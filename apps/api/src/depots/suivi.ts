@@ -76,3 +76,16 @@ export function statutAuCabinet(
 ): StatutCabinet {
   return statutCabinet({ status, suivi: faits ? versSuivi(faits) : null });
 }
+
+/**
+ * La pièce `p` est-elle un document JOINT à une autre (planche 3) : il part
+ * avec sa pièce, sans lecture, et ne compte nulle part comme une pièce.
+ *
+ * L'index des rattachements écarte d'abord les pièces sans lien ; la règle
+ * est celle de la base (`app.piece_jointe`). Une seule écriture, pour la
+ * liste de la PME, la file de la comptabilité et ses compteurs.
+ */
+export const EST_JOINTE = `(exists (select 1 from capture.rattachements r0
+                        where r0.tenant_id = p.tenant_id
+                          and (r0.piece_id = p.id or r0.piece_liee_id = p.id))
+                and app.piece_jointe(p.id))`;

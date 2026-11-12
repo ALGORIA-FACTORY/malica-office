@@ -1045,6 +1045,9 @@ export const ar: Dict = {
   "cab.banque.when": "\u0627\u0644\u062a\u0648\u0642\u064a\u062a",
   "cab.banque.orphansbank":
     "\u0623\u0633\u0637\u0631 \u0627\u0644\u0643\u0634\u0641 \u0628\u062f\u0648\u0646 \u0642\u064a\u062f",
+  "cab.banque.reglement.propose": "يسدّد الفاتورة {facture}",
+  "cab.banque.reglement.ecriture": "قيد التسديد المقترح",
+  "cab.banque.reglement.ouvrir": "فتح الفاتورة",
   "cab.banque.orphansbook":
     "\u0642\u064a\u0648\u062f \u0628\u062f\u0648\u0646 \u0633\u0637\u0631 \u0643\u0634\u0641",
   "cab.noorg": "لا توجد محاسبة. أنشئ محاسبة للإشراف على حرفائك.",
@@ -1441,7 +1444,7 @@ export const ar: Dict = {
   "cab.rail.role.assistant": "مساعد",
   "cab.rail.role.plateforme": "مطوّر · وصول كامل",
   "cab.rail.role.aucun": "بلا دور هنا",
-  "cab.nav.export": "تصدير FEC / CSV",
+  "cab.nav.export": "تصدير القيود",
   "cab.nav.conseil": "الاستشارة",
   "cab.abo.title": "اشتراكات الحرفاء",
   "cab.abo.kpi.couverts": "الشركات المشمولة",
@@ -1554,7 +1557,7 @@ export const ar: Dict = {
   "cab.dos.briefing.pour": "لـ {email}، بتاريخ {date}",
   "cab.dos.briefing.vide": "لا موجز: لم يُنقل الملف بعد.",
   "cab.top.search": "حريف، وثيقة، قيد…",
-  "cab.top.searchAria": "البحث عن حريف أو شاشة",
+  "cab.top.searchAria": "البحث عن حريف أو وثيقة أو قيد أو شاشة",
   "cab.top.notifications": "التنبيهات",
   "cab.top.notifications.nonLues": "التنبيهات — {count} غير مقروءة",
   "cab.top.notifications.nonLues#one": "التنبيهات — تنبيه واحد غير مقروء",
@@ -1563,6 +1566,8 @@ export const ar: Dict = {
   "cab.top.menu": "فتح التنقّل",
   "cab.palette.screens": "الشاشات",
   "cab.palette.clients": "الحرفاء",
+  "cab.palette.pieces": "الوثائق",
+  "cab.palette.ecritures": "القيود",
   "cab.palette.none": "لا شيء مطابق.",
   "cab.dossier.kicker": "ملف الحريف",
   "cab.dossier.back": "العودة إلى المحفظة",
@@ -1722,7 +1727,7 @@ export const ar: Dict = {
   "cab.review.reglement.retenue.aide":
     "الصك لا يحمل إلا الصافي: يُدفع الخصم إلى الدولة لحساب المزوّد.",
   "cab.review.reglement.inscrire": "تسجيل",
-  "cab.review.reglement.inscrit": "مسجّل في اليومية — يظهر في ملف FEC.",
+  "cab.review.reglement.inscrit": "مسجّل في اليومية — يظهر في تصدير القيود.",
   "cab.review.paiement.reference": "المرجع",
   "cab.review.paiement.eteint": "تمّ إلغاء التسديد — دون أثر محاسبي",
   "cab.review.paiement.annules": "{count} تسديدات ملغاة",
@@ -1733,6 +1738,7 @@ export const ar: Dict = {
   "cab.review.enregistre": "حُفظ في: {chemin}",
   "cab.review.joints": "الوثائق المرفقة",
   "cab.review.audit": "سجل الوثيقة",
+  "cab.review.reponse": "ردّ الحريف على إرجاعكم",
   "cab.lecteur.titre": "ما قرأه القارئ",
   "cab.lecteur.observation":
     "ملاحظة فقط: لا يتغيّر شيء في القراءة المعتمدة. يسجّل القارئ المُثبِت ما يقرؤه ليُحكم عليه قبل تفعيله.",
@@ -1783,7 +1789,7 @@ export const ar: Dict = {
   "cab.echeances.panel": "متأخرة: {late} · خلال سبعة أيام: {week}.",
   "cab.settings.title": "إعدادات المحاسبة",
   "cab.export.kicker": "إخراج البيانات · دون قفل",
-  "cab.export.title": "تصدير FEC وCSV",
+  "cab.export.title": "تصدير القيود",
   "cab.export.lede":
     "صدّر القيود المثبتة للفترة المختارة. تحقق من الملف والصيغة وعدد الأسطر قبل إنشاء الملف.",
   "cab.export.client": "الحريف",
@@ -1794,13 +1800,13 @@ export const ar: Dict = {
   "cab.export.exercice.civil": "البطاقة لا تذكر تاريخ الإقفال: تُعتمد السنة المدنية.",
   "cab.export.exercice.aucun": "لا سنة محاسبية للتصدير.",
   "cab.export.format": "الصيغة",
-  "cab.export.format.fec": "FEC",
-  "cab.export.format.fec.hint": "القيود · الصيغة القانونية",
+  "cab.export.format.fec": "القيود، 18 عمودًا",
+  "cab.export.format.fec.hint": "تنسيق FEC الفرنسي · المطابقة غير مُثبتة",
   "cab.export.format.csv_ecritures": "CSV القيود",
   "cab.export.format.csv_ecritures.hint": "دفتر الأستاذ · جدولي",
   "cab.export.format.csv_plan": "CSV المخطط",
   "cab.export.format.csv_plan.hint": "مخطط الحسابات · الحزمة والمحاسبة",
-  "cab.export.format.fec.unDossier": "يُنتَج FEC ملفًا بملف: اختر حريفًا.",
+  "cab.export.format.fec.unDossier": "يُنتَج الملف ذو 18 عمودًا ملفًا بملف: اختر حريفًا.",
   "cab.export.taille": "{lignes} سطر · {taille}",
   "cab.export.taille#one": "سطر واحد · {taille}",
   "cab.export.taille#other": "{lignes} سطر · {taille}",
@@ -1950,7 +1956,7 @@ export const ar: Dict = {
     "يُلصق الكشف في المطابقة. تُستبعد السطور المستوردة سابقًا، ولا يُنشأ أي قيد دون إجراء.",
   "cab.integ.releves.action": "استيراد كشف",
   "cab.integ.exports.nom": "تصدير القيود",
-  "cab.integ.exports.nature": "إخراج · FEC و CSV",
+  "cab.integ.exports.nature": "إخراج · القيود و CSV",
   "cab.integ.exports.note":
     "القيود المحاسبية لملف، في ملف تقرؤه الإدارة أو برنامج آخر. يُسجَّل كل تصدير مع بصمته.",
   "cab.integ.exports.action": "إنتاج تصدير",
@@ -2164,6 +2170,7 @@ export const ar: Dict = {
   "envoi.demande.detail": "{quand} · على {qui} أن يوافق، وسنُعلمك.",
   "envoi.reponse.fait": "أُرسل ردّك إلى {qui}",
   "envoi.reponse.detail": "«{texte}» · {quand}",
+  "envoi.reponse.reste": "«{texte}» · {quand}. تبقى الوثيقة عندك: أعد إرسالها متى كنت جاهزاً.",
   "envoi.cab.client": "الحريف",
   "envoi.cab.retour.titre": "أُرجعت إلى الحريف.",
   "envoi.cab.retour.phrase": "{piece} لدى {client} منذ {quand}، مع السبب «{motif}».",
@@ -2595,7 +2602,7 @@ export const ar: Dict = {
   "refus.export.fuseau": "المنطقة الزمنية للتصدير ليست منطقة المحاسبة.",
   "refus.export.concurrent": "صدر تصدير آخر لهذه اليومية للتوّ: أعد المحاولة.",
   "refus.export.format_absent": "صيغة التصدير هذه غير موجودة.",
-  "refus.export.fec_par_dossier": "يُنتَج ملف FEC ملفًا بملف: اختر حريفًا.",
+  "refus.export.fec_par_dossier": "يُنتَج الملف ذو 18 عمودًا ملفًا بملف: اختر حريفًا.",
   "refus.export.periode_a_l_envers": "الفترة معكوسة: البداية تلي النهاية.",
   "refus.identifiant.invalide": "هذا المعرّف ليس بالشكل المنتظر: «{valeur}». مثال: «{exemple}».",
   "refus.supervision.second_regard":
@@ -4182,6 +4189,7 @@ export const ar: Dict = {
   "pme.reglages.abo.priseEnChargeEtComplement":
     "يختاره ويسدّده محاسبكم، {comptabilite}. تدفعون الفرق: {prix} {devise} دون احتساب الأداء / شهريًا.",
   "pme.notifs.voirProposition": "عرض الاقتراح",
+  "pme.notifs.voirAbonnement": "عرض اشتراكي",
   "pme.reglages.offres.empechement.engagement_annuel":
     "اشتراكك سنوي: لا تتغيّر الباقة قبل نهاية الالتزام.",
   "pme.reglages.annuel.detail":

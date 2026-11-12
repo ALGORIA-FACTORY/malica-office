@@ -22,8 +22,9 @@ import {
   tiersDeLaPiece,
 } from "../bibliotheque.ts";
 
+import { dec } from "./decimal.ts";
 import { retenirPourLaFile } from "./fenetre-de-la-file.ts";
-import { COLONNES_DU_SUIVI, statutAuCabinet, versSuivi } from "./suivi.ts";
+import { COLONNES_DU_SUIVI, EST_JOINTE, statutAuCabinet, versSuivi } from "./suivi.ts";
 
 /** Chaque statut compte, même à zéro : un client sans pièce doit s'afficher. */
 const COMPTES_VIDES = {
@@ -58,11 +59,14 @@ const PIECES_DU_CABINET = `pieces_v p
 /**
  * Ce qui a été TRANSMIS au cabinet : une pièce « chez vous » n'y paraît pas,
  * même pour un compte membre des deux côtés ; un reçu ou un justificatif
- * voyage avec sa pièce (« Documents liés ») ; la photo qui en remplace une
- * autre a pris sa place ; une pièce que le client a retirée n'attend plus rien.
+ * voyage avec sa pièce (« Documents liés ») ; un document joint NON LU aussi —
+ * un bon de livraison n'est pas une pièce à lire (recette du 11 novembre
+ * 2026), alors qu'un avoir lu, même joint, attend son écriture ; la photo qui en remplace une autre a pris sa place ; une pièce que
+ * le client a retirée n'attend plus rien.
  */
 const TRANSMISE = `p.vis = 'partage'
           and not app.piece_accompagne(p.id)
+          and not (p.status = 'capturee' and ${EST_JOINTE})
           and p.remplacee_par is null and p.archivee_le is null`;
 
 /**
@@ -570,6 +574,99 @@ export const supervision = {
       objet: (r["object_table"] as string | null) ?? null,
       objetId: (r["object_id"] as string | null) ?? null,
     }));
+  },
+
+  /**
+   * « Client, pièce, écriture… » : ce que la recherche ⌘K trouve au-delà des
+   * clients et des écrans (recette du 11 novembre 2026 — « FA-2026-1111 »,
+   * « PAPETERIE », « 358 », « 606 » ne trouvaient rien).
+   *
+   * Les pièces sont celles que la file et les compteurs lisent
+   * (`PIECES_DU_CABINET`, `TRANSMISE`) : n°, émetteur, montant. Les écritures,
+   * celles des mandats visibles de la personne : compte, libellé. Tout passe
+   * par les vues sous RLS, sous l'identité de qui cherche — aucun rôle
+   * privilégié. Le texte se compare sans accents, ni casse, ni ponctuation.
+   */
+  async chercher(db: Requete, cabinetTenantId: string, texte: string) {
+    const plie = texte
+      .normalize("NFD")
+      .replace(/[^\p{L}\p{N}]/gu, "")
+      .toLocaleUpperCase("fr");
+    if (plie.length < 2) return { pieces: [], ecritures: [] };
+    // Un nombre cherche aussi un montant : « 358 » trouve 358,000, « 358,5 » 358,500.
+    const nombre = /^\s*-?\d+(?:[.,]\d+)?\s*$/.test(texte) ? texte.trim().replace(",", ".") : null;
+    const entier = nombre !== null && !nombre.includes(".");
+    const PLIER = (x: string) =>
+      `upper(regexp_replace(normalize(coalesce(${x}, ''), NFD), '[^[:alnum:]]', '', 'g'))`;
+
+    const [pieces, ecritures] = await Promise.all([
+      db.query(
+        `select p.id, p.tenant_id, o.name as client, x.emetteur, x.reference, m.montant
+           from ${PIECES_DU_CABINET}
+           left join organizations_v o on o.id = p.tenant_id
+           left join lateral (
+             select coalesce(app.emetteur_dit(p.id), x2.payload ->> 'issuer') as emetteur,
+                    (select string_agg(r.valeur, ' · ')
+                       from jsonb_each_text(coalesce(x2.payload -> 'references', '{}'::jsonb))
+                            as r(cle, valeur)
+                      where length(btrim(r.valeur)) > 0) as reference
+               from extractions_v x2 where x2.piece_id = p.id
+              order by x2.created_at desc limit 1
+           ) x on true
+           -- Le montant : l'écriture vivante de la pièce, la même que la file.
+           left join lateral (
+             select sum(l.debit) as montant
+               from ecritures_v e join ecriture_lignes_v l on l.ecriture_id = e.id
+              where e.piece_id = any(array(select app.versions_de_la_piece(p.id)))
+                and e.nature = 'piece' and app.ecriture_vivante(e.id)
+           ) m on true
+          where ${TRANSMISE}
+            and (${PLIER("x.emetteur")} like '%' || $2 || '%'
+                 or ${PLIER("x.reference")} like '%' || $2 || '%'
+                 or ($3::numeric is not null
+                     and (m.montant = $3::numeric or ($4 and trunc(m.montant) = $3::numeric))))
+          order by coalesce(p.transmise_le, p.created_at) desc
+          limit 8`,
+        [cabinetTenantId, plie, nombre, entier],
+      ),
+      db.query(
+        `select e.id, e.piece_id, e.tenant_id, o.name as client, e.libelle, e.date_ecriture::text
+                  as date_ecriture, min(l.account_code) filter (
+                    where starts_with(l.account_code, $3)
+                       or ${PLIER("l.libelle")} like '%' || $2 || '%') as compte
+           from ecritures_v e
+           join ecriture_lignes_v l on l.ecriture_id = e.id
+           left join organizations_v o on o.id = e.tenant_id
+          where e.tenant_id in (select app.mandats_visibles($1))
+            and app.ecriture_vivante(e.id)
+            and (starts_with(l.account_code, $3)
+                 or ${PLIER("l.libelle")} like '%' || $2 || '%'
+                 or ${PLIER("e.libelle")} like '%' || $2 || '%')
+          group by e.id, e.piece_id, e.tenant_id, o.name, e.libelle, e.date_ecriture
+          order by e.date_ecriture desc, e.id
+          limit 8`,
+        [cabinetTenantId, plie, texte.trim()],
+      ),
+    ]);
+    return {
+      pieces: (pieces.rows as Record<string, unknown>[]).map((r) => ({
+        pieceId: r["id"] as string,
+        tenantId: r["tenant_id"] as string,
+        client: (r["client"] as string | null) ?? null,
+        emetteur: (r["emetteur"] as string | null) ?? null,
+        reference: (r["reference"] as string | null) ?? null,
+        montant: r["montant"] == null ? null : dec(r["montant"]),
+      })),
+      ecritures: (ecritures.rows as Record<string, unknown>[]).map((r) => ({
+        ecritureId: r["id"] as string,
+        pieceId: (r["piece_id"] as string | null) ?? null,
+        tenantId: r["tenant_id"] as string,
+        client: (r["client"] as string | null) ?? null,
+        libelle: (r["libelle"] as string | null) ?? null,
+        compte: (r["compte"] as string | null) ?? null,
+        dateEcriture: r["date_ecriture"] as string,
+      })),
+    };
   },
 
   /**

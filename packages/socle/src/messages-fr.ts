@@ -1105,6 +1105,9 @@ export const fr = {
   "cab.banque.lettree": "Lettr\u00e9e",
   "cab.banque.when": "Horodatage",
   "cab.banque.orphansbank": "Lignes de relev\u00e9 sans \u00e9criture",
+  "cab.banque.reglement.propose": "Règle la facture {facture}",
+  "cab.banque.reglement.ecriture": "Écriture de règlement proposée",
+  "cab.banque.reglement.ouvrir": "Ouvrir la facture",
   "cab.banque.orphansbook": "\u00c9critures sans ligne de relev\u00e9",
   "cab.noorg": "Aucune organisation de comptabilité. Créez-en une pour superviser vos clients.",
   "cab.today.title": "Aujourd'hui",
@@ -1526,7 +1529,7 @@ export const fr = {
   "cab.rail.role.assistant": "Assistant",
   "cab.rail.role.plateforme": "Développeur · accès à tout",
   "cab.rail.role.aucun": "Sans rôle ici",
-  "cab.nav.export": "Export FEC / CSV",
+  "cab.nav.export": "Exports des écritures",
   "cab.nav.conseil": "Conseil",
   "cab.abo.title": "Abonnements des clients",
   "cab.abo.kpi.couverts": "Sociétés couvertes",
@@ -1650,7 +1653,7 @@ export const fr = {
   "cab.dos.briefing.pour": "Pour {email}, le {date}",
   "cab.dos.briefing.vide": "Aucun briefing : le dossier n’a pas encore été transféré.",
   "cab.top.search": "Client, pièce, écriture…",
-  "cab.top.searchAria": "Chercher un client ou un écran",
+  "cab.top.searchAria": "Chercher un client, une pièce, une écriture ou un écran",
   "cab.top.notifications": "Notifications",
   "cab.top.notifications.nonLues": "Notifications — {count} non lues",
   "cab.top.notifications.nonLues#one": "Notifications — {count} non lue",
@@ -1659,6 +1662,8 @@ export const fr = {
   "cab.top.menu": "Ouvrir la navigation",
   "cab.palette.screens": "Écrans",
   "cab.palette.clients": "Clients",
+  "cab.palette.pieces": "Pièces",
+  "cab.palette.ecritures": "Écritures",
   "cab.palette.none": "Rien ne correspond.",
   "cab.dossier.kicker": "Dossier client",
   "cab.dossier.back": "Retour au portefeuille",
@@ -1828,7 +1833,7 @@ export const fr = {
   "cab.review.reglement.retenue.aide":
     "Le règlement ne porte que le net : la retenue est versée à l’État pour le compte du fournisseur.",
   "cab.review.reglement.inscrire": "Inscrire",
-  "cab.review.reglement.inscrit": "Inscrit au journal — il figure au FEC.",
+  "cab.review.reglement.inscrit": "Inscrit au journal — il figure aux exports des écritures.",
   "cab.review.paiement.reference": "Référence",
   "cab.review.paiement.eteint": "Règlement annulé — sans effet comptable",
   "cab.review.paiement.annules": "{count} règlements annulés",
@@ -1839,6 +1844,7 @@ export const fr = {
   "cab.review.enregistre": "Enregistré : {chemin}",
   "cab.review.joints": "Documents joints",
   "cab.review.audit": "Journal de la pièce",
+  "cab.review.reponse": "Réponse du client à votre retour",
   "cab.lecteur.titre": "Ce que le lecteur a lu",
   "cab.lecteur.observation":
     "Observation : rien n’est modifié dans la lecture retenue. Le lecteur prouvé inscrit ce qu’il lit pour qu’on le juge avant de l’allumer.",
@@ -1890,7 +1896,7 @@ export const fr = {
   "cab.echeances.panel": "En retard : {late} · sous sept jours : {week}.",
   "cab.settings.title": "Réglages de la comptabilité",
   "cab.export.kicker": "Sortie de données · aucun verrou",
-  "cab.export.title": "Export FEC et CSV",
+  "cab.export.title": "Exports des écritures",
   "cab.export.lede":
     "Exportez les écritures comptabilisées de la période sélectionnée. Vérifiez le dossier, le format et le nombre de lignes avant de générer le fichier.",
   "cab.export.client": "Client",
@@ -1901,14 +1907,14 @@ export const fr = {
   "cab.export.exercice.civil": "La fiche ne dit pas la clôture : l’exercice civil s’applique.",
   "cab.export.exercice.aucun": "Aucun exercice à exporter.",
   "cab.export.format": "Format",
-  "cab.export.format.fec": "FEC",
-  "cab.export.format.fec.hint": "écritures · format légal",
+  "cab.export.format.fec": "Écritures, 18 colonnes",
+  "cab.export.format.fec.hint": "disposition du FEC français · conformité non attestée",
   "cab.export.format.csv_ecritures": "CSV des écritures",
   "cab.export.format.csv_ecritures.hint": "grand livre · tabulé",
   "cab.export.format.csv_plan": "CSV du plan",
   "cab.export.format.csv_plan.hint": "plan comptable · pack et comptabilité",
   "cab.export.format.fec.unDossier":
-    "Le FEC se produit dossier par dossier : choisissez un client.",
+    "Le fichier à 18 colonnes se produit dossier par dossier : choisissez un client.",
   "cab.export.taille": "{lignes} lignes · {taille}",
   "cab.export.taille#one": "{lignes} ligne · {taille}",
   "cab.export.taille#other": "{lignes} lignes · {taille}",
@@ -2060,7 +2066,7 @@ export const fr = {
     "Le relevé se colle dans le rapprochement. Les lignes déjà importées sont écartées, et aucune écriture n’est créée sans geste.",
   "cab.integ.releves.action": "Importer un relevé",
   "cab.integ.exports.nom": "Export des écritures",
-  "cab.integ.exports.nature": "Sortie · FEC et CSV",
+  "cab.integ.exports.nature": "Sortie · écritures et CSV",
   "cab.integ.exports.note":
     "Les écritures comptabilisées d’un mandat, dans un fichier que l’administration ou un autre logiciel sait lire. Chaque export est journalisé avec son empreinte.",
   "cab.integ.exports.action": "Produire un export",
@@ -2287,6 +2293,8 @@ export const fr = {
   "envoi.demande.detail": "{quand} · {qui} doit l'accorder ; vous serez prévenu.",
   "envoi.reponse.fait": "Réponse envoyée à {qui}",
   "envoi.reponse.detail": "« {texte} » · {quand}",
+  "envoi.reponse.reste":
+    "« {texte} » · {quand}. La pièce reste chez vous : renvoyez-la quand vous êtes prêt.",
   "envoi.cab.client": "le client",
   "envoi.cab.retour.titre": "Retournée au client.",
   "envoi.cab.retour.phrase": "{piece} est chez {client} depuis {quand}, avec le motif « {motif} ».",
@@ -2788,7 +2796,8 @@ export const fr = {
   "refus.export.fuseau": "Le fuseau de l’export n’est pas celui de la comptabilité.",
   "refus.export.concurrent": "Un autre export de ce journal vient d’être produit : recommencez.",
   "refus.export.format_absent": "Ce format d’export n’existe pas.",
-  "refus.export.fec_par_dossier": "Le FEC se produit dossier par dossier : choisissez un client.",
+  "refus.export.fec_par_dossier":
+    "Le fichier à 18 colonnes se produit dossier par dossier : choisissez un client.",
   "refus.export.periode_a_l_envers": "La période est à l’envers : le début suit la fin.",
   "refus.identifiant.invalide":
     "Cet identifiant n’a pas la forme attendue : « {valeur} ». Exemple : « {exemple} ».",
@@ -4483,6 +4492,7 @@ export const fr = {
   "pme.reglages.abo.priseEnChargeEtComplement":
     "Choisi et réglé par votre comptabilité, {comptabilite}. Vous payez la différence : {prix} {devise} HT / mois.",
   "pme.notifs.voirProposition": "Voir la proposition",
+  "pme.notifs.voirAbonnement": "Voir mon abonnement",
   "pme.reglages.offres.empechement.engagement_annuel":
     "Votre abonnement est à l'année : l'offre ne change pas avant la fin de l'engagement.",
   "pme.reglages.annuel.detail":

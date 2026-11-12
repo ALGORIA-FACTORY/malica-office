@@ -82,11 +82,36 @@ export function detailDe(kind: string, payload: Record<string, unknown>): string
   return chaine(payload, "note");
 }
 
-/** La phrase d'une notification : son genre, ou le verdict d'une demande tranchée. */
+/**
+ * La phrase d'une notification : son genre, le verdict d'une demande tranchée,
+ * ou — pour une prise en charge qui a démarré (acceptée, ou d'elle-même à
+ * l'arrivée du dirigeant) — ce qu'elle est devenue. « Propose de prendre votre
+ * abonnement en charge » se lisait d'une offre déjà en cours (recette du
+ * 11 novembre 2026) ; la base pose l'issue sur l'alerte (`tranchee`).
+ */
 export function cleDuGenre(kind: string, payload: Record<string, unknown> = {}): MessageKey {
-  return kind === "piece.demande_tranchee"
-    ? phraseDeLaReponse(payload)
-    : (GENRES[kind] ?? "cab.notif.kind.autre");
+  if (kind === "piece.demande_tranchee") return phraseDeLaReponse(payload);
+  if (kind === "acces.propose" && payload["tranchee"] === "actif")
+    return "notif.kind.acces.accepte";
+  return GENRES[kind] ?? "cab.notif.kind.autre";
+}
+
+/**
+ * Où mène une alerte d'abonnement ou de mandat. Une PROPOSITION encore ouverte
+ * se répond ; une information (l'offre a été montée, arrêtée, la proposition a
+ * déjà sa réponse) mène à l'abonnement sans promettre de proposition ; un
+ * mandat qui a sa réponse ne se propose plus à l'acceptation.
+ */
+export function gesteDeLaQuestion(
+  kind: string,
+  payload: Record<string, unknown> = {},
+): "proposition" | "abonnement" | "mandat" | null {
+  const ouverte = payload["tranchee"] === undefined;
+  if (kind === "acces.propose" || kind === "acces.descente_demandee")
+    return ouverte ? "proposition" : "abonnement";
+  if (kind === "acces.monte" || kind === "acces.arrete") return "abonnement";
+  if (kind === "mandat.propose") return ouverte ? "mandat" : null;
+  return null;
 }
 
 /**

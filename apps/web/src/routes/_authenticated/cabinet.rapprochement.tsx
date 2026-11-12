@@ -40,6 +40,10 @@ import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { BankBookLine, BankStatementLine } from "@malica/socle/ports/repositories";
 import { computeRapprochement } from "@malica/socle/engines/banque/rapprochement";
+import {
+  lignesDuReglement,
+  reglementsDesLignes,
+} from "@malica/socle/engines/banque/reglement-de-ligne";
 
 export const Route = createFileRoute("/_authenticated/cabinet/rapprochement")({
   head: () => ({
@@ -253,6 +257,47 @@ function CarteAppariement({
   );
 }
 
+/**
+ * La facture qu'une ligne sans vis-à-vis règle, et l'écriture que son
+ * règlement inscrira — proposées par le Socle (`reglementsDesLignes`). Le
+ * règlement s'inscrit sur la facture.
+ */
+function ReglementPropose({
+  facture,
+  pieceId,
+  lignes,
+  t,
+  locale,
+}: {
+  facture: string;
+  pieceId: string;
+  lignes: ReadonlyArray<{ account_code: string; debit: string; credit: string }>;
+  t: T;
+  locale: string;
+}) {
+  return (
+    <span className="mt-1.5 block space-y-1 border-s-2 border-border ps-2">
+      <span className="block text-[11.5px]">{t("cab.banque.reglement.propose", { facture })}</span>
+      <span className="sr-only">{t("cab.banque.reglement.ecriture")}</span>
+      {lignes.map((x) => (
+        <span key={x.account_code} className="num block text-[10.5px] text-muted-foreground">
+          {x.account_code} ·{" "}
+          {x.debit !== "0"
+            ? `${t("pme.journal.debit")} ${montant(x.debit, locale)}`
+            : `${t("pme.journal.credit")} ${montant(x.credit, locale)}`}
+        </span>
+      ))}
+      <Link
+        to="/cabinet/piece/$pieceId"
+        params={{ pieceId }}
+        className="inline-block text-[10px] font-semibold uppercase tracking-[0.12em] underline underline-offset-4"
+      >
+        {t("cab.banque.reglement.ouvrir")}
+      </Link>
+    </span>
+  );
+}
+
 function CabinetRapprochement() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
@@ -385,6 +430,15 @@ function CabinetRapprochement() {
         to,
       }),
     enabled: !!client && !!compte,
+  });
+  /*
+   * Les factures inscrites dont le règlement reste à inscrire : ce qu'une
+   * ligne sans vis-à-vis peut éteindre (recette du 11 novembre 2026).
+   */
+  const facturesOuvertes = useQuery({
+    queryKey: ["banque-factures-ouvertes", client?.tenantId],
+    queryFn: () => office().banque.facturesOuvertes(client!.tenantId),
+    enabled: !!client,
   });
   const etat = useQuery({
     queryKey: ["banque-etat", client?.tenantId],
@@ -588,6 +642,15 @@ function CabinetRapprochement() {
       })
     : nonLettrees;
 
+  /*
+   * Ce que le Socle propose pour une ligne sans vis-à-vis : la facture
+   * ouverte qu'elle règle, et l'écriture de règlement (tiers de la facture,
+   * compte de la banque). Aucun chiffre n'est produit ici.
+   */
+  const reglements = new Map(
+    reglementsDesLignes(orphelinesBanque, facturesOuvertes.data ?? []).map((r) => [r.ligneId, r]),
+  );
+
   /* ---- formats */
   const dateCourte = (iso: string) =>
     new Intl.DateTimeFormat(locale, {
@@ -785,11 +848,23 @@ function CabinetRapprochement() {
                     mono: true,
                   },
                 ].map((c) => (
-                  <label key={c.key} className="flex flex-col gap-1">
+                  /*
+                   * Un type et une étiquette liée par son identifiant : l'audit
+                   * d'accessibilité du 11 novembre 2026 ne trouvait ni l'un ni l'autre.
+                   */
+                  <label
+                    key={c.key}
+                    htmlFor={`nouveau-compte-${c.key}`}
+                    className="flex flex-col gap-1"
+                  >
                     <span className="text-[9.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                       {c.libelle}
                     </span>
                     <input
+                      id={`nouveau-compte-${c.key}`}
+                      name={`nouveau-compte-${c.key}`}
+                      type="text"
+                      autoComplete="off"
                       value={c.valeur}
                       onChange={(e) => c.poser(e.target.value)}
                       inputMode={c.key === "code" ? "numeric" : undefined}
@@ -963,6 +1038,26 @@ function CabinetRapprochement() {
                                 ? ` · ${t("cab.banque.pair.ref", { ref: l.reference })}`
                                 : ""}
                             </span>
+                            {reglements.has(l.id) && compte ? (
+                              <ReglementPropose
+                                facture={
+                                  [
+                                    reglements.get(l.id)!.facture.reference,
+                                    reglements.get(l.id)!.facture.tiers,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ") || dateCourte(reglements.get(l.id)!.facture.date)
+                                }
+                                pieceId={reglements.get(l.id)!.facture.pieceId}
+                                lignes={lignesDuReglement(
+                                  l,
+                                  reglements.get(l.id)!.facture,
+                                  compte.accountCode,
+                                )}
+                                t={t}
+                                locale={locale}
+                              />
+                            ) : null}
                           </span>
                           <span className="flex shrink-0 items-baseline gap-3">
                             <span className="num whitespace-nowrap text-[12px] font-medium">

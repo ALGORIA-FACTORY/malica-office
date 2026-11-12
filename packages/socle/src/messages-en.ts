@@ -1048,6 +1048,9 @@ export const en: Dict = {
   "cab.banque.lettree": "Matched",
   "cab.banque.when": "Timestamp",
   "cab.banque.orphansbank": "Statement lines without entry",
+  "cab.banque.reglement.propose": "Settles invoice {facture}",
+  "cab.banque.reglement.ecriture": "Proposed settlement entry",
+  "cab.banque.reglement.ouvrir": "Open the invoice",
   "cab.banque.orphansbook": "Entries without statement line",
   "cab.noorg": "No accounting organization yet. Create one to supervise your clients.",
   "cab.today.title": "Today",
@@ -1459,7 +1462,7 @@ export const en: Dict = {
   "cab.rail.role.assistant": "Assistant",
   "cab.rail.role.plateforme": "Developer · full access",
   "cab.rail.role.aucun": "No role here",
-  "cab.nav.export": "FEC / CSV export",
+  "cab.nav.export": "Entry exports",
   "cab.nav.conseil": "Advice",
   "cab.abo.title": "Client subscriptions",
   "cab.abo.kpi.couverts": "Companies covered",
@@ -1582,7 +1585,7 @@ export const en: Dict = {
   "cab.dos.briefing.pour": "For {email}, on {date}",
   "cab.dos.briefing.vide": "No briefing: the file has not been transferred yet.",
   "cab.top.search": "Client, document, entry…",
-  "cab.top.searchAria": "Search a client or a screen",
+  "cab.top.searchAria": "Search a client, a document, an entry or a screen",
   "cab.top.notifications": "Notifications",
   "cab.top.notifications.nonLues": "Notifications — {count} unread",
   "cab.top.notifications.nonLues#one": "Notifications — {count} unread",
@@ -1591,6 +1594,8 @@ export const en: Dict = {
   "cab.top.menu": "Open navigation",
   "cab.palette.screens": "Screens",
   "cab.palette.clients": "Clients",
+  "cab.palette.pieces": "Documents",
+  "cab.palette.ecritures": "Entries",
   "cab.palette.none": "Nothing matches.",
   "cab.dossier.kicker": "Client file",
   "cab.dossier.back": "Back to the portfolio",
@@ -1758,7 +1763,7 @@ export const en: Dict = {
   "cab.review.reglement.retenue.aide":
     "The payment carries only the net: the withholding is paid to the State on the supplier’s behalf.",
   "cab.review.reglement.inscrire": "Post",
-  "cab.review.reglement.inscrit": "Posted to the journal — it appears in the FEC.",
+  "cab.review.reglement.inscrit": "Posted to the journal — it appears in the entry exports.",
   "cab.review.paiement.reference": "Reference",
   "cab.review.paiement.eteint": "Settlement cancelled — no accounting effect",
   "cab.review.paiement.annules": "{count} cancelled settlements",
@@ -1769,6 +1774,7 @@ export const en: Dict = {
   "cab.review.enregistre": "Saved: {chemin}",
   "cab.review.joints": "Attached documents",
   "cab.review.audit": "Document log",
+  "cab.review.reponse": "The client’s reply to your return",
   "cab.lecteur.titre": "What the reader read",
   "cab.lecteur.observation":
     "Observation only: nothing changes in the retained reading. The proven reader records what it reads so it can be judged before it is switched on.",
@@ -1820,7 +1826,7 @@ export const en: Dict = {
   "cab.echeances.panel": "Overdue: {late} · within seven days: {week}.",
   "cab.settings.title": "Accounting settings",
   "cab.export.kicker": "Data out · no lock-in",
-  "cab.export.title": "FEC and CSV export",
+  "cab.export.title": "Entry exports",
   "cab.export.lede":
     "Export the posted entries for the selected period. Check the client, format and row count before generating the file.",
   "cab.export.client": "Client",
@@ -1831,13 +1837,14 @@ export const en: Dict = {
   "cab.export.exercice.civil": "The file does not state the year end: the calendar year applies.",
   "cab.export.exercice.aucun": "No financial year to export.",
   "cab.export.format": "Format",
-  "cab.export.format.fec": "FEC",
-  "cab.export.format.fec.hint": "entries · legal format",
+  "cab.export.format.fec": "Entries, 18 columns",
+  "cab.export.format.fec.hint": "French FEC layout · compliance not certified",
   "cab.export.format.csv_ecritures": "Entries CSV",
   "cab.export.format.csv_ecritures.hint": "general ledger · tabular",
   "cab.export.format.csv_plan": "Chart CSV",
   "cab.export.format.csv_plan.hint": "chart of accounts · pack and accountant",
-  "cab.export.format.fec.unDossier": "The FEC is produced one file at a time: choose a client.",
+  "cab.export.format.fec.unDossier":
+    "The 18-column file is produced one client at a time: choose a client.",
   "cab.export.taille": "{lignes} rows · {taille}",
   "cab.export.taille#one": "{lignes} row · {taille}",
   "cab.export.taille#other": "{lignes} rows · {taille}",
@@ -1989,7 +1996,7 @@ export const en: Dict = {
     "The statement is pasted into reconciliation. Lines already imported are skipped, and no entry is created without a deliberate action.",
   "cab.integ.releves.action": "Import a statement",
   "cab.integ.exports.nom": "Entries export",
-  "cab.integ.exports.nature": "Outbound · FEC and CSV",
+  "cab.integ.exports.nature": "Outbound · entries and CSV",
   "cab.integ.exports.note":
     "A client’s booked entries, in a file the tax administration or another application can read. Every export is logged with its fingerprint.",
   "cab.integ.exports.action": "Produce an export",
@@ -2212,6 +2219,8 @@ export const en: Dict = {
   "envoi.demande.detail": "{quand} · {qui} has to agree; you'll be told.",
   "envoi.reponse.fait": "Reply sent to {qui}",
   "envoi.reponse.detail": "“{texte}” · {quand}",
+  "envoi.reponse.reste":
+    "“{texte}” · {quand}. The document stays with you: send it back when you are ready.",
   "envoi.cab.client": "the client",
   "envoi.cab.retour.titre": "Returned to the client.",
   "envoi.cab.retour.phrase": "{piece} is with {client} since {quand}, with the reason “{motif}”.",
@@ -2694,7 +2703,8 @@ export const en: Dict = {
   "refus.export.fuseau": "The export’s time zone is not the accountant’s.",
   "refus.export.concurrent": "Another export of this journal has just been produced: try again.",
   "refus.export.format_absent": "This export format does not exist.",
-  "refus.export.fec_par_dossier": "The FEC is produced file by file: choose a client.",
+  "refus.export.fec_par_dossier":
+    "The 18-column file is produced one client at a time: choose a client.",
   "refus.export.periode_a_l_envers": "The period is reversed: the start comes after the end.",
   "refus.identifiant.invalide":
     "This identifier does not have the expected form: “{valeur}”. Example: “{exemple}”.",
@@ -4353,6 +4363,7 @@ export const en: Dict = {
   "pme.reglages.abo.priseEnChargeEtComplement":
     "Chosen and paid for by your accountant, {comptabilite}. You pay the difference: {prix} {devise} excl. tax / month.",
   "pme.notifs.voirProposition": "See the offer",
+  "pme.notifs.voirAbonnement": "See my subscription",
   "pme.reglages.offres.empechement.engagement_annuel":
     "Your subscription is yearly: the plan stays the same until the commitment ends.",
   "pme.reglages.annuel.detail":
