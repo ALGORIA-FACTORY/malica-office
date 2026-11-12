@@ -15,6 +15,7 @@ import { Link } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useCabinet } from "@/components/malica/cabinet-context";
+import { estComptabiliteInterne } from "@/lib/comptabilite-interne";
 import { MandatDuClient } from "@/components/malica/honoraires-de-la-comptabilite";
 import { LettreAuConfrere } from "@/components/malica/lettre-au-confrere";
 import { useSuperposition } from "@/hooks/use-superposition";
@@ -126,7 +127,12 @@ function Onglets({
   courant,
   aller,
 }: {
-  onglets: ReadonlyArray<{ id: OngletFiche; titre: string; alerte?: boolean }>;
+  onglets: ReadonlyArray<{
+    id: OngletFiche;
+    titre: string;
+    alerte?: boolean;
+    grise?: string | undefined;
+  }>;
   courant: OngletFiche;
   aller: (o: OngletFiche) => void;
 }) {
@@ -138,9 +144,13 @@ function Onglets({
           type="button"
           role="tab"
           aria-selected={courant === o.id}
-          onClick={() => aller(o.id)}
+          onClick={() => (o.grise ? undefined : aller(o.id))}
+          disabled={o.grise !== undefined}
+          aria-disabled={o.grise !== undefined || undefined}
+          title={o.grise}
           className={cn(
             "-mb-px flex shrink-0 items-center gap-1.5 border-b-2 pb-2.5 text-[13px]",
+            o.grise !== undefined && "cursor-not-allowed opacity-50",
             courant === o.id
               ? "border-foreground font-semibold text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground",
@@ -418,6 +428,9 @@ export function FicheClient({
   const notes = useNotesDHonoraires();
   const onglet: OngletFiche =
     ongletChoisi === "factures" && !notes.ouvertes ? "societe" : ongletChoisi;
+  // La comptabilité interne ne tient ni honoraires ni abonnements : ces onglets
+  // restent visibles, grisés, avec la raison (point 2 de la décision du 12 novembre).
+  const greyeExterne = estComptabiliteInterne(org) ? t("cab.cli.grise.externe") : undefined;
 
   const fiche = useQuery({
     queryKey: ["fiche", client.tenantId],
@@ -468,19 +481,28 @@ export function FicheClient({
             alerte: fiche.isSuccess && !ficheComplete(fiche.data),
           },
           { id: "acces", titre: t("cab.cli.onglet.acces"), alerte: !etat?.dirigeantPresent },
-          { id: "mandat", titre: t("cab.cli.onglet.mandat"), alerte: !mandat },
+          { id: "mandat", titre: t("cab.cli.onglet.mandat"), alerte: !mandat, grise: greyeExterne },
           {
             id: "abo",
             titre: t("cab.cli.onglet.abo"),
             alerte: !etat?.accesStatut && !parLaLicence,
+            grise: greyeExterne,
           },
           ...(notes.ouvertes
-            ? [{ id: "factures" as const, titre: t("cab.cli.onglet.factures") }]
+            ? [
+                {
+                  id: "factures" as const,
+                  titre: t("cab.cli.onglet.factures"),
+                  grise: greyeExterne,
+                },
+              ]
             : []),
         ]}
       />
       <div className="flex-1 overflow-y-auto px-6 py-5">
-        {onglet === "societe" ? (
+        {greyeExterne && onglet !== "societe" && onglet !== "acces" ? (
+          <p className="text-[13px] text-muted-foreground">{t("cab.cli.grise.externe")}</p>
+        ) : onglet === "societe" ? (
           <OngletSociete
             client={client}
             etat={etat}
