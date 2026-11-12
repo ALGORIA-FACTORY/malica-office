@@ -18,7 +18,14 @@
  * Rien ici ne décide de comptabilité : la coquille situe, elle ne juge pas.
  */
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  retainSearchParams,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   Bell,
   BookOpen,
@@ -94,6 +101,9 @@ export const Route = createFileRoute("/_authenticated/cabinet")({
   // l'a listée parmi les sociétés affectées (voir `CabinetLayout`).
   validateSearch: (s: Record<string, unknown>): { societe?: string } =>
     typeof s["societe"] === "string" ? { societe: s["societe"] } : {},
+  // Chaque lien du cabinet garde la société choisie : sans cela, changer de page
+  // ramène silencieusement à la première société (revue Codex de #372).
+  search: { middlewares: [retainSearchParams(["societe"])] },
   component: CabinetLayout,
 });
 
