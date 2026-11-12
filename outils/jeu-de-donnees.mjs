@@ -36,7 +36,7 @@
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { creerEpreuve } from "./epreuves/socle.mjs";
+import { creerEpreuve, reglerLesNotesDHonoraires } from "./epreuves/socle.mjs";
 
 const e = creerEpreuve("le jeu de données", process.argv[2]);
 
@@ -1312,9 +1312,18 @@ for (const [cle, m] of Object.entries(MANDATS)) {
     );
 }
 
+// Les notes d'honoraires sont livrées éteintes (12 novembre 2026) : le jeu les
+// allume par la tour, comme un opérateur. Là où la base n'est pas à portée (le
+// staging), elles restent éteintes et le jeu s'arrête aux mandats.
+const notesAllumees = await reglerLesNotesDHonoraires(e.BASE, true);
+if (!notesAllumees)
+  e.sansObjet(
+    "les notes d'honoraires du jeu",
+    "elles sont éteintes à la tour, et ce poste ne peut pas les allumer",
+  );
 const periode = moisPrecedent();
 const FACTURES = {};
-for (const cle of ["sotumag", "medina"]) {
+for (const cle of notesAllumees ? ["sotumag", "medina"] : []) {
   const pme = PMES[cle];
   if (!pme.id) continue;
   const existantes = await rpc("honoraires", "factures", [cabinet.id, { clientTenantId: pme.id }]);

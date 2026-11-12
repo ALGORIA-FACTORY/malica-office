@@ -12,7 +12,7 @@
  * Pas d'export PDF : aucun moteur ne le produit encore, donc aucun bouton.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
@@ -21,6 +21,7 @@ import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant } from "@/lib/lisible";
+import { useNotesDHonoraires } from "@/lib/notes-d-honoraires";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -56,8 +57,23 @@ export const Route = createFileRoute("/_authenticated/cabinet/facture/$factureId
    * suivante, boutons disparus — audit du 27 octobre 2026).
    */
   remountDeps: ({ params }) => params,
-  component: CabinetFacture,
+  component: LaFactureSiLesNotesSontAllumees,
 });
+
+/**
+ * Les notes d'honoraires s'allument à la tour (éteintes le 12 novembre 2026).
+ * Éteintes, cette adresse ne montre rien : elle ramène à la page Clients. La
+ * note, elle, reste en base, avec son numéro.
+ */
+function LaFactureSiLesNotesSontAllumees() {
+  const { t } = useI18n();
+  const notes = useNotesDHonoraires();
+  if (notes.chargement) {
+    return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
+  }
+  if (!notes.ouvertes) return <Navigate to="/cabinet/clients" replace />;
+  return <CabinetFacture />;
+}
 
 const OU = "routes/_authenticated/cabinet.facture";
 const STATUTS: Record<string, MessageKey> = {
