@@ -262,8 +262,7 @@ describe("balance / base sans TVA", () => {
     expect(base?.tax_code).toBe("EXPORT");
   });
 
-  // Recette du 11 novembre 2026 : la ligne de charge exportait un code de taxe vide.
-  it("une base avec TVA porte aussi son code, quand la pièce n'en a qu'un", () => {
+  it("une base avec TVA ne change pas : son code reste sur la ligne de TVA", () => {
     const p = computePivot({
       extract: factureVenteSimple(),
       source_item_id: null,
@@ -273,9 +272,7 @@ describe("balance / base sans TVA", () => {
       tolerances: TOLERANCES,
     });
     const base = p.lines.find((l) => l.account_code === MAP_VENTE.charge_or_product_account);
-    const tva = p.lines.find((l) => l.account_code !== base?.account_code && l.tax_code);
-    expect(base?.tax_code).toBe(tva?.tax_code);
-    expect(base?.tax_code).toBeTruthy();
+    expect(base?.tax_code).toBeUndefined();
   });
 });
 
