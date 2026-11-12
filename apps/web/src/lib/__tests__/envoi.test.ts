@@ -13,7 +13,7 @@ import { resteAEnvoyer } from "@malica/socle/circuit";
 import type { Droit, Visibility } from "@malica/socle/ports/repositories";
 import type { CircuitInterne } from "@malica/socle/statut-d-envoi";
 
-import { fusionnerLEnvoi, pieceSuivanteATransmettre } from "../envoi";
+import { compteCommeTransmise, fusionnerLEnvoi, pieceSuivanteATransmettre } from "../envoi";
 
 const p = (
   id: string,
@@ -94,5 +94,19 @@ describe("réessayer une pièce restée", () => {
       restees: [{ id: "b", refus: "Licence impayée" }],
     });
     expect(apres.restees).toEqual([{ id: "b", refus: "Licence impayée" }]);
+  });
+});
+
+describe("ce qui compte comme transmis à la comptabilité", () => {
+  it("compte la facture transmise, pas le document joint non lu qui la suit", () => {
+    const facture = { vis: "partage" as const, status: "lue", jointe: false };
+    const bonDeLivraison = { vis: "partage" as const, status: "capturee", jointe: true };
+    expect([facture, bonDeLivraison].filter(compteCommeTransmise)).toEqual([facture]);
+  });
+
+  it("compte un avoir lu, même joint à sa facture, et jamais une pièce retournée", () => {
+    expect(compteCommeTransmise({ vis: "partage", status: "lue", jointe: true })).toBe(true);
+    expect(compteCommeTransmise({ vis: "partage", status: "retournee" })).toBe(false);
+    expect(compteCommeTransmise({ vis: "entite", status: "lue" })).toBe(false);
   });
 });

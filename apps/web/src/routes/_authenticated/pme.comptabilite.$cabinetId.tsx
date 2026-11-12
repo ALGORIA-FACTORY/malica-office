@@ -23,6 +23,7 @@ import { useFichesDesSocietes } from "@/hooks/use-fiches-des-societes";
 import { usePiecesLuesDesSocietes } from "@/hooks/use-pieces-lues";
 import { useRevenir } from "@/hooks/use-revenir";
 import { useI18n } from "@/i18n";
+import { compteCommeTransmise } from "@/lib/envoi";
 import { jourEtMois } from "@/lib/lisible";
 
 export const Route = createFileRoute("/_authenticated/pme/comptabilite/$cabinetId")({
@@ -59,7 +60,7 @@ function DossierDeLaComptabilite() {
   );
   const aRepondre = pieces.filter(({ p }) => p.status === "retournee");
   const transmis = pieces
-    .filter(({ p }) => p.vis === "partage" && p.status !== "retournee")
+    .filter(({ p }) => compteCommeTransmise(p))
     .sort((a, b) =>
       (b.p.transmiseLe ?? b.p.createdAt).localeCompare(a.p.transmiseLe ?? a.p.createdAt),
     );

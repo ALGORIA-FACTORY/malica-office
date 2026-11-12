@@ -23,7 +23,7 @@ import {
 } from "../bibliotheque.ts";
 
 import { retenirPourLaFile } from "./fenetre-de-la-file.ts";
-import { COLONNES_DU_SUIVI, statutAuCabinet, versSuivi } from "./suivi.ts";
+import { COLONNES_DU_SUIVI, EST_JOINTE, statutAuCabinet, versSuivi } from "./suivi.ts";
 
 /** Chaque statut compte, même à zéro : un client sans pièce doit s'afficher. */
 const COMPTES_VIDES = {
@@ -58,11 +58,14 @@ const PIECES_DU_CABINET = `pieces_v p
 /**
  * Ce qui a été TRANSMIS au cabinet : une pièce « chez vous » n'y paraît pas,
  * même pour un compte membre des deux côtés ; un reçu ou un justificatif
- * voyage avec sa pièce (« Documents liés ») ; la photo qui en remplace une
- * autre a pris sa place ; une pièce que le client a retirée n'attend plus rien.
+ * voyage avec sa pièce (« Documents liés ») ; un document joint NON LU aussi —
+ * un bon de livraison n'est pas une pièce à lire (recette du 11 novembre
+ * 2026), alors qu'un avoir lu, même joint, attend son écriture ; la photo qui en remplace une autre a pris sa place ; une pièce que
+ * le client a retirée n'attend plus rien.
  */
 const TRANSMISE = `p.vis = 'partage'
           and not app.piece_accompagne(p.id)
+          and not (p.status = 'capturee' and ${EST_JOINTE})
           and p.remplacee_par is null and p.archivee_le is null`;
 
 /**

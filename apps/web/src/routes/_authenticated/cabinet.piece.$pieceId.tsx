@@ -782,7 +782,8 @@ function CabinetReviewDeLaPiece() {
             {
               id: "dossier-joints",
               cle: "cab.review.contenu.joints",
-              n: (joints.data ?? []).length,
+              // Ce que la PME a joint compte aussi : la pastille mène à la même liste.
+              n: tousLesJoints.length,
             },
           ]
             .filter((c) => c.n > 0)
