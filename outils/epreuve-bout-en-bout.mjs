@@ -557,11 +557,18 @@ if (process.argv.includes("--modeles")) {
     });
     const corps = r.ok ? await r.json() : { erreur: (await r.text()).slice(0, 200) };
     const reponse = corps.resultat ?? corps;
-    const preuve = `POST ${route} · modèle ${reponse.model ?? "?"} · jetons ${reponse.tokensIn ?? "?"} → ${reponse.tokensOut ?? "?"}`;
+    // Le navigateur ne reçoit jamais la mécanique (modèle, jetons, durée) : elle
+    // reste au journal des agents (lot C, 10 novembre 2026). L'épreuve exige donc
+    // une vraie réponse, et que rien de la mécanique ne sorte.
+    const texte = typeof reponse.answer === "string" ? reponse.answer.trim() : "";
+    const muette =
+      !reponse.model && reponse.tokensIn == null && reponse.tokensOut == null && !reponse.runId;
     verdict(
-      "Malica répond à une question",
-      r.ok && Boolean(reponse.model) && (reponse.tokensIn ?? 0) > 0,
-      r.ok ? preuve : `${r.status} ${corps.erreur ?? ""}`,
+      "Malica répond à une question, sans livrer sa mécanique",
+      r.ok && texte.length > 0 && muette,
+      r.ok
+        ? `POST ${route} · ${texte.length} caractère(s) · mécanique ${muette ? "absente" : "PRÉSENTE"}`
+        : `${r.status} ${corps.erreur ?? ""}`,
     );
   }
 }
