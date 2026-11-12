@@ -1,6 +1,6 @@
 /**
  * La montée reste ouverte pendant l'année (décision du 12 novembre 2026,
- * 7.5 ; recette du 11 novembre, 3.6 ; migration 20261214110000).
+ * 7.5 ; recette du 11 novembre, 3.6 ; migration 20261218110000).
  *
  * Avant le début de l'année, l'engagement passe sur la nouvelle offre au prix
  * annuel correspondant ; pendant l'année, l'écart se règle pour les jours qui

@@ -1,7 +1,7 @@
 /**
  * La comptabilité ne « monte » pas vers l'offre que le client a déjà prise à
  * sa charge (recette du 11 novembre 2026, point 1.2 ; migration
- * 20261214120000). Sous l'identité de l'expert, par la vraie porte.
+ * 20261218120000). Sous l'identité de l'expert, par la vraie porte.
  *
  *   node --experimental-strip-types --import ./src/garde-base-de-test.ts \
  *     --test src/facturation/la-comptabilite-voit-la-montee-du-client.test.ts

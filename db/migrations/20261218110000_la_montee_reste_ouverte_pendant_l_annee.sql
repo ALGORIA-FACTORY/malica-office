@@ -928,7 +928,7 @@ begin
 end
 $function$;
 
--- Repris de 20261214090000 ; l'acompte d'une montée de l'année porte son écart annuel.
+-- Repris de 20261218090000 ; l'acompte d'une montée de l'année porte son écart annuel.
 create or replace function public.paiement_montee_preparer(p_tenant uuid DEFAULT NULL::uuid)
  RETURNS jsonb
  LANGUAGE plpgsql

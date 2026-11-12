@@ -1,6 +1,6 @@
 /**
  * Une descente n'efface pas une montée (recette du 11 novembre 2026, point
- * 1.4, migration 20261214090000).
+ * 1.4, migration 20261218090000).
  *
  * Solo → Premium, puis Premium → Team avant d'avoir réglé : la somme à régler
  * disparaissait. La règle : une montée engagée par la PME reste due jusqu'à

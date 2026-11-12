@@ -901,7 +901,7 @@ dirigeant** : quand et où monter le pilote, puis la production.
 
 Le prompt admettait deux règles : rendre à la PME la part déjà payée (avoir ou imputation), ou ne facturer
 la comptabilité qu'à partir de la fin de la période déjà payée. **Tranché par défaut : la seconde**
-(migration `20261214090000`). Elle n'émet aucun avoir et ne crée aucune créance de la PME sur ALGORIA : la
+(migration `20261218090000`). Elle n'émet aucun avoir et ne crée aucune créance de la PME sur ALGORIA : la
 PME garde ce qu'elle a payé, la comptabilité prend la suite à l'échéance de la PME (fin du mois, périmètre
 « PME » coupé ; fin de la période payée d'avance, périmètre ouvert). **À confirmer par le dirigeant.**
 
@@ -920,5 +920,5 @@ fiscal, comme E : aucun avoir à la descente.
 - Périmètre « PME » ouvert et montée AVANT le début de l'année : les jours qui restent avant l'année partent
   par le complément du jour (une facture), l'écart de l'année par son acompte : deux montants à régler au
   lieu d'un. Accepté tel quel ; à revoir à l'ouverture du périmètre.
-- Le droit de timbre : l'acompte de l'année le porte (1.8, `20261214100000`) ; l'acompte d'une montée de
+- Le droit de timbre : l'acompte de l'année le porte (1.8, `20261218100000`) ; l'acompte d'une montée de
   l'année non, il s'impute sur une facture qui porte le sien.

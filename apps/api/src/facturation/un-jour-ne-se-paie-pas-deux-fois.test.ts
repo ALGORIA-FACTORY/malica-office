@@ -1,6 +1,6 @@
 /**
  * Un jour ne se paie pas deux fois (recette du 11 novembre 2026, point 1.1,
- * migration 20261214090000).
+ * migration 20261218090000).
  *
  * La règle : ce que la PME a engagé d'avance reste à elle jusqu'à son
  * échéance ; la comptabilité qui reprend, ou qui monte par-dessus, n'est

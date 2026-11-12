@@ -1,6 +1,6 @@
 -- ======================================================================
 --  Une montée remplacée pendant l'année ne cache pas son écart (relecture de
---  #365, sur 20261214110000).
+--  #365, sur 20261218110000).
 --
 --  Abonné à l'année, Solo → Team puis Team → Premium avant d'avoir réglé la
 --  première montée : son acompte passait « remplacé » (20261117110000) et le
@@ -12,7 +12,7 @@
 --  facturées. La facture porte une ligne par montée ; l'acompte s'y impute
 --  en entier. Aucun montant compté deux fois, aucun perdu.
 --
---  Repris de sa définition en vigueur (20261214110000) ; seule la somme change.
+--  Repris de sa définition en vigueur (20261218110000) ; seule la somme change.
 --  REJEU (R11) : aucune donnée de référence écrite.
 -- ======================================================================
 
