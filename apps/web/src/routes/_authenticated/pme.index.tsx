@@ -42,6 +42,7 @@ import { COMMERCE } from "@/capabilities/coque";
 import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
 import { jourOuInstant, montant, montantSigne } from "@/lib/lisible";
+import { nomPourSaluer } from "@/lib/nom-de-la-personne";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
@@ -295,7 +296,9 @@ function PmeHome() {
    * 19 octobre 2026 : `identity.profiles.prenom`). Sans prénom, le salut nu —
    * jamais un prénom deviné depuis l'adresse.
    */
-  const prenom = profil.data?.prenom ?? null;
+  // Le prénom écrit dans les Réglages ; à défaut, le nom donné à l'inscription
+  // (« Bonsoir. » sans nom, recette du 11 novembre 2026, 4.4).
+  const prenom = nomPourSaluer(profil.data);
   const salut = prenom
     ? t(
         heure < 12

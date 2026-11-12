@@ -70,7 +70,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const collab = {
   async members(db: Requete, cabinetTenantId: string) {
     const { rows } = await db.query(
-      `select tenant_id, user_id, role, email from cabinet_members_v where tenant_id = $1`,
+      // Le nom que la personne a donné (inscription, ou Réglages) : l'équipe
+      // le montre au lieu de l'adresse (recette du 11 novembre 2026, 4.4).
+      // La RLS des profils ouvre ceux des co-membres.
+      `select m.tenant_id, m.user_id, m.role, m.email,
+              coalesce(nullif(btrim(concat_ws(' ', p.prenom, p.nom)), ''),
+                       nullif(btrim(p.display_name), '')) as nom
+         from cabinet_members_v m
+         left join identity.profiles p on p.user_id = m.user_id
+        where m.tenant_id = $1`,
       [cabinetTenantId],
     );
     return (rows as Record<string, unknown>[]).map((m) => ({
@@ -78,6 +86,7 @@ export const collab = {
       userId: m["user_id"] as string,
       role: texte(m["role"]),
       email: texte(m["email"]),
+      nom: (m["nom"] as string | null) ?? null,
     }));
   },
 

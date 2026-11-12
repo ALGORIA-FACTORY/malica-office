@@ -186,7 +186,8 @@ function CabinetClients() {
   }, [actifs, etats.data, mandats.data, fiches]);
 
   const collabDe = useMemo(() => {
-    const parUser = new Map((membres.data ?? []).map((m) => [m.userId, m.email]));
+    // Le collaborateur se nomme ; son adresse seulement à défaut (4.4).
+    const parUser = new Map((membres.data ?? []).map((m) => [m.userId, m.nom ?? m.email]));
     const carte = new Map<string, string>();
     for (const a of (affectations.data ?? []).filter((x) => x.active)) {
       const email = parUser.get(a.collaboratorId);

@@ -286,7 +286,8 @@ function CabinetEtEquipe() {
   });
 
   const extensions = (plan.data ?? []).filter((c) => c.origine === "cabinet").length;
-  const emails = (membres.data ?? []).map((m) => m.email);
+  // L'équipe se nomme : le nom donné, l'adresse seulement à défaut (4.4).
+  const emails = (membres.data ?? []).map((m) => m.nom ?? m.email);
 
   if (reglages.isPending) {
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;

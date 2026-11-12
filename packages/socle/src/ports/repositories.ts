@@ -2955,6 +2955,8 @@ export interface CabinetMember {
   userId: string;
   role: string;
   email: string;
+  /** Le nom que la personne a donné ; `null` sans nom, et l'écran montre l'adresse. */
+  nom: string | null;
 }
 
 /** Affectation d'un dossier client à un collaborateur. Rien ne s'efface (R7). */
