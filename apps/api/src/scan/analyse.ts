@@ -587,6 +587,7 @@ export function jugerLaLecture(
     numero: refs["numero"] ?? null,
     date: l.date,
     montants: normalisation,
+    tvaImprimeeParTaux: (l.payload.lines ?? []).map((_, i) => l.imprime(`lines[${i}].vat_amount`)),
     confianceParChamp: l.confianceParChamp,
     reception: { doublonDe: l.doublonDe, recueLe: l.recueLe },
     // Le sens CONFIRMÉ par la personne (20 octobre 2026), qu'il redise la
@@ -656,7 +657,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-11-08.6a78860dc6ff";
+export const REGLES_DU_JUGEMENT = "2026-11-12.6cd32273b3b3";
 
 /*
  * Les référentiels de MOTS que le jugement compare au texte imprimé, et que la

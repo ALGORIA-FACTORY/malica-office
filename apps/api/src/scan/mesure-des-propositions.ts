@@ -135,8 +135,11 @@ interface Facture {
   date?: string | null;
   recueLe?: string;
   currency?: string | null;
-  /** Une ligne par taux : le code lu, et la base imprimée sur la ligne (null : non citée). */
-  lignes: Array<{ code: string | null; ht?: string | null }>;
+  /**
+   * Une ligne par taux : le code lu, la base imprimée sur la ligne et sa TVA
+   * (null ou absente : non citée).
+   */
+  lignes: Array<{ code: string | null; ht?: string | null; tva?: string | null }>;
   /** Les droits que la lecture nomme : leur code, et leur montant imprimé (null : non cité). */
   droits?: Array<{ code: string; montant: string | null }>;
   ht?: string | null;
@@ -164,7 +167,10 @@ function facture(f: Facture): LectureAJuger {
   citer("references.matricule_fiscal", emetteur.identifiantFiscal);
   citer("references.matricule_fiscal_client", client.identifiantFiscal);
   if (f.date !== null) citer("document_date", f.date ?? "2026-09-10");
-  f.lignes.forEach((l, i) => citer(`lines[${i}].base_ht`, l.ht));
+  f.lignes.forEach((l, i) => {
+    citer(`lines[${i}].base_ht`, l.ht);
+    citer(`lines[${i}].vat_amount`, l.tva);
+  });
   (f.droits ?? []).forEach((d, i) => citer(`other_charges[${i}].amount`, d.montant));
   citer("totals.base_ht", f.ht);
   citer("totals.vat", f.tva);
@@ -354,6 +360,21 @@ export const CAS_DE_MESURE: CasDeMesure[] = [
     nom: "achat à deux taux et le timbre",
     provenance: "facture du 11 octobre 2026 (`un-total-illisible-n-efface-pas-la-facture.test.ts`)",
     lecture: facture(DEUX),
+    attendu: DEUX_TAUX,
+  },
+  {
+    // La mention « Montant de la TVA » est imprimée taux par taux : elle
+    // n'est pas absente (recette du 11 novembre 2026).
+    nom: "deux taux, une TVA imprimée par taux et aucun total de TVA",
+    provenance: "recette du 11 novembre 2026 (`ce-que-la-recette-du-11-novembre-a-lu.test.ts`)",
+    lecture: facture({
+      ...DEUX,
+      lignes: [
+        { code: "TVA07", ht: "864,700", tva: "60,529" },
+        { code: "TVA19", ht: "2 696,600", tva: "512,354" },
+      ],
+      tva: null,
+    }),
     attendu: DEUX_TAUX,
   },
   {

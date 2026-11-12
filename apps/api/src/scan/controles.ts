@@ -75,6 +75,14 @@ export interface PieceAControler {
   /** Date de la pièce, AAAA-MM-JJ, ou null si illisible. */
   date: string | null;
   montants: ResultatNormalisation;
+  /**
+   * La TVA imprimée sur chaque ligne par taux, telle que la pièce la porte
+   * (texte cité, `null` pour une ligne dont la TVA ne se lit pas). Absente :
+   * aucune ligne par taux lue. Une facture à plusieurs taux imprime souvent
+   * une TVA par taux et aucun total : sa mention « Montant de la TVA » est
+   * là (recette du 11 novembre 2026).
+   */
+  tvaImprimeeParTaux?: ReadonlyArray<string | null>;
   confianceParChamp: Record<string, number>;
   reception: { doublonDe: string | null; recueLe: string };
   /**
@@ -435,7 +443,13 @@ function mentions(p: PieceAControler, ctx: ContexteControle): ResultatControle {
      * illisible » — un message vérifiable, et faux (5 octobre 2026).
      */
     BASE_HT: () => p.montants.imprime.bases.some((ht) => ht !== null),
-    MONTANT_TVA: () => p.montants.imprime.tva !== null,
+    // Un total de TVA imprimé, ou une TVA imprimée pour CHAQUE taux : lue
+    // sur la pièce, jamais la somme que le Socle en déduit.
+    MONTANT_TVA: () =>
+      p.montants.imprime.tva !== null ||
+      (p.tvaImprimeeParTaux !== undefined &&
+        p.tvaImprimeeParTaux.length > 0 &&
+        p.tvaImprimeeParTaux.every((tva) => tva !== null && tva.trim() !== "")),
     TOTAL_TTC: () => p.montants.imprime.ttc !== null,
   };
   const manquantes: string[] = [];

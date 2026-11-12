@@ -24,6 +24,13 @@ RUN npm ci --omit=dev --workspace @malica/api --workspace @malica/socle --worksp
 
 FROM node:22-bookworm-slim
 ENV NODE_ENV=production
+# Une police arabe, la seule police système de l'image : l'impression PDF
+# écrit ses mentions en arabe quand la machine sait les dessiner, sinon en
+# français (`apps/api/src/impression-pdf.ts`). Amiri : 2,5 Mo installés, là où
+# `fonts-noto-core` en pèse des dizaines.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends fonts-hosny-amiri \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /srv
 COPY --from=dependances /srv/node_modules ./node_modules
 COPY package.json ./

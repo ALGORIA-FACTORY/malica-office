@@ -331,6 +331,7 @@ describe(
         aVerifier:
           confiance?.statut === "conforme" ? [] : (preuves.aRelire ?? preuves.champs ?? []),
         verdict: jugement.verdict,
+        mentions: jugement.controles.find((c) => c.code === "mentions_obligatoires"),
       };
     }
 
@@ -378,6 +379,11 @@ describe(
       const r = await lire(DEUX_TAUX, { lecteur: "pdf-text", fournisseurConnu: true });
       assert.equal(r.sansIa, true);
       assert.deepEqual(r.totaux, { base_ht: "958.000", vat: "146.260", ttc: "1105.260" });
+    });
+
+    it("6.1 — deux taux, une TVA imprimée par taux et aucun total : la mention « Montant de la TVA » est là", async () => {
+      const r = await lire(DEUX_TAUX, { lecteur: "pdf-text", fournisseurConnu: true });
+      assert.equal(r.mentions?.statut, "conforme", r.mentions?.motif);
     });
 
     it("6.1 — deux taux sur une photo, désignés par un modèle puis prouvés : 146,260", async () => {
