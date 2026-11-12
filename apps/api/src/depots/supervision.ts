@@ -572,6 +572,24 @@ export const supervision = {
     }));
   },
 
+  /**
+   * Combien de pièces de ce dossier ont été retournées au client entre deux
+   * jours (inclus), selon le journal d'audit — le fait, pas l'état du moment.
+   * Une pièce retournée puis renvoyée le même jour compte : c'est ce que le PV
+   * affirmait faux (« aucune pièce retournée », recette du 11 novembre 2026).
+   * Sous RLS : le cabinet ne lit que ses mandats.
+   */
+  async piecesRetourneesEntre(db: Requete, tenantId: string, du: string, au: string) {
+    const { rows } = await db.query<{ n: number }>(
+      `select count(distinct object_id)::int as n
+         from event_log_v
+        where tenant_id = $1 and action = 'piece.retournee'
+          and at >= $2::date and at < $3::date + 1`,
+      [tenantId, du, au],
+    );
+    return rows[0]?.n ?? 0;
+  },
+
   async auditForPiece(db: Requete, pieceId: string) {
     // Le filtre est passé à la base. L'adaptateur lisait 200 lignes puis les
     // filtrait en JavaScript : il pouvait manquer des événements plus anciens

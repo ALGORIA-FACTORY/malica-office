@@ -2435,6 +2435,8 @@ export interface SupervisionRepository {
   ): Promise<
     Array<{ id: string; action: string; at: string; objet: string | null; objetId: string | null }>
   >;
+  /** Les pièces de ce dossier retournées au client entre deux jours inclus, selon le journal. */
+  piecesRetourneesEntre(tenantId: string, du: string, au: string): Promise<number>;
   /** Organisations cabinet dont l'utilisateur est membre. */
   listMyCabinets(): Promise<Organization[]>;
   listClients(cabinetTenantId: string): Promise<ClientSummary[]>;
