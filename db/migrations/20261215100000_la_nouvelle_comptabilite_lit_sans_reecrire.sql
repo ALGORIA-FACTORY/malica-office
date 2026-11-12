@@ -41,10 +41,16 @@
 begin;
 
 -- --- 1. Le motif gouverné de la contre-passation du confrère ----------------------------
+-- Ce n'est pas un motif de RETOUR : la pièce ne part pas chez le client. Il a
+-- son usage, `contre_passation`, et ne paraît dans aucune liste de retour.
+alter table ref.rejet_motifs drop constraint if exists rejet_motifs_usage_check;
+alter table ref.rejet_motifs add constraint rejet_motifs_usage_check
+  check (usage in ('retour', 'delettrage', 'contre_passation'));
+
 insert into ref.rejet_motifs (code, severity, requires_note, sort_order, active, valid_from,
-                              geste, preuve)
+                              geste, preuve, usage)
 select 'contre_passation_du_confrere', 'avertissement', false, 120, false, date '2026-12-15',
-       'repondre', 'aucune'
+       'repondre', 'aucune', 'contre_passation'
  where not exists (select 1 from ref.rejet_motifs where code = 'contre_passation_du_confrere');
 
 insert into ref.labels (ns, key, locale, value) values

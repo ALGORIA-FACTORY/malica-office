@@ -65,6 +65,15 @@ create policy mandats_clos_sel on identity.mandats_clos for select to authentica
          or pme_org_id in (select app.member_orgs())
          or (select app.is_platform()));
 
+-- Le relecteur de nuit (compte de service) n'y écrit ni n'y lit : la fin
+-- d'un mandat n'est pas une pièce (`20261118100000_le_relecteur_de_nuit`).
+drop trigger if exists service_hors_perimetre on identity.mandats_clos;
+create trigger service_hors_perimetre before insert or update or delete on identity.mandats_clos
+  for each statement execute function app.service_hors_perimetre();
+drop policy if exists service_hors_perimetre on identity.mandats_clos;
+create policy service_hors_perimetre on identity.mandats_clos as restrictive for select
+  to authenticated using ((select app.service()) is null);
+
 drop trigger if exists mandats_clos_no_upd on identity.mandats_clos;
 create trigger mandats_clos_no_upd before update or delete on identity.mandats_clos
   for each row execute function app.deny_mutation();
