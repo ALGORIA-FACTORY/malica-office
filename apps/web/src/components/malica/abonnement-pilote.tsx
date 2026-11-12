@@ -938,6 +938,15 @@ export function ARegler() {
     (p) => p.etat !== "paye" && p.etat !== "remplace" && p.payeur_tenant_id === null,
   );
   if (ouverts.length === 0 && !retour) return null;
+  // Tout est réglé : le verdict du prestataire seul, sans « 0 opération en
+  // attente » (recette du 11 novembre 2026, 3.5).
+  if (ouverts.length === 0) {
+    return (
+      <p className="t-body" aria-live="polite" data-a-regler>
+        {retour}
+      </p>
+    );
+  }
   /*
    * UNE carte, un total (maquette du 1er novembre 2026). Le total est la
    * somme décimale du Socle (`sommeDecimale`), et seulement dans une seule
@@ -972,7 +981,10 @@ export function ARegler() {
           <span className="mt">
             {montant(p.montant_ttc, locale)} {p.devise}
           </span>
-          {p.etat === "refuse" ? <p className="warn">{t("pme.reglages.paiement.refuse")}</p> : null}
+          {/* Le verdict qu'on vient de recevoir se dit une fois, sous la carte. */}
+          {p.etat === "refuse" && !(retour && revenu === p.paiement_id) ? (
+            <p className="warn">{t("pme.reglages.paiement.refuse")}</p>
+          ) : null}
           {simulateur && revenu === p.paiement_id ? (
             <div className="acts">
               <span className="t-body">{t("pme.reglages.paiement.simulateur")}</span>
