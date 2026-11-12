@@ -15,6 +15,7 @@ import { CIBLE_COQUE } from "@/capabilities/coque";
 import { FichierNonPdf, files, type PickedFile } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
+import { useAbonnementSuitLesAlertes } from "@/hooks/use-relire-l-abonnement";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { useTransitionDEcran } from "@/components/malica/mouvement";
 import {
@@ -648,6 +649,7 @@ function PmeLayout() {
     enabled: idsDesSocietes.length > 0,
     refetchInterval: 60_000,
   });
+  useAbonnementSuitLesAlertes(alertes.data);
   // La pastille compte ce qui attend un geste (planche 2, option A).
   const nonLues = alertes.data
     ? alertes.data.filter((n) => attendUnGeste(n) && seMontreIci(n.kind, CIBLE_COQUE))

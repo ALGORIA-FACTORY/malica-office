@@ -64,7 +64,7 @@ describe("les prestataires de paiement", () => {
   it("une seule adresse de retour, et le simulateur y revient marqué", async () => {
     assert.equal(
       adresseDeRetour("https://staging.exemple.tn", "societe", "p-1"),
-      "https://staging.exemple.tn/pme/reglages?paiement=p-1",
+      "https://staging.exemple.tn/pme/reglages?page=abonnement&paiement=p-1",
     );
     assert.equal(
       adresseDeRetour("https://staging.exemple.tn", "cabinet", "p-1"),
@@ -88,7 +88,10 @@ describe("les prestataires de paiement", () => {
       libelle: "x",
       retour: adresseDeRetour(sim!.urlPublique, "societe", "p-1"),
     });
-    assert.equal(lien, "https://staging.exemple.tn/pme/reglages?paiement=p-1&simulateur=1");
+    assert.equal(
+      lien,
+      "https://staging.exemple.tn/pme/reglages?page=abonnement&paiement=p-1&simulateur=1",
+    );
   });
 
   it("la tour choisit ; un adaptateur sans ses secrets reste fermé, et les secrets ne viennent que du serveur", () => {

@@ -2461,6 +2461,8 @@ export const ar: Dict = {
   "refus.licence.a_un_proprietaire": "لا تُنقل الرخصة إلا إلى مالك للشركة.",
   "refus.place.offre_pleine": "كلّ مقاعد هذه الباقة مشغولة ({places} في المجموع).",
   "refus.abonnement.deja_propose": "اشتراك مقترح أو مُسند مسبقًا لهذا الملف من محاسبة.",
+  "refus.abonnement.deja_l_offre_du_client":
+    "لدى العميل هذا العرض مسبقًا على نفقته: لا شيء للترقية.",
   "refus.abonnement.plus_en_attente": "هذا الاقتراح لم يعد معلّقًا.",
   "refus.forfait.periode_figee": "فترة الباقة لا يُعاد تحريرها: يُسجَّل إغلاقها فقط.",
   "refus.forfait.periode_ouverte": "فترة باقة لا تزال سارية على هذه الرخصة: أغلقها قبل فتح أخرى.",
@@ -4986,6 +4988,8 @@ export const ar: Dict = {
   "cab.cli.abo.propose.detail": "على المسيّر القبول؛ لا فوترة قبل ذلك.",
   "cab.cli.abo.attente.detail": "في انتظار المسيّر · لا فوترة. يبدأ العرض عند انضمامه.",
   "cab.cli.abo.paye": "{offre} · تدفعونه أنتم",
+  "cab.cli.abo.paye.monteeParLeClient":
+    "{offre} · تدفعونه أنتم · ترقّى العميل إلى {client} على نفقته",
   "cab.cli.abo.paye.detail": "في فاتورة Malica حسب الأيام.",
   "cab.cli.abo.descente.attente": "تخفيض إلى {offre} في انتظار موافقة المسيّر",
   "cab.cli.abo.ton.actif": "نشط",
@@ -4997,10 +5001,11 @@ export const ar: Dict = {
   "cab.cli.abo.effet.a_proposer":
     "تُقترح على المسيّر عند انضمامه وتبدأ تلقائياً. لا فوترة قبل ذلك.",
   "cab.cli.abo.effet.attente": "لم ينضمّ المسيّر بعد: العرض ينتظره، لا فوترة.",
+  "cab.cli.abo.effet.reponse": "انضمّ المسيّر: يقبل هذا العرض أو يرفضه. لا شيء يُفوتر قبل ردّه.",
   "cab.cli.abo.effet.montee":
     "ترقية فورية: يُعلَم المسيّر فقط. تصبح فاتورتكم {prix} دون أداءات شهرياً حسب الأيام من اليوم.",
   "cab.cli.abo.effet.descente": "تخفيض: على المسيّر قبوله. لا يتغيّر شيء قبل ردّه.",
-  "cab.cli.abo.effet.actuelle": "هذا عرضه الحالي. أعلى: ترقية؛ أدنى: طلب تخفيض.",
+  "cab.cli.abo.effet.actuelle": "هذا عرضه الحالي: {offre}. أعلى: ترقية؛ أدنى: طلب تخفيض.",
   "cab.cli.abo.effet.couvrir":
     "يدفع بنفسه اليوم. اقترحوا تغطيته: عند قبوله ينتقل الاشتراك إليكم في اليوم نفسه.",
   "cab.cli.abo.regle":

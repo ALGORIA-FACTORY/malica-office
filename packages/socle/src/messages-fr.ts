@@ -2628,6 +2628,8 @@ export const fr = {
   "refus.place.offre_pleine": "Toutes les places de cette offre sont prises ({places} au total).",
   "refus.abonnement.deja_propose":
     "Un abonnement est déjà proposé ou attribué à ce dossier par une comptabilité.",
+  "refus.abonnement.deja_l_offre_du_client":
+    "Le client a déjà cette offre, à sa charge : il n'y a rien à monter.",
   "refus.abonnement.plus_en_attente": "Cette proposition n’est plus en attente.",
   "refus.forfait.periode_figee":
     "Une période de forfait ne se réécrit pas : seule sa fermeture s’inscrit.",
@@ -5413,6 +5415,8 @@ export const fr = {
   "cab.cli.abo.attente.detail":
     "En attente du dirigeant · rien n'est facturé. L'offre démarre à son arrivée.",
   "cab.cli.abo.paye": "{offre} · payé par vous",
+  "cab.cli.abo.paye.monteeParLeClient":
+    "{offre} · payé par vous · le client est monté en {client} à sa charge",
   "cab.cli.abo.paye.detail": "Sur votre facture Malica, au prorata des jours.",
   "cab.cli.abo.descente.attente": "Descente vers {offre} en attente de l'accord du dirigeant",
   "cab.cli.abo.ton.actif": "Actif",
@@ -5425,12 +5429,14 @@ export const fr = {
     "Proposée au dirigeant à son arrivée ; elle démarre alors d'elle-même. Rien n'est facturé avant.",
   "cab.cli.abo.effet.attente":
     "Le dirigeant n'a pas encore rejoint : l'offre l'attend, rien n'est facturé.",
+  "cab.cli.abo.effet.reponse":
+    "Le dirigeant a rejoint : il accepte ou refuse cette proposition. Rien n'est facturé avant sa réponse.",
   "cab.cli.abo.effet.montee":
     "Montée immédiate : le dirigeant est seulement prévenu. Votre facture passe à {prix} HT par mois, au prorata dès aujourd'hui.",
   "cab.cli.abo.effet.descente":
     "Descente : le dirigeant doit l'accepter. Rien ne change tant qu'il n'a pas répondu.",
   "cab.cli.abo.effet.actuelle":
-    "C'est son offre actuelle. Au-dessus, vous montez ; en dessous, vous demandez une descente.",
+    "C'est son offre actuelle : {offre}. Au-dessus, vous montez ; en dessous, vous demandez une descente.",
   "cab.cli.abo.effet.couvrir":
     "Il paie lui-même aujourd'hui. Proposez de le couvrir : il accepte, et l'abonnement passe à votre charge le jour même.",
   "cab.cli.abo.regle":

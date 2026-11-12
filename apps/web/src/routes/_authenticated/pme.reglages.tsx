@@ -15,6 +15,7 @@ import {
 } from "@/components/malica/abonnement-pilote";
 import { useApparence, type Apparence } from "@/components/malica/apparence";
 import { Aide } from "@/components/malica/aide";
+import { AbonnementDeLaComptabilite } from "@/components/malica/abonnement-pilote";
 import { InviterDansMonDossier } from "@/components/malica/inviter-dans-mon-dossier";
 import { usePme } from "@/components/malica/pme-context";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
@@ -32,7 +33,7 @@ import { plier } from "@/lib/mes-societes";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
-import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
+import { nombre as entier, ouverturesDuForfait, utilisateursInclus } from "@/lib/forfait";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -164,6 +165,8 @@ function PmeReglages() {
   const abo = useLAbonnement();
   const f = abo.forfait;
   const verrous = degradation(f, t, catalogue);
+  const societesIncluses =
+    catalogue?.find((o) => o.code === f?.offre)?.organisations_incluses ?? null;
   const bientot = lecturesQuiSAchevent(f);
 
   const apparences: Array<{ cle: Apparence; label: string }> = [
@@ -302,9 +305,7 @@ function PmeReglages() {
                 <b>{t("pme.reglages.sieges")}</b>
                 <span>{t("pme.reglages.abo.siegesOccupes")}</span>
               </span>
-              <span className="v">
-                {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
-              </span>
+              <span className="v">{utilisateurs(f ?? null, locale)}</span>
               <IcChevron />
             </Link>
           </div>
@@ -381,9 +382,7 @@ function PmeReglages() {
               </div>
               <div>
                 <u>{t("pme.reglages.abo.siegesOccupes")}</u>
-                <b>
-                  {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
-                </b>
+                <b>{utilisateurs(f ?? null, locale)}</b>
               </div>
               <div>
                 <u>{t("pme.reglages.abo.siegesMax")}</u>
@@ -483,10 +482,12 @@ function PmeReglages() {
              * titulaire (staging, 3 novembre 2026). Le nombre seul, alors.
              */}
             <span>
-              {[...abo.titulaire.values()].every(Boolean)
+              {/* Les sociétés DE la licence sur celles que son offre comprend
+                  (« 1 sur 2 » en Premium ; recette du 11 novembre, 3.1). */}
+              {[...abo.titulaire.values()].every(Boolean) && societesIncluses !== null
                 ? t("pme.reglages.surTotal", {
-                    n: abo.organisations.length,
-                    total: nombre(f?.organisations, locale),
+                    n: nombre(f?.organisations, locale),
+                    total: nombre(societesIncluses, locale),
                   })
                 : nombre(abo.organisations.length, locale)}
             </span>
@@ -507,43 +508,43 @@ function PmeReglages() {
            * disparaît dans aucun des deux cas.
            */}
           <div className="grp">
-            {verrous.societes.ouvert ? (
-              <Link to="/onboarding" className="inv">
-                <i>
-                  <IcPlus />
-                </i>
-                <span className="bd">
-                  <b>{t("pme.reglages.orgs.ajouter")}</b>
-                  {/* Le prix est lu dans la grille, et dit au web et à la PWA seulement. */}
-                  {prixEnPlus.data && Number(prixEnPlus.data.prix_organisation_sup) > 0 ? (
-                    <span>
-                      {t("pme.reglages.orgs.prix", {
-                        inclus: String(prixEnPlus.data.organisations_incluses),
-                        prix: aLEchelle(prixEnPlus.data.prix_organisation_sup),
-                        devise: pme.currency,
-                      })}
-                    </span>
-                  ) : null}
-                </span>
-              </Link>
-            ) : COMMERCE ? (
-              /*
-               * `data-verrou` est la marque commune des cartes verrouillées : elle
-               * les rend repérables d'un écran à l'autre, et c'est elle qu'une
-               * épreuve peut interroger pour vérifier qu'aucune n'a été masquée.
-               */
-              <div className="inv off" data-verrou={verrous.societes.offre}>
-                <i>
-                  <IcCadenas />
-                </i>
-                <span className="bd">
-                  <b>{t("pme.home.societes")}</b>
-                  <span>{t("pme.reglages.societes.verrou")}</span>
-                  <em>{verrous.societes.offre}</em>
-                  {verrous.societes.raison ? <span>{verrous.societes.raison}</span> : null}
-                </span>
-              </div>
-            ) : null}
+            {/*
+             * La même entrée pour toutes les offres (recette du 11 novembre, 3.1) :
+             * une société se crée toujours. Hors de l'offre qui les regroupe, elle
+             * vit sur sa propre licence, et l'entrée dit, sur le web seulement,
+             * l'offre qui les regroupe. La coque ne nomme ni offre ni prix.
+             */}
+            <Link
+              to="/onboarding"
+              className="inv"
+              data-verrou={verrous.societes.ouvert ? undefined : verrous.societes.offre}
+            >
+              <i>
+                <IcPlus />
+              </i>
+              <span className="bd">
+                <b>{t("pme.reglages.orgs.ajouter")}</b>
+                {/* Le prix est lu dans la grille, et dit au web et à la PWA seulement. */}
+                {verrous.societes.ouvert &&
+                prixEnPlus.data &&
+                Number(prixEnPlus.data.prix_organisation_sup) > 0 ? (
+                  <span>
+                    {t("pme.reglages.orgs.prix", {
+                      inclus: String(prixEnPlus.data.organisations_incluses),
+                      prix: aLEchelle(prixEnPlus.data.prix_organisation_sup),
+                      devise: pme.currency,
+                    })}
+                  </span>
+                ) : null}
+                {!verrous.societes.ouvert && COMMERCE ? (
+                  <>
+                    <span>{t("pme.reglages.societes.verrou")}</span>
+                    <em>{verrous.societes.offre}</em>
+                    {verrous.societes.raison ? <span>{verrous.societes.raison}</span> : null}
+                  </>
+                ) : null}
+              </span>
+            </Link>
           </div>
         </>
       ) : null}
@@ -564,9 +565,7 @@ function PmeReglages() {
               />
             </h2>
             {/* Le même compte que la ligne de l'abonnement : occupés sur inclus. */}
-            <span>
-              {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
-            </span>
+            <span>{utilisateurs(f ?? null, locale)}</span>
           </div>
           <Sieges abo={abo} verrou={verrous.sieges} />
 
@@ -1230,142 +1229,6 @@ function Organisation({
 }
 
 /**
- * L'abonnement que la comptabilité propose ou couvre (ANO-011, 21 octobre
- * 2026 ; règles du 20 octobre). La comptabilité propose ; le dirigeant accepte
- * ou refuse. Accepter arrête l'abonnement que la société payait elle-même, le
- * jour même : c'est la comptabilité qui est facturée, au prix public. Rien ne
- * s'affiche quand il n'y a rien à dire.
- */
-function AbonnementDeLaComptabilite({
-  tenantId,
-  propositionsSeules = false,
-}: {
-  tenantId: string;
-  /** La page Abonnement dit déjà qui paie, dans sa carte : elle ne montre que ce qui attend une réponse. */
-  propositionsSeules?: boolean;
-}) {
-  const { t, locale } = useI18n();
-  const catalogue = useCatalogueDesOffres().data;
-  const qc = useQueryClient();
-  const [retour, setRetour] = useState<string | null>(null);
-  const propositions = useQuery({
-    queryKey: ["abonnements-pour-moi", tenantId],
-    queryFn: () => office().facturation.abonnementsPourMoi(tenantId),
-  });
-  const repondre = useMutation({
-    mutationFn: (v: { accesId: string; accepte: boolean }) =>
-      office().facturation.repondreAbonnement(v.accesId, v.accepte),
-    onSuccess: async (_r, v) => {
-      setRetour(t(v.accepte ? "pme.abo.cabinet.accepte" : "pme.abo.cabinet.refuse"));
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
-        qc.invalidateQueries({ queryKey: ["mon-forfait"] }),
-      ]);
-    },
-    onError: (e: unknown) =>
-      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
-  });
-  // La comptabilité qui paie propose une offre plus légère : rien ne change
-  // sans l'accord du dirigeant (décision du 8 novembre 2026).
-  const descente = useQuery({
-    queryKey: ["descente-pour-moi", tenantId],
-    queryFn: () => office().facturation.descentePourMoi(tenantId),
-  });
-  const trancher = useMutation({
-    mutationFn: (v: { id: string; accepte: boolean }) =>
-      office().facturation.repondreDescente(v.id, v.accepte),
-    onSuccess: async () => {
-      setRetour(t("pme.descente.ok"));
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["descente-pour-moi", tenantId] }),
-        qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
-        qc.invalidateQueries({ queryKey: ["mon-forfait"] }),
-      ]);
-    },
-    onError: (e: unknown) =>
-      setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error"))),
-  });
-  const d = descente.data ?? null;
-  const lignes = (propositions.data ?? []).filter(
-    (a) => a.statut === "propose" || (a.statut === "actif" && !propositionsSeules),
-  );
-  if (lignes.length === 0 && !d && !retour) return null;
-  return (
-    // `.org` porte la typographie des propositions (`.mn`) et leurs boutons (`.acts`).
-    <div className="org mt-3">
-      {d ? (
-        <div>
-          <p className="mn">
-            {t("pme.descente.titre", { offre: libelleDOffre(catalogue, d.offre_code) })}
-          </p>
-          <p className="mn">{t("pme.descente.lede")}</p>
-          <div className="acts">
-            <button
-              type="button"
-              disabled={trancher.isPending}
-              onClick={() => trancher.mutate({ id: d.descente_id, accepte: true })}
-            >
-              {t("pme.descente.accepter")}
-            </button>
-            <button
-              type="button"
-              className="cut"
-              disabled={trancher.isPending}
-              onClick={() => trancher.mutate({ id: d.descente_id, accepte: false })}
-            >
-              {t("pme.descente.refuser")}
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {lignes.map((a) =>
-        a.statut === "actif" ? (
-          <p key={a.acces_id} className="mn">
-            {t("pme.abo.cabinet.couvert", {
-              cabinet: a.cabinet_nom,
-              offre: libelleDOffre(catalogue, a.offre_code),
-              date: dateEnLettres(a.effet_du, locale),
-            })}
-          </p>
-        ) : (
-          <div key={a.acces_id}>
-            <p className="mn">
-              {t("pme.abo.cabinet.propose", {
-                cabinet: a.cabinet_nom,
-                offre: libelleDOffre(catalogue, a.offre_code),
-              })}
-            </p>
-            <p className="mn">{t("pme.abo.cabinet.effet")}</p>
-            <div className="acts">
-              <button
-                type="button"
-                disabled={repondre.isPending}
-                onClick={() => repondre.mutate({ accesId: a.acces_id, accepte: true })}
-              >
-                {t("pme.abo.cabinet.accepter")}
-              </button>
-              <button
-                type="button"
-                className="cut"
-                disabled={repondre.isPending}
-                onClick={() => repondre.mutate({ accesId: a.acces_id, accepte: false })}
-              >
-                {t("pme.abo.cabinet.refuser")}
-              </button>
-            </div>
-          </div>
-        ),
-      )}
-      {retour ? (
-        <p className="t-body" aria-live="polite">
-          {retour}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-/**
  * Le TTC du mois et le report du mois dernier, sous le prix HT.
  *
  * Les deux viennent de la base : `prix_ttc` par la fiscalité de la facture
@@ -1972,6 +1835,14 @@ const ABSENT = "—";
 function nombre(n: number | string | null | undefined, locale: string): string {
   const v = entier(n);
   return v === null ? ABSENT : v.toLocaleString(locale);
+}
+
+/** « occupés / inclus », propriétaire compris (`utilisateursInclus`), ou l'absence. */
+function utilisateurs(f: MonForfait | null, locale: string): string {
+  const u = utilisateursInclus(f);
+  return u === null
+    ? `${ABSENT} / ${ABSENT}`
+    : `${u.occupes.toLocaleString(locale)} / ${u.inclus.toLocaleString(locale)}`;
 }
 
 /**

@@ -11,7 +11,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const api = vi.hoisted(() => ({ mesRecharges: vi.fn(), noter: vi.fn() }));
+const api = vi.hoisted(() => ({
+  mesRecharges: vi.fn(),
+  noter: vi.fn(),
+  offre: { code: "solo" },
+  catalogue: undefined as unknown,
+}));
 vi.mock("@/i18n", () => ({
   useI18n: () => ({
     t: (cle: string, p?: Record<string, unknown>) => (p ? `${cle} ${JSON.stringify(p)}` : cle),
@@ -22,12 +27,12 @@ vi.mock("@/components/malica/pme-context", () => ({
   usePme: () => ({
     tenantId: "org-essai",
     currency: "TND",
-    forfait: { ligne: { offre: "solo", prix_mensuel_ht: "30.000", titulaire: true } },
+    forfait: { ligne: { offre: api.offre.code, prix_mensuel_ht: "30.000", titulaire: true } },
   }),
 }));
 vi.mock("@/hooks/use-decimales", () => ({ usePrix: () => (v: unknown) => String(v ?? "") }));
 vi.mock("@/hooks/use-offres", () => ({
-  useCatalogueDesOffres: () => ({ data: undefined }),
+  useCatalogueDesOffres: () => ({ data: api.catalogue }),
   libelleDOffre: (_c: unknown, code: string) => code,
   offreQuiPermetDeRecharger: () => undefined,
 }));
@@ -70,7 +75,11 @@ function monter() {
 }
 
 describe("mes recharges", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    api.offre.code = "solo";
+    api.catalogue = undefined;
+  });
   afterEach(cleanup);
 
   it("une recharge sans échéance se dit « sans date limite »", async () => {
@@ -94,5 +103,20 @@ describe("mes recharges", () => {
     const ligne = await screen.findByText(/pme\.reglages\.recharges\.reste /);
     expect(ligne.textContent).not.toContain("infinity");
     expect(api.noter).toHaveBeenCalledOnce();
+  });
+
+  it("en Basic, une recharge payée reste visible, « en sommeil » (recette du 11 novembre, 1.5)", async () => {
+    api.offre.code = "basic";
+    api.catalogue = [
+      { code: "basic", libelle: "Basic", rang: 1, recharges_permises: false },
+      { code: "solo", libelle: "Solo", rang: 2, recharges_permises: true },
+    ];
+    api.mesRecharges.mockResolvedValue([
+      { ...recharge("2027-10-23"), utilisable: false, gelee: true },
+    ]);
+    monter();
+    expect(await screen.findByText("pme.reglages.recharges.gelee")).toBeTruthy();
+    expect(screen.getByText("pme.reglages.recharges.verrou")).toBeTruthy();
+    expect(screen.getByText(/pme\.reglages\.recharges\.reste /)).toBeTruthy();
   });
 });

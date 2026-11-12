@@ -45,6 +45,22 @@ export function nombre(v: number | string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Les utilisateurs de la licence, propriétaire principal compris : la base
+ * compte les places SANS lui (`facturation.places_v`), l'écran « Utilisateurs
+ * inclus » le compte des deux côtés — sinon une société en Basic ou en Solo
+ * affichait « 0 / 0 » avec son propriétaire présent (recette du 11 novembre
+ * 2026, 5.4). `null` tant que la ligne n'est pas lue.
+ */
+export function utilisateursInclus(
+  f: Pick<MonForfait, "sieges_occupes" | "sieges_inclus"> | null | undefined,
+): { occupes: number; inclus: number } | null {
+  const occupes = nombre(f?.sieges_occupes);
+  const inclus = nombre(f?.sieges_inclus);
+  if (occupes === null || inclus === null) return null;
+  return { occupes: occupes + 1, inclus: inclus + 1 };
+}
+
 /** Ce que l'écran peut ouvrir. Tout est fermé tant que le forfait n'est pas lu. */
 export interface OuverturesDuForfait {
   /** Le bloc des sièges : inviter un collaborateur, reprendre sa place. */
