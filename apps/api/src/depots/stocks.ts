@@ -14,12 +14,17 @@ import type { Requete } from "../db.ts";
 import { dec, decOuNul } from "./decimal.ts";
 
 export const stocks = {
-  async categories(db: Requete, packVersionId: string) {
+  async categories(db: Requete, packVersionId: string, locale = "fr") {
+    // Le nom dans la langue demandée (`ref.labels`, `stock_categorie`), le
+    // libellé du pack à défaut — comme les catégories d'immobilisations.
     const { rows } = await db.query(
-      `select id, code, label, account_stock, account_variation, account_provision,
-              account_provision_dotation, account_provision_reprise, legal_reference
-         from ref_stock_categories_v where pack_version_id = $1 order by code`,
-      [packVersionId],
+      `select c.id, c.code, coalesce(l.value, c.label) as label, c.account_stock,
+              c.account_variation, c.account_provision, c.account_provision_dotation,
+              c.account_provision_reprise, c.legal_reference
+         from ref_stock_categories_v c
+         left join ref_labels_v l on l.ns = 'stock_categorie' and l.key = c.code and l.locale = $2
+        where c.pack_version_id = $1 order by c.code`,
+      [packVersionId, locale],
     );
     return (rows as Record<string, unknown>[]).map((r) => ({
       id: r["id"] as string,

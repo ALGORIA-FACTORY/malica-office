@@ -125,6 +125,7 @@ export function chiffresDeLaFile(
   file: ReadonlyArray<Pick<QueueItem, "createdAt" | "statut">>,
   periode: string,
   retournees: number,
+  retourneesDuMois: number,
 ): PvChiffre[] {
   const nombre = (label: string, valeur: number): PvChiffre => ({
     label,
@@ -137,6 +138,10 @@ export function chiffresDeLaFile(
     nombre("pieces", file.filter((p) => p.createdAt.slice(0, 7) === periode).length),
     nombre("aSuperviser", file.filter((p) => A_TRAITER.has(p.statut)).length),
     nombre("retournees", retournees),
+    // Le fait du mois, au journal : une pièce retournée puis renvoyée n'est
+    // plus « retournée » au moment du PV, mais elle l'a été. Sans ce chiffre,
+    // Malica affirmait « aucune pièce retournée » (recette du 11 novembre 2026).
+    nombre("retourneesDuMois", retourneesDuMois),
   ];
 }
 
@@ -158,7 +163,7 @@ async function rassemblerLesChiffres(
   const fin = arreteDuCumul(periode, jourDuPv);
   const devise = client.currency;
 
-  const [fiche, pack, plan, extraits, file, echeances] = await Promise.all([
+  const [fiche, pack, plan, extraits, file, echeances, retourneesDuMois] = await Promise.all([
     api.rpc<FicheCourante | null>("identite", "ficheCourante", [client.tenantId]),
     api.rpc<JurisdictionPack | null>("referentiel", "activePack", [client.jurisdiction]),
     api.rpc<Array<{ code: string; libelle: string; parent: string | null }>>(
@@ -173,6 +178,11 @@ async function rassemblerLesChiffres(
     ]),
     api.rpc<QueueItem[]>("supervision", "queue", [cabinetTenantId, client.tenantId]),
     api.rpc<Echeance[]>("collab", "echeances", [[client.tenantId]]),
+    api.rpc<number>("supervision", "piecesRetourneesEntre", [
+      client.tenantId,
+      `${periode}-01`,
+      jourDuPv.slice(0, 10),
+    ]),
   ]);
 
   const debut = debutDExercice(fiche?.clotureExercice ?? null, periode);
@@ -260,7 +270,7 @@ async function rassemblerLesChiffres(
     );
   }
 
-  chiffres.push(...chiffresDeLaFile(file, periode, client.counts.retournee ?? 0));
+  chiffres.push(...chiffresDeLaFile(file, periode, client.counts.retournee ?? 0, retourneesDuMois));
 
   const jour = new Date(`${jourDuPv}T00:00:00Z`).getTime();
   const aVenir = echeances.filter((e) => {
@@ -297,7 +307,7 @@ function faitsEnTexte(faits: readonly Fait[]): string {
   return faits.map((f) => `- ${f.label} : ${f.valeur} (${f.source})`).join("\n");
 }
 
-function consigne(input: {
+export function consigne(input: {
   locale: Locale;
   ton: string;
   cabinet: string;
@@ -316,11 +326,13 @@ function consigne(input: {
     {
       role: "system",
       content: [
-        `Tu es Malica, l'assistante du cabinet d'expertise comptable « ${input.cabinet} ». Tu rédiges en ${langue} le procès-verbal d'une réunion de restitution avec le client « ${input.client} ».`,
+        `Tu es Malica, l'assistante de la comptabilité « ${input.cabinet} ». Tu rédiges en ${langue} le procès-verbal d'une réunion de restitution avec le client « ${input.client} ».`,
+        "VOCABULAIRE : tu parles de « la comptabilité » (ou tu la nommes), jamais du « cabinet ».",
         registre,
         "RÈGLE ABSOLUE — LES CHIFFRES : tu n'écris JAMAIS un nombre qui ne figure pas dans la liste CHIFFRES ci-dessous. Aucune somme, aucune différence, aucun pourcentage, aucun ratio, aucune moyenne, aucun « environ ». Tu ne fais aucun calcul. Si un chiffre manque, tu le dis en mots, sans l'inventer.",
         "Quand tu cites un chiffre de la liste, tu le recopies exactement tel qu'il est écrit, avec sa devise. Les seuls nombres admis en dehors de la liste sont les dates et l'année.",
         "Tu ne cites aucun article de loi, aucun taux, aucun seuil réglementaire.",
+        "LES FAITS : tu n'affirmes rien sur les pièces — transmises, retournées, en attente — qui ne vienne de la liste CHIFFRES. Pour dire qu'aucune pièce n'a été retournée, il faut que le chiffre des pièces retournées dans le mois y vaille 0.",
         'FORME : tu réponds UNIQUEMENT par un objet JSON, sans commentaire, de la forme {"sections":[{"kicker":"…","corps":"…"}]}. Entre trois et cinq sections. Chaque « kicker » est un intitulé de deux à cinq mots (situation, pièces, TVA, échéances, suite…). Chaque « corps » est un paragraphe de trois à six phrases.',
       ].join("\n"),
     },

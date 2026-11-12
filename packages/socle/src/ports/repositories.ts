@@ -56,6 +56,8 @@ export interface NewOrganization {
   currency: string;
   validationMode?: ValidationMode;
   defaultEntityName?: string;
+  /** L'adresse du siège, quand on la donne à la création. */
+  adresse?: string | null;
 }
 
 /** Un mandat proposé, vu depuis la PME qui doit y répondre. */
@@ -253,6 +255,8 @@ export interface IdentityRepository {
    */
   etablirFiche(input: NouvelleFiche): Promise<{ id: string }>;
   /** La comptabilité corrige le nom, le matricule (avant toute pièce) ou l'adresse. */
+  /** Le matricule de ce dossier est-il figé (une pièce est déjà reçue) ? */
+  matriculeFige(cabinetId: string, pmeId: string): Promise<boolean>;
   modifierDossier(input: {
     cabinetId: string;
     pmeId: string;
@@ -2508,6 +2512,8 @@ export interface SupervisionRepository {
   ): Promise<
     Array<{ id: string; action: string; at: string; objet: string | null; objetId: string | null }>
   >;
+  /** Les pièces de ce dossier retournées au client entre deux jours inclus, selon le journal. */
+  piecesRetourneesEntre(tenantId: string, du: string, au: string): Promise<number>;
   /** Organisations cabinet dont l'utilisateur est membre. */
   listMyCabinets(): Promise<Organization[]>;
   listClients(cabinetTenantId: string): Promise<ClientSummary[]>;
@@ -2839,7 +2845,7 @@ export interface StockDepreciationRow {
 }
 
 export interface StocksRepository {
-  categories(packVersionId: string): Promise<StockCategory[]>;
+  categories(packVersionId: string, locale?: string): Promise<StockCategory[]>;
   listItems(tenantId: string): Promise<StockItem[]>;
   createItem(input: NewStockItem): Promise<string>;
   updateItem(input: {
@@ -3022,6 +3028,8 @@ export interface CabinetMember {
   userId: string;
   role: string;
   email: string;
+  /** Le nom que la personne a donné ; `null` sans nom, et l'écran montre l'adresse. */
+  nom: string | null;
 }
 
 /** Affectation d'un dossier client à un collaborateur. Rien ne s'efface (R7). */

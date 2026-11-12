@@ -312,8 +312,10 @@ function CabinetNotifications() {
       <EnTeteCabinet
         surtitre={
           <>
-            {nonLues.length > 0
-              ? t("cab.notif.kicker.attente", { n: nonLues.length })
+            {/* « En attente » compte ce qui attend la comptabilité — la liste « À
+                traiter » —, pas les simples informations non lues (8 novembre). */}
+            {aFaire.length > 0
+              ? t("cab.notif.kicker.attente", { n: aFaire.length })
               : t("cab.notif.kicker.rien")}
           </>
         }
