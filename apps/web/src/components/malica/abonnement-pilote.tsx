@@ -700,7 +700,7 @@ export function MesRecharges() {
             <span>{t("pme.reglages.recharges.verrou")}</span>
           </span>
         </div>
-        {null}
+        {(miennes.data ?? []).length > 0 ? reserve : null}
       </>
     );
   }
