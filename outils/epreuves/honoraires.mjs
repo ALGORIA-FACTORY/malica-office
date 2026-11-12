@@ -298,7 +298,10 @@ if (!notesAllumees) {
       "la note d'honoraires, du brouillon à l'avoir",
       "elle est éteinte à la tour sur cette instance",
     );
+  // `conclure` ne sort que sur un échec : sans lui, la suite appellerait une
+  // note éteinte et finirait sur un refus non rattrapé.
   e.conclure();
+  process.exit(0);
 }
 
 /* ------------------------------------------------ le brouillon */
