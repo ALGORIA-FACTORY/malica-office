@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const donnees = vi.hoisted(() => ({ actifs: false, panne: false }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
+  retainSearchParams: () => ({}),
   useNavigate: () => vi.fn(),
   useRouterState: () => "/cabinet",
   Link: ({
