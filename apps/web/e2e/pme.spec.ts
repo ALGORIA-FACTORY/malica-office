@@ -56,9 +56,7 @@ test("depuis l'accueil, la barre de demande mène à la conversation, et on en r
   // L'écran du dessin : son composeur, et le pied qui dit ce que Malica ne
   // dit simplement que Malica peut se tromper.
   await expect(page.getByLabel(/Écrivez à Malica/)).toBeVisible();
-  await expect(
-    page.getByText(/Malica peut faire des erreurs\./),
-  ).toBeVisible();
+  await expect(page.getByText(/Malica peut faire des erreurs\./)).toBeVisible();
 
   // L'adresse tient au rechargement.
   await page.reload();
