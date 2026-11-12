@@ -60,7 +60,7 @@
  */
 import { Worker } from "node:worker_threads";
 
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
 
 import type { DemandeDeRendu, RenduDePage } from "./miniature-pdf.ts";
 
@@ -190,6 +190,8 @@ export const limitesDuRenduPdf = { delaiMs: 15_000, memoireMo: 512 };
 export function pagesDuPdf(
   octets: Uint8Array,
   rendu: Pick<DemandeDeRendu, "boite" | "qualite" | "pages">,
+  // Une impression rend TOUTES les pages : son délai suit leur nombre.
+  delaiMs: number = limitesDuRenduPdf.delaiMs,
 ): Promise<Buffer[] | null> {
   // Une COPIE, transférée au fil : l'appelant garde ses octets intacts.
   const copie = new ArrayBuffer(octets.byteLength);
@@ -213,7 +215,7 @@ export function pagesDuPdf(
       void fil.terminate();
       suite();
     };
-    const minuterie = setTimeout(() => regler(() => resoudre(null)), limitesDuRenduPdf.delaiMs);
+    const minuterie = setTimeout(() => regler(() => resoudre(null)), delaiMs);
     fil.once("message", ({ jpegs }: RenduDePage) =>
       regler(() => resoudre(jpegs.length > 0 ? jpegs.map((j) => Buffer.from(j)) : null)),
     );
@@ -254,6 +256,26 @@ export async function fabriquerMiniature(octets: Uint8Array): Promise<Buffer | n
   ctx.fillRect(0, 0, largeur, hauteur);
   ctx.drawImage(image, 0, 0, largeur, hauteur);
   return await toile.encode("jpeg", QUALITE);
+}
+
+/** Les octets sont-ils ceux d'un PDF ? Lu dans leur signature, comme tout format ici. */
+export function estUnPdf(octets: Uint8Array): boolean {
+  return formatDe(octets) === "pdf";
+}
+
+/**
+ * L'image d'une pièce photographiée, décodée en entier — pour l'impression,
+ * qui la pose sur sa page. Mêmes portes que la miniature : la signature des
+ * octets, les dimensions de l'en-tête, le plafond de pixels. `null` pour tout
+ * ce qui n'est pas une image admise (un PDF, un HEIC, une image trop grande).
+ */
+export async function imageDeLaPiece(octets: Uint8Array): Promise<Image | null> {
+  const format = formatDe(octets);
+  if (!format || format === "pdf") return null;
+  const taille = dimensionsDe(octets, format);
+  if (!taille || taille.largeur * taille.hauteur > PLAFOND_PIXELS) return null;
+  const image = await loadImage(Buffer.from(octets));
+  return image.width && image.height ? image : null;
 }
 
 /** Le côté d'un portrait, en pixels : une pastille de 36 px, vue à 3×, sans plus. */

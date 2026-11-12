@@ -88,4 +88,28 @@ export const enBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.toutCocher": "Select all",
   "cab.biblio.toutTelecharger": "Download all ({n})",
   "cab.biblio.volumineux": "This file is large: open a month to see its documents.",
+  "cab.biblio.imprimer": "Print",
+  "cab.biblio.imprimer.dossier": "Print file",
+  "cab.biblio.imprimer.mois": "Print {mois}",
+  "cab.biblio.imprimer.typeDuMois": "Print {type} — {mois}",
+  "cab.biblio.imprimer.piece": "Print this document",
+  "cab.biblio.imprimer.selection": "Print selection ({n})",
+  "cab.biblio.imprimer.tout": "Print all ({n})",
+  "cab.biblio.imprimer.titre": "Prepare printing",
+  "cab.biblio.imprimer.aide":
+    "A single PDF: the cover page, the index, then the documents in index order. It is not kept, and the print is recorded in the log.",
+  "cab.biblio.imprimer.enCours": "Composing the PDF…",
+  "cab.biblio.imprimer.volume":
+    "Large print: about {pages} pages, {taille} MB of originals. Composing may take several minutes.",
+  "cab.biblio.imprimer.quandMeme": "Print anyway",
+  "cab.biblio.imprimer.trop":
+    "This print has about {pages} pages, more than the {max} allowed at once: narrow the selection, or print month by month.",
+  "cab.biblio.imprimer.pret": "PDF ready: the print dialog is opening.",
+  "cab.biblio.imprimer.rouvrir": "Open the print dialog",
+  "cab.biblio.imprimer.enregistre": "PDF ready, saved on the device: open it to print.",
+  "cab.biblio.imprimer.erreur": "The print could not be prepared.",
+  "cab.biblio.imprimer.vide": "No document to print here.",
+  "cab.biblio.imprimer.selectionner": "Select",
+  "cab.biblio.imprimer.terminer": "Done",
+  "cab.biblio.imprimer.cocher": "Select {nom}",
 };

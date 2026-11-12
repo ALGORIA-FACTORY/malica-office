@@ -3,7 +3,7 @@
  *
  * Écran du cabinet : le comptable choisit l'un de ses clients actifs, ouvre un mois,
  * puis un type de document, et retrouve les pièces avec leur miniature. Il peut en
- * télécharger une, ou tout le dossier comptable. Les clients et les pièces viennent
+ * télécharger ou en imprimer une, une sélection, ou tout le dossier comptable. Les clients et les pièces viennent
  * de la supervision du cabinet (`supervision.listClients`) ; les pièces sont lues
  * côté serveur, un mois à la fois quand le dossier est trop gros pour tenir d'un coup.
  *
@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { useCabinet } from "@/components/malica/cabinet-context";
 import { EmptyState, SignalLight, type Tone } from "@/components/malica/office-ui";
+import { ImprimerLesPieces } from "@/components/malica/imprimer-les-pieces";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
 import { useI18n, type MessageKey } from "@/i18n";
 import {
@@ -374,6 +375,20 @@ function BibliothequeDuClient({
               principal
             />
           )}
+          {type ? null : (
+            <ImprimerLesPieces
+              cabinetId={cabinetId}
+              pieces={duNiveau.map((d) => d.id)}
+              portee="dossier"
+              nom={nomDuDossier}
+              titre={nomDuDossier}
+              libelle={
+                mois
+                  ? t("cab.biblio.imprimer.mois", { mois: nomDuMois(mois, locale) })
+                  : t("cab.biblio.imprimer.dossier")
+              }
+            />
+          )}
         </div>
       </div>
       {vide ? (
@@ -455,14 +470,25 @@ function LesMois({
         pieces={r.pieces}
         ligne={t("cab.biblio.pieces", { count: r.pieces.length })}
         telecharger={
-          <TelechargerDossierComptable
-            cabinetId={cabinetId}
-            clientId={client.tenantId}
-            nomClient={`${client.name} ${nom}`}
-            pieces={r.pieces.map((d) => d.id)}
-            libelle={t("cab.biblio.telechargerMois", { mois: nom })}
-            compact
-          />
+          <span className="inline-flex gap-2">
+            <TelechargerDossierComptable
+              cabinetId={cabinetId}
+              clientId={client.tenantId}
+              nomClient={`${client.name} ${nom}`}
+              pieces={r.pieces.map((d) => d.id)}
+              libelle={t("cab.biblio.telechargerMois", { mois: nom })}
+              compact
+            />
+            <ImprimerLesPieces
+              cabinetId={cabinetId}
+              pieces={r.pieces.map((d) => d.id)}
+              portee="dossier"
+              nom={`${client.name} ${nom}`}
+              titre={`${client.name} · ${nom}`}
+              libelle={t("cab.biblio.imprimer.mois", { mois: nom })}
+              compact
+            />
+          </span>
         }
       />,
     );
@@ -582,17 +608,31 @@ function LeMois({
               pieces={du}
               ligne={[t("cab.biblio.pieces", { count: du.length }), ...qui.slice(0, 2)].join(" · ")}
               telecharger={
-                <TelechargerDossierComptable
-                  cabinetId={cabinetId}
-                  clientId={client.tenantId}
-                  nomClient={`${client.name} ${nomMois} ${nomType(code)}`}
-                  pieces={du.map((d) => d.id)}
-                  libelle={t("cab.biblio.telechargerTypeDuMois", {
-                    type: nomType(code),
-                    mois: nomMois,
-                  })}
-                  compact
-                />
+                <span className="inline-flex gap-2">
+                  <TelechargerDossierComptable
+                    cabinetId={cabinetId}
+                    clientId={client.tenantId}
+                    nomClient={`${client.name} ${nomMois} ${nomType(code)}`}
+                    pieces={du.map((d) => d.id)}
+                    libelle={t("cab.biblio.telechargerTypeDuMois", {
+                      type: nomType(code),
+                      mois: nomMois,
+                    })}
+                    compact
+                  />
+                  <ImprimerLesPieces
+                    cabinetId={cabinetId}
+                    pieces={du.map((d) => d.id)}
+                    portee="dossier"
+                    nom={`${client.name} ${nomMois} ${nomType(code)}`}
+                    titre={`${client.name} · ${nomType(code)} · ${nomMois}`}
+                    libelle={t("cab.biblio.imprimer.typeDuMois", {
+                      type: nomType(code),
+                      mois: nomMois,
+                    })}
+                    compact
+                  />
+                </span>
               }
             />
           );
@@ -644,18 +684,32 @@ function ListeDesPieces({
           />
           {t("cab.biblio.toutCocher")}
         </label>
-        <TelechargerDossierComptable
-          cabinetId={cabinetId}
-          clientId={client.tenantId}
-          nomClient={nomDuDossier}
-          pieces={coches.length ? coches : pieces.map((d) => d.id)}
-          libelle={
-            coches.length
-              ? t("cab.biblio.selection", { n: coches.length })
-              : t("cab.biblio.toutTelecharger", { n: pieces.length })
-          }
-          principal
-        />
+        <div className="flex flex-wrap gap-2">
+          <TelechargerDossierComptable
+            cabinetId={cabinetId}
+            clientId={client.tenantId}
+            nomClient={nomDuDossier}
+            pieces={coches.length ? coches : pieces.map((d) => d.id)}
+            libelle={
+              coches.length
+                ? t("cab.biblio.selection", { n: coches.length })
+                : t("cab.biblio.toutTelecharger", { n: pieces.length })
+            }
+            principal
+          />
+          <ImprimerLesPieces
+            cabinetId={cabinetId}
+            pieces={coches.length ? coches : pieces.map((d) => d.id)}
+            portee={coches.length ? "selection" : "dossier"}
+            nom={nomDuDossier}
+            titre={nomDuDossier}
+            libelle={
+              coches.length
+                ? t("cab.biblio.imprimer.selection", { n: coches.length })
+                : t("cab.biblio.imprimer.tout", { n: pieces.length })
+            }
+          />
+        </div>
       </div>
       <ul className="cab-doclib-documents">
         {pieces.map((d) => (
@@ -693,13 +747,22 @@ function ListeDesPieces({
                 <SignalLight tone={feuDuStatut(d.statut)} label={t(MOT_CABINET[d.statut])} />
               ) : null}
             </span>
-            <span className="cab-doclib-arrow">
+            <span className="cab-doclib-arrow inline-flex flex-col gap-2">
               <TelechargerDossierComptable
                 cabinetId={cabinetId}
                 clientId={client.tenantId}
                 nomClient={`${client.name} ${d.tiers ?? d.reference ?? ""}`.trim()}
                 pieces={[d.id]}
                 libelle={t("cab.biblio.telechargerPiece")}
+                compact
+              />
+              <ImprimerLesPieces
+                cabinetId={cabinetId}
+                pieces={[d.id]}
+                portee="piece"
+                nom={`${client.name} ${d.tiers ?? d.reference ?? ""}`.trim()}
+                titre={`${client.name} · ${d.tiers ?? d.reference ?? nomType(d)}`}
+                libelle={t("cab.biblio.imprimer.piece")}
                 compact
               />
             </span>
