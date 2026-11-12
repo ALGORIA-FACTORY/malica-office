@@ -329,6 +329,48 @@ describe("mentions obligatoires", () => {
     assert.equal(c.statut, "conforme");
   });
 
+  /*
+   * Recette du 11 novembre 2026 : une facture à deux taux imprime une TVA par
+   * taux et aucun total de TVA. Le contrôle ne regardait que le total, et
+   * posait « Mentions obligatoires absentes : Montant de la TVA ».
+   */
+  const avecMontantTva: ContexteControle = {
+    ...CONTEXTE,
+    mentionsObligatoires: [
+      ...CONTEXTE.mentionsObligatoires,
+      { code: "MONTANT_TVA", libelle: "Montant de la TVA" },
+    ],
+  };
+  const sansTotal = normaliserMontants(
+    { bases: [{ ht: "1 000,000", taux: "0.19" }], ttc: "1 190,000" },
+    P,
+  );
+
+  it("une TVA imprimée par taux, sans total : « Montant de la TVA » est là", () => {
+    const c = statut(
+      facture({ montants: sansTotal, tvaImprimeeParTaux: ["190,000"] }),
+      "mentions_obligatoires",
+      avecMontantTva,
+    );
+    assert.deepEqual(c.preuves["manquantes"], []);
+    assert.equal(c.statut, "conforme");
+  });
+
+  it("une TVA par taux dont l'une ne se lit pas, sans total : la mention manque", () => {
+    for (const tvaImprimeeParTaux of [["190,000", null], ["190,000", " "], []]) {
+      const c = statut(
+        facture({ montants: sansTotal, tvaImprimeeParTaux }),
+        "mentions_obligatoires",
+        avecMontantTva,
+      );
+      assert.deepEqual(
+        c.preuves["manquantes"],
+        ["MONTANT_TVA"],
+        JSON.stringify(tvaImprimeeParTaux),
+      );
+    }
+  });
+
   it("et une mention vraiment absente le reste", () => {
     // La correction ne doit pas rendre ce contrôle complaisant : un TTC que la
     // pièce ne porte pas manque toujours.
