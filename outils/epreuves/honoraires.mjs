@@ -13,8 +13,21 @@
  * Rejouable : le client de l'épreuve porte une identité fixe et ce qui existe
  * est repris. Une facture émise ne s'efface pas (R7) : chaque passage en
  * laisse une, réglée puis annulée par son avoir.
+ *
+ * Les notes d'honoraires sont livrées ÉTEINTES (12 novembre 2026). L'épreuve
+ * les éteint d'abord par la tour, prouve que le mandat se règle toujours et
+ * que le serveur refuse de créer une note, puis les allume pour jouer le
+ * reste, et les rend à la fin dans l'état où elle les a trouvées. Sur une
+ * instance distante où elles sont éteintes, elle s'arrête là et le dit.
  */
-import { COMPTE_DEV, DIRIGEANT_EPREUVE, PME_EPREUVE, creerEpreuve } from "./socle.mjs";
+import {
+  COMPTE_DEV,
+  DIRIGEANT_EPREUVE,
+  PME_EPREUVE,
+  creerEpreuve,
+  estUneInstanceLocale,
+  reglerLesNotesDHonoraires,
+} from "./socle.mjs";
 
 const e = creerEpreuve("les honoraires du cabinet", process.argv[2]);
 
@@ -173,6 +186,19 @@ const droitsLibelle = droitsDuPack.length
 
 const syntheseAvant = await e.rpc("honoraires", "synthese", [cabinet.id, MOIS]);
 
+/* ------------------------------------------------ l'interrupteur de la tour */
+e.section("L'interrupteur de la tour");
+const notesAuDepart = await e.rpc("honoraires", "notesOuvertes");
+const notesEteintes = notesAuDepart ? await reglerLesNotesDHonoraires(e.BASE, false) : true;
+if (notesEteintes) {
+  e.verdict(
+    "éteintes, l'écran lit « non »",
+    (await e.rpc("honoraires", "notesOuvertes")) === false,
+  );
+} else {
+  e.sansObjet("le refus du serveur, notes éteintes", "la tour n'est pas à portée de ce poste");
+}
+
 /* ------------------------------------------------ le mandat */
 e.section("Le mandat d'honoraires");
 const mandatsAvant = await e.rpc("honoraires", "mandats", [cabinet.id]);
@@ -241,6 +267,42 @@ e.verdict(
   "le refus n'a pas clos le mandat en place",
   mandats.some((m) => m.id === defA.id),
 );
+
+/* ------------------------------------------------ éteintes, puis allumées */
+e.section("Éteintes : le mandat s'est réglé, la note se refuse");
+if (notesEteintes) {
+  const refusEteintes = await e.rpcAttenduEnEchec("honoraires", "creerBrouillon", [
+    {
+      cabinetTenantId: cabinet.id,
+      clientTenantId: client.tenantId,
+      periodeDu: `${MOIS}-01`,
+      periodeAu: `${MOIS}-28`,
+      tauxTvaCode: tauxChoisi.code,
+      lignes: [{ libelle: "Forfait d'honoraires — épreuve", quantite: "1", prixUnitaire: "1200" }],
+    },
+  ]);
+  e.verdict(
+    "le serveur refuse de créer une note, par sa clé",
+    motif(refusEteintes) === "refus.honoraires.notes_eteintes",
+    motif(refusEteintes),
+  );
+}
+const notesAllumees = await reglerLesNotesDHonoraires(e.BASE, true);
+if (!notesAllumees) {
+  // Une instance du poste ou de la CI doit pouvoir les allumer : sinon, rien
+  // de ce qui suit n'est éprouvé, et l'épreuve ne réussit pas en silence.
+  if (estUneInstanceLocale(e.BASE))
+    e.verdict("la tour allume les notes d'honoraires pour l'épreuve", false);
+  else
+    e.sansObjet(
+      "la note d'honoraires, du brouillon à l'avoir",
+      "elle est éteinte à la tour sur cette instance",
+    );
+  // `conclure` ne sort que sur un échec : sans lui, la suite appellerait une
+  // note éteinte et finirait sur un refus non rattrapé.
+  e.conclure();
+  process.exit(0);
+}
 
 /* ------------------------------------------------ le brouillon */
 e.section("Le brouillon et ses totaux");
@@ -744,5 +806,13 @@ const refusBrouillonEtranger = await e.rpcAttenduEnEchec("honoraires", "creerBro
 e.verdict("une facture ne se crée pas pour un client non mandaté", refusBrouillonEtranger !== null);
 const refusClore = await e.rpcAttenduEnEchec("honoraires", "cloreMandat", [defA.id]);
 e.verdict("un mandat déjà clos ne se clôt pas deux fois", refusClore !== null);
+
+// L'épreuve rend l'interrupteur dans l'état où elle l'a trouvé.
+if (!notesAuDepart) {
+  e.verdict(
+    "les notes d'honoraires reviennent à leur état de départ : éteintes",
+    await reglerLesNotesDHonoraires(e.BASE, false),
+  );
+}
 
 e.conclure();

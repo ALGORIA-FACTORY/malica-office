@@ -2655,6 +2655,7 @@ export const fr = {
   "refus.relecture_nuit.passage_ferme": "Ce passage de nuit est fermé.",
   "refus.facturation_auto.rattrapage_hors_bornes":
     "Le rattrapage compte au moins un mois : le mois qui vient de se clore.",
+  "refus.fonction.inconnue": "La tour ne connaît pas cette fonction.",
   "refus.facturation_auto.perimetre_inconnu":
     "Un périmètre de facturation est « cabinets » ou « pme ».",
   "refus.facturation.premier_du_mois": "Une période de facturation commence le premier du mois.",
@@ -2684,6 +2685,7 @@ export const fr = {
   "refus.recu.attestation": "Seul un reçu issu d’une pièce atteste des règlements.",
   "refus.recu.sans_reglement": "Un reçu ne se rattache pas à un règlement.",
   "refus.recu.produit": "Un reçu se produit : il ne se photographie pas.",
+  "refus.honoraires.notes_eteintes": "Les notes d’honoraires arrivent dans une prochaine version.",
   "refus.honoraires.avoir_d_une_emise": "Seule une facture émise s’annule par un avoir.",
   "refus.honoraires.avoir_non_annulable": "Un avoir ne s’annule pas.",
   "refus.honoraires.emise_figee":
@@ -4260,6 +4262,17 @@ export const fr = {
   "tour.relances.etat.ouvertes": "Ouvertes depuis le {date}.",
   "tour.relances.etat.suspension": "Ouvertes depuis le {date}, avec suspension automatique.",
   "tour.menu.facturation": "Facturation automatique",
+  "tour.menu.fonctions": "Fonctions du produit",
+  "tour.fonctions": "Fonctions du produit",
+  "tour.fonctions.aide":
+    "Ce que la tour allume ou éteint pour tout le monde. Éteinte, une fonction disparaît des écrans et le serveur la refuse ; rien n'est supprimé, et chaque décision reste au registre avec son motif.",
+  "tour.fonctions.notes_honoraires": "Notes d'honoraires",
+  "tour.fonctions.notes_honoraires.aide":
+    "Créer, émettre et encaisser une note d'honoraires, côté comptabilité. Le mandat et son forfait, la facture de Malica, les exports et les écritures ne s'éteignent pas.",
+  "tour.fonctions.etat.allumee": "Allumée depuis le {date}.",
+  "tour.fonctions.etat.eteinte": "Éteinte depuis le {date}.",
+  "tour.fonctions.allumer": "Allumer",
+  "tour.fonctions.eteindre": "Éteindre",
   "tour.facturation": "Facturation automatique",
   "tour.facturation.aide":
     "Deux périmètres indépendants, chacun ouvert ou coupé, motif à l'appui. Coupé, aucune facture de ce périmètre ne part d'elle-même.",

@@ -2567,6 +2567,7 @@ export const en: Dict = {
   "refus.relecture_nuit.passage_ferme": "This night pass is closed.",
   "refus.facturation_auto.rattrapage_hors_bornes":
     "The catch-up covers at least one month: the month that has just closed.",
+  "refus.fonction.inconnue": "The control tower does not know this feature.",
   "refus.facturation_auto.perimetre_inconnu": "An invoicing scope is “cabinets” or “pme”.",
   "refus.facturation.premier_du_mois": "A billing period starts on the first of the month.",
   "refus.facturation.destinataire_sans_nom":
@@ -2592,6 +2593,7 @@ export const en: Dict = {
   "refus.recu.attestation": "Only a receipt produced from a document attests payments.",
   "refus.recu.sans_reglement": "A receipt is not attached to a payment.",
   "refus.recu.produit": "A receipt is produced: it is not photographed.",
+  "refus.honoraires.notes_eteintes": "Fee notes are coming in a future version.",
   "refus.honoraires.avoir_d_une_emise": "Only an issued invoice is cancelled by a credit note.",
   "refus.honoraires.avoir_non_annulable": "A credit note cannot be cancelled.",
   "refus.honoraires.emise_figee":
@@ -4137,6 +4139,17 @@ export const en: Dict = {
   "tour.relances.etat.ouvertes": "Enabled since {date}.",
   "tour.relances.etat.suspension": "Enabled since {date}, with automatic suspension.",
   "tour.menu.facturation": "Automatic invoicing",
+  "tour.menu.fonctions": "Product features",
+  "tour.fonctions": "Product features",
+  "tour.fonctions.aide":
+    "What the tower turns on or off for everyone. When off, a feature disappears from the screens and the server refuses it; nothing is deleted, and every decision stays on record with its reason.",
+  "tour.fonctions.notes_honoraires": "Fee notes",
+  "tour.fonctions.notes_honoraires.aide":
+    "Creating, issuing and collecting a fee note, on the accountant's side. The mandate and its flat fee, Malica's invoice, exports and entries are never turned off.",
+  "tour.fonctions.etat.allumee": "On since {date}.",
+  "tour.fonctions.etat.eteinte": "Off since {date}.",
+  "tour.fonctions.allumer": "Turn on",
+  "tour.fonctions.eteindre": "Turn off",
   "tour.facturation": "Automatic invoicing",
   "tour.facturation.aide":
     "Two independent scopes, each opened or turned off with a reason. When off, no invoice of that scope goes out on its own.",

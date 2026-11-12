@@ -69,6 +69,14 @@ const SELECT_FACTURE = `
 
 export const honoraires = {
   /** Les mandats ouverts du cabinet, avec la prochaine facturation dérivée. */
+  /** Les notes d'honoraires sont-elles allumées à la tour ? La base répond, pour toute personne connectée. */
+  async notesOuvertes(db: Requete): Promise<boolean> {
+    const { rows } = await db.query<{ r: boolean }>(
+      `select plateforme.fonction_ouverte('notes_honoraires') as r`,
+    );
+    return Boolean(rows[0]?.r);
+  },
+
   async mandats(db: Requete, cabinetTenantId: string) {
     const { rows } = await db.query(
       `select m.*, o.name as client_name,

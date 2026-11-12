@@ -201,6 +201,7 @@
     "factures",
     "mandats",
     "modifierBrouillon",
+    "notesOuvertes",
     "supprimerBrouillon",
     "synthese"
   ],
@@ -391,6 +392,7 @@
     "designation",
     "designerEmetteur",
     "emetteur",
+    "fonctions",
     "grilleEnVigueur",
     "interventions",
     "licences",
@@ -413,6 +415,7 @@
     "reglerConseilCite",
     "reglerDesignation",
     "reglerFacturationAuto",
+    "reglerFonction",
     "reglerIa",
     "reglerPaiement",
     "reglerPlafondDeLAssistant",

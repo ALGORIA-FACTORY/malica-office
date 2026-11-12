@@ -22,6 +22,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { ficheComplete } from "@/lib/etat-des-clients";
 import { montant } from "@/lib/lisible";
+import { useNotesDHonoraires } from "@/lib/notes-d-honoraires";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type {
@@ -411,7 +412,12 @@ export function FicheClient({
 }) {
   const { t } = useI18n();
   const { org } = useCabinet();
-  const [onglet, setOnglet] = useState<OngletFiche>(ongletInitial);
+  const [ongletChoisi, setOnglet] = useState<OngletFiche>(ongletInitial);
+  // L'onglet « Factures » est celui des notes d'honoraires : éteintes à la
+  // tour, il disparaît, et une adresse qui le demandait ouvre la société.
+  const notes = useNotesDHonoraires();
+  const onglet: OngletFiche =
+    ongletChoisi === "factures" && !notes.ouvertes ? "societe" : ongletChoisi;
 
   const fiche = useQuery({
     queryKey: ["fiche", client.tenantId],
@@ -468,7 +474,9 @@ export function FicheClient({
             titre: t("cab.cli.onglet.abo"),
             alerte: !etat?.accesStatut && !parLaLicence,
           },
-          { id: "factures", titre: t("cab.cli.onglet.factures") },
+          ...(notes.ouvertes
+            ? [{ id: "factures" as const, titre: t("cab.cli.onglet.factures") }]
+            : []),
         ]}
       />
       <div className="flex-1 overflow-y-auto px-6 py-5">
