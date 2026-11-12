@@ -772,12 +772,9 @@ test("l'accueil de la société lit ses sociétés et ses mois en un appel", asy
     appels.push(`${depot}.${methode}`);
   });
   await page.goto("/pme");
-  await expect
-    .poll(() => appels.filter((a) => a === "identite.mandatsProposesDesSocietes").length, {
-      timeout: 20_000,
-    })
-    .toBe(1);
   await page.waitForLoadState("networkidle");
+  // Les mandats proposés ne s'affichent plus sur l'accueil : ils vivent dans les notifications.
+  expect(appels.filter((a) => a === "identite.mandatsProposesDesSocietes")).toEqual([]);
   expect(appels.filter((a) => a === "identite.mandatsProposes")).toEqual([]);
   // Le mois affiché peut garder sa lecture ; la série de douze mois n'en fait qu'une.
   expect(appels.filter((a) => a === "referentiel.declarationTva").length).toBeLessThanOrEqual(1);

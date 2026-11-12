@@ -25,7 +25,7 @@ androidWebViewHierarchy: devtools
     centerElement: true
 - tapOn: "Me demander"
 - extendedWaitUntil:
-    visible: "Je cite l'article.*"
+    visible: "Malica peut faire des erreurs.*"
     timeout: 20000
 # L'accueil revient à l'endroit où on l'avait laissé, défilé jusqu'à la carte
 # de Malica : c'est elle qui le prouve, pas le chiffre du mois, plus haut.

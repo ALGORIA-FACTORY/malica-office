@@ -54,10 +54,10 @@ test("depuis l'accueil, la barre de demande mène à la conversation, et on en r
   await expect(page).toHaveURL(/\/pme\/malica$/);
 
   // L'écran du dessin : son composeur, et le pied qui dit ce que Malica ne
-  // tranche pas à la place de l'expert-comptable.
+  // dit simplement que Malica peut se tromper.
   await expect(page.getByLabel(/Écrivez à Malica/)).toBeVisible();
   await expect(
-    page.getByText(/Je ne tranche pas à la place de votre expert-comptable/),
+    page.getByText(/Malica peut faire des erreurs\./),
   ).toBeVisible();
 
   // L'adresse tient au rechargement.
