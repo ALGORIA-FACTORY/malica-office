@@ -5204,8 +5204,7 @@ export const fr = {
   "pme.malica.rienEncore": "Rien encore : posez une question.",
   "pme.malica.voix.parler": "Parler à Malica",
   "pme.malica.voix.ecoute": "Je vous écoute…",
-  "pme.malica.pied":
-    "Je cite l'article et sa version en vigueur à la date. Je ne tranche pas à la place de votre expert-comptable sur ce qui engage votre dossier.",
+  "pme.malica.pied": "Malica peut faire des erreurs.",
   // Une pièce qui en accompagne une autre — reçu, justificatif (maquette du 25 octobre 2026).
   "pme.accompagne.genre.recu": "Reçu",
   "pme.accompagne.genre.justificatif": "Justificatif",

@@ -51,6 +51,8 @@ import { SelecteurDeSociete } from "./selecteur-de-societe";
 export interface EntetePmeProps {
   /** L'initiale du compte ouvert — la PERSONNE, jamais Malica. */
   initiale: string;
+  /** La photo du compte, quand il en a une : elle remplace l'initiale. */
+  photo?: string | null;
   /** Les alertes non lues de toutes les sociétés, et la plus récente. */
   cloche: ClocheProps;
   /**
@@ -60,7 +62,7 @@ export interface EntetePmeProps {
   societe?: React.ComponentProps<typeof SelecteurDeSociete> | undefined;
 }
 
-export function EntetePme({ initiale, cloche, societe }: EntetePmeProps) {
+export function EntetePme({ initiale, photo, cloche, societe }: EntetePmeProps) {
   const { t } = useI18n();
 
   return (
@@ -85,7 +87,7 @@ export function EntetePme({ initiale, cloche, societe }: EntetePmeProps) {
        */}
       <ClocheDeLEntete {...cloche} />
       <Link to="/pme/reglages" aria-label={t("pme.reglages.titre")} className="me">
-        {initiale}
+        {photo ? <img src={photo} alt="" /> : initiale}
       </Link>
     </header>
   );

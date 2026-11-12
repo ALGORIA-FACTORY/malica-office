@@ -103,6 +103,7 @@ import type { Notification } from "@malica/socle/ports/repositories";
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
+import { MandatsProposesDesSocietes } from "@/components/malica/MandatsProposes";
 import { useI18n } from "@/i18n";
 import { laReponseAEffaceLaPiece } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -414,6 +415,12 @@ function PmeNotifications() {
             </button>
           ))}
         </div>
+
+        {/* ── les propositions de mandat : ici, et seulement ici ─────── */}
+        <MandatsProposesDesSocietes
+          societes={pme.dossiers.length > 0 ? pme.dossiers : [{ id: pme.tenantId, name: "" }]}
+          nommer={plusieurs}
+        />
 
         {/* ── la société, et les non lues seules ─────────────────────── */}
         <div className="flt">
