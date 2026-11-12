@@ -536,6 +536,21 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /** Les fonctions du produit que la tour tient : pour chacune, la décision en vigueur. */
+  async fonctions(db: Requete) {
+    const { rows } = await db.query<{ r: unknown }>(`select plateforme.fonctions_etat() as r`);
+    return rows[0]?.r ?? {};
+  },
+
+  /** La tour allume ou éteint une fonction : daté, motivé, en ajout seul. */
+  async reglerFonction(db: Requete, fonction: string, actif: boolean, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.fonction_regler($1, $2, $3) as r`,
+      [fonction, actif, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /**
    * La passe de nuit : le réglage en vigueur, et l'état du relecteur de nuit
    * avec son libellé dans la langue demandée (le français à défaut).

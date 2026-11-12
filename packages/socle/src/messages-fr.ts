@@ -109,7 +109,7 @@ export const fr = {
 
   "onboarding.title": "Votre organisation",
   "onboarding.subtitle":
-    "Une organisation est un tenant : ses données sont isolées de toutes les autres. Vous en serez le premier membre.",
+    "Votre société, ou votre comptabilité. Ses données ne sont visibles que de ses membres, et de ceux qu’elle invite. Vous en serez le premier membre.",
   "onboarding.kind": "Nature",
   "onboarding.kind.pme": "PME — je tiens ma comptabilité",
   "onboarding.kind.cabinet": "Comptabilité — je tiens les dossiers de PME",
@@ -194,19 +194,21 @@ export const fr = {
   "plan.malica":
     "Un schéma d’écriture ne cite jamais un numéro de compte : il cite un rôle. Rebrancher un rôle ici change toutes les écritures qui l’emploient, sans qu’aucun schéma ne bouge.",
   "onboarding.jurisdiction": "Juridiction",
+  "onboarding.jurisdiction.option": "{pays} · {devise}",
   "onboarding.jurisdiction.choose": "Choisissez une juridiction",
   "onboarding.jurisdiction.help":
     "Elle fixe le plan comptable, les taux et la devise. Seules les juridictions dont le référentiel est en vigueur sont proposées.",
   "onboarding.jurisdiction.required": "Choisissez une juridiction avant de continuer.",
   "onboarding.legalId": "Identifiant fiscal (facultatif)",
+  "onboarding.adresse": "Adresse du siège (facultatif)",
   "onboarding.mode": "Mode de validation",
-  "onboarding.mode.mandate": "Sous mandat — la comptabilité supervise (quatre-yeux)",
-  "onboarding.mode.autonome": "Autonome — auto-validation, tracée à l'audit",
-  "onboarding.entity": "Établissement principal",
+  "onboarding.mode.mandate": "Avec une comptabilité — elle relit et valide vos écritures",
+  "onboarding.mode.autonome": "Seul — vous validez vous-même, et chaque validation est gardée",
   "onboarding.submit": "Créer l'organisation",
   "onboarding.error": "Création impossible.",
 
-  "app.orgs.empty": "Aucune organisation. Créez-en une pour commencer.",
+  "app.orgs.empty":
+    "Vous n’avez encore ni société ni comptabilité ici. Créez la vôtre, ou ouvrez le lien d’invitation que vous avez reçu.",
   "app.orgs.create": "Nouvelle organisation",
   "portal.title": "Choisissez votre espace",
   "portal.subtitle": "Deux applications, une seule base gouvernée.",
@@ -215,7 +217,6 @@ export const fr = {
   "portal.tour.cta": "Entrer",
   "portal.pme.count": "PME rattachées",
   "portal.cabinet.count": "Clients sous mandat",
-  "portal.norole": "Aucun espace disponible pour ce compte.",
   "portal.switch": "Changer d'espace",
   "app.role": "Rôle",
   "app.kind.pme": "PME",
@@ -1149,7 +1150,7 @@ export const fr = {
   "fiche.enregistrer": "Enregistrer ma situation",
   "fiche.promesse": "Un champ vide reste vide : je préfère l'ignorer que le supposer.",
   "fiche.dejaEtablie":
-    "Établie depuis le {depuis}. L'enregistrer la clôture et en ouvre une autre.",
+    "Établie depuis le {depuis}. L’enregistrer clôture cette fiche et en ouvre une autre.",
   "malica.fils.titre": "Vos conversations",
   "malica.fils.voir": "Mes conversations",
   "malica.fils.retour": "Retour au fil",
@@ -1953,6 +1954,10 @@ export const fr = {
   "cab.journal.piece.vers_mon_espace": "Pièce passée dans Mon espace.",
   "cab.journal.piece.demande_accordee": "Demande du client accordée.",
   "cab.journal.piece.demande_refusee": "Demande du client refusée.",
+  "cab.settings.borne.pourcentage": "{champ} : entre 0 et 100 %.",
+  "cab.settings.borne.capacite": "{champ} : un nombre entier, au moins 1.",
+  "cab.settings.borne.montant": "{champ} : un montant positif, ou vide.",
+  "cab.settings.fuseau.enregistrer": "Enregistrer le fuseau",
   "cab.settings.fuseau.titre": "Fuseau horaire de la comptabilité",
   "cab.settings.fuseau.lede":
     "Le jour du journal, le numéro de ses exports et leur comparaison se lisent dans ce fuseau.",
@@ -2250,7 +2255,7 @@ export const fr = {
   "pme.retour.fait.photo": "Nouvelle photo jointe à cette pièce",
   "pme.retour.fait.date": "Date corrigée",
   "pme.retour.fait.reponse": "Réponse envoyée à la comptabilité",
-  "envoi.titre": "Envoyé.",
+  "envoi.titre": "Envoyée.",
   "envoi.piece.sansNom": "Cette pièce",
   "envoi.piece.chez": "{piece} est chez {qui} depuis {quand}.",
   "envoi.piece.suite": "{qui} la prend en charge. Vous serez prévenu s'il a une question.",
@@ -2658,6 +2663,7 @@ export const fr = {
   "refus.relecture_nuit.passage_ferme": "Ce passage de nuit est fermé.",
   "refus.facturation_auto.rattrapage_hors_bornes":
     "Le rattrapage compte au moins un mois : le mois qui vient de se clore.",
+  "refus.fonction.inconnue": "La tour ne connaît pas cette fonction.",
   "refus.facturation_auto.perimetre_inconnu":
     "Un périmètre de facturation est « cabinets » ou « pme ».",
   "refus.facturation.premier_du_mois": "Une période de facturation commence le premier du mois.",
@@ -2687,6 +2693,7 @@ export const fr = {
   "refus.recu.attestation": "Seul un reçu issu d’une pièce atteste des règlements.",
   "refus.recu.sans_reglement": "Un reçu ne se rattache pas à un règlement.",
   "refus.recu.produit": "Un reçu se produit : il ne se photographie pas.",
+  "refus.honoraires.notes_eteintes": "Les notes d’honoraires arrivent dans une prochaine version.",
   "refus.honoraires.avoir_d_une_emise": "Seule une facture émise s’annule par un avoir.",
   "refus.honoraires.avoir_non_annulable": "Un avoir ne s’annule pas.",
   "refus.honoraires.emise_figee":
@@ -3329,7 +3336,8 @@ export const fr = {
   "cab.pv.chiffre.tvaHorsCalcul": "Pièces hors du calcul de la TVA, à reprendre",
   "cab.pv.chiffre.pieces": "Pièces transmises dans le mois",
   "cab.pv.chiffre.aSuperviser": "Pièces en attente de supervision",
-  "cab.pv.chiffre.retournees": "Pièces retournées au client",
+  "cab.pv.chiffre.retournees": "Pièces retournées, encore chez le client",
+  "cab.pv.chiffre.retourneesDuMois": "Pièces retournées au client dans le mois",
   "cab.pv.chiffre.echeances": "Échéances dans les trente jours",
   "cab.pv.source.pnl": "moteur P&L · Socle",
   "cab.pv.source.tva": "moteur TVA · Socle",
@@ -3489,6 +3497,8 @@ export const fr = {
   "cab.pil.kpi.ecart": "Écart de charge",
   "cab.pil.kpi.ecart.ctx": "entre le plus et le moins chargé",
   "cab.pil.kpi.sans": "Sans collaborateur",
+  "cab.pil.kpi.sans.ctx#one": "mandat à affecter",
+  "cab.pil.kpi.sans.ctx#other": "mandats à affecter",
   "cab.pil.kpi.sans.ctx": "mandats à affecter",
   "cab.pil.kpi.delai": "Délai médian de la comptabilité",
   "cab.pil.kpi.delai.ctx": "de la lecture à la comptabilisation, trente jours",
@@ -3727,7 +3737,8 @@ export const fr = {
   "cab.journal.honoraires.avoir": "Avoir émis",
   "cab.dos.kicker": "Synthèse au {date}",
   "cab.dos.sous": "Exercice au {cloture} · mandat depuis {depuis} · pack {pack}",
-  "cab.dos.cloture.inconnue": "clôture non renseignée",
+  "cab.dos.sous.sansCloture":
+    "Clôture de l’exercice non renseignée · mandat depuis {depuis} · pack {pack}",
   "cab.dos.depuis.inconnu": "date inconnue",
   "cab.dos.pack.inconnu": "pack non trouvé",
   "cab.dos.superviser": "Superviser ({n})",
@@ -4247,6 +4258,17 @@ export const fr = {
   "tour.relances.etat.ouvertes": "Ouvertes depuis le {date}.",
   "tour.relances.etat.suspension": "Ouvertes depuis le {date}, avec suspension automatique.",
   "tour.menu.facturation": "Facturation automatique",
+  "tour.menu.fonctions": "Fonctions du produit",
+  "tour.fonctions": "Fonctions du produit",
+  "tour.fonctions.aide":
+    "Ce que la tour allume ou éteint pour tout le monde. Éteinte, une fonction disparaît des écrans et le serveur la refuse ; rien n'est supprimé, et chaque décision reste au registre avec son motif.",
+  "tour.fonctions.notes_honoraires": "Notes d'honoraires",
+  "tour.fonctions.notes_honoraires.aide":
+    "Créer, émettre et encaisser une note d'honoraires, côté comptabilité. Le mandat et son forfait, la facture de Malica, les exports et les écritures ne s'éteignent pas.",
+  "tour.fonctions.etat.allumee": "Allumée depuis le {date}.",
+  "tour.fonctions.etat.eteinte": "Éteinte depuis le {date}.",
+  "tour.fonctions.allumer": "Allumer",
+  "tour.fonctions.eteindre": "Éteindre",
   "tour.facturation": "Facturation automatique",
   "tour.facturation.aide":
     "Deux périmètres indépendants, chacun ouvert ou coupé, motif à l'appui. Coupé, aucune facture de ce périmètre ne part d'elle-même.",
@@ -4465,7 +4487,7 @@ export const fr = {
   "pme.reglages.abo.report#other": "Dont {n} lectures reportées du mois dernier.",
   "pme.reglages.offres.empechement.choisi_par_la_comptabilite": "Choisi par votre comptabilité.",
   "pme.reglages.offres.complement":
-    "Votre abonnement est choisi et réglé par {comptabilite}. Vous pouvez monter d'offre : vous ne payez alors que la différence, indiquée ci-dessous.",
+    "Votre abonnement est choisi et réglé par {comptabilite}. S’il existe une offre au-dessus de la vôtre, vous pouvez y monter : vous ne payez alors que la différence.",
   "pme.reglages.abo.priseEnCharge": "Choisi et réglé par votre comptabilité, {comptabilite}.",
   "pme.reglages.abo.priseEnChargeEtComplement":
     "Choisi et réglé par votre comptabilité, {comptabilite}. Vous payez la différence : {prix} {devise} HT / mois.",
@@ -5335,6 +5357,8 @@ export const fr = {
   "cab.cli.nouveau.mandat.ok": "Demande de mandat envoyée à {client}",
   "cab.cli.champ.mf": "Matricule fiscal",
   "cab.cli.champ.mf.aide": "Sept chiffres, une lettre, puis A/M/000 — comme sur la carte fiscale.",
+  "cab.cli.champ.mf.figeDepuis":
+    "Figé : une pièce de ce dossier est déjà reçue. Il ne se modifie plus.",
   "cab.cli.champ.mf.fige": "Modifiable jusqu'à la première pièce reçue, puis figé.",
   "cab.cli.champ.nom": "Raison sociale",
   "cab.cli.champ.email": "E-mail du dirigeant",
@@ -5524,7 +5548,12 @@ export const fr = {
   "cab.mer.equipe.lien": "Réglages · Équipe",
   "cab.mer.clients": "Ajoutez vos clients",
   "cab.mer.clients.lede": "Importez votre liste ou ajoutez un client.",
-  "cab.mer.clients.fait": "{count} dossiers · {rejoints} dirigeants ont rejoint",
+  "cab.mer.clients.fait": "{count} dossiers",
+  "cab.mer.clients.fait#one": "{count} dossier",
+  "cab.mer.clients.fait#other": "{count} dossiers",
+  "cab.mer.clients.rejoints": "{count} dirigeants ont rejoint",
+  "cab.mer.clients.rejoints#one": "{count} dirigeant a rejoint",
+  "cab.mer.clients.rejoints#other": "{count} dirigeants ont rejoint",
   "cab.mer.abo": "Proposez leurs abonnements",
   "cab.mer.abo.lede": "Facultatif — sur la même page, ligne par ligne ou en lot.",
   "cab.mer.fait": "fait",

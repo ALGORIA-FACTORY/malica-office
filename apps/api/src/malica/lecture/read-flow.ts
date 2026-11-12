@@ -22,7 +22,7 @@ import { traceDOrigineDeLaPiece } from "../../db.ts";
 import type { CompteRendu } from "../../fabrique/travaux-execution.ts";
 import { consigner, tracerUnTravail } from "../../observabilite/journal.ts";
 import { noterLObjet } from "../../observabilite/trace.ts";
-import { confianceParChamp } from "../../scan/confiance.ts";
+import { confianceParChamp, NEUTRE_DU_MINIMUM } from "../../scan/confiance.ts";
 
 import {
   raisonDuRattrapage,
@@ -556,6 +556,30 @@ export async function readPieceFlow(
 type Construite = ReturnType<typeof buildExtractFromTokenPlan>;
 
 /**
+ * La confiance de la DÉSIGNATION, que chaque champ lu prend au minimum avec celle de ses
+ * jetons (`confianceParChamp`) — et le contrôle `confiance_lecture` dit « à vérifier »
+ * tout champ sous la réserve du pack.
+ *
+ * Une pièce que le Sudoku a prouvée SEUL pour tout ce que l'écriture exige
+ * (`prouveeSansIa`, `ref.lecture_sans_ia`) n'a été désignée par aucun modèle : sa
+ * sélection porte le score par défaut d'une sélection vide (0,5), qui n'est la mesure de
+ * rien. Il passait pour une confiance, sous la réserve, et chaque champ d'un PDF propre
+ * sortait « à vérifier » (recette du 11 novembre 2026, point 6.2). Le moteur désigne ou
+ * s'abstient : sa désignation prend le NEUTRE du minimum, comme une recette, et la
+ * confiance d'un champ est celle de son relevé — exacte pour la couche de texte d'un
+ * PDF, celle de l'OCR pour une photo.
+ *
+ * Le score GLOBAL de la sélection (`field_confidence.overall`, la file du cabinet) n'est
+ * pas touché : une pièce lue sans IA ne se range pas pour autant parmi les validables
+ * d'un geste.
+ */
+export function confianceDeLaDesignation(
+  read: Pick<VisionRead, "prouveeSansIa" | "selection">,
+): number {
+  return read.prouveeSansIa === true ? NEUTRE_DU_MINIMUM : read.selection.overall_confidence;
+}
+
+/**
  * La lecture telle que la base la persiste, et ses drapeaux — la première
  * comme une relecture retenue : un seul endroit pour le dire.
  */
@@ -603,7 +627,7 @@ function lectureAPersister(pieceId: string, packId: string, read: VisionRead, bu
       confianceParChamp: confianceParChamp(
         built.citations as Array<{ field: string; page: number; ordinal: number }>,
         read.tokens,
-        read.selection.overall_confidence,
+        confianceDeLaDesignation(read),
       ),
     },
   };

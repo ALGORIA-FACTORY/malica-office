@@ -108,7 +108,7 @@ export const en: Dict = {
 
   "onboarding.title": "Your organisation",
   "onboarding.subtitle":
-    "An organisation is a tenant: its data is isolated from every other one. You will be its first member.",
+    "Your company, or your accounting firm. Its data is visible only to its members and to those it invites. You will be its first member.",
   "onboarding.kind": "Nature",
   "onboarding.kind.pme": "Company — I keep my books",
   "onboarding.kind.cabinet": "Accounting — I keep companies' books",
@@ -193,19 +193,21 @@ export const en: Dict = {
   "plan.malica":
     "An entry template never cites an account number: it cites a role. Rebinding a role here changes every entry that uses it, without touching a single template.",
   "onboarding.jurisdiction": "Jurisdiction",
+  "onboarding.jurisdiction.option": "{pays} · {devise}",
   "onboarding.jurisdiction.choose": "Choose a jurisdiction",
   "onboarding.jurisdiction.help":
     "It sets the chart of accounts, the rates and the currency. Only jurisdictions with an active reference pack are offered.",
   "onboarding.jurisdiction.required": "Choose a jurisdiction before continuing.",
   "onboarding.legalId": "Tax identification number (optional)",
+  "onboarding.adresse": "Head office address (optional)",
   "onboarding.mode": "Validation mode",
-  "onboarding.mode.mandate": "Under mandate — the accountant reviews (four eyes)",
-  "onboarding.mode.autonome": "Autonomous — self-validation, recorded in the audit log",
-  "onboarding.entity": "Main establishment",
+  "onboarding.mode.mandate": "With an accountant — they review and approve your entries",
+  "onboarding.mode.autonome": "On your own — you approve yourself, and every approval is kept",
   "onboarding.submit": "Create organisation",
   "onboarding.error": "Creation failed.",
 
-  "app.orgs.empty": "No organisation yet. Create one to start.",
+  "app.orgs.empty":
+    "You have no company or accounting firm here yet. Create yours, or open the invitation link you received.",
   "app.orgs.create": "New organisation",
   "portal.title": "Choose your workspace",
   "portal.subtitle": "Two applications, one governed ledger.",
@@ -214,7 +216,6 @@ export const en: Dict = {
   "portal.tour.cta": "Enter",
   "portal.pme.count": "Companies linked",
   "portal.cabinet.count": "Clients under mandate",
-  "portal.norole": "No workspace available for this account.",
   "portal.switch": "Switch workspace",
   "app.role": "Role",
   "app.kind.pme": "Company",
@@ -1883,6 +1884,10 @@ export const en: Dict = {
   "cab.journal.piece.vers_mon_espace": "Document moved to My space.",
   "cab.journal.piece.demande_accordee": "Client request granted.",
   "cab.journal.piece.demande_refusee": "Client request declined.",
+  "cab.settings.borne.pourcentage": "{champ}: between 0 and 100%.",
+  "cab.settings.borne.capacite": "{champ}: a whole number, at least 1.",
+  "cab.settings.borne.montant": "{champ}: a positive amount, or empty.",
+  "cab.settings.fuseau.enregistrer": "Save the time zone",
   "cab.settings.fuseau.titre": "Accounting time zone",
   "cab.settings.fuseau.lede":
     "The day of the journal, the number of its exports and their comparison are read in this time zone.",
@@ -2571,6 +2576,7 @@ export const en: Dict = {
   "refus.relecture_nuit.passage_ferme": "This night pass is closed.",
   "refus.facturation_auto.rattrapage_hors_bornes":
     "The catch-up covers at least one month: the month that has just closed.",
+  "refus.fonction.inconnue": "The control tower does not know this feature.",
   "refus.facturation_auto.perimetre_inconnu": "An invoicing scope is “cabinets” or “pme”.",
   "refus.facturation.premier_du_mois": "A billing period starts on the first of the month.",
   "refus.facturation.destinataire_sans_nom":
@@ -2596,6 +2602,7 @@ export const en: Dict = {
   "refus.recu.attestation": "Only a receipt produced from a document attests payments.",
   "refus.recu.sans_reglement": "A receipt is not attached to a payment.",
   "refus.recu.produit": "A receipt is produced: it is not photographed.",
+  "refus.honoraires.notes_eteintes": "Fee notes are coming in a future version.",
   "refus.honoraires.avoir_d_une_emise": "Only an issued invoice is cancelled by a credit note.",
   "refus.honoraires.avoir_non_annulable": "A credit note cannot be cancelled.",
   "refus.honoraires.emise_figee":
@@ -3233,7 +3240,8 @@ export const en: Dict = {
   "cab.pv.chiffre.tvaHorsCalcul": "Documents left out of the VAT calculation, to rework",
   "cab.pv.chiffre.pieces": "Documents sent during the month",
   "cab.pv.chiffre.aSuperviser": "Documents awaiting review",
-  "cab.pv.chiffre.retournees": "Documents returned to the client",
+  "cab.pv.chiffre.retournees": "Documents returned, still with the client",
+  "cab.pv.chiffre.retourneesDuMois": "Documents returned to the client this month",
   "cab.pv.chiffre.echeances": "Deadlines within thirty days",
   "cab.pv.source.pnl": "P&L engine · Socle",
   "cab.pv.source.tva": "VAT engine · Socle",
@@ -3391,6 +3399,8 @@ export const en: Dict = {
   "cab.pil.kpi.ecart": "Workload gap",
   "cab.pil.kpi.ecart.ctx": "between the most and the least loaded",
   "cab.pil.kpi.sans": "Unassigned",
+  "cab.pil.kpi.sans.ctx#one": "mandate to assign",
+  "cab.pil.kpi.sans.ctx#other": "mandates to assign",
   "cab.pil.kpi.sans.ctx": "mandates to assign",
   "cab.pil.kpi.delai": "Accounting median delay",
   "cab.pil.kpi.delai.ctx": "from reading to booking, thirty days",
@@ -3627,7 +3637,7 @@ export const en: Dict = {
   "cab.journal.honoraires.avoir": "Credit note issued",
   "cab.dos.kicker": "Overview as of {date}",
   "cab.dos.sous": "Year end {cloture} · mandate since {depuis} · pack {pack}",
-  "cab.dos.cloture.inconnue": "year end not set",
+  "cab.dos.sous.sansCloture": "Year end not set · mandate since {depuis} · pack {pack}",
   "cab.dos.depuis.inconnu": "unknown date",
   "cab.dos.pack.inconnu": "pack not found",
   "cab.dos.superviser": "Supervise ({n})",
@@ -4125,6 +4135,17 @@ export const en: Dict = {
   "tour.relances.etat.ouvertes": "Enabled since {date}.",
   "tour.relances.etat.suspension": "Enabled since {date}, with automatic suspension.",
   "tour.menu.facturation": "Automatic invoicing",
+  "tour.menu.fonctions": "Product features",
+  "tour.fonctions": "Product features",
+  "tour.fonctions.aide":
+    "What the tower turns on or off for everyone. When off, a feature disappears from the screens and the server refuses it; nothing is deleted, and every decision stays on record with its reason.",
+  "tour.fonctions.notes_honoraires": "Fee notes",
+  "tour.fonctions.notes_honoraires.aide":
+    "Creating, issuing and collecting a fee note, on the accountant's side. The mandate and its flat fee, Malica's invoice, exports and entries are never turned off.",
+  "tour.fonctions.etat.allumee": "On since {date}.",
+  "tour.fonctions.etat.eteinte": "Off since {date}.",
+  "tour.fonctions.allumer": "Turn on",
+  "tour.fonctions.eteindre": "Turn off",
   "tour.facturation": "Automatic invoicing",
   "tour.facturation.aide":
     "Two independent scopes, each opened or turned off with a reason. When off, no invoice of that scope goes out on its own.",
@@ -4337,7 +4358,7 @@ export const en: Dict = {
   "pme.reglages.abo.report#other": "Including {n} reads carried over from last month.",
   "pme.reglages.offres.empechement.choisi_par_la_comptabilite": "Chosen by your accountant.",
   "pme.reglages.offres.complement":
-    "Your plan is chosen and paid for by {comptabilite}. You can move up: you then pay only the difference, shown below.",
+    "Your plan is chosen and paid for by {comptabilite}. If there is a plan above yours, you can move up to it: you then pay only the difference.",
   "pme.reglages.abo.priseEnCharge": "Chosen and paid for by your accountant, {comptabilite}.",
   "pme.reglages.abo.priseEnChargeEtComplement":
     "Chosen and paid for by your accountant, {comptabilite}. You pay the difference: {prix} {devise} excl. tax / month.",
@@ -5123,6 +5144,8 @@ export const en: Dict = {
   "cab.cli.nouveau.mandat.ok": "Engagement request sent to {client}",
   "cab.cli.champ.mf": "Tax ID",
   "cab.cli.champ.mf.aide": "Seven digits, a letter, then A/M/000 — as on the tax card.",
+  "cab.cli.champ.mf.figeDepuis":
+    "Locked: a document of this file has already arrived. It can no longer be changed.",
   "cab.cli.champ.mf.fige": "Editable until the first document arrives, then locked.",
   "cab.cli.champ.nom": "Company name",
   "cab.cli.champ.email": "Owner's e-mail",
@@ -5308,7 +5331,12 @@ export const en: Dict = {
   "cab.mer.equipe.lien": "Settings · Team",
   "cab.mer.clients": "Add your clients",
   "cab.mer.clients.lede": "Import your list or add a client.",
-  "cab.mer.clients.fait": "{count} files · {rejoints} owners joined",
+  "cab.mer.clients.fait": "{count} files",
+  "cab.mer.clients.fait#one": "{count} file",
+  "cab.mer.clients.fait#other": "{count} files",
+  "cab.mer.clients.rejoints": "{count} owners joined",
+  "cab.mer.clients.rejoints#one": "{count} owner joined",
+  "cab.mer.clients.rejoints#other": "{count} owners joined",
   "cab.mer.abo": "Offer their subscriptions",
   "cab.mer.abo.lede": "Optional — on the same page, row by row or in bulk.",
   "cab.mer.fait": "done",

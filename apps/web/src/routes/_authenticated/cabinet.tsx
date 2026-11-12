@@ -65,6 +65,7 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
 import { compteDuBadge, montant } from "@/lib/lisible";
 import { plier } from "@/lib/mes-societes";
+import { nomDeLaPersonne } from "@/lib/nom-de-la-personne";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 import type { ClientSummary, MonAcces, Organization } from "@malica/socle/ports/repositories";
@@ -279,6 +280,13 @@ function Coquille({
   const nbClients = (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length;
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
+  // Le nom donné à l'inscription ou dans les Réglages : l'en-tête le montre
+  // au lieu de l'adresse (recette du 11 novembre 2026, 4.4).
+  const profil = useQuery({
+    queryKey: ["mon-profil"],
+    queryFn: () => office().identity.monProfil(),
+    staleTime: 10 * 60 * 1000,
+  });
   // Qui je suis ici : le pied du rail le dit, et les lectures filtrent sur la même règle.
   const acces = useMonAcces(org.id);
 
@@ -403,6 +411,7 @@ function Coquille({
         nbClients={nbClients}
         clients={clients.data ?? []}
         email={compte.data?.email ?? null}
+        nom={nomDeLaPersonne(profil.data)}
         role={libelleDuRole(acces.data ?? null, t)}
         ouvert={tiroir}
         fermerTiroir={() => setTiroir(false)}
@@ -496,6 +505,7 @@ function Rail({
   nbClients,
   clients,
   email,
+  nom,
   role,
   ouvert,
   fermerTiroir,
@@ -509,6 +519,7 @@ function Rail({
   nbClients: number;
   clients: ClientSummary[];
   email: string | null;
+  nom: string | null;
   role: string;
   ouvert: boolean;
   fermerTiroir: () => void;
@@ -718,11 +729,13 @@ function Rail({
           title={email ?? ""}
         >
           <span className="num flex h-7 w-7 shrink-0 items-center justify-center bg-foreground text-[10.5px] font-semibold text-background">
-            {email ? initialesDe(email) : "—"}
+            {nom || email ? initialesDe(nom ?? email ?? "") : "—"}
           </span>
           {!replie ? (
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[12.5px] font-medium">{email ?? "—"}</span>
+              <span className="block truncate text-[12.5px] font-medium">
+                {nom ?? email ?? "—"}
+              </span>
               <span className="block text-[10.5px] text-muted-foreground">{role}</span>
             </span>
           ) : null}

@@ -13,6 +13,15 @@
 
 const borner = (x: number) => Math.min(1, Math.max(0, x));
 
+/**
+ * Le NEUTRE du minimum : la confiance d'une désignation qui n'ajoute aucune
+ * incertitude. Un désignateur déterministe (une recette, le Sudoku seul) désigne
+ * ou s'abstient, il n'échantillonne pas. Ce n'est pas « sûr à 100 % » : la
+ * confiance du champ devient celle de son jeton relevé, exactement comme pour un
+ * jeton sans confiance propre.
+ */
+export const NEUTRE_DU_MINIMUM = 1;
+
 export function confianceParChamp(
   citations: ReadonlyArray<{ field: string; page: number; ordinal: number }>,
   jetons: ReadonlyArray<{ page: number; ordinal: number; confidence?: number | null }>,
