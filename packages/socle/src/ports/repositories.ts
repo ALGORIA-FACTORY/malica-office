@@ -1,3 +1,4 @@
+import type { FactureOuverte } from "../engines/banque/reglement-de-ligne.ts";
 import type { QualificationDeRetenue, TauxDeRetenue } from "../use-cases/retenue-au-reglement.ts";
 /**
  * Ports du domaine. Les écrans ne connaissent que ce vocabulaire :
@@ -2921,6 +2922,8 @@ export interface BanqueRepository {
   /** Journal d'audit des gestes bancaires du tenant. */
   audit(tenantId: string): Promise<AuditEntry[]>;
   setLineStatus(ligneId: string, status: "ouverte" | "rapprochee" | "ignoree"): Promise<void>;
+  /** Les factures inscrites dont le règlement reste à inscrire, ce qu'une ligne peut éteindre. */
+  facturesOuvertes(tenantId: string): Promise<FactureOuverte[]>;
 }
 
 // ------------------------------------------------------------- collaboration

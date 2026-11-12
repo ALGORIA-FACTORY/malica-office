@@ -211,14 +211,18 @@ export function lireLeSens(e: {
  * est une seule décision, écrite une fois, éprouvée une fois, appelée par qui
  * en a besoin.
  */
+/** Le type d'une pièce dit-il un sens — achat ou vente ? */
+export function estUnSensDeFacture(v: string | null | undefined): v is SensDeLaPiece {
+  return v === "facture_achat" || v === "facture_vente";
+}
+
 export function leSensResteADemander(e: {
   /** Ce que la lecture a tranché, ou `null` si elle n'a pas su. */
   sensLu: string | null | undefined;
   /** Ce que la personne a déclaré à la capture, ou corrigé depuis. */
   typeDeclare: string | null | undefined;
 }): boolean {
-  const estUnSens = (v: string | null | undefined): v is SensDeLaPiece =>
-    v === "facture_achat" || v === "facture_vente";
+  const estUnSens = estUnSensDeFacture;
   // Un type déclaré qui n'est ni l'un ni l'autre — un relevé bancaire, un
   // ticket — ne répond pas à la question : il dit seulement que ce n'est pas
   // une facture, et l'écran qui demande le sens ne s'affiche pas sur ces

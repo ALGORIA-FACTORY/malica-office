@@ -1044,6 +1044,9 @@ export const ar: Dict = {
   "cab.banque.when": "\u0627\u0644\u062a\u0648\u0642\u064a\u062a",
   "cab.banque.orphansbank":
     "\u0623\u0633\u0637\u0631 \u0627\u0644\u0643\u0634\u0641 \u0628\u062f\u0648\u0646 \u0642\u064a\u062f",
+  "cab.banque.reglement.propose": "يسدّد الفاتورة {facture}",
+  "cab.banque.reglement.ecriture": "قيد التسديد المقترح",
+  "cab.banque.reglement.ouvrir": "فتح الفاتورة",
   "cab.banque.orphansbook":
     "\u0642\u064a\u0648\u062f \u0628\u062f\u0648\u0646 \u0633\u0637\u0631 \u0643\u0634\u0641",
   "cab.noorg": "لا توجد محاسبة. أنشئ محاسبة للإشراف على حرفائك.",
