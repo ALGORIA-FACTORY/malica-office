@@ -14,26 +14,24 @@ import { destinationDesEnvois } from "@malica/socle/circuit";
 
 import type { DestinationDEnvoi } from "@/lib/envoi";
 
-import { useComptabiliteDeLaSociete } from "./use-comptable-interne";
 import { useMonAcces } from "./use-mon-acces";
+import { useMonCabinet } from "./use-mon-cabinet";
 
 export function useDestinationDeLEnvoi(tenantId: string | null | undefined) {
   const { t } = useI18n();
   const acces = useMonAcces(tenantId);
-  // La comptabilité mandatée, ou le comptable interne (7.2) : l'un ou l'autre
-  // reçoit ce que le propriétaire transmet.
-  const compta = useComptabiliteDeLaSociete(tenantId);
-  const cabinet = compta.cabinet;
+  const cabinet = useMonCabinet(tenantId);
   const droits = acces.data?.droits ?? [];
-  const destination = destinationDesEnvois(droits, compta.aUneComptabilite);
+  const aUnCabinet = Boolean(cabinet.data);
+  const destination = destinationDesEnvois(droits, aUnCabinet);
   const quiPour = (d: DestinationDEnvoi) =>
     d === "proprietaire"
       ? t("circuit.proprietaire")
-      : (cabinet.data?.name ?? compta.interne?.nom ?? t("pme.coffre.votreComptable"));
+      : (cabinet.data?.name ?? t("pme.coffre.votreComptable"));
   return {
     destination,
     /** Lus : la destination est sûre (droits et mandat). */
-    pret: acces.isSuccess && compta.pret,
+    pret: acces.isSuccess && cabinet.isSuccess,
     quiPour,
     /** Le geste qui envoie un lot. */
     action: (d: DestinationDEnvoi) =>

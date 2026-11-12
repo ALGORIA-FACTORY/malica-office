@@ -968,3 +968,18 @@ Migration `20261221100000`. Ce qui est tranché par défaut :
 - Le courriel part par Brevo quand il est configuré (expéditeur et adresse publique en configuration,
   aucune adresse en dur) ; il dit « tenir sa comptabilité », jamais « Dirigeant ». Les épreuves n'envoient
   rien.
+
+### C-4 — Le comptable interne n'a pas encore d'espace de travail (revue de #369, constat 2)
+
+Le rôle, ses droits (lecture, préparation, inscription, validation, retour, export), sa place comprise et la
+règle C-1 sont en place côté base et API. **Il n'a pas d'écran pour revoir une pièce.** L'espace de la
+comptabilité (`/cabinet`) est construit autour d'une organisation de type cabinet ; la revue d'une pièce
+(`cabinet.piece.$pieceId`, 1 800 lignes) lit la file, le plan et les clients de cette organisation. Le
+rendre utilisable pour une société demande un écran dédié, à maquetter et à vérifier au clic.
+
+Décision prise pour ne rien présenter qui ne fonctionne pas : **le comptable interne n'est pas une
+destination des pièces** côté écran (envoi, circuit, capture lisent à nouveau seulement le mandat d'une
+comptabilité, comme sur `main`). Sa place reste affichée dans Réglages › Sociétés. **Conséquence à
+trancher avant toute mise en production** : une société qui n'a qu'un comptable interne ne peut plus
+inscrire ses propres écritures (`refus.inscription.reservee_au_cabinet`, règle C-1), et son comptable ne
+peut pas encore les revoir. Deux voies : construire l'espace, ou ne pas livrer la règle C-1 avant lui.

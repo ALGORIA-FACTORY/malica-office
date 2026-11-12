@@ -41,7 +41,6 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { etiqueterLeDossier } from "@/lib/telemetrie";
 import { clePiecesLues } from "@/hooks/use-pieces-lues";
 import { attendUnGeste, seMontreIci } from "@/lib/libelle-de-notification";
-import { useComptabiliteDeLaSociete } from "@/hooks/use-comptable-interne";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
 import { useDossiers } from "@/hooks/use-dossiers";
@@ -165,8 +164,7 @@ function PmeLayout() {
    * pièce confirmée ne partait jamais au cabinet ; un dirigeant qui était
    * aussi expert ailleurs croyait l'inverse.
    */
-  // Ou un comptable interne (7.2) : la pièce lui part de même.
-  const aUnCabinet = useComptabiliteDeLaSociete(org?.id).aUneComptabilite;
+  const aUnCabinet = Boolean(monCabinet.data?.id);
   const hasCabinet = (orgsQuery.data ?? []).some((o) => o.kind === "cabinet");
 
   // Garde de rôle : sans appartenance PME, on renvoie au portail plutôt qu'un écran muet.

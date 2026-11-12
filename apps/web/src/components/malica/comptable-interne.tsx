@@ -4,8 +4,8 @@
  *
  * Une place « Comptable interne » est comprise dans chaque offre, dès Basic,
  * hors des places payantes : la ligne dit qui l'occupe, ou l'invitation qui
- * l'attend. L'invitation se fait par « Inviter ma comptabilité »
- * (`inviter-ma-comptabilite.tsx`), choix « Interne ».
+ * l'attend. Elle n'envoie rien au comptable : son espace de travail n'existe
+ * pas encore (revue de #369).
  */
 import { usePlaceComptable } from "@/hooks/use-comptable-interne";
 import { useI18n } from "@/i18n";

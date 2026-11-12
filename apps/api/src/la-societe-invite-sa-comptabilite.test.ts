@@ -232,4 +232,71 @@ describe("la société invite sa comptabilité", { skip: !BASE_CONFIGUREE }, () 
       /refus\.mandat\.un_seul_actif/,
     );
   });
+
+  it("les portes de l'invitation appartiennent au portier : elles ne contournent pas la RLS de l'appelant", async () => {
+    const { rows } = await admin.query<{ fn: string; proprietaire: string }>(
+      `select p.proname as fn, pg_get_userbyid(p.proowner) as proprietaire
+         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+          and p.proname in ('comptabilite_inviter', 'comptabilite_invitation_lire',
+                            'comptabilite_invitation_accepter', 'comptable_interne_inviter',
+                            'place_comptable_lire')`,
+    );
+    assert.equal(rows.length, 5);
+    for (const r of rows) assert.equal(r.proprietaire, "portier", r.fn);
+  });
+
+  it("l'expert n'écrit pas un mandat sans l'invitation ouverte de la société", async () => {
+    // Une société sans aucune invitation : la comptabilité de l'expert n'y a
+    // pas de mandat à écrire, et la politique d'écriture le refuse.
+    const sans = await creer(dirigeant, "pme", `SOCIETE SANS ${marque}`, matriculeDEssai());
+    const refusee = await sousIdentiteDuServeur(expert.id, (db) =>
+      db.query(
+        `insert into identity.engagements (pme_org_id, cabinet_org_id, status, starts_on, created_by)
+         values ($1, $2, 'actif', current_date, $3)`,
+        [sans, cabinet, expert.id],
+      ),
+    ).then(
+      () => "accepte",
+      (e: Error) => e.message,
+    );
+    assert.notEqual(refusee, "accepte");
+    await admin.query(
+      `update identity.organizations set archived_at = now(), archived_reason = 'fixture de test automatisé' where id = $1`,
+      [sans],
+    );
+  });
+
+  it("décliner une invitation de sa comptabilité réussit, expire l'invitation, et ne crée aucune appartenance", async () => {
+    const societe = await creer(dirigeant, "pme", `SOCIETE DECLINE ${marque}`, matriculeDEssai());
+    const offre = (await fait(
+      dirigeant,
+      "identite.inviterMaComptabilite",
+      societe,
+      expert.email,
+    )) as {
+      jeton: string;
+    };
+    const recues = (await fait(expert, "collab.invitationsPourMoi")) as InvitationRecue[];
+    const inv = recues.find((i) => i.cabinetTenantId === societe);
+    assert.ok(inv, "l'invitation arrive à l'expert");
+    assert.ok(offre.jeton);
+    const r = (await fait(expert, "collab.repondreAInvitation", inv.id, false)) as {
+      rejoint: boolean;
+    };
+    assert.equal(r.rejoint, false);
+    const { rows } = await admin.query(
+      `select 1 from identity.memberships where tenant_id = $1 and user_id = $2`,
+      [societe, expert.id],
+    );
+    assert.equal(rows.length, 0, "aucune appartenance");
+    const lue = (await fait(expert, "identite.lireInvitationParLien", offre.jeton)) as {
+      valable: boolean;
+    };
+    assert.equal(lue.valable, false, "l'invitation est expirée");
+    await admin.query(
+      `update identity.organizations set archived_at = now(), archived_reason = 'fixture de test automatisé' where id = $1`,
+      [societe],
+    );
+  });
 });

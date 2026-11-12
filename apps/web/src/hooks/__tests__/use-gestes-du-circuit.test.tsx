@@ -16,11 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CircuitInterne } from "@malica/socle/statut-d-envoi";
 
-const base = vi.hoisted(() => ({
-  droits: [] as string[],
-  cabinet: true,
-  comptables: [] as Array<{ userId: string; nom: string | null }>,
-}));
+const base = vi.hoisted(() => ({ droits: [] as string[], cabinet: true }));
 const api = vi.hoisted(() => ({
   envoyer: vi.fn(),
   transmettreLesPieces: vi.fn(),
@@ -43,14 +39,6 @@ vi.mock("@/verticals/malica-office/composition", () => ({
         base.cabinet ? { id: "cab", name: "CABINET ESSAI", tientLesLivres: true } : null,
     },
     acces: { monAcces: async () => ({ role: "x", plateforme: false, droits: base.droits }) },
-    facturation: {
-      placeComptable: async () => ({
-        incluses: 1,
-        engagees: base.comptables.length,
-        comptables: base.comptables,
-        invitations: [],
-      }),
-    },
   }),
 }));
 
@@ -124,7 +112,6 @@ async function pret<T>(hook: () => T) {
 beforeEach(() => {
   base.droits = PROPRIETAIRE;
   base.cabinet = true;
-  base.comptables = [];
   for (const f of Object.values(api)) f.mockReset();
   api.envoyer.mockResolvedValue({ le: "2026-10-31T10:00:00Z", chez: "cabinet", deja: false });
   api.transmettreLesPieces.mockResolvedValue({ transmises: 1 });
@@ -162,26 +149,6 @@ describe("« Envoyer » ne se rend que si le circuit l'offre", () => {
     r.result.current.valeur.lot.mutate([gardee, retourneeAuSiege]);
     await waitFor(() => expect(r.result.current.valeur.lot.isSuccess).toBe(true));
     expect(api.transmettreLesPieces).not.toHaveBeenCalled();
-  });
-});
-
-/*
- * Le comptable interne (7.2, 12 novembre 2026) : une société qui en a un n'est
- * plus « autonome ». Sans comptabilité mandatée, la pièce du propriétaire part
- * chez lui ; sans l'un ni l'autre, elle ne part nulle part.
- */
-describe("une société avec un comptable interne transmet ses pièces", () => {
-  it("sans mandat, la pièce part au comptable interne", async () => {
-    base.cabinet = false;
-    base.comptables = [{ userId: "u-comptable", nom: "Nour Essai" }];
-    const r = avec(() => useEnvoyer("dossier", piece()));
-    await waitFor(() => expect(r.result.current?.vers).toBe("cabinet"));
-  });
-
-  it("sans mandat ni comptable interne, rien ne part", async () => {
-    base.cabinet = false;
-    const r = await pret(() => useEnvoyer("dossier", piece()));
-    expect(r.result.current.valeur).toBeNull();
   });
 });
 

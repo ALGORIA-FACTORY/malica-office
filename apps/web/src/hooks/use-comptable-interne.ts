@@ -1,18 +1,15 @@
 /**
- * Le comptable interne de la société ouverte (décision du 12 novembre 2026,
- * 7.2) : un salarié, membre de la société, qui en tient les livres.
+ * La place « Comptable interne » de la société ouverte (décision du 12 novembre
+ * 7.2) : comprise, prise, attendue. Jamais un prix.
  *
- * Une société qui en a un n'est plus « autonome » au sens où personne ne
- * valide : ses pièces partent chez lui, comme elles partiraient chez une
- * comptabilité externe. Les écrans qui décident où part un envoi lisent donc
- * `aUneComptabilite`, jamais le seul mandat. La base décide de même
- * (`app.livres_tenus_par_le_cabinet`).
+ * Ce hook ne fait PAS partir les pièces vers le comptable interne : il n'a pas
+ * encore d'espace de travail (revue de #369). Tant que cet espace n'existe pas,
+ * l'envoi, le circuit et la capture ne lisent que le MANDAT d'une comptabilité
+ * (`useMonCabinet`), comme sur `main`.
  */
 import { useQuery } from "@tanstack/react-query";
 
 import { office } from "@/verticals/malica-office/composition";
-
-import { useMonCabinet } from "./use-mon-cabinet";
 
 const DIX_MINUTES = 10 * 60 * 1000;
 
@@ -28,22 +25,4 @@ export function usePlaceComptable(tenantId: string | null | undefined) {
     enabled: Boolean(tenantId),
     staleTime: DIX_MINUTES,
   });
-}
-
-/**
- * Qui tient les livres de la société : la comptabilité mandatée, sinon le
- * comptable interne. `nom` : celui à qui la pièce part (`null` quand il n'a
- * pas de nom, l'écran dit alors son rôle).
- */
-export function useComptabiliteDeLaSociete(tenantId: string | null | undefined) {
-  const cabinet = useMonCabinet(tenantId);
-  const place = usePlaceComptable(tenantId);
-  const interne = place.data?.comptables[0] ?? null;
-  return {
-    cabinet,
-    aUneComptabilite: Boolean(cabinet.data) || interne !== null,
-    /** Le comptable interne en place, s'il n'y a pas de comptabilité mandatée. */
-    interne: cabinet.data ? null : interne,
-    pret: cabinet.isSuccess && (place.isSuccess || place.isError),
-  };
 }
