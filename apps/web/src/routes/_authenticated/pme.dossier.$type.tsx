@@ -16,6 +16,7 @@ import { Fragment, useEffect, useState } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-groupe";
+import { ImprimerDepuisLaPme } from "@/components/malica/imprimer-les-pieces";
 import { RangeeDesSieges, type Siege } from "@/components/malica/rangee-des-sieges";
 import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { usePme } from "@/components/malica/pme-context";
@@ -265,6 +266,18 @@ function Dossier() {
             </svg>
           </button>
         </div>
+        {/* Imprimer le dossier (7.7) : ce que l'écran montre, siège et société compris. */}
+        {chargement ? null : (
+          <ImprimerDepuisLaPme
+            key={`${type}:${societe}:${siege}`}
+            pieces={retenues.map((p) => p.id)}
+            portee="dossier"
+            nom={libelle}
+            libelle={t("cab.biblio.imprimer.dossier")}
+            classe="plus-anciennes"
+            classeDuTexte="vide"
+          />
+        )}
 
         {chargement ? (
           <p className="vide">{t("common.loading")}</p>

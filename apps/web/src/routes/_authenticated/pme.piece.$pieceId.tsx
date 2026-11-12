@@ -35,6 +35,7 @@ import { DocumentView } from "@/components/malica/document-view";
 import { pagesJpegDuPdf } from "@/capabilities/pages-du-pdf";
 import { MalicaAvatar } from "@/components/malica/office-ui";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
+import { ImprimerDepuisLaPme } from "@/components/malica/imprimer-les-pieces";
 import { Aide } from "@/components/malica/aide";
 import { PieceQuiAccompagneFiche } from "@/components/malica/piece-qui-accompagne";
 import { RattacherUnDocument } from "@/components/malica/rattacher-un-document";
@@ -3120,6 +3121,18 @@ function PieceScreen() {
             </div>
           ) : (
             <div className="f-carte">
+              {/* Imprimer l'original (7.7) : une pièce de la société, jamais le privé. */}
+              {vis === "partage" ? (
+                <ImprimerDepuisLaPme
+                  pieces={[piece.id]}
+                  portee="piece"
+                  nom={payload?.issuer ?? t("cab.biblio.imprimer")}
+                  libelle={t("cab.biblio.imprimer")}
+                  classe="f-ligne"
+                  classeDuTexte="lb"
+                  enLigne
+                />
+              ) : null}
               <button type="button" className="f-ligne" onClick={reprendreLaPhoto}>
                 <span className="bd">
                   <span className="lb-a">{t("pme.verifie.corriger")}</span>

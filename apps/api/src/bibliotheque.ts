@@ -84,7 +84,7 @@ type LigneDocument = Omit<DocumentComptable, "montant"> & {
 };
 
 /** Le fuseau de la personne connectée : sa préférence, ou le défaut livré inscrit chez elle. */
-async function fuseauDeLaPersonne(db: Requete): Promise<string> {
+export async function fuseauDeLaPersonne(db: Requete): Promise<string> {
   await db.query(`select public.mes_preferences_ouvrir()`);
   const { rows } = await db.query<{ fuseau: string | null }>(
     `select fuseau from notif.preferences where user_id = auth.uid()`,
@@ -281,6 +281,92 @@ export async function documentsLies(
     [clientId, tous],
   );
   return { documents: docs, ecritures, controles, paiements };
+}
+
+/** Une société dont des pièces s'impriment : ce que sa page de garde en dit. */
+export interface SocieteAImprimer {
+  tenantId: string;
+  nom: string;
+  matricule: string | null;
+  documents: DocumentComptable[];
+}
+
+/**
+ * Les pièces d'une impression, société par société, dans l'ordre du dossier
+ * téléchargé (`documentsLies` : réception, puis identifiant).
+ *
+ * Une société dont la personne n'est pas membre — qu'elle nomme un cabinet ou
+ * non — se lit par la comptabilité : la MÊME lecture que l'archive (mandat,
+ * garde de l'export, documents liés). Une société dont elle est membre, sans
+ * cabinet nommé : les pièces que la base lui rend (RLS), les siennes ou
+ * celles de sa société, transmises ou gardées. Dans les deux cas l'espace privé
+ * (`personnel`) n'y entre jamais, et une pièce
+ * demandée que la personne ne voit pas fait refuser l'impression entière.
+ */
+export async function documentsAImprimer(
+  db: Requete,
+  cabinetId: string | null,
+  pieces: string[],
+): Promise<SocieteAImprimer[]> {
+  Choix.parse(pieces);
+  const { rows: vues } = await db.query<{ id: string; tenant_id: string }>(
+    `select id, tenant_id from pieces_v where id = any($1::uuid[]) and vis <> 'personnel'`,
+    [pieces],
+  );
+  if (new Set(pieces).size !== vues.length)
+    throw Object.assign(new Error("refus.introuvable.piece"), { code: "42501" });
+  const parSociete = new Map<string, string[]>();
+  for (const p of vues) parSociete.set(p.tenant_id, [...(parSociete.get(p.tenant_id) ?? []), p.id]);
+  const { rows: societes } = await db.query<{ id: string; nom: string; matricule: string | null }>(
+    `select id, name as nom, legal_id as matricule from organizations_v
+      where id = any($1::uuid[]) order by name, id`,
+    [[...parSociete.keys()]],
+  );
+  if (societes.length !== parSociete.size)
+    throw Object.assign(new Error("refus.introuvable.dossier"), { code: "42501" });
+  /*
+   * Le chemin ne se choisit pas dans la requête (relecture de #366) : une
+   * société dont la personne n'est pas membre ne se lit que par une
+   * comptabilité, donc sous son mandat et la garde d'export (une licence
+   * suspendue n'imprime pas plus qu'elle n'exporte). Le cabinet nommé, s'il
+   * l'est, doit être celui-là ; sinon, c'est celui dont la personne est
+   * membre et qui tient le mandat actif.
+   */
+  const { rows: chemins } = await db.query<{ id: string; membre: boolean; cabinet: string | null }>(
+    `select o.id, o.id in (select app.member_orgs()) as membre,
+            (select g.cabinet_org_id from engagements_v g
+              where g.pme_org_id = o.id and g.status = 'actif'
+                and g.cabinet_org_id in (select app.member_orgs())
+                and ($2::uuid is null or g.cabinet_org_id = $2)
+              order by g.starts_on desc, g.cabinet_org_id limit 1) as cabinet
+       from unnest($1::uuid[]) as o(id)`,
+    [[...parSociete.keys()], cabinetId],
+  );
+  const chemin = new Map(chemins.map((c) => [c.id, c]));
+  let fuseau: string | null = null;
+  const resultat: SocieteAImprimer[] = [];
+  for (const s of societes) {
+    const choix = parSociete.get(s.id)!;
+    const par = chemin.get(s.id)!;
+    const sousMandat = cabinetId !== null || !par.membre;
+    let docs: DocumentComptable[];
+    if (sousMandat) {
+      if (!par.cabinet)
+        throw Object.assign(new Error("refus.introuvable.dossier"), { code: "42501" });
+      docs = (await documentsLies(db, par.cabinet, s.id, choix)).documents;
+    } else {
+      fuseau ??= await fuseauDeLaPersonne(db);
+      const { rows } = await db.query<LigneDocument>(
+        `${DOCUMENTS}
+        where p.tenant_id = $1 and p.vis <> 'personnel' and p.id = any($2::uuid[])
+        order by p.created_at, p.id`,
+        [s.id, choix, fuseau],
+      );
+      docs = avecMontants(rows);
+    }
+    resultat.push({ tenantId: s.id, nom: s.nom, matricule: s.matricule, documents: docs });
+  }
+  return resultat;
 }
 
 export async function controlesPiece(

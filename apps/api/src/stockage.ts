@@ -291,6 +291,43 @@ export async function lireContenu(
 }
 
 /**
+ * Les pièces d'une impression : où sont leurs octets, et combien ils pèsent.
+ *
+ * Même `select`, même RLS que la route : une pièce que la base ne rend pas à
+ * l'appelant n'est pas dans la réponse, et l'impression la refuse. Le chemin
+ * se dérive de la ligne lue ; il sert à relire les octets APRÈS la
+ * transaction, parce qu'une composition dure plus qu'elle ne doit rester
+ * ouverte (`impression.ts`). Une pièce sans octets pèse zéro.
+ */
+export interface OriginalDUnePiece {
+  chemin: string;
+  octets: number;
+  /** Le nombre de pages que la base en connaît ; une, à défaut. */
+  pages: number;
+}
+
+export async function originauxDesPieces(
+  db: Requete,
+  pieces: readonly string[],
+): Promise<Map<string, OriginalDUnePiece>> {
+  const { rows } = await db.query<{ id: string; tenant_id: string; pages: number | null }>(
+    `select id, tenant_id, page_count as pages from pieces_v where id = any($1::uuid[])`,
+    [pieces.filter((id) => UUID.test(id))],
+  );
+  const originaux = new Map<string, OriginalDUnePiece>();
+  for (const piece of rows) {
+    const chemin = cheminAbsolu(piece.tenant_id, piece.id);
+    const octets = await stat(chemin).then(
+      (s) => s.size,
+      () => 0,
+    );
+    // Sans nombre de pages connu (une photo, une pièce ancienne) : une page.
+    originaux.set(piece.id, { chemin, octets, pages: Math.max(1, piece.pages ?? 1) });
+  }
+  return originaux;
+}
+
+/**
  * Quarante mégaoctets : vingt-quatre pages photographiées et emballées en PDF
  * tiennent dessous. Au-delà, ce n'est plus une pièce comptable — et sans
  * borne, un seul envoi remplirait le disque de tout le monde.
@@ -501,6 +538,20 @@ async function envoyerLesOctets(
     return;
   }
 
+  enTetesDuContenu(res, type, taille, nomDeFichier);
+  await pipeline(createReadStream(source), res);
+}
+
+/**
+ * Les en-têtes de tout contenu servi — une pièce, un export, un PDF
+ * d'impression composé à la demande : un seul endroit les pose.
+ */
+export function enTetesDuContenu(
+  res: Response,
+  type: string | null,
+  taille: number,
+  nomDeFichier: string | null,
+): void {
   // Le type vient de la base, jamais de l'extension ni du contenu. Absent, on
   // l'avoue au lieu de deviner.
   res.setHeader("Content-Type", type ?? TYPE_INCONNU);
@@ -515,7 +566,6 @@ async function envoyerLesOctets(
   );
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Content-Security-Policy", CSP_DU_CONTENU);
-  await pipeline(createReadStream(source), res);
 }
 
 /* ================================================== LES EXPORTS DU JOURNAL, GARDÉS
