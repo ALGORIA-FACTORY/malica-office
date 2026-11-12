@@ -108,7 +108,7 @@ export const en: Dict = {
 
   "onboarding.title": "Your organisation",
   "onboarding.subtitle":
-    "An organisation is a tenant: its data is isolated from every other one. You will be its first member.",
+    "Your company, or your accounting firm. Its data is visible only to its members and to those it invites. You will be its first member.",
   "onboarding.kind": "Nature",
   "onboarding.kind.pme": "Company — I keep my books",
   "onboarding.kind.cabinet": "Accounting — I keep companies' books",
@@ -193,19 +193,21 @@ export const en: Dict = {
   "plan.malica":
     "An entry template never cites an account number: it cites a role. Rebinding a role here changes every entry that uses it, without touching a single template.",
   "onboarding.jurisdiction": "Jurisdiction",
+  "onboarding.jurisdiction.option": "{pays} · {devise}",
   "onboarding.jurisdiction.choose": "Choose a jurisdiction",
   "onboarding.jurisdiction.help":
     "It sets the chart of accounts, the rates and the currency. Only jurisdictions with an active reference pack are offered.",
   "onboarding.jurisdiction.required": "Choose a jurisdiction before continuing.",
   "onboarding.legalId": "Tax identification number (optional)",
+  "onboarding.adresse": "Head office address (optional)",
   "onboarding.mode": "Validation mode",
-  "onboarding.mode.mandate": "Under mandate — the accountant reviews (four eyes)",
-  "onboarding.mode.autonome": "Autonomous — self-validation, recorded in the audit log",
-  "onboarding.entity": "Main establishment",
+  "onboarding.mode.mandate": "With an accountant — they review and approve your entries",
+  "onboarding.mode.autonome": "On your own — you approve yourself, and every approval is kept",
   "onboarding.submit": "Create organisation",
   "onboarding.error": "Creation failed.",
 
-  "app.orgs.empty": "No organisation yet. Create one to start.",
+  "app.orgs.empty":
+    "You have no company or accounting firm here yet. Create yours, or open the invitation link you received.",
   "app.orgs.create": "New organisation",
   "portal.title": "Choose your workspace",
   "portal.subtitle": "Two applications, one governed ledger.",
@@ -214,7 +216,6 @@ export const en: Dict = {
   "portal.tour.cta": "Enter",
   "portal.pme.count": "Companies linked",
   "portal.cabinet.count": "Clients under mandate",
-  "portal.norole": "No workspace available for this account.",
   "portal.switch": "Switch workspace",
   "app.role": "Role",
   "app.kind.pme": "Company",

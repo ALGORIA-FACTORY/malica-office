@@ -20,7 +20,7 @@ const monde = vi.hoisted(() => ({
 const appels = vi.hoisted(() => ({
   modifierDossier: vi.fn(async () => ({})),
   etablirFiche: vi.fn(async () => ({})),
-  definirMandat: vi.fn(async () => ({ id: "m2" })),
+  definirMandat: vi.fn(async (..._a: unknown[]) => ({ id: "m2" })),
 }));
 
 vi.mock("@/i18n", () => ({

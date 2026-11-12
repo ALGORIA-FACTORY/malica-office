@@ -56,6 +56,8 @@ export interface NewOrganization {
   currency: string;
   validationMode?: ValidationMode;
   defaultEntityName?: string;
+  /** L'adresse du siège, quand on la donne à la création. */
+  adresse?: string | null;
 }
 
 /** Un mandat proposé, vu depuis la PME qui doit y répondre. */

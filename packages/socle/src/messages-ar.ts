@@ -104,7 +104,7 @@ export const ar: Dict = {
 
   "onboarding.title": "مؤسستك",
   "onboarding.subtitle":
-    "المؤسسة وحدة معزولة: بياناتها منفصلة تمامًا عن غيرها. ستكون أول عضو فيها.",
+    "شركتكم أو محاسبتكم. بياناتها لا يراها إلا أعضاؤها ومن تدعوهم. ستكونون أول عضو فيها.",
   "onboarding.kind": "الصنف",
   "onboarding.kind.pme": "مؤسسة — أتولى محاسبتي",
   "onboarding.kind.cabinet": "المحاسبة — أمسك حسابات مؤسسات",
@@ -187,19 +187,21 @@ export const ar: Dict = {
   "plan.malica":
     "نموذج القيد لا يذكر رقم حساب أبداً: إنه يذكر دوراً. إعادة ربط دور هنا تغيّر كل القيود التي تستعمله، دون أن يتحرك أي نموذج.",
   "onboarding.jurisdiction": "الولاية القضائية",
+  "onboarding.jurisdiction.option": "{pays} · {devise}",
   "onboarding.jurisdiction.choose": "اختر ولاية قضائية",
   "onboarding.jurisdiction.help":
     "تحدد مخطط الحسابات والنسب والعملة. لا تُعرض إلا الولايات القضائية التي لها مرجع ساري المفعول.",
   "onboarding.jurisdiction.required": "اختر ولاية قضائية قبل المتابعة.",
   "onboarding.legalId": "المعرف الجبائي (اختياري)",
+  "onboarding.adresse": "عنوان المقر (اختياري)",
   "onboarding.mode": "نمط المصادقة",
-  "onboarding.mode.mandate": "بانتداب — المحاسبة تراجع (أربع أعين)",
-  "onboarding.mode.autonome": "مستقل — مصادقة ذاتية مسجّلة في سجل التدقيق",
-  "onboarding.entity": "المؤسسة الرئيسية",
+  "onboarding.mode.mandate": "مع محاسبة — تراجع قيودكم وتصادق عليها",
+  "onboarding.mode.autonome": "بمفردكم — تصادقون بأنفسكم، وتُحفظ كل مصادقة",
   "onboarding.submit": "إنشاء المؤسسة",
   "onboarding.error": "تعذّر الإنشاء.",
 
-  "app.orgs.empty": "لا توجد مؤسسة. أنشئ واحدة للبدء.",
+  "app.orgs.empty":
+    "ليست لديكم بعد شركة ولا محاسبة هنا. أنشئوا الخاصة بكم، أو افتحوا رابط الدعوة الذي تلقيتموه.",
   "app.orgs.create": "مؤسسة جديدة",
   "portal.title": "اختر فضاءك",
   "portal.subtitle": "تطبيقان، قاعدة واحدة محكومة.",
@@ -208,7 +210,6 @@ export const ar: Dict = {
   "portal.tour.cta": "دخول",
   "portal.pme.count": "المؤسسات المرتبطة",
   "portal.cabinet.count": "الحرفاء تحت التوكيل",
-  "portal.norole": "لا يوجد فضاء متاح لهذا الحساب.",
   "portal.switch": "تغيير الفضاء",
   "app.role": "الدور",
   "app.kind.pme": "مؤسسة",

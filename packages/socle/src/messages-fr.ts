@@ -109,7 +109,7 @@ export const fr = {
 
   "onboarding.title": "Votre organisation",
   "onboarding.subtitle":
-    "Une organisation est un tenant : ses données sont isolées de toutes les autres. Vous en serez le premier membre.",
+    "Votre société, ou votre comptabilité. Ses données ne sont visibles que de ses membres, et de ceux qu’elle invite. Vous en serez le premier membre.",
   "onboarding.kind": "Nature",
   "onboarding.kind.pme": "PME — je tiens ma comptabilité",
   "onboarding.kind.cabinet": "Comptabilité — je tiens les dossiers de PME",
@@ -194,19 +194,21 @@ export const fr = {
   "plan.malica":
     "Un schéma d’écriture ne cite jamais un numéro de compte : il cite un rôle. Rebrancher un rôle ici change toutes les écritures qui l’emploient, sans qu’aucun schéma ne bouge.",
   "onboarding.jurisdiction": "Juridiction",
+  "onboarding.jurisdiction.option": "{pays} · {devise}",
   "onboarding.jurisdiction.choose": "Choisissez une juridiction",
   "onboarding.jurisdiction.help":
     "Elle fixe le plan comptable, les taux et la devise. Seules les juridictions dont le référentiel est en vigueur sont proposées.",
   "onboarding.jurisdiction.required": "Choisissez une juridiction avant de continuer.",
   "onboarding.legalId": "Identifiant fiscal (facultatif)",
+  "onboarding.adresse": "Adresse du siège (facultatif)",
   "onboarding.mode": "Mode de validation",
-  "onboarding.mode.mandate": "Sous mandat — la comptabilité supervise (quatre-yeux)",
-  "onboarding.mode.autonome": "Autonome — auto-validation, tracée à l'audit",
-  "onboarding.entity": "Établissement principal",
+  "onboarding.mode.mandate": "Avec une comptabilité — elle relit et valide vos écritures",
+  "onboarding.mode.autonome": "Seul — vous validez vous-même, et chaque validation est gardée",
   "onboarding.submit": "Créer l'organisation",
   "onboarding.error": "Création impossible.",
 
-  "app.orgs.empty": "Aucune organisation. Créez-en une pour commencer.",
+  "app.orgs.empty":
+    "Vous n’avez encore ni société ni comptabilité ici. Créez la vôtre, ou ouvrez le lien d’invitation que vous avez reçu.",
   "app.orgs.create": "Nouvelle organisation",
   "portal.title": "Choisissez votre espace",
   "portal.subtitle": "Deux applications, une seule base gouvernée.",
@@ -215,7 +217,6 @@ export const fr = {
   "portal.tour.cta": "Entrer",
   "portal.pme.count": "PME rattachées",
   "portal.cabinet.count": "Clients sous mandat",
-  "portal.norole": "Aucun espace disponible pour ce compte.",
   "portal.switch": "Changer d'espace",
   "app.role": "Rôle",
   "app.kind.pme": "PME",

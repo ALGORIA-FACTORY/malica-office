@@ -114,7 +114,10 @@ function OfficeHome() {
         </div>
       </header>
 
-      <PackBanner jurisdiction={jurisdiction} />
+      {/* L'état du référentiel est l'affaire des opérateurs : à une personne
+          qui vient de s'inscrire, « Référentiel non ratifié » ne disait rien
+          qu'elle puisse faire (recette du 11 novembre 2026, 4.1). */}
+      {operateur ? <PackBanner jurisdiction={jurisdiction} /> : null}
 
       <main className="w-full px-4 py-8 sm:px-6 lg:py-12">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
@@ -144,9 +147,17 @@ function OfficeHome() {
         <LienMonEspaceParti className="mt-6 inline-flex min-h-[48px] items-center border border-border px-4 text-sm font-medium" />
 
         {!orgsQuery.isPending && pmeOrgs.length === 0 && cabinetOrgs.length === 0 && !operateur ? (
-          <p className="mt-8 border border-border bg-card p-6 text-sm text-muted-foreground">
-            {t("portal.norole")}
-          </p>
+          // Une seule phrase pour un compte neuf, qui dit quoi faire — le
+          // portail en portait deux, et ne proposait rien (4.1).
+          <div className="mt-8 border border-border bg-card p-6 text-sm">
+            <p className="text-muted-foreground">{t("app.orgs.empty")}</p>
+            <Link
+              to="/onboarding"
+              className="mt-4 inline-flex min-h-[44px] items-center border border-foreground bg-foreground px-4 text-xs font-medium uppercase tracking-wide text-background"
+            >
+              {t("app.orgs.create")}
+            </Link>
+          </div>
         ) : (
           <section className="mt-8 grid gap-px border border-border bg-border md:grid-cols-2">
             {pmeOrgs.length > 0 ? (
@@ -184,13 +195,11 @@ function OfficeHome() {
           </section>
         )}
 
+        {/* Le détail technique des organisations (rôle, mode de validation,
+            juridiction, devise, établissements) est celui des opérateurs. */}
         {orgsQuery.isPending ? (
           <p className="mt-8 text-sm text-muted-foreground">{t("common.loading")}</p>
-        ) : orgs.length === 0 ? (
-          <p className="mt-8 border border-border bg-card p-6 text-sm text-muted-foreground">
-            {t("app.orgs.empty")}
-          </p>
-        ) : (
+        ) : orgs.length === 0 || !operateur ? null : (
           <div className="mt-8 grid gap-px border border-border bg-border lg:grid-cols-2">
             {orgs.map((org) => (
               <OrgCard key={org.id} org={org} />
