@@ -107,8 +107,20 @@ import { useI18n } from "@/i18n";
 import { laReponseAEffaceLaPiece } from "@/lib/demande-sur-piece";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { jourOuInstant } from "@/lib/lisible";
-import { compteurs, sourceDe, trier, type Onglet } from "@/lib/tri-des-notifications";
-import { chaine, cleDuGenre, detailDe, seMontreIci } from "@/lib/libelle-de-notification";
+import {
+  compteurs,
+  ongletDOuverture,
+  sourceDe,
+  trier,
+  type Onglet,
+} from "@/lib/tri-des-notifications";
+import {
+  chaine,
+  cleDuGenre,
+  detailDe,
+  gesteDeLaQuestion,
+  seMontreIci,
+} from "@/lib/libelle-de-notification";
 import { CIBLE_COQUE } from "@/capabilities/coque";
 import { office } from "@/verticals/malica-office/composition";
 import { useRevenir } from "@/hooks/use-revenir";
@@ -148,7 +160,7 @@ function PmeNotifications() {
    * toutes, les non lues seules si l'on veut. Par défaut : ce qui attend un
    * geste, toutes sociétés — ce que compte la pastille de la cloche.
    */
-  const [onglet, setOnglet] = useState<Onglet>("aTraiter");
+  const [ongletChoisi, setOnglet] = useState<Onglet | null>(null);
   const [societe, setSociete] = useState<string | null>(null);
   const [nonLuesSeulement, setNonLuesSeulement] = useState(false);
   const [ouverts, setOuverts] = useState<ReadonlySet<string>>(new Set());
@@ -200,6 +212,11 @@ function PmeNotifications() {
   // Dans la coque, rien ne parle d'abonnement (`seMontreIci`).
   const rows = (notifs.data ?? []).filter((n) => seMontreIci(n.kind, CIBLE_COQUE));
   const nombres = compteurs(rows, societe);
+  // Tant que la personne n'a rien choisi : ce qui attend un geste, sinon tout —
+  // décidé une fois, à l'arrivée des alertes : lire la dernière ne change pas d'onglet.
+  const [ouverture, setOuverture] = useState<Onglet | null>(null);
+  if (ouverture === null && notifs.isSuccess) setOuverture(ongletDOuverture(nombres));
+  const onglet = ongletChoisi ?? ouverture ?? "aTraiter";
   const sections = trier(rows, { onglet, societe, nonLuesSeulement });
   const nonLuesIci = sections.flatMap((s) =>
     s.groupes.flatMap((g) => g.elements.filter((n) => !n.readAt).map((n) => n.id)),
@@ -243,14 +260,13 @@ function PmeNotifications() {
         },
       };
     }
-    if (
-      kind === "acces.propose" ||
-      kind === "acces.descente_demandee" ||
-      kind === "acces.monte" ||
-      kind === "acces.arrete"
-    ) {
+    const question = gesteDeLaQuestion(kind, payload);
+    if (question === "proposition" || question === "abonnement") {
       return {
-        libelle: t("pme.notifs.voirProposition"),
+        // « Voir la proposition » ne se dit que d'une proposition encore ouverte.
+        libelle: t(
+          question === "proposition" ? "pme.notifs.voirProposition" : "pme.notifs.voirAbonnement",
+        ),
         aller: () => {
           dabord();
           void navigate({ to: "/pme/reglages", search: { page: "abonnement" } });
@@ -266,7 +282,7 @@ function PmeNotifications() {
         },
       };
     }
-    if (kind === "mandat.propose") {
+    if (question === "mandat") {
       return {
         libelle: t("pme.mandat.accepter"),
         aller: () => {

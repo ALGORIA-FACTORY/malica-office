@@ -6,6 +6,7 @@ import {
   estCorrigee,
   FAIT_DU_GESTE,
   LIBELLE_DU_GESTE,
+  reponsesAuDernierRetour,
   sortiesDuRetour,
 } from "@/lib/retour-du-cabinet";
 
@@ -62,5 +63,42 @@ describe("dernierRetourParPiece", () => {
     expect(
       dernierRetourParPiece([n("a", undefined, "2026-10-20T10:00:00Z")], (x) => x.piece),
     ).toEqual([]);
+  });
+});
+
+/** Recette du 11 novembre 2026 : la réponse du client se lit sur la pièce. */
+describe("la réponse du client au dernier retour", () => {
+  const fait = (id: string, action: string, at: string, payload: unknown = {}) => ({
+    id,
+    action,
+    at,
+    payload,
+  });
+
+  it("rend le texte des réponses faites après le dernier retour, la plus récente d'abord", () => {
+    const journal = [
+      fait("5", "piece.renvoyee", "2026-11-11T12:00:00Z"),
+      fait("4", "piece.reponse_client", "2026-11-11T11:00:00Z", { texte: "Il arrive lundi." }),
+      fait("3", "piece.reponse_client", "2026-11-11T10:30:00Z", { texte: "Quel document ?" }),
+      fait("2", "piece.retournee", "2026-11-11T10:00:00Z"),
+      fait("1", "piece.reponse_client", "2026-11-10T09:00:00Z", { texte: "Ancienne réponse" }),
+      fait("0", "piece.retournee", "2026-11-10T08:00:00Z"),
+    ];
+    expect(reponsesAuDernierRetour(journal).map((r) => [r.id, r.texte])).toEqual([
+      ["4", "Il arrive lundi."],
+      ["3", "Quel document ?"],
+    ]);
+  });
+
+  it("ne rend ni la réponse d'un siège à son propriétaire, ni un fait sans texte", () => {
+    const journal = [
+      fait("3", "piece.reponse_client", "2026-11-11T11:00:00Z", {
+        texte: "Pour Amel",
+        chez: "proprietaire",
+      }),
+      fait("2", "piece.reponse_client", "2026-11-11T10:30:00Z", {}),
+      fait("1", "piece.retournee", "2026-11-11T10:00:00Z"),
+    ];
+    expect(reponsesAuDernierRetour(journal)).toEqual([]);
   });
 });

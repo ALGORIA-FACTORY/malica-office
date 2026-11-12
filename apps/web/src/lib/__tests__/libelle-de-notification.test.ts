@@ -7,7 +7,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { attendUnGeste, cleDuGenre, seMontreIci } from "../libelle-de-notification";
+import {
+  attendUnGeste,
+  cleDuGenre,
+  gesteDeLaQuestion,
+  seMontreIci,
+} from "../libelle-de-notification";
 
 describe("ce qu'une notification dit, et ce qu'elle demande", () => {
   it("la cloche compte ce qui attend un geste, pas tout le non lu", () => {
@@ -27,5 +32,24 @@ describe("ce qu'une notification dit, et ce qu'elle demande", () => {
   it("un genre inconnu a sa phrase par défaut", () => {
     expect(cleDuGenre("genre.inconnu")).toBe("cab.notif.kind.autre");
     expect(cleDuGenre("piece.retournee")).toBe("notif.kind.piece.retournee");
+  });
+
+  it("une prise en charge qui a démarré ne se dit plus « proposée »", () => {
+    expect(cleDuGenre("acces.propose", { acces_id: "a" })).toBe("notif.kind.acces.propose");
+    expect(cleDuGenre("acces.propose", { acces_id: "a", tranchee: "actif" })).toBe(
+      "notif.kind.acces.accepte",
+    );
+  });
+
+  it("« Voir la proposition » ne s'offre que sur une proposition encore ouverte", () => {
+    expect(gesteDeLaQuestion("acces.propose", {})).toBe("proposition");
+    expect(gesteDeLaQuestion("acces.descente_demandee", {})).toBe("proposition");
+    expect(gesteDeLaQuestion("acces.propose", { tranchee: "actif" })).toBe("abonnement");
+    // Une simple information : l'offre a été montée, ou arrêtée.
+    expect(gesteDeLaQuestion("acces.monte", {})).toBe("abonnement");
+    expect(gesteDeLaQuestion("acces.arrete", {})).toBe("abonnement");
+    expect(gesteDeLaQuestion("mandat.propose", {})).toBe("mandat");
+    expect(gesteDeLaQuestion("mandat.propose", { tranchee: "actif" })).toBeNull();
+    expect(gesteDeLaQuestion("piece.retournee", {})).toBeNull();
   });
 });

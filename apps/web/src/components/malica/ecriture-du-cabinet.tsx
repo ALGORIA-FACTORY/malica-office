@@ -56,6 +56,8 @@ import { office } from "@/verticals/malica-office/composition";
 const OU = "components/malica/ecriture-du-cabinet";
 /** Une seule liste du plan pour l'écran. */
 const LISTE_DES_COMPTES = "plan-de-l-ecriture";
+/** Ce qui retient le bouton d'inscrire, que le bouton cite. */
+const RAISON_DU_BOUTON = "raison-de-l-inscription";
 
 /** Le libellé que le plan donne à ce compte — celui du cabinet d'abord. */
 function libelleDuPlan(plan: readonly CompteDuPlan[], code: string): string | null {
@@ -203,23 +205,37 @@ export function EcritureDuCabinet({
   });
   const doublon = prise ? null : (deja.data ?? null);
   const resume = !modifier && depart.depart !== "rien" && telleQuelle;
+  /*
+   * Un compte que le plan du dossier ne connaît pas : la base refusera
+   * l'écriture. « Forcer l'écriture » restait cliquable sous « Inconnu du plan
+   * — la base refusera » (recette du 11 novembre 2026) ; il s'éteint et dit
+   * pourquoi. Le plan pas encore chargé ne juge rien.
+   */
+  const horsPlan =
+    plan.length === 0
+      ? undefined
+      : saisie.lignes
+          .map((l) => l.account_code.trim())
+          .find((code) => code !== "" && libelleDuPlan(plan, code) === null);
   /** Ce qui manque avant d'inscrire, dit par la même phrase que le refus du serveur. */
   const manque: string | null =
     controle === null
       ? t("common.loading")
       : doublon
         ? t("refus.ecriture.doublon")
-        : !saisie.journal
-          ? t("refus.ecriture.journal")
-          : !saisie.date
-            ? t("cab.ecriture.date.manque")
-            : !saisie.libelle.trim()
-              ? t("cab.ecriture.libelle.manque")
-              : typeAEtablir && !type
-                ? t("refus.inscription.type_inconnu")
-                : controle.defaut
-                  ? t(`refus.ecriture.${controle.defaut}`)
-                  : null;
+        : horsPlan
+          ? t("refus.ecriture.compte_hors_plan", { compte: horsPlan })
+          : !saisie.journal
+            ? t("refus.ecriture.journal")
+            : !saisie.date
+              ? t("cab.ecriture.date.manque")
+              : !saisie.libelle.trim()
+                ? t("cab.ecriture.libelle.manque")
+                : typeAEtablir && !type
+                  ? t("refus.inscription.type_inconnu")
+                  : controle.defaut
+                    ? t(`refus.ecriture.${controle.defaut}`)
+                    : null;
 
   const relire = () =>
     Promise.all([
@@ -900,14 +916,15 @@ export function EcritureDuCabinet({
                 {t("cab.ecriture.ligne.ajouter")}
               </button>
               <p
+                id={RAISON_DU_BOUTON}
                 className={
-                  controle && !controle.defaut
+                  manque === null
                     ? "col-span-2 text-signal-ok sm:col-span-1"
                     : "col-span-2 text-signal-stop sm:col-span-1"
                 }
                 aria-live="polite"
               >
-                {controle && !controle.defaut ? t("cab.ecriture.equilibree") : manque}
+                {manque ?? t("cab.ecriture.equilibree")}
               </p>
               {/*
                * Ce que l'écran montre de la lecture ou de l'écriture, tel quel :
@@ -965,6 +982,7 @@ export function EcritureDuCabinet({
           <button
             type="button"
             disabled={inscrire.isPending || tampon || manque !== null}
+            aria-describedby={manque !== null ? RAISON_DU_BOUTON : undefined}
             onClick={() => inscrire.mutate()}
             className="min-h-[48px] flex-1 basis-40 rounded-full bg-foreground px-4 text-[15px] font-semibold text-background disabled:opacity-40"
           >
@@ -972,6 +990,12 @@ export function EcritureDuCabinet({
           </button>
         )}
       </div>
+      {/* Résumé : la ligne des totaux n'est pas à l'écran, la raison se dit ici. */}
+      {resume && manque !== null && !(prise && telleQuelle) ? (
+        <p id={RAISON_DU_BOUTON} className="text-[12.5px] text-signal-stop">
+          {manque}
+        </p>
+      ) : null}
       {erreur ? (
         <p role="alert" className="text-[12.5px] text-signal-stop">
           {erreur}

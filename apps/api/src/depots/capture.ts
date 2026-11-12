@@ -61,7 +61,13 @@ import {
 } from "../malica/lecture/sudoku.ts";
 import { dateDeLaPiece } from "./dates.ts";
 import { idsDeSocietes } from "./societes.ts";
-import { COLONNES_DU_CIRCUIT, COLONNES_DU_SUIVI, versCircuit, versSuivi } from "./suivi.ts";
+import {
+  COLONNES_DU_CIRCUIT,
+  COLONNES_DU_SUIVI,
+  EST_JOINTE,
+  versCircuit,
+  versSuivi,
+} from "./suivi.ts";
 import { sensConfirme } from "./sens.ts";
 
 /** Ce que la base répond sur une lecture. Le motif vient du référentiel. */
@@ -427,10 +433,7 @@ async function piecesLuesDe(
               -- Un document joint à sa pièce : il part avec elle, sans lecture
               -- (planche 3). L'index des rattachements écarte d'abord les
               -- pièces sans lien ; la règle est celle de la base.
-              (exists (select 1 from capture.rattachements r0
-                        where r0.tenant_id = p.tenant_id
-                          and (r0.piece_id = p.id or r0.piece_liee_id = p.id))
-                and app.piece_jointe(p.id)) as jointe,
+              ${EST_JOINTE} as jointe,
               h.precision_kind,
               -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
               -- reste telle quelle), que la liste préfère au nom lu.

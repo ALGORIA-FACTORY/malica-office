@@ -47,6 +47,21 @@ export function partieVers(p: PieceAEnvoyer, d: DestinationDEnvoi): boolean {
   );
 }
 
+/**
+ * Une pièce que la comptabilité a reçue et qui s'y compte : transmise, pas
+ * retournée, et pas un document joint non lu — un bon de livraison joint à sa
+ * facture part avec elle et se voit à côté d'elle, il n'est pas une pièce de
+ * plus (recette du 11 novembre 2026). La file de la comptabilité suit la même
+ * règle (`TRANSMISE`, côté serveur).
+ */
+export function compteCommeTransmise(p: {
+  vis: Visibility;
+  status: string;
+  jointe?: boolean | null;
+}): boolean {
+  return p.vis === "partage" && p.status !== "retournee" && !(p.jointe && p.status === "capturee");
+}
+
 /** L'heure de la base pour ce départ. */
 export function partieLeVers(p: PieceAEnvoyer, d: DestinationDEnvoi): string | null {
   return d === "cabinet" ? (p.transmiseLe ?? null) : (p.circuit?.envoyeeLe ?? null);

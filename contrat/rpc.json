@@ -8,6 +8,7 @@
     "createAccount",
     "delettrer",
     "etat",
+    "facturesOuvertes",
     "importLines",
     "lettrages",
     "lettrer",
@@ -356,6 +357,7 @@
   ],
   "supervision": [
     "auditForPiece",
+    "chercher",
     "controlesPiece",
     "documents",
     "documentsLies",

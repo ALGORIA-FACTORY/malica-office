@@ -52,7 +52,8 @@ import {
 } from "@/components/malica/office-ui";
 import { useLimiteDuMotif } from "@/hooks/use-limite-du-motif";
 import { useI18n, type MessageKey } from "@/i18n";
-import { dateEnChiffres, montant, quantite } from "@/lib/lisible";
+import { dateEnChiffres, momentDeLEnvoi, montant, quantite } from "@/lib/lisible";
+import { reponsesAuDernierRetour } from "@/lib/retour-du-cabinet";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
 import { depuisUniteMineure } from "@malica/socle/somme-decimale";
@@ -348,6 +349,8 @@ function CabinetReviewDeLaPiece() {
   const [annulesOuverts, setAnnulesOuverts] = useState(false);
   const [signalementsOuverts, setSignalementsOuverts] = useState(false);
   const [journalOuvert, setJournalOuvert] = useState(false);
+  /** Ce que le client a répondu au dernier retour : sur la pièce et dans son journal. */
+  const reponses = reponsesAuDernierRetour(audit.data ?? []);
 
   /**
    * Les moyens du pack, traduits, à la date de la pièce.
@@ -802,6 +805,27 @@ function CabinetReviewDeLaPiece() {
       ) : null}
 
       {/*
+       * Ce que le client a répondu au retour (recette du 11 novembre 2026) : la
+       * réponse n'était lisible que dans les alertes. Elle se lit sur la pièce,
+       * avec son texte, qu'elle ait été renvoyée ou non.
+       */}
+      {reponses.length > 0 ? (
+        <div className="mb-6 border border-s-[3px] border-border border-s-signal-warn bg-card p-4">
+          <p className="text-[13px] font-medium">{t("cab.review.reponse")}</p>
+          <ul className="mt-2 grid gap-2">
+            {reponses.map((r) => (
+              <li key={r.id} className="text-[13px]">
+                <q>{r.texte}</q>
+                <span className="num ms-2 text-[12px] text-muted-foreground">
+                  {momentDeLEnvoi(r.le, locale).quand}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {/*
        * Rien ne se perd dans l'écran résumé : ce que la pièce porte se voit
        * d'un coup d'œil, et chaque pastille mène à son détail (8 novembre 2026).
        */}
@@ -820,7 +844,8 @@ function CabinetReviewDeLaPiece() {
             {
               id: "dossier-joints",
               cle: "cab.review.contenu.joints",
-              n: (joints.data ?? []).length,
+              // Ce que la PME a joint compte aussi : la pastille mène à la même liste.
+              n: tousLesJoints.length,
             },
           ]
             .filter((c) => c.n > 0)
@@ -1253,6 +1278,11 @@ function CabinetReviewDeLaPiece() {
                     >
                       <span>
                         {libelleDeLAction(entry.action, t, entry.payload)}
+                        {reponses.some((r) => r.id === entry.id) ? (
+                          <q className="block text-muted-foreground">
+                            {reponses.find((r) => r.id === entry.id)!.texte}
+                          </q>
+                        ) : null}
                         {entry.service ? (
                           <span className="text-muted-foreground">
                             {" · "}
