@@ -153,6 +153,18 @@ export const identite = {
   },
 
   /** La comptabilité corrige le nom, le matricule (avant toute pièce) ou l'adresse. */
+  /**
+   * Le matricule de ce dossier est-il figé ? Vrai dès la première pièce reçue :
+   * la même règle que `modifierDossier`, que l'écran lit pour griser le champ.
+   */
+  async matriculeFige(db: Requete, cabinetId: string, pmeId: string): Promise<boolean> {
+    const { rows } = await db.query<{ r: boolean }>(
+      `select public.dossier_matricule_fige($1, $2) as r`,
+      [cabinetId, pmeId],
+    );
+    return Boolean(rows[0]?.r);
+  },
+
   async modifierDossier(
     db: Requete,
     input: {

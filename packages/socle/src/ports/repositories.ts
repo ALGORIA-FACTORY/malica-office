@@ -207,6 +207,8 @@ export interface IdentityRepository {
    */
   etablirFiche(input: NouvelleFiche): Promise<{ id: string }>;
   /** La comptabilité corrige le nom, le matricule (avant toute pièce) ou l'adresse. */
+  /** Le matricule de ce dossier est-il figé (une pièce est déjà reçue) ? */
+  matriculeFige(cabinetId: string, pmeId: string): Promise<boolean>;
   modifierDossier(input: {
     cabinetId: string;
     pmeId: string;

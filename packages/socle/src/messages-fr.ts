@@ -5342,6 +5342,8 @@ export const fr = {
   "cab.cli.nouveau.mandat.ok": "Demande de mandat envoyée à {client}",
   "cab.cli.champ.mf": "Matricule fiscal",
   "cab.cli.champ.mf.aide": "Sept chiffres, une lettre, puis A/M/000 — comme sur la carte fiscale.",
+  "cab.cli.champ.mf.figeDepuis":
+    "Figé : une pièce de ce dossier est déjà reçue. Il ne se modifie plus.",
   "cab.cli.champ.mf.fige": "Modifiable jusqu'à la première pièce reçue, puis figé.",
   "cab.cli.champ.nom": "Raison sociale",
   "cab.cli.champ.email": "E-mail du dirigeant",

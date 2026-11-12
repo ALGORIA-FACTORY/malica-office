@@ -4921,6 +4921,7 @@ export const ar: Dict = {
   "cab.cli.nouveau.mandat.ok": "أُرسل طلب التكليف إلى {client}",
   "cab.cli.champ.mf": "المعرّف الجبائي",
   "cab.cli.champ.mf.aide": "سبعة أرقام وحرف ثم A/M/000 — كما في البطاقة الجبائية.",
+  "cab.cli.champ.mf.figeDepuis": "مثبَّت: وصلت وثيقة من هذا الملف. لم يعد قابلاً للتعديل.",
   "cab.cli.champ.mf.fige": "قابل للتعديل حتى أول وثيقة، ثم يُثبَّت.",
   "cab.cli.champ.nom": "الاسم التجاري",
   "cab.cli.champ.email": "البريد الإلكتروني للمسيّر",

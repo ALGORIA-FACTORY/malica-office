@@ -5128,6 +5128,8 @@ export const en: Dict = {
   "cab.cli.nouveau.mandat.ok": "Engagement request sent to {client}",
   "cab.cli.champ.mf": "Tax ID",
   "cab.cli.champ.mf.aide": "Seven digits, a letter, then A/M/000 — as on the tax card.",
+  "cab.cli.champ.mf.figeDepuis":
+    "Locked: a document of this file has already arrived. It can no longer be changed.",
   "cab.cli.champ.mf.fige": "Editable until the first document arrives, then locked.",
   "cab.cli.champ.nom": "Company name",
   "cab.cli.champ.email": "Owner's e-mail",
