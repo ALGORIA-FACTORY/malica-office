@@ -82,6 +82,8 @@ import type {
   ParametresDeDistance,
 } from "../../fabrique/signature-distance.ts";
 
+import { NEUTRE_DU_MINIMUM } from "../../scan/confiance.ts";
+
 import { repairArticles } from "./article-repair.ts";
 import { recollerLesMilliers } from "./recoller-les-milliers.ts";
 import type { PageToken, TokenRef } from "./token-plan.ts";
@@ -416,7 +418,7 @@ export function creerDesignateurDeRecette(
         // d'un champ devient celle de son jeton relevé, parce qu'une recette
         // n'ajoute aucune incertitude d'échantillonnage — elle désigne ou elle
         // s'abstient.
-        neutreDeConfiance: 1,
+        neutreDeConfiance: NEUTRE_DU_MINIMUM,
       });
     } catch (e: unknown) {
       console.error(`fabrique : désignation impossible — pièce ${piece.pieceId} : ${message(e)}`);

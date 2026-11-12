@@ -366,8 +366,40 @@ export function buildExtractFromTokenPlan(params: {
   });
 
   const totalBase = montant("totals.base_ht", selection.totals.base_ht, "totaux", "piece.total.ht");
-  const totalVat = montant("totals.vat", selection.totals.vat, "totaux", "piece.total.tva");
+  let totalVat = montant("totals.vat", selection.totals.vat, "totaux", "piece.total.tva");
   const totalTtc = montant("totals.ttc", selection.totals.ttc, "totaux", "piece.total.ttc");
+
+  /*
+   * ======================== LA TVA D'UNE FACTURE À PLUSIEURS TAUX (recette du 11 novembre 2026)
+   *
+   * Une facture à 7 % et 19 % imprime une TVA PAR TAUX, et souvent aucun total de TVA.
+   * Rien ne désigne alors `totals.vat` — ni le modèle, qui ne trouve aucun jeton, ni le
+   * Sudoku, dont la grille prouve les instances par taux et non leur somme
+   * (`selectionParLeSudoku`) — et la pièce sortait « TVA — », le HT, le timbre et le TTC
+   * justes à côté. La TVA de la pièce est la SOMME de ses lignes par taux, chacune relue
+   * dans le plan et citée : le Socle l'additionne, et le drapeau le dit.
+   *
+   * Seulement quand AUCUN total de TVA n'est désigné et que CHAQUE ligne a rendu sa TVA :
+   * une ligne écartée (illisible, invraisemblable) ferait une somme partielle, donc fausse.
+   * La somme n'est pas citée : elle n'est imprimée nulle part, et le jugement ne relit que
+   * l'imprimé — il recalcule la TVA par ses taux et la confronte au TTC, comme avant.
+   */
+  if (
+    totalVat === null &&
+    !selection.totals.vat &&
+    selection.lines.length > 0 &&
+    lines.length === selection.lines.length
+  ) {
+    totalVat = toFixedStr(
+      lines.reduce((s, l) => s.plus(D(l["vat_amount"]!)), D(0)),
+      decimals,
+    );
+    flags.push({
+      field: "totals.vat",
+      code: "DERIVED_BY_SOCLE",
+      detail: "TVA = somme des TVA par taux, chacune lue sur la pièce (primitives du Socle)",
+    });
+  }
 
   // Beaucoup de factures ne ventilent la TVA qu'au pied : aucune ligne ne survit
   // alors au filtre. On reconstitue une ligne unique à partir des totaux —
