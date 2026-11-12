@@ -295,10 +295,11 @@ export interface SocieteAImprimer {
  * Les pièces d'une impression, société par société, dans l'ordre du dossier
  * téléchargé (`documentsLies` : réception, puis identifiant).
  *
- * Sous un cabinet (`cabinetId`), c'est la MÊME lecture que l'archive : le
- * mandat, la garde de l'export, et les documents liés. Sans cabinet, ce sont
- * les pièces que la base rend à la personne (RLS) : les siennes, ou celles de
- * sa société, transmises ou gardées. Dans les deux cas l'espace privé
+ * Une société dont la personne n'est pas membre — qu'elle nomme un cabinet ou
+ * non — se lit par la comptabilité : la MÊME lecture que l'archive (mandat,
+ * garde de l'export, documents liés). Une société dont elle est membre, sans
+ * cabinet nommé : les pièces que la base lui rend (RLS), les siennes ou
+ * celles de sa société, transmises ou gardées. Dans les deux cas l'espace privé
  * (`personnel`) n'y entre jamais, et une pièce
  * demandée que la personne ne voit pas fait refuser l'impression entière.
  */
@@ -323,13 +324,38 @@ export async function documentsAImprimer(
   );
   if (societes.length !== parSociete.size)
     throw Object.assign(new Error("refus.introuvable.dossier"), { code: "42501" });
-  const fuseau = cabinetId ? null : await fuseauDeLaPersonne(db);
+  /*
+   * Le chemin ne se choisit pas dans la requête (relecture de #366) : une
+   * société dont la personne n'est pas membre ne se lit que par une
+   * comptabilité, donc sous son mandat et la garde d'export (une licence
+   * suspendue n'imprime pas plus qu'elle n'exporte). Le cabinet nommé, s'il
+   * l'est, doit être celui-là ; sinon, c'est celui dont la personne est
+   * membre et qui tient le mandat actif.
+   */
+  const { rows: chemins } = await db.query<{ id: string; membre: boolean; cabinet: string | null }>(
+    `select o.id, o.id in (select app.member_orgs()) as membre,
+            (select g.cabinet_org_id from engagements_v g
+              where g.pme_org_id = o.id and g.status = 'actif'
+                and g.cabinet_org_id in (select app.member_orgs())
+                and ($2::uuid is null or g.cabinet_org_id = $2)
+              order by g.starts_on desc, g.cabinet_org_id limit 1) as cabinet
+       from unnest($1::uuid[]) as o(id)`,
+    [[...parSociete.keys()], cabinetId],
+  );
+  const chemin = new Map(chemins.map((c) => [c.id, c]));
+  let fuseau: string | null = null;
   const resultat: SocieteAImprimer[] = [];
   for (const s of societes) {
     const choix = parSociete.get(s.id)!;
+    const par = chemin.get(s.id)!;
+    const sousMandat = cabinetId !== null || !par.membre;
     let docs: DocumentComptable[];
-    if (cabinetId) docs = (await documentsLies(db, cabinetId, s.id, choix)).documents;
-    else {
+    if (sousMandat) {
+      if (!par.cabinet)
+        throw Object.assign(new Error("refus.introuvable.dossier"), { code: "42501" });
+      docs = (await documentsLies(db, par.cabinet, s.id, choix)).documents;
+    } else {
+      fuseau ??= await fuseauDeLaPersonne(db);
       const { rows } = await db.query<LigneDocument>(
         `${DOCUMENTS}
         where p.tenant_id = $1 and p.vis <> 'personnel' and p.id = any($2::uuid[])

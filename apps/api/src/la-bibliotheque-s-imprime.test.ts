@@ -433,6 +433,35 @@ describe("la bibliothèque s'imprime", { skip: !CONFIGUREE }, () => {
     assert.deepEqual(lignes[0]!.payload["pieces"], [facture, justificatif]);
   });
 
+  it("passe toujours par la garde d'export quand la comptabilité imprime, même sans se nommer", async () => {
+    const licence = (statut: "active" | "suspendue") =>
+      admin.query(
+        `update facturation.licences l
+            set statut = $2, suspendue_le = case when $2 = 'active' then null else now() end
+           from facturation.licence_organisations lo
+          where lo.licence_id = l.id and lo.tenant_id = $1`,
+        [societe, statut],
+      );
+    await licence("suspendue");
+    try {
+      const avant = (await journal(expert.id)).length;
+      for (const corps of [{ cabinetId: cabinet }, {}]) {
+        const reponse = await imprimer(expert, { pieces: [facture], ...corps });
+        assert.notEqual(reponse.headers.get("content-type"), "application/pdf");
+        assert.deepEqual(await reponse.json(), { erreur: "refus.licence.export" });
+      }
+      assert.equal((await journal(expert.id)).length, avant, "un refus ne s'inscrit pas");
+    } finally {
+      await licence("active");
+    }
+    // Licence active, sans se nommer : le même dossier que sous son mandat.
+    const reponse = await imprimer(expert, { pieces: [facture] });
+    assert.equal(reponse.headers.get("content-type"), "application/pdf");
+    await reponse.arrayBuffer();
+    const lignes = await journal(expert.id);
+    assert.deepEqual(lignes.at(-1)!.payload["pieces"], [facture, justificatif]);
+  });
+
   it("ouvre une page de garde par société quand la sélection en couvre plusieurs", async () => {
     const avant = (await journal(dirigeant.id)).length;
     const reponse = await imprimer(dirigeant, { pieces: [autre, photo] });
