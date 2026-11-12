@@ -26,6 +26,7 @@ export function PieceEnArchive({
   telechargement,
   onTelecharger,
   enregistreSous,
+  imprimer,
 }: {
   /** Le bouton de retour de l'écran, tel qu'il est partout ailleurs. */
   retour: ReactNode;
@@ -37,6 +38,8 @@ export function PieceEnArchive({
   onTelecharger: () => void;
   /** Dans la coque native : où le fichier a été écrit. */
   enregistreSous: string | null;
+  /** « Imprimer », comme le téléchargement : la même archive, lue par la base. */
+  imprimer?: ReactNode;
 }) {
   const { t, locale } = useI18n();
   return (
@@ -63,6 +66,7 @@ export function PieceEnArchive({
             {telechargement ? t("common.loading") : t("cab.review.telecharger")}
           </button>
         ) : null}
+        {imprimer ? <div className="mt-3">{imprimer}</div> : null}
         {enregistreSous ? (
           <p className="mt-2 text-[12px] text-muted-foreground">
             {t("cab.review.enregistre", { chemin: enregistreSous })}

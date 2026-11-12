@@ -577,6 +577,16 @@ function CabinetReviewDeLaPiece() {
         telechargement={telecharger.isPending}
         onTelecharger={() => telecharger.mutate()}
         enregistreSous={cheminEnregistre}
+        imprimer={
+          <ImprimerLesPieces
+            cabinetId={org.id}
+            pieces={[pieceId]}
+            portee="piece"
+            nom={clients.data?.find((c) => c.tenantId === piece.tenantId)?.name ?? piece.tenantId}
+            titre={clients.data?.find((c) => c.tenantId === piece.tenantId)?.name ?? ""}
+            libelle={t("cab.biblio.imprimer")}
+          />
+        }
       />
     );
   }

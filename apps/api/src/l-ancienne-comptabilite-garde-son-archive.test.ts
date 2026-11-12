@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
-import { documents, documentsLies } from "./bibliotheque.ts";
+import { documents, documentsAImprimer, documentsLies } from "./bibliotheque.ts";
 import { BASE_CONFIGUREE, monterUneSociete, type SocieteDEssai } from "./circuit-d-essai.ts";
 import { fermerLePool, sousIdentite, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
@@ -174,6 +174,23 @@ describe("l'ancienne comptabilité garde son archive", { skip: !BASE_CONFIGUREE 
     await assert.rejects(
       sousIdentiteDuServeur(s.gens.expert.id, (db) =>
         documentsLies(db, s.cabinet, s.pme, [jamaisTraitee]),
+      ),
+    );
+  });
+
+  it("elle imprime son archive comme elle la télécharge, et rien de plus", async () => {
+    for (const cabinet of [s.cabinet, null]) {
+      const [societe] = await sousIdentiteDuServeur(s.gens.expert.id, (db) =>
+        documentsAImprimer(db, cabinet, [traitee]),
+      );
+      assert.deepEqual(
+        societe?.documents.map((d) => d.id),
+        [traitee],
+      );
+    }
+    await assert.rejects(
+      sousIdentiteDuServeur(s.gens.expert.id, (db) =>
+        documentsAImprimer(db, s.cabinet, [jamaisTraitee]),
       ),
     );
   });

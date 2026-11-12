@@ -347,11 +347,17 @@ export async function documentsAImprimer(
    */
   const { rows: chemins } = await db.query<{ id: string; membre: boolean; cabinet: string | null }>(
     `select o.id, o.id in (select app.member_orgs()) as membre,
-            (select g.cabinet_org_id from engagements_v g
-              where g.pme_org_id = o.id and g.status = 'actif'
-                and g.cabinet_org_id in (select app.member_orgs())
-                and ($2::uuid is null or g.cabinet_org_id = $2)
-              order by g.starts_on desc, g.cabinet_org_id limit 1) as cabinet
+            coalesce(
+              (select g.cabinet_org_id from engagements_v g
+                where g.pme_org_id = o.id and g.status = 'actif'
+                  and g.cabinet_org_id in (select app.member_orgs())
+                  and ($2::uuid is null or g.cabinet_org_id = $2)
+                order by g.starts_on desc, g.cabinet_org_id limit 1),
+              -- Mandat terminé : l'archive en lecture seule de la comptabilité
+              -- (1.6), lue ensuite par documentsLies comme son téléchargement.
+              (select a.cabinet from app.mes_archives() a
+                where a.pme = o.id and ($2::uuid is null or a.cabinet = $2)
+                order by a.clos_le desc, a.cabinet limit 1)) as cabinet
        from unnest($1::uuid[]) as o(id)`,
     [[...parSociete.keys()], cabinetId],
   );
