@@ -2768,7 +2768,7 @@ export interface StockDepreciationRow {
 }
 
 export interface StocksRepository {
-  categories(packVersionId: string): Promise<StockCategory[]>;
+  categories(packVersionId: string, locale?: string): Promise<StockCategory[]>;
   listItems(tenantId: string): Promise<StockItem[]>;
   createItem(input: NewStockItem): Promise<string>;
   updateItem(input: {
