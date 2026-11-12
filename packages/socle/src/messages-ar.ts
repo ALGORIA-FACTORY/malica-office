@@ -1732,6 +1732,7 @@ export const ar: Dict = {
   "cab.review.enregistre": "حُفظ في: {chemin}",
   "cab.review.joints": "الوثائق المرفقة",
   "cab.review.audit": "سجل الوثيقة",
+  "cab.review.reponse": "ردّ الحريف على إرجاعكم",
   "cab.lecteur.titre": "ما قرأه القارئ",
   "cab.lecteur.observation":
     "ملاحظة فقط: لا يتغيّر شيء في القراءة المعتمدة. يسجّل القارئ المُثبِت ما يقرؤه ليُحكم عليه قبل تفعيله.",
@@ -2159,6 +2160,7 @@ export const ar: Dict = {
   "envoi.demande.detail": "{quand} · على {qui} أن يوافق، وسنُعلمك.",
   "envoi.reponse.fait": "أُرسل ردّك إلى {qui}",
   "envoi.reponse.detail": "«{texte}» · {quand}",
+  "envoi.reponse.reste": "«{texte}» · {quand}. تبقى الوثيقة عندك: أعد إرسالها متى كنت جاهزاً.",
   "envoi.cab.client": "الحريف",
   "envoi.cab.retour.titre": "أُرجعت إلى الحريف.",
   "envoi.cab.retour.phrase": "{piece} لدى {client} منذ {quand}، مع السبب «{motif}».",

@@ -1838,6 +1838,7 @@ export const fr = {
   "cab.review.enregistre": "Enregistré : {chemin}",
   "cab.review.joints": "Documents joints",
   "cab.review.audit": "Journal de la pièce",
+  "cab.review.reponse": "Réponse du client à votre retour",
   "cab.lecteur.titre": "Ce que le lecteur a lu",
   "cab.lecteur.observation":
     "Observation : rien n’est modifié dans la lecture retenue. Le lecteur prouvé inscrit ce qu’il lit pour qu’on le juge avant de l’allumer.",
@@ -2282,6 +2283,8 @@ export const fr = {
   "envoi.demande.detail": "{quand} · {qui} doit l'accorder ; vous serez prévenu.",
   "envoi.reponse.fait": "Réponse envoyée à {qui}",
   "envoi.reponse.detail": "« {texte} » · {quand}",
+  "envoi.reponse.reste":
+    "« {texte} » · {quand}. La pièce reste chez vous : renvoyez-la quand vous êtes prêt.",
   "envoi.cab.client": "le client",
   "envoi.cab.retour.titre": "Retournée au client.",
   "envoi.cab.retour.phrase": "{piece} est chez {client} depuis {quand}, avec le motif « {motif} ».",

@@ -1768,6 +1768,7 @@ export const en: Dict = {
   "cab.review.enregistre": "Saved: {chemin}",
   "cab.review.joints": "Attached documents",
   "cab.review.audit": "Document log",
+  "cab.review.reponse": "The client’s reply to your return",
   "cab.lecteur.titre": "What the reader read",
   "cab.lecteur.observation":
     "Observation only: nothing changes in the retained reading. The proven reader records what it reads so it can be judged before it is switched on.",
@@ -2207,6 +2208,8 @@ export const en: Dict = {
   "envoi.demande.detail": "{quand} · {qui} has to agree; you'll be told.",
   "envoi.reponse.fait": "Reply sent to {qui}",
   "envoi.reponse.detail": "“{texte}” · {quand}",
+  "envoi.reponse.reste":
+    "“{texte}” · {quand}. The document stays with you: send it back when you are ready.",
   "envoi.cab.client": "the client",
   "envoi.cab.retour.titre": "Returned to the client.",
   "envoi.cab.retour.phrase": "{piece} is with {client} since {quand}, with the reason “{motif}”.",
