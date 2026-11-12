@@ -3383,6 +3383,10 @@ export const fr = {
     "{cabinet} propose de tenir votre comptabilité. En acceptant, vos pièces transmises lui seront visibles, et lui seul.",
   "pme.mandat.accepter": "Accepter le mandat",
   "pme.mandat.refuser": "Refuser",
+  "pme.mandat.accepterEtQuitter": "Accepter et quitter {ancienne}",
+  "pme.mandat.quitter.aide":
+    "{ancienne} tient aujourd’hui votre comptabilité. En acceptant, elle cesse ce jour et {cabinet} commence le même jour, sans interruption. {ancienne} est prévenue avec votre motif et garde son archive en lecture seule.",
+  "pme.mandat.quitter.motif": "Pourquoi quittez-vous {ancienne} ?",
   "pme.mandat.accepte": "Mandat accepté : {cabinet} suit maintenant votre dossier.",
   "pme.mandat.refuse": "Mandat refusé. La comptabilité en est informée.",
   "pme.mandat.erreur": "Je n’ai pas pu enregistrer votre réponse.",

@@ -19,6 +19,8 @@ export interface MandatPropose {
   cabinetTenantId: string;
   cabinet: string;
   proposeLe: string;
+  /** La comptabilité que l'acceptation remplacerait (3.2), ou `null`. */
+  remplace: string | null;
 }
 
 /** Le mandat en cours, vu depuis la PME. */
@@ -445,15 +447,20 @@ export const identite = {
     return rows[0]?.r ?? null;
   },
 
-  /** La PME répond : oui rend le mandat actif à compter d'aujourd'hui, non le termine. */
+  /**
+   * La PME répond : oui rend le mandat actif à compter d'aujourd'hui, non le
+   * termine. Oui, quand une autre comptabilité est mandatée, la quitte le même
+   * jour, avec le motif qu'elle lira (3.2).
+   */
   async repondreAuMandat(
     db: Requete,
     engagementId: string,
     accepte: boolean,
+    motif: string | null = null,
   ): Promise<{ id: string; status: string }> {
     const { rows } = await db.query<{ r: { id: string; status: string } }>(
-      `select public.mandat_repondre($1, $2) as r`,
-      [engagementId, accepte],
+      `select public.mandat_repondre($1, $2, $3) as r`,
+      [engagementId, accepte, motif],
     );
     const r = rows[0]?.r;
     if (!r) throw new Error("mandat.sans_reponse");

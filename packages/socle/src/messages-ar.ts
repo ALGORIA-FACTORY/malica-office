@@ -3146,6 +3146,10 @@ export const ar: Dict = {
     "{cabinet} يقترح مسك محاسبتك. بقبولك، تصبح الوثائق التي ترسلها مرئية لهذا المحاسب وحده.",
   "pme.mandat.accepter": "قبول الوكالة",
   "pme.mandat.refuser": "رفض",
+  "pme.mandat.accepterEtQuitter": "قبول ومغادرة {ancienne}",
+  "pme.mandat.quitter.aide":
+    "تمسك {ancienne} محاسبتكم حاليًا. بالقبول تنتهي مهمتها اليوم وتبدأ {cabinet} في اليوم نفسه دون انقطاع. تُعلَم {ancienne} بسببكم وتحتفظ بأرشيفها للقراءة فقط.",
+  "pme.mandat.quitter.motif": "لماذا تغادرون {ancienne}؟",
   "pme.mandat.accepte": "قُبلت الوكالة: {cabinet} يتابع ملفك الآن.",
   "pme.mandat.refuse": "رُفضت الوكالة. أُعلم المحاسب بذلك.",
   "pme.mandat.erreur": "لم أستطع تسجيل ردّك.",

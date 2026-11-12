@@ -64,6 +64,11 @@ export interface MandatPropose {
   cabinetTenantId: string;
   cabinet: string;
   proposeLe: string;
+  /**
+   * La comptabilité aujourd'hui mandatée, que l'acceptation remplacerait
+   * (« Accepter et quitter … », 3.2) ; `null` sans mandat en cours.
+   */
+  remplace: string | null;
 }
 
 /** Le mandat en cours, vu depuis la PME : qui tient sa comptabilité, depuis quand. */
@@ -132,7 +137,15 @@ export interface IdentityRepository {
   mandatsProposes(pmeTenantId: string): Promise<MandatPropose[]>;
   /** Les mêmes, pour toutes les sociétés d'une personne, en un seul appel. */
   mandatsProposesDesSocietes(pmeTenantIds: string[]): Promise<Record<string, MandatPropose[]>>;
-  repondreAuMandat(engagementId: string, accepte: boolean): Promise<{ id: string; status: string }>;
+  /**
+   * Accepter un mandat quand une autre comptabilité est mandatée la quitte
+   * dans le même geste : `motif` est alors exigé, et elle le lira (3.2).
+   */
+  repondreAuMandat(
+    engagementId: string,
+    accepte: boolean,
+    motif?: string | null,
+  ): Promise<{ id: string; status: string }>;
   /** Le mandat en cours du dossier, lu depuis la PME ; `null` sans mandat. */
   monMandat(pmeTenantId: string): Promise<MonMandat | null>;
   /** Le dirigeant met fin au mandat actif, avec un motif que la comptabilité lira. */

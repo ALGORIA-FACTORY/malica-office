@@ -1420,7 +1420,7 @@ function TtcEtReport({ ht }: { ht: string | null }) {
  * motif (la comptabilité le lira à son journal) et une seconde touche. Elle ne
  * touche pas la licence — c'est la règle des scénarios D.
  */
-function LeMandat({
+export function LeMandat({
   tenantId,
   onRevoque,
 }: {
@@ -1436,7 +1436,6 @@ function LeMandat({
   const [ouvert, setOuvert] = useState(false);
   const [revoquer, setRevoquer] = useState(false);
   const [motif, setMotif] = useState("");
-  const [armee, setArmee] = useState(false);
   const [retour, setRetour] = useState<string | null>(null);
 
   const mandat = useQuery({
@@ -1447,7 +1446,6 @@ function LeMandat({
     mutationFn: () => office().identity.revoquerMandat(tenantId, motif.trim()),
     onSuccess: async () => {
       setRevoquer(false);
-      setArmee(false);
       onRevoque(t("pme.reglages.org.mandat.revoque"));
       /*
        * TOUT SE RELIT ENSEMBLE (staging, 3 novembre 2026). Les deux lectures
@@ -1464,7 +1462,6 @@ function LeMandat({
       ]);
     },
     onError: (e: unknown) => {
-      setArmee(false);
       setRetour(texteDeLErreur(e, "routes/_authenticated/pme.reglages", t("common.error")));
     },
   });
@@ -1481,7 +1478,7 @@ function LeMandat({
           <button
             type="button"
             className="cut"
-            onClick={() => (setRevoquer((v) => !v), setArmee(false), setRetour(null))}
+            onClick={() => (setRevoquer((v) => !v), setRetour(null))}
             aria-expanded={revoquer}
           >
             {t("pme.reglages.org.revoquer")}
@@ -1516,7 +1513,7 @@ function LeMandat({
           </p>
           <input
             value={motif}
-            onChange={(e) => (setMotif(e.target.value), setArmee(false))}
+            onChange={(e) => setMotif(e.target.value)}
             placeholder={t("pme.reglages.org.mandat.motif")}
             aria-label={t("pme.reglages.org.mandat.motif")}
             className="mt-2 h-[46px] w-full border border-line-strong bg-transparent px-3 text-[14px]"
@@ -1525,11 +1522,14 @@ function LeMandat({
             type="button"
             className="btn btn-sec btn-sup mt-2"
             disabled={fin.isPending || motif.trim() === ""}
-            onClick={() => (armee ? fin.mutate() : setArmee(true))}
+            onClick={() => fin.mutate()}
           >
-            {armee
-              ? t("pme.reglages.org.mandat.confirmer", { nom: m.comptabilite })
-              : t("pme.reglages.org.revoquer")}
+            {/*
+             * Deux touches, pas trois (recette du 11 novembre 2026, 3.2) :
+             * « Révoquer » ouvre, ce bouton nomme la comptabilité et agit. Le
+             * motif exigé et le nom écrit sur le bouton sont la confirmation.
+             */}
+            {t("pme.reglages.org.mandat.confirmer", { nom: m.comptabilite })}
           </button>
         </div>
       ) : null}

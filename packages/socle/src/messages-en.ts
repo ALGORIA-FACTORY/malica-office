@@ -3284,6 +3284,10 @@ export const en: Dict = {
     "{cabinet} offers to keep your books. By accepting, the documents you send become visible to that accountant, and to them alone.",
   "pme.mandat.accepter": "Accept the engagement",
   "pme.mandat.refuser": "Decline",
+  "pme.mandat.accepterEtQuitter": "Accept and leave {ancienne}",
+  "pme.mandat.quitter.aide":
+    "{ancienne} currently keeps your accounts. If you accept, it stops today and {cabinet} starts the same day, with no gap. {ancienne} is told your reason and keeps its archive, read-only.",
+  "pme.mandat.quitter.motif": "Why are you leaving {ancienne}?",
   "pme.mandat.accepte": "Engagement accepted: {cabinet} now follows your file.",
   "pme.mandat.refuse": "Engagement declined. The accountant has been told.",
   "pme.mandat.erreur": "I could not record your answer.",
