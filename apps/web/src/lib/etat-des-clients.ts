@@ -107,9 +107,29 @@ function rangDe(
   return offres.find((o) => o.code === code)?.rang ?? 0;
 }
 
+/**
+ * L'offre dont le client jouit : celle que la comptabilité paie, ou celle,
+ * plus haute, où le dirigeant est monté à sa charge (le forfait de la licence).
+ */
+export function offreActuelle(
+  e: EtatDuClient | undefined,
+  offres: ReadonlyArray<{ code: string; rang: number }>,
+): string | null {
+  if (!e) return null;
+  return rangDe(e.forfaitOffre, offres) > rangDe(e.accesOffre, offres)
+    ? e.forfaitOffre
+    : e.accesOffre;
+}
+
 /** L'effet d'un choix d'offre, avant de l'enregistrer. */
 export type EffetDuChoix =
-  "a_proposer" | "attente_dirigeant" | "montee" | "descente" | "actuelle" | "couvrir";
+  | "a_proposer"
+  | "attente_dirigeant"
+  | "attente_reponse"
+  | "montee"
+  | "descente"
+  | "actuelle"
+  | "couvrir";
 
 export function effetDuChoix(
   e: EtatDuClient | undefined,
@@ -117,8 +137,12 @@ export function effetDuChoix(
   offres: ReadonlyArray<{ code: string; rang: number }>,
 ): EffetDuChoix {
   if (!e?.accesStatut) return e?.dirigeantPresent ? "couvrir" : "a_proposer";
-  if (e.accesStatut === "propose") return "attente_dirigeant";
-  if (choix === e.accesOffre) return "actuelle";
+  // Proposée : elle attend l'arrivée du dirigeant, ou sa réponse s'il est là (3.7).
+  if (e.accesStatut === "propose")
+    return e.dirigeantPresent ? "attente_reponse" : "attente_dirigeant";
+  // L'offre que la comptabilité paie, ou celle où le client est monté à sa
+  // charge : on ne « monte » pas vers ce qu'il a déjà (recette du 11 novembre, 1.2).
+  if (choix === e.accesOffre || choix === offreActuelle(e, offres)) return "actuelle";
   return rangDe(choix, offres) > rangDe(e.accesOffre, offres) ? "montee" : "descente";
 }
 

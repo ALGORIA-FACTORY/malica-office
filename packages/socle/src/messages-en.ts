@@ -2549,6 +2549,8 @@ export const en: Dict = {
   "refus.place.offre_pleine": "All the seats of this plan are taken ({places} in total).",
   "refus.abonnement.deja_propose":
     "A subscription is already offered to or assigned to this file by an accountant.",
+  "refus.abonnement.deja_l_offre_du_client":
+    "The client already has this plan, at their own cost: there is nothing to upgrade.",
   "refus.abonnement.plus_en_attente": "This offer is no longer pending.",
   "refus.forfait.periode_figee": "A plan period cannot be rewritten: only its closing is recorded.",
   "refus.forfait.periode_ouverte":
@@ -5225,6 +5227,8 @@ export const en: Dict = {
   "cab.cli.abo.attente.detail":
     "Awaiting the owner · nothing billed. The plan starts when they join.",
   "cab.cli.abo.paye": "{offre} · paid by you",
+  "cab.cli.abo.paye.monteeParLeClient":
+    "{offre} · paid by you · the client upgraded to {client} at their own cost",
   "cab.cli.abo.paye.detail": "On your Malica invoice, prorated by day.",
   "cab.cli.abo.descente.attente": "Downgrade to {offre} awaiting the owner's consent",
   "cab.cli.abo.ton.actif": "Active",
@@ -5236,12 +5240,14 @@ export const en: Dict = {
   "cab.cli.abo.effet.a_proposer":
     "Offered to the owner when they join; it then starts on its own. Nothing billed before.",
   "cab.cli.abo.effet.attente": "The owner hasn't joined yet: the plan waits, nothing is billed.",
+  "cab.cli.abo.effet.reponse":
+    "The owner has joined: they accept or decline this offer. Nothing is billed before they answer.",
   "cab.cli.abo.effet.montee":
     "Immediate upgrade: the owner is only notified. Your invoice moves to {prix} excl. tax per month, prorated from today.",
   "cab.cli.abo.effet.descente":
     "Downgrade: the owner must accept. Nothing changes until they answer.",
   "cab.cli.abo.effet.actuelle":
-    "This is the current plan. Above, you upgrade; below, you request a downgrade.",
+    "This is the current plan: {offre}. Above, you upgrade; below, you request a downgrade.",
   "cab.cli.abo.effet.couvrir":
     "They pay themselves today. Offer to cover it: once accepted, the subscription moves to you the same day.",
   "cab.cli.abo.regle":

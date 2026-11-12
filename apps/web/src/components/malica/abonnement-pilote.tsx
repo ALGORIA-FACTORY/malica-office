@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
 import { usePrix } from "@/hooks/use-decimales";
+import { useRelireLAbonnement } from "@/hooks/use-relire-l-abonnement";
 import { useRetourDuPrestataire } from "@/hooks/use-paiement-en-ligne";
 import {
   libelleDOffre,
@@ -35,27 +36,6 @@ import { office } from "@/verticals/malica-office/composition";
 import type { OffreDeLaGrille } from "@malica/socle/ports/repositories";
 
 const OU = "components/malica/abonnement-pilote";
-
-/** Les clés que ces gestes rendent caduques. */
-const CLES = [
-  ["mon-forfait"],
-  ["forfait-sieges"],
-  ["forfait-organisations"],
-  ["mes-offres"],
-  ["mes-recharges"],
-  ["recharge-automatique"],
-  ["mes-paiements"],
-  ["mon-annuel"],
-  // Le prix d'une place ou d'une société suit l'offre (`usePrixEnPlus`).
-  ["prix-en-plus"],
-];
-
-function useInvalider() {
-  const qc = useQueryClient();
-  return async () => {
-    for (const queryKey of CLES) await qc.invalidateQueries({ queryKey });
-  };
-}
 
 /** Les empêchements que la base nomme, et leur phrase. Un code inconnu se tait. */
 const EMPECHEMENTS: Record<string, MessageKey> = {
@@ -211,6 +191,136 @@ export function MonNom() {
   );
 }
 
+/* ------------------------------------------------- la comptabilité qui paie */
+
+/**
+ * L'abonnement que la comptabilité propose ou couvre (ANO-011, 21 octobre
+ * 2026 ; règles du 20 octobre). La comptabilité propose ; le dirigeant accepte
+ * ou refuse. Accepter arrête l'abonnement que la société payait elle-même, le
+ * jour même : c'est la comptabilité qui est facturée, au prix public. Rien ne
+ * s'affiche quand il n'y a rien à dire.
+ */
+export function AbonnementDeLaComptabilite({
+  tenantId,
+  propositionsSeules = false,
+}: {
+  tenantId: string;
+  /** La page Abonnement dit déjà qui paie, dans sa carte : elle ne montre que ce qui attend une réponse. */
+  propositionsSeules?: boolean;
+}) {
+  const { t, locale } = useI18n();
+  const catalogue = useCatalogueDesOffres().data;
+  const invalider = useRelireLAbonnement();
+  const [retour, setRetour] = useState<string | null>(null);
+  const propositions = useQuery({
+    queryKey: ["abonnements-pour-moi", tenantId],
+    queryFn: () => office().facturation.abonnementsPourMoi(tenantId),
+  });
+  const repondre = useMutation({
+    mutationFn: (v: { accesId: string; accepte: boolean }) =>
+      office().facturation.repondreAbonnement(v.accesId, v.accepte),
+    onSuccess: async (_r, v) => {
+      setRetour(t(v.accepte ? "pme.abo.cabinet.accepte" : "pme.abo.cabinet.refuse"));
+      // Tout ce que la page Abonnement lit change avec qui paie (recette 1.3).
+      await invalider();
+    },
+    onError: (e: unknown) => setRetour(texteDeLErreur(e, OU, t("common.error"))),
+  });
+  // La comptabilité qui paie propose une offre plus légère : rien ne change
+  // sans l'accord du dirigeant (décision du 8 novembre 2026).
+  const descente = useQuery({
+    queryKey: ["descente-pour-moi", tenantId],
+    queryFn: () => office().facturation.descentePourMoi(tenantId),
+  });
+  const trancher = useMutation({
+    mutationFn: (v: { id: string; accepte: boolean }) =>
+      office().facturation.repondreDescente(v.id, v.accepte),
+    onSuccess: async () => {
+      setRetour(t("pme.descente.ok"));
+      await invalider();
+    },
+    onError: (e: unknown) => setRetour(texteDeLErreur(e, OU, t("common.error"))),
+  });
+  const d = descente.data ?? null;
+  const lignes = (propositions.data ?? []).filter(
+    (a) => a.statut === "propose" || (a.statut === "actif" && !propositionsSeules),
+  );
+  if (lignes.length === 0 && !d && !retour) return null;
+  return (
+    // `.org` porte la typographie des propositions (`.mn`) et leurs boutons (`.acts`).
+    <div className="org mt-3">
+      {d ? (
+        <div>
+          <p className="mn">
+            {t("pme.descente.titre", { offre: libelleDOffre(catalogue, d.offre_code) })}
+          </p>
+          <p className="mn">{t("pme.descente.lede")}</p>
+          <div className="acts">
+            <button
+              type="button"
+              disabled={trancher.isPending}
+              onClick={() => trancher.mutate({ id: d.descente_id, accepte: true })}
+            >
+              {t("pme.descente.accepter")}
+            </button>
+            <button
+              type="button"
+              className="cut"
+              disabled={trancher.isPending}
+              onClick={() => trancher.mutate({ id: d.descente_id, accepte: false })}
+            >
+              {t("pme.descente.refuser")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {lignes.map((a) =>
+        a.statut === "actif" ? (
+          <p key={a.acces_id} className="mn">
+            {t("pme.abo.cabinet.couvert", {
+              cabinet: a.cabinet_nom,
+              offre: libelleDOffre(catalogue, a.offre_code),
+              date: dateEnLettres(a.effet_du, locale),
+            })}
+          </p>
+        ) : (
+          <div key={a.acces_id}>
+            <p className="mn">
+              {t("pme.abo.cabinet.propose", {
+                cabinet: a.cabinet_nom,
+                offre: libelleDOffre(catalogue, a.offre_code),
+              })}
+            </p>
+            <p className="mn">{t("pme.abo.cabinet.effet")}</p>
+            <div className="acts">
+              <button
+                type="button"
+                disabled={repondre.isPending}
+                onClick={() => repondre.mutate({ accesId: a.acces_id, accepte: true })}
+              >
+                {t("pme.abo.cabinet.accepter")}
+              </button>
+              <button
+                type="button"
+                className="cut"
+                disabled={repondre.isPending}
+                onClick={() => repondre.mutate({ accesId: a.acces_id, accepte: false })}
+              >
+                {t("pme.abo.cabinet.refuser")}
+              </button>
+            </div>
+          </div>
+        ),
+      )}
+      {retour ? (
+        <p className="t-body" aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /* --------------------------------------------------------------- l'offre */
 
 export function ChangerDOffre() {
@@ -218,7 +328,7 @@ export function ChangerDOffre() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const aLEchelle = usePrix();
-  const invalider = useInvalider();
+  const invalider = useRelireLAbonnement();
   const principal = useEstPrincipal();
   const offres = useQuery({
     queryKey: ["mes-offres", pme.tenantId],
@@ -358,7 +468,7 @@ export function PayerALAnnee() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const aLEchelle = usePrix();
-  const invalider = useInvalider();
+  const invalider = useRelireLAbonnement();
   const principal = useEstPrincipal();
   const [armee, setArmee] = useState(false);
   const [retour, setRetour] = useState<string | null>(null);
@@ -398,6 +508,12 @@ export function PayerALAnnee() {
             offerts: a.en_cours.mois_offerts,
           })}
         </p>
+        {/* Le même TTC que la proposition et que « À régler » : la base le rend (1.8). */}
+        {a.en_cours.ttc !== null ? (
+          <p className="t-body">
+            {t("pme.reglages.annuel.ttc", { ttc: aLEchelle(a.en_cours.ttc), devise: pme.currency })}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -470,7 +586,7 @@ export function MesRecharges() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const aLEchelle = usePrix();
-  const invalider = useInvalider();
+  const invalider = useRelireLAbonnement();
   const principal = useEstPrincipal();
   const paliers = useQuery({
     queryKey: ["paliers-de-recharge"],
@@ -540,16 +656,52 @@ export function MesRecharges() {
       : (code ?? "");
   const champ = "h-[46px] min-w-0 flex-1 border border-line-strong bg-transparent px-3 text-[14px]";
 
+  // Les recharges achetées, utilisables ou non : une recharge payée ne
+  // disparaît jamais de l'écran (recette du 11 novembre, 1.5).
+  const reserve =
+    (miennes.data ?? []).length === 0 ? (
+      <p className="t-body">{t("pme.reglages.recharges.aucune")}</p>
+    ) : (
+      (miennes.data ?? []).map((r) => (
+        <div key={r.recharge_id} className="reserve" data-recharge={r.recharge_id}>
+          <span className="bd">
+            <u>{t("pme.reglages.recharges.miennes")}</u>
+            <b>
+              {r.expire_le === null
+                ? t("pme.reglages.recharges.reste.sansDateLimite", {
+                    restantes: r.restantes,
+                    lectures: r.lectures,
+                  })
+                : t("pme.reglages.recharges.reste", {
+                    restantes: r.restantes,
+                    lectures: r.lectures,
+                    date: dateEnLettres(r.expire_le, locale),
+                  })}
+            </b>
+          </span>
+          {r.gelee || r.expiree ? (
+            <span>
+              {r.gelee ? t("pme.reglages.recharges.gelee") : t("pme.reglages.recharges.expiree")}
+            </span>
+          ) : null}
+        </div>
+      ))
+    );
+
   // Une offre sans recharge (`ref.offres.recharges_permises`) : la carte reste
-  // visible, verrouillée, et nomme l'offre qui les ouvre.
+  // visible, verrouillée, et nomme l'offre qui les ouvre. Les recharges déjà
+  // achetées restent dessous, « en sommeil » (la base le dit : `gelee`).
   if (catalogue && offre && catalogue.find((o) => o.code === offre)?.recharges_permises === false) {
     return (
-      <div className="inv off" data-verrou={offreQuiPermetDeRecharger(catalogue, offre)?.libelle}>
-        <span className="bd">
-          <b>{t("pme.reglages.recharges")}</b>
-          <span>{t("pme.reglages.recharges.verrou")}</span>
-        </span>
-      </div>
+      <>
+        <div className="inv off" data-verrou={offreQuiPermetDeRecharger(catalogue, offre)?.libelle}>
+          <span className="bd">
+            <b>{t("pme.reglages.recharges")}</b>
+            <span>{t("pme.reglages.recharges.verrou")}</span>
+          </span>
+        </div>
+        {(miennes.data ?? []).length > 0 ? reserve : null}
+      </>
     );
   }
 
@@ -561,34 +713,7 @@ export function MesRecharges() {
   const choisi = liste.find((p) => p.code === palier) ?? liste[liste.length - 1] ?? null;
   return (
     <>
-      {(miennes.data ?? []).length === 0 ? (
-        <p className="t-body">{t("pme.reglages.recharges.aucune")}</p>
-      ) : (
-        (miennes.data ?? []).map((r) => (
-          <div key={r.recharge_id} className="reserve" data-recharge={r.recharge_id}>
-            <span className="bd">
-              <u>{t("pme.reglages.recharges.miennes")}</u>
-              <b>
-                {r.expire_le === null
-                  ? t("pme.reglages.recharges.reste.sansDateLimite", {
-                      restantes: r.restantes,
-                      lectures: r.lectures,
-                    })
-                  : t("pme.reglages.recharges.reste", {
-                      restantes: r.restantes,
-                      lectures: r.lectures,
-                      date: dateEnLettres(r.expire_le, locale),
-                    })}
-              </b>
-            </span>
-            {r.gelee || r.expiree ? (
-              <span>
-                {r.gelee ? t("pme.reglages.recharges.gelee") : t("pme.reglages.recharges.expiree")}
-              </span>
-            ) : null}
-          </div>
-        ))
-      )}
+      {reserve}
 
       <div className="paliers mt-3" role="group" aria-label={t("pme.reglages.recharges")}>
         {liste.map((p) => (
@@ -699,7 +824,7 @@ export function MesRecharges() {
 export function MesProprietaires() {
   const { t } = useI18n();
   const pme = usePme();
-  const invalider = useInvalider();
+  const invalider = useRelireLAbonnement();
   const principal = useEstPrincipal();
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
   const sieges = useQuery({
@@ -792,7 +917,7 @@ export function MesProprietaires() {
  */
 export function ARegler() {
   const { t, locale } = useI18n();
-  const invalider = useInvalider();
+  const invalider = useRelireLAbonnement();
   const principal = useEstPrincipal();
   const paiements = useQuery({
     queryKey: ["mes-paiements"],
@@ -813,6 +938,15 @@ export function ARegler() {
     (p) => p.etat !== "paye" && p.etat !== "remplace" && p.payeur_tenant_id === null,
   );
   if (ouverts.length === 0 && !retour) return null;
+  // Tout est réglé : le verdict du prestataire seul, sans « 0 opération en
+  // attente » (recette du 11 novembre 2026, 3.5).
+  if (ouverts.length === 0) {
+    return (
+      <p className="t-body" aria-live="polite" data-a-regler>
+        {retour}
+      </p>
+    );
+  }
   /*
    * UNE carte, un total (maquette du 1er novembre 2026). Le total est la
    * somme décimale du Socle (`sommeDecimale`), et seulement dans une seule
@@ -847,7 +981,10 @@ export function ARegler() {
           <span className="mt">
             {montant(p.montant_ttc, locale)} {p.devise}
           </span>
-          {p.etat === "refuse" ? <p className="warn">{t("pme.reglages.paiement.refuse")}</p> : null}
+          {/* Le verdict qu'on vient de recevoir se dit une fois, sous la carte. */}
+          {p.etat === "refuse" && !(retour && revenu === p.paiement_id) ? (
+            <p className="warn">{t("pme.reglages.paiement.refuse")}</p>
+          ) : null}
           {simulateur && revenu === p.paiement_id ? (
             <div className="acts">
               <span className="t-body">{t("pme.reglages.paiement.simulateur")}</span>

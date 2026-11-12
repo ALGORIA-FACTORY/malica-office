@@ -189,11 +189,12 @@ export function secretsPoses(adaptateur: string | null, env: Env = process.env):
 
 /**
  * Les écrans où l'on revient de la page du prestataire, et où le retour se
- * vérifie auprès de lui : la société, ses réglages ; le cabinet, la page de
- * choix du paiement lui-même.
+ * vérifie auprès de lui : la société, la page Abonnement de ses réglages — là
+ * où sont « À régler » et les boutons du simulateur, pas le sommaire (recette
+ * du 11 novembre 2026, 3.5) ; le cabinet, la page de choix du paiement.
  */
 export const ECRANS_DE_RETOUR = {
-  societe: () => "/pme/reglages",
+  societe: () => "/pme/reglages?page=abonnement",
   cabinet: (paiementId: string) => `/cabinet/payer/${encodeURIComponent(paiementId)}`,
 } as const;
 
@@ -203,7 +204,9 @@ export function adresseDeRetour(
   ecran: keyof typeof ECRANS_DE_RETOUR,
   paiementId: string,
 ): string {
-  return `${urlPublique}${ECRANS_DE_RETOUR[ecran](paiementId)}?${new URLSearchParams({ paiement: paiementId })}`;
+  const adresse = new URL(`${urlPublique}${ECRANS_DE_RETOUR[ecran](paiementId)}`);
+  adresse.searchParams.set("paiement", paiementId);
+  return adresse.toString();
 }
 
 /** Le prestataire que la tour a ouvert, ou `null` quand le paiement en ligne est fermé. */
