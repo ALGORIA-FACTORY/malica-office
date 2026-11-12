@@ -23,6 +23,7 @@ import {
   enPersonne,
   millimes,
   prix,
+  regler,
   type Decor,
 } from "./decor-de-facture.ts";
 
@@ -185,6 +186,78 @@ describe("la montée pendant l'année", { skip: !ADMIN }, () => {
         assert.equal(Number(j.couvert), Number(j.du_ht), `${j.jour} : couvert par l'année`);
       }
       assert.equal((await emettre(db, d, d.moisSuivant)).couvert, true, "rien de plus ensuite");
+    });
+  });
+
+  it("pendant l'année, deux montées avant d'avoir réglé la première : « À régler » porte les deux écarts, la facture aussi, une fois", async () => {
+    await aBlanc(async (db) => {
+      const d = await decor(db, "solo");
+      const offerts = await moisOfferts(db);
+      const [solo, team, premium] = [
+        await prix(db, "solo"),
+        await prix(db, "team"),
+        await prix(db, "premium"),
+      ];
+      const { rows: e } = await db.query<{ jr: number; ja: number }>(
+        `insert into facturation.engagements_annuels
+           (licence_id, offre_code, du, au, prix_mensuel_ht, mois_offerts, montant_ht, souscrit_par)
+         values ($1, 'solo', $2::date, ($2::date + interval '1 year - 1 day')::date, $3::numeric,
+                 $4::int, $3::numeric * (12 - $4::int), $5)
+         returning (au + 1 - current_date) as jr, (au + 1 - du) as ja`,
+        [d.licence, d.mois, solo, offerts, d.titulaire],
+      );
+      const { jr, ja } = e[0]!;
+      const ecart1 = millimes(((team - solo) * 12 * jr) / ja);
+      const ecart2 = millimes(((premium - team) * 12 * jr) / ja);
+
+      const premiere = await changerDOffre(db, d, "team");
+      assert.equal(Number(premiere!.montant_ht), ecart1);
+      const seconde = await changerDOffre(db, d, "premium");
+      assert.ok(seconde);
+
+      // « À régler », tel que la page le lit : ni payé, ni remplacé.
+      const ouverts = await enPersonne(db, d.titulaire, async () => {
+        const { rows } = await db.query<{ montant_ht: string }>(
+          `select montant_ht::text from facturation.paiements_en_ligne_v
+            where licence_id = $1 and etat not in ('paye', 'remplace')`,
+          [d.licence],
+        );
+        return rows.map((r) => Number(r.montant_ht));
+      });
+      assert.deepEqual(
+        ouverts,
+        [millimes(ecart1 + ecart2)],
+        "aucun écart caché, aucun compté deux fois",
+      );
+
+      const ce = await emettre(db, d, d.mois);
+      assert.equal(ce.ht, millimes(solo * (12 - offerts) + ecart1 + ecart2));
+      assert.equal(ce.lignes.length, 3, "l'année, et une ligne par montée");
+    });
+  });
+
+  it("pendant l'année, la première montée déjà réglée : la seconde ne porte que son écart", async () => {
+    await aBlanc(async (db) => {
+      const d = await decor(db, "solo");
+      const offerts = await moisOfferts(db);
+      const [solo, team, premium] = [
+        await prix(db, "solo"),
+        await prix(db, "team"),
+        await prix(db, "premium"),
+      ];
+      const { rows: e } = await db.query<{ jr: number; ja: number }>(
+        `insert into facturation.engagements_annuels
+           (licence_id, offre_code, du, au, prix_mensuel_ht, mois_offerts, montant_ht, souscrit_par)
+         values ($1, 'solo', $2::date, ($2::date + interval '1 year - 1 day')::date, $3::numeric,
+                 $4::int, $3::numeric * (12 - $4::int), $5)
+         returning (au + 1 - current_date) as jr, (au + 1 - du) as ja`,
+        [d.licence, d.mois, solo, offerts, d.titulaire],
+      );
+      const { jr, ja } = e[0]!;
+      const premiere = await changerDOffre(db, d, "team");
+      await regler(db, d, premiere!.paiement_id);
+      const seconde = await changerDOffre(db, d, "premium");
+      assert.equal(Number(seconde!.montant_ht), millimes(((premium - team) * 12 * jr) / ja));
     });
   });
 });
