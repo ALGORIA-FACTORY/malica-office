@@ -36,6 +36,7 @@ import { ControlesComptables } from "@/components/malica/controles-comptables";
 import { EcritureDuCabinet } from "@/components/malica/ecriture-du-cabinet";
 import { EcritureDuConfrere } from "@/components/malica/ecriture-du-confrere";
 import { PanneauRetourne, type RetourEnvoye } from "@/components/malica/envoye";
+import { ImprimerLesPieces } from "@/components/malica/imprimer-les-pieces";
 import { PieceEnArchive } from "@/components/malica/piece-en-archive";
 import { TelechargerDossierComptable } from "@/components/malica/telecharger-dossier-comptable";
 import { VersionPrecedente } from "@/components/malica/version-precedente";
@@ -874,6 +875,14 @@ function CabinetReviewDeLaPiece() {
           }
           pieces={[pieceId]}
           libelle={t("cab.biblio.operation")}
+        />
+        <ImprimerLesPieces
+          cabinetId={org.id}
+          pieces={[pieceId]}
+          portee="piece"
+          nom={clients.data?.find((c) => c.tenantId === piece.tenantId)?.name ?? piece.tenantId}
+          titre={clients.data?.find((c) => c.tenantId === piece.tenantId)?.name ?? ""}
+          libelle={t("cab.biblio.imprimer")}
         />
       </div>
       <div className="cab-operation-layout grid gap-8 xl:grid-cols-[1.15fr_1fr]">

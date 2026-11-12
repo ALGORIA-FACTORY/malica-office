@@ -96,6 +96,31 @@ export const frBibliotheque = {
   "cab.biblio.toutCocher": "Tout cocher",
   "cab.biblio.toutTelecharger": "Tout télécharger ({n})",
   "cab.biblio.volumineux": "Ce dossier est volumineux : ouvrez un mois pour voir ses pièces.",
+  "cab.biblio.imprimer": "Imprimer",
+  "cab.biblio.imprimer.dossier": "Imprimer le dossier",
+  "cab.biblio.imprimer.mois": "Imprimer {mois}",
+  "cab.biblio.imprimer.typeDuMois": "Imprimer {type} — {mois}",
+  "cab.biblio.imprimer.piece": "Imprimer cette pièce",
+  "cab.biblio.imprimer.selection": "Imprimer la sélection ({n})",
+  "cab.biblio.imprimer.tout": "Tout imprimer ({n})",
+  "cab.biblio.imprimer.titre": "Préparer l’impression",
+  "cab.biblio.imprimer.aide":
+    "Un seul PDF : la page de garde, l’index, puis les pièces dans l’ordre de l’index. Il n’est pas conservé, et l’impression s’inscrit au journal.",
+  "cab.biblio.imprimer.enCours": "Composition du PDF…",
+  "cab.biblio.imprimer.volume":
+    "Impression volumineuse : environ {pages} pages, {taille} Mo d’originaux. La composition peut prendre plusieurs minutes.",
+  "cab.biblio.imprimer.quandMeme": "Imprimer quand même",
+  "cab.biblio.imprimer.trop":
+    "Cette impression compte environ {pages} pages, plus que les {max} possibles en une fois : réduisez la sélection, ou imprimez mois par mois.",
+  "cab.biblio.imprimer.pret": "PDF prêt : la boîte d’impression s’ouvre.",
+  "cab.biblio.imprimer.rouvrir": "Ouvrir la boîte d’impression",
+  "cab.biblio.imprimer.enregistre":
+    "PDF prêt, enregistré sur l’appareil : ouvrez-le pour l’imprimer.",
+  "cab.biblio.imprimer.erreur": "L’impression n’a pas pu être préparée.",
+  "cab.biblio.imprimer.vide": "Aucune pièce à imprimer ici.",
+  "cab.biblio.imprimer.selectionner": "Sélectionner",
+  "cab.biblio.imprimer.terminer": "Terminer",
+  "cab.biblio.imprimer.cocher": "Sélectionner {nom}",
 } as const;
 
 export type MessagesDeLaBibliotheque = Record<keyof typeof frBibliotheque, string>;

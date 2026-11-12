@@ -91,4 +91,28 @@ export const arBibliotheque: MessagesDeLaBibliotheque = {
   "cab.biblio.toutCocher": "تحديد الكل",
   "cab.biblio.toutTelecharger": "تنزيل الكل ({n})",
   "cab.biblio.volumineux": "هذا الملف كبير: افتح شهراً لرؤية وثائقه.",
+  "cab.biblio.imprimer": "طباعة",
+  "cab.biblio.imprimer.dossier": "طباعة الملف",
+  "cab.biblio.imprimer.mois": "طباعة {mois}",
+  "cab.biblio.imprimer.typeDuMois": "طباعة {type} — {mois}",
+  "cab.biblio.imprimer.piece": "طباعة هذه الوثيقة",
+  "cab.biblio.imprimer.selection": "طباعة المحدد ({n})",
+  "cab.biblio.imprimer.tout": "طباعة الكل ({n})",
+  "cab.biblio.imprimer.titre": "تحضير الطباعة",
+  "cab.biblio.imprimer.aide":
+    "ملف PDF واحد: صفحة الغلاف، ثم الفهرس، ثم الوثائق حسب ترتيب الفهرس. لا يُحفظ، وتُسجَّل الطباعة في السجل.",
+  "cab.biblio.imprimer.enCours": "جارٍ إعداد ملف PDF…",
+  "cab.biblio.imprimer.volume":
+    "طباعة كبيرة الحجم: حوالي {pages} صفحة، {taille} م.ب من الأصول. قد يستغرق الإعداد عدة دقائق.",
+  "cab.biblio.imprimer.quandMeme": "اطبع على أي حال",
+  "cab.biblio.imprimer.trop":
+    "هذه الطباعة تضم حوالي {pages} صفحة، أكثر من {max} المسموح بها دفعة واحدة: قلّص التحديد أو اطبع شهراً بشهر.",
+  "cab.biblio.imprimer.pret": "ملف PDF جاهز: نافذة الطباعة تُفتح.",
+  "cab.biblio.imprimer.rouvrir": "فتح نافذة الطباعة",
+  "cab.biblio.imprimer.enregistre": "ملف PDF جاهز ومحفوظ على الجهاز: افتحه لطباعته.",
+  "cab.biblio.imprimer.erreur": "تعذّر تحضير الطباعة.",
+  "cab.biblio.imprimer.vide": "لا توجد وثيقة للطباعة هنا.",
+  "cab.biblio.imprimer.selectionner": "تحديد",
+  "cab.biblio.imprimer.terminer": "إنهاء",
+  "cab.biblio.imprimer.cocher": "تحديد {nom}",
 };

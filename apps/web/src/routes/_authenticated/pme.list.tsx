@@ -19,6 +19,7 @@ import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-gro
 import { RangeeDesSieges, type Siege } from "@/components/malica/rangee-des-sieges";
 import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { FileLocale } from "@/components/malica/file-locale";
+import { ImprimerDepuisLaPme } from "@/components/malica/imprimer-les-pieces";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
@@ -265,9 +266,12 @@ function Bibliotheque() {
   );
 
   const [ouvert, setOuvert] = useState<Ouvert | null>(null);
+  /** Les pièces cochées pour « Imprimer la sélection » ; `null` : pas de cases. */
+  const [choix, setChoix] = useState<ReadonlySet<string> | null>(null);
   // Changer de société referme le groupe déroulé : il montrait l'autre
-  // (revue de #211).
+  // (revue de #211). Les cases partent avec lui.
   useEffect(() => setOuvert(null), [pme.societeAffichee]);
+  useEffect(() => setChoix(null), [ouvert]);
   const revenir = useRevenir();
   const [tout, setTout] = useState(false);
 
@@ -444,54 +448,117 @@ function Bibliotheque() {
               {t("pme.doc.compte", { count: groupeOuvert.pieces.length })} ·{" "}
               {sommes(groupeOuvert.pieces)}
             </p>
+            {/*
+             * Imprimer (7.7) : le groupe ouvert, ou les pièces cochées — un
+             * seul PDF, une page de garde par société quand « Toutes les
+             * sociétés » en mêle plusieurs.
+             */}
+            {choix === null ? (
+              <>
+                <ImprimerDepuisLaPme
+                  key={`groupe:${ouvert?.cle}`}
+                  pieces={groupeOuvert.pieces.map((p) => p.id)}
+                  portee="dossier"
+                  nom={groupeOuvert.titre}
+                  libelle={t("cab.biblio.imprimer.mois", { mois: groupeOuvert.titre })}
+                  classe="more"
+                  classeDuTexte="sub"
+                />
+                <button type="button" className="more" onClick={() => setChoix(new Set())}>
+                  {t("cab.biblio.imprimer.selectionner")}
+                </button>
+              </>
+            ) : (
+              <>
+                <ImprimerDepuisLaPme
+                  key={`choix:${[...choix].join(",")}`}
+                  pieces={groupeOuvert.pieces.filter((p) => choix.has(p.id)).map((p) => p.id)}
+                  portee="selection"
+                  nom={groupeOuvert.titre}
+                  libelle={t("cab.biblio.imprimer.selection", { n: choix.size })}
+                  classe="more"
+                  classeDuTexte="sub"
+                />
+                <button type="button" className="more" onClick={() => setChoix(null)}>
+                  {t("cab.biblio.imprimer.terminer")}
+                </button>
+              </>
+            )}
             <div className="lines">
-              {tranches.visibles.map((p) => (
-                <Link
-                  key={p.id}
-                  to="/pme/piece/$pieceId"
-                  params={{ pieceId: p.id }}
-                  onClick={() => ouvrirSaSociete(p.id)}
-                  className={cn("pc", p.status === "capturee" && "dim")}
-                >
-                  <VignetteDeLaPiece piece={p} />
-                  <span className="cps">
-                    <span className="hd">
+              {tranches.visibles.map((p) => {
+                const contenu = (
+                  <>
+                    <VignetteDeLaPiece piece={p} />
+                    <span className="cps">
+                      <span className="hd">
+                        {/*
+                         * Le titre ne ment pas : sans émetteur, une pièce LUE
+                         * dit « sans émetteur », pas « pas encore lue ».
+                         */}
+                        <span className="nm">
+                          {p.emetteur ??
+                            (p.status === "capturee"
+                              ? t("pme.list.nonLue")
+                              : t("pme.list.sansEmetteur"))}
+                        </span>
+                        {/* Sans montant : « — », jamais « 0,000 », qui serait un fait comptable. */}
+                        <span className={cn("vl", p.kind === "facture_vente" && "rec")}>
+                          {p.total === null ? "—" : montant(p.total, locale)}
+                        </span>
+                      </span>
+                      <span className="mt">
+                        {[sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle ?? null, jour(p)]
+                          .filter((x): x is string => !!x)
+                          .join(" · ")}
+                      </span>
                       {/*
-                       * Le titre ne ment pas : sans émetteur, une pièce LUE
-                       * dit « sans émetteur », pas « pas encore lue ».
+                       * Une pièce non lue n'est pas une pièce qui attend : au
+                       * plafond, elle dit pourquoi elle n'a pas été lue.
                        */}
-                      <span className="nm">
-                        {p.emetteur ??
-                          (p.status === "capturee"
-                            ? t("pme.list.nonLue")
-                            : t("pme.list.sansEmetteur"))}
-                      </span>
-                      {/* Sans montant : « — », jamais « 0,000 », qui serait un fait comptable. */}
-                      <span className={cn("vl", p.kind === "facture_vente" && "rec")}>
-                        {p.total === null ? "—" : montant(p.total, locale)}
-                      </span>
+                      {p.status === "capturee" ? (
+                        <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} lecture={p.lecture} />
+                      ) : (
+                        // Le statut, un mot et une couleur — jamais une écriture.
+                        <span className={cn("tag", TON_PME[statutDeLaPieceLue(p)])}>
+                          <i aria-hidden />
+                          {motDuStatut(statutDuCircuit(p), nomDuCabinet, t)}
+                        </span>
+                      )}
                     </span>
-                    <span className="mt">
-                      {[sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle ?? null, jour(p)]
-                        .filter((x): x is string => !!x)
-                        .join(" · ")}
-                    </span>
-                    {/*
-                     * Une pièce non lue n'est pas une pièce qui attend : au
-                     * plafond, elle dit pourquoi elle n'a pas été lue.
-                     */}
-                    {p.status === "capturee" ? (
-                      <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} lecture={p.lecture} />
-                    ) : (
-                      // Le statut, un mot et une couleur — jamais une écriture.
-                      <span className={cn("tag", TON_PME[statutDeLaPieceLue(p)])}>
-                        <i aria-hidden />
-                        {motDuStatut(statutDuCircuit(p), nomDuCabinet, t)}
-                      </span>
-                    )}
-                  </span>
-                </Link>
-              ))}
+                  </>
+                );
+                // En sélection, la ligne se coche au lieu de s'ouvrir.
+                return choix !== null ? (
+                  <label key={p.id} className={cn("pc", p.status === "capturee" && "dim")}>
+                    <input
+                      type="checkbox"
+                      checked={choix.has(p.id)}
+                      aria-label={t("cab.biblio.imprimer.cocher", {
+                        nom: p.emetteur ?? t("pme.list.sansEmetteur"),
+                      })}
+                      onChange={(e) =>
+                        setChoix((c) => {
+                          const suivant = new Set(c);
+                          if (e.target.checked) suivant.add(p.id);
+                          else suivant.delete(p.id);
+                          return suivant;
+                        })
+                      }
+                    />
+                    {contenu}
+                  </label>
+                ) : (
+                  <Link
+                    key={p.id}
+                    to="/pme/piece/$pieceId"
+                    params={{ pieceId: p.id }}
+                    onClick={() => ouvrirSaSociete(p.id)}
+                    className={cn("pc", p.status === "capturee" && "dim")}
+                  >
+                    {contenu}
+                  </Link>
+                );
+              })}
               {tranches.reste ? <span ref={tranches.sentinelle} aria-hidden /> : null}
             </div>
           </>

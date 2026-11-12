@@ -76,6 +76,7 @@
         "public.immo_depreciation_constater",
         "public.immo_dotation_constater",
         "public.immo_sortir",
+        "public.impression_journaliser",
         "public.journal_export_journaliser",
         "public.justificatif_deplacer",
         "public.justificatif_remplacer",
