@@ -99,6 +99,15 @@ jobs:
       - name: Installer
         run: npm ci
 
+      # Le moteur du sudoku, comme en production (`infra/api.Dockerfile`) et
+      # dans la CI. Sans lui, l'API écrivait « sudoku : moteur absent » et chaque
+      # pièce passait par les modèles seuls : l'épreuve censée éprouver la vraie
+      # chaîne n'en éprouvait pas le cœur (relevé le 12 novembre 2026).
+      - name: Le moteur du sudoku
+        run: |
+          rustup target add wasm32-unknown-unknown
+          npm run build --workspace @malica/sudoku
+
       - name: Monter le schéma
         run: node db/migrer.mjs --base "$DATABASE_URL_ADMIN" --mot-de-passe-api
         env:
