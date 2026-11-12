@@ -20,11 +20,12 @@
  *
  * ========================================================= LES POLICES
  *
- * L'image de l'API n'a aucune police système. Les mentions s'écrivent avec
- * Liberation Sans, livrée par pdf.js (`standard_fonts`) : elle couvre le
- * latin, pas l'arabe. Une police arabe présente sur la machine est employée
- * (`POLICES_ARABES`) ; sans elle, `saitEcrire` le constate et l'appelant écrit
- * les mentions en français plutôt qu'en carrés vides.
+ * Les mentions s'écrivent avec Liberation Sans, livrée par pdf.js
+ * (`standard_fonts`) : elle couvre le latin, pas l'arabe. Une police arabe
+ * présente sur la machine est employée (`POLICES_ARABES`) — l'image de l'API
+ * installe Amiri (`infra/api.Dockerfile`) ; sans elle, `saitEcrire` le
+ * constate et l'appelant écrit les mentions en français plutôt qu'en carrés
+ * vides.
  *
  * Ce fichier ne lit ni la base ni le disque des pièces : il reçoit des
  * valeurs, et un chargeur d'octets.
