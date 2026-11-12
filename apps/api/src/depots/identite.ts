@@ -9,7 +9,7 @@
 
 import { configurationCourriel } from "../courriel/brevo.ts";
 import { envoyerInvitation, type StatutCourriel } from "../courriel/invitation.ts";
-import type { LettreAuConfrere } from "@malica/socle/ports/repositories";
+import type { LettreAuConfrere, MatriculeExamine } from "@malica/socle/ports/repositories";
 import type { Requete } from "../db.ts";
 import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 
@@ -178,6 +178,22 @@ export const identite = {
     return rows[0]!.r;
   },
 
+  /**
+   * Le matricule que la comptabilité saisit : complet au format du pack, sa
+   * lettre de contrôle, une société déjà dans Malica (3.8). Rien n'est créé.
+   */
+  async examinerMatricule(
+    db: Requete,
+    cabinetId: string,
+    valeur: string,
+  ): Promise<MatriculeExamine> {
+    const { rows } = await db.query<{ r: MatriculeExamine }>(
+      `select public.matricule_examiner($1, $2) as r`,
+      [cabinetId, valeur],
+    );
+    return rows[0]!.r;
+  },
+
   /** Une liste à importer, vérifiée ligne par ligne. Rien n'est créé. */
   async verifierDossiers(
     db: Requete,
@@ -189,10 +205,12 @@ export const identite = {
       statut: "pret" | "existant" | "deja_client" | "a_corriger";
       motif: string | null;
       organisation: string | null;
+      avertissement: string | null;
     }>
   > {
     const { rows } = await db.query(
-      `select ligne, statut, motif, organisation from public.dossiers_verifier($1, $2::jsonb)`,
+      `select ligne, statut, motif, organisation, avertissement
+         from public.dossiers_verifier($1, $2::jsonb)`,
       [cabinetId, JSON.stringify(lignes)],
     );
     return rows as never;

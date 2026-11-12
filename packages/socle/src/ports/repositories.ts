@@ -111,6 +111,18 @@ export const DROITS = [
 export type Droit = (typeof DROITS)[number];
 
 /** Les éléments du modèle de lettre au confrère : rien n'est envoyé par Malica. */
+/**
+ * Ce qu'est un matricule saisi par une comptabilité (3.8) : complet au format
+ * du pack, sa lettre de contrôle, et s'il désigne une société déjà dans Malica.
+ */
+export type MatriculeExamine =
+  | { complet: false }
+  | {
+      complet: true;
+      lettre: "conforme" | "discordante" | null;
+      societe: "nouvelle" | "existante" | "deja_cliente";
+    };
+
 export interface LettreAuConfrere {
   confrere: string;
   comptabilite: string;
@@ -162,6 +174,8 @@ export interface IdentityRepository {
     cabinetTenantId: string,
     clientTenantId: string,
   ): Promise<LettreAuConfrere | null>;
+  /** Le matricule saisi dans « Ajouter un client », examiné en base dès la frappe (3.8). */
+  examinerMatricule(cabinetTenantId: string, valeur: string): Promise<MatriculeExamine>;
   listEntities(tenantId: string): Promise<Entity[]>;
   createOrganization(input: NewOrganization): Promise<string>;
   /**
@@ -344,6 +358,11 @@ export interface LigneVerifiee {
   statut: "pret" | "existant" | "deja_client" | "a_corriger";
   motif: string | null;
   organisation: string | null;
+  /**
+   * Ce qui se signale sans arrêter la ligne : une lettre de contrôle qui ne
+   * répond pas aux chiffres, quand la règle du pack avertit (3.4). Une clé.
+   */
+  avertissement?: string | null;
 }
 
 export interface FicheCourante {

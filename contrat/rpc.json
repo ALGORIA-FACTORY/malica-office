@@ -214,6 +214,7 @@
     "ecrireMonProfil",
     "etablirFiche",
     "etatDesClients",
+    "examinerMatricule",
     "ficheCourante",
     "formesDisponibles",
     "invitationsDuDossier",

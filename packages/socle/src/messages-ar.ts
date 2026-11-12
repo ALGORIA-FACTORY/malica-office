@@ -2596,6 +2596,7 @@ export const ar: Dict = {
   "refus.export.fec_par_dossier": "يُنتَج ملف FEC ملفًا بملف: اختر حريفًا.",
   "refus.export.periode_a_l_envers": "الفترة معكوسة: البداية تلي النهاية.",
   "refus.identifiant.invalide": "هذا المعرّف ليس بالشكل المنتظر: «{valeur}». مثال: «{exemple}».",
+  "refus.identifiant.lettre_de_controle": "حرف المراقبة لهذا المعرف الجبائي لا يوافق أرقامه.",
   "refus.supervision.second_regard":
     "تتطلّب المراجعة نظرة ثانية: من سجّل القيد لا يصادق عليه بنفسه.",
   "refus.moteur.organisation_a_preciser": "حدّد المؤسسة: تعنيك أكثر من واحدة.",
@@ -4923,6 +4924,10 @@ export const ar: Dict = {
   "cab.cli.nouveau.existant":
     "هذه الشركة موجودة في Malica. أرسلوا لها طلب تكليف: عند قبوله ينضمّ ملفها إليكم.",
   "cab.cli.nouveau.demander": "إرسال طلب تكليف",
+  "cab.cli.nouveau.dejaCliente":
+    "هذه الشركة من عملائكم مسبقًا، أو في انتظار طلب التكليف الذي أرسلتموه.",
+  "cab.cli.matricule.lettre":
+    "حرف المراقبة لا يوافق أرقام هذا المعرف الجبائي: تأكدوا من أنه لم يُنسخ خطأً.",
   "cab.cli.nouveau.mandat.ok": "أُرسل طلب التكليف إلى {client}",
   "cab.cli.champ.mf": "المعرّف الجبائي",
   "cab.cli.champ.mf.aide": "سبعة أرقام وحرف ثم A/M/000 — كما في البطاقة الجبائية.",
@@ -5070,8 +5075,13 @@ export const ar: Dict = {
   "cab.cli.import.fin": "{count} عملاء في محفظتكم.",
   "cab.cli.import.fin#one": "عميل واحد في محفظتكم.",
   "cab.cli.import.fin#other": "{count} عملاء في محفظتكم.",
-  "cab.cli.import.fin.lede":
-    "تلقّى {invites} مسيّرين دعوتهم و{mandats} شركات طلب التكليف. سترون كلاً منهم يصبح «انضمّ» في القائمة.",
+  "cab.cli.import.fin.invites": "تلقّى {count} مسيّرين دعوتهم.",
+  "cab.cli.import.fin.invites#one": "تلقّى مسيّر واحد دعوته.",
+  "cab.cli.import.fin.invites#other": "تلقّى {count} مسيّرًا دعوتهم.",
+  "cab.cli.import.fin.mandats": "تلقّت {count} شركات طلب التكليف.",
+  "cab.cli.import.fin.mandats#one": "تلقّت شركة واحدة طلب التكليف.",
+  "cab.cli.import.fin.mandats#other": "تلقّت {count} شركة طلب التكليف.",
+  "cab.cli.import.fin.suite": "سترون كلاً منهم يصبح «انضمّ» في القائمة.",
   "cab.cli.import.voir": "عرض عملائي",
   "cab.cli.lot.choisis": "{count} محدّدة",
   "cab.cli.lot.choisis#one": "واحد محدّد",

@@ -2790,6 +2790,8 @@ export const fr = {
   "refus.export.periode_a_l_envers": "La période est à l’envers : le début suit la fin.",
   "refus.identifiant.invalide":
     "Cet identifiant n’a pas la forme attendue : « {valeur} ». Exemple : « {exemple} ».",
+  "refus.identifiant.lettre_de_controle":
+    "La lettre de contrôle de ce matricule ne correspond pas à ses chiffres.",
   "refus.supervision.second_regard":
     "La supervision exige un second regard : celui qui a inscrit l’écriture ne la valide pas lui-même.",
   "refus.moteur.organisation_a_preciser": "Précisez l’organisation : plusieurs vous concernent.",
@@ -5343,6 +5345,10 @@ export const fr = {
   "cab.cli.nouveau.existant":
     "Cette société est déjà dans Malica. Envoyez-lui une demande de mandat : elle l'accepte, et son dossier vous rejoint.",
   "cab.cli.nouveau.demander": "Envoyer une demande de mandat",
+  "cab.cli.nouveau.dejaCliente":
+    "Cette société est déjà dans vos clients, ou attend votre demande de mandat.",
+  "cab.cli.matricule.lettre":
+    "La lettre de contrôle ne correspond pas aux chiffres de ce matricule : vérifiez qu’il n’a pas été mal recopié.",
   "cab.cli.nouveau.mandat.ok": "Demande de mandat envoyée à {client}",
   "cab.cli.champ.mf": "Matricule fiscal",
   "cab.cli.champ.mf.aide": "Sept chiffres, une lettre, puis A/M/000 — comme sur la carte fiscale.",
@@ -5501,8 +5507,13 @@ export const fr = {
   "cab.cli.import.fin": "{count} clients sont dans votre portefeuille.",
   "cab.cli.import.fin#one": "{count} client est dans votre portefeuille.",
   "cab.cli.import.fin#other": "{count} clients sont dans votre portefeuille.",
-  "cab.cli.import.fin.lede":
-    "{invites} dirigeants ont reçu leur invitation et {mandats} sociétés votre demande de mandat. Vous verrez chacun passer à « a rejoint » dans la liste.",
+  "cab.cli.import.fin.invites": "{count} dirigeants ont reçu leur invitation.",
+  "cab.cli.import.fin.invites#one": "{count} dirigeant a reçu son invitation.",
+  "cab.cli.import.fin.invites#other": "{count} dirigeants ont reçu leur invitation.",
+  "cab.cli.import.fin.mandats": "{count} sociétés ont reçu votre demande de mandat.",
+  "cab.cli.import.fin.mandats#one": "{count} société a reçu votre demande de mandat.",
+  "cab.cli.import.fin.mandats#other": "{count} sociétés ont reçu votre demande de mandat.",
+  "cab.cli.import.fin.suite": "Vous verrez chacun passer à « a rejoint » dans la liste.",
   "cab.cli.import.voir": "Voir mes clients",
   "cab.cli.lot.choisis": "{count} sélectionnés",
   "cab.cli.lot.choisis#one": "{count} sélectionné",

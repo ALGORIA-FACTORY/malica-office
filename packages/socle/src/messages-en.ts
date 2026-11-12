@@ -2696,6 +2696,8 @@ export const en: Dict = {
   "refus.export.periode_a_l_envers": "The period is reversed: the start comes after the end.",
   "refus.identifiant.invalide":
     "This identifier does not have the expected form: “{valeur}”. Example: “{exemple}”.",
+  "refus.identifiant.lettre_de_controle":
+    "The check letter of this tax ID does not match its digits.",
   "refus.supervision.second_regard":
     "Supervision requires a second look: whoever recorded the entry does not validate it themselves.",
   "refus.moteur.organisation_a_preciser": "Specify the organisation: several concern you.",
@@ -5130,6 +5132,10 @@ export const en: Dict = {
   "cab.cli.nouveau.existant":
     "This company is already in Malica. Send it an engagement request: once accepted, its file joins you.",
   "cab.cli.nouveau.demander": "Send an engagement request",
+  "cab.cli.nouveau.dejaCliente":
+    "This company is already one of your clients, or is awaiting your engagement request.",
+  "cab.cli.matricule.lettre":
+    "The check letter does not match the digits of this tax ID: make sure it was not mistyped.",
   "cab.cli.nouveau.mandat.ok": "Engagement request sent to {client}",
   "cab.cli.champ.mf": "Tax ID",
   "cab.cli.champ.mf.aide": "Seven digits, a letter, then A/M/000 — as on the tax card.",
@@ -5284,8 +5290,13 @@ export const en: Dict = {
   "cab.cli.import.fin": "{count} clients are in your portfolio.",
   "cab.cli.import.fin#one": "{count} client is in your portfolio.",
   "cab.cli.import.fin#other": "{count} clients are in your portfolio.",
-  "cab.cli.import.fin.lede":
-    "{invites} owners received their invitation and {mandats} companies your engagement request. You'll see each switch to “joined” in the list.",
+  "cab.cli.import.fin.invites": "{count} owners received their invitation.",
+  "cab.cli.import.fin.invites#one": "{count} owner received their invitation.",
+  "cab.cli.import.fin.invites#other": "{count} owners received their invitation.",
+  "cab.cli.import.fin.mandats": "{count} companies received your engagement request.",
+  "cab.cli.import.fin.mandats#one": "{count} company received your engagement request.",
+  "cab.cli.import.fin.mandats#other": "{count} companies received your engagement request.",
+  "cab.cli.import.fin.suite": "You'll see each switch to “joined” in the list.",
   "cab.cli.import.voir": "See my clients",
   "cab.cli.lot.choisis": "{count} selected",
   "cab.cli.lot.choisis#one": "{count} selected",
