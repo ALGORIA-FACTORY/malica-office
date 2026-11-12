@@ -118,6 +118,30 @@ const PDF_PROPRE: PageToken[] = [
   mot(31, 0.44, 0.84, "358,000"),
 ];
 
+/**
+ * 6.1 — deux taux, une TVA par taux et AUCUN total de TVA : 298,000 à 7 % (20,860) et
+ * 660,000 à 19 % (125,400), soit 146,260 de TVA ; 1,000 de timbre ; 1 105,260 TTC.
+ */
+const DEUX_TAUX: PageToken[] = [
+  ...ENTETE,
+  mot(21, 0.36, 0.54, "TVA"),
+  mot(22, 0.36, 0.57, "7 %"),
+  mot(23, 0.36, 0.7, "298,000"),
+  mot(24, 0.36, 0.84, "20,860"),
+  mot(25, 0.38, 0.54, "TVA"),
+  mot(26, 0.38, 0.57, "19 %"),
+  mot(27, 0.38, 0.7, "660,000"),
+  mot(28, 0.38, 0.84, "125,400"),
+  mot(29, 0.4, 0.54, "Total"),
+  mot(30, 0.4, 0.58, "HT"),
+  mot(31, 0.4, 0.84, "958,000"),
+  mot(32, 0.42, 0.54, "Timbre"),
+  mot(33, 0.42, 0.87, "1,000"),
+  mot(34, 0.44, 0.54, "Total"),
+  mot(35, 0.44, 0.58, "TTC"),
+  mot(36, 0.44, 0.84, "1 105,260"),
+];
+
 /** Ce qu'un modèle désignerait sur la facture à deux taux : aucun jeton pour le total de TVA. */
 const DESIGNATION_DEUX_TAUX: VisionSelection = {
   document_kind: "facture_achat",
@@ -138,6 +162,46 @@ const DESIGNATION_DEUX_TAUX: VisionSelection = {
 /** Une photo : chaque jeton porte la confiance de l'OCR. */
 const enPhoto = (plan: readonly PageToken[], confiance: number): PageToken[] =>
   plan.map((t) => ({ ...t, confidence: confiance }));
+
+/* ================================================== LA RELECTURE, SANS BASE = */
+
+describe("6.1 — la TVA d'une facture à plusieurs taux est la somme de ses lignes", () => {
+  const relire = (selection: VisionSelection, tokens: readonly PageToken[] = DEUX_TAUX) =>
+    buildExtractFromTokenPlan({
+      tokens,
+      selection,
+      ...devisesDEssai(3),
+      matriculeDossier: MF_DOSSIER,
+      lecteur: "pdf-text",
+    });
+  const totaux = (b: ReturnType<typeof relire>) =>
+    b.extract["totals"] as { base_ht: string | null; vat: string | null; ttc: string | null };
+
+  it("aucun total de TVA imprimé : 20,860 + 125,400 = 146,260, dit par le Socle", () => {
+    const b = relire(DESIGNATION_DEUX_TAUX);
+    assert.deepEqual(totaux(b), { base_ht: "958.000", vat: "146.260", ttc: "1105.260" });
+    assert.ok(
+      b.flags.some((f) => f.field === "totals.vat" && f.code === "DERIVED_BY_SOCLE"),
+      "une somme se dit calculée, jamais lue",
+    );
+    assert.ok(
+      !b.citations.some((c) => c.field === "totals.vat"),
+      "la somme n'est imprimée nulle part : elle ne se cite pas",
+    );
+  });
+
+  it("une ligne dont la TVA ne se lit pas : pas de somme partielle", () => {
+    const tokens = DEUX_TAUX.map((t) => (t.ordinal === 24 ? { ...t, text: "TVA" } : t));
+    assert.equal(totaux(relire(DESIGNATION_DEUX_TAUX, tokens)).vat, null);
+  });
+
+  it("un total de TVA désigné reste le sien, même illisible : rien ne le remplace", () => {
+    const illisible = { ...DESIGNATION_DEUX_TAUX.totals, vat: ref(29) };
+    const b = relire({ ...DESIGNATION_DEUX_TAUX, totals: illisible });
+    assert.equal(totaux(b).vat, null);
+    assert.ok(!b.flags.some((f) => f.field === "totals.vat" && f.code === "DERIVED_BY_SOCLE"));
+  });
+});
 
 /* ========================================= LA CHAÎNE ENTIÈRE, VRAI MOTEUR === */
 
@@ -308,6 +372,23 @@ describe(
       });
       assert.equal(r.appels, 1, "fournisseur inconnu : la chaîne de désignation part");
       assert.ok(r.aVerifier.includes("issuer"));
+    });
+
+    it("6.1 — deux taux prouvés sans IA : la TVA est 146,260", async () => {
+      const r = await lire(DEUX_TAUX, { lecteur: "pdf-text", fournisseurConnu: true });
+      assert.equal(r.sansIa, true);
+      assert.deepEqual(r.totaux, { base_ht: "958.000", vat: "146.260", ttc: "1105.260" });
+    });
+
+    it("6.1 — deux taux sur une photo, désignés par un modèle puis prouvés : 146,260", async () => {
+      const r = await lire(enPhoto(DEUX_TAUX, 0.97), {
+        lecteur: "paddle",
+        fournisseurConnu: false,
+        designation: DESIGNATION_DEUX_TAUX,
+        mode: "designe",
+      });
+      assert.equal(r.appels, 1);
+      assert.deepEqual(r.totaux, { base_ht: "958.000", vat: "146.260", ttc: "1105.260" });
     });
   },
 );
