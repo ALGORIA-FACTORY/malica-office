@@ -84,7 +84,7 @@ type LigneDocument = Omit<DocumentComptable, "montant"> & {
 };
 
 /** Le fuseau de la personne connectée : sa préférence, ou le défaut livré inscrit chez elle. */
-async function fuseauDeLaPersonne(db: Requete): Promise<string> {
+export async function fuseauDeLaPersonne(db: Requete): Promise<string> {
   await db.query(`select public.mes_preferences_ouvrir()`);
   const { rows } = await db.query<{ fuseau: string | null }>(
     `select fuseau from notif.preferences where user_id = auth.uid()`,
@@ -281,6 +281,65 @@ export async function documentsLies(
     [clientId, tous],
   );
   return { documents: docs, ecritures, controles, paiements };
+}
+
+/** Une société dont des pièces s'impriment : ce que sa page de garde en dit. */
+export interface SocieteAImprimer {
+  tenantId: string;
+  nom: string;
+  matricule: string | null;
+  documents: DocumentComptable[];
+}
+
+/**
+ * Les pièces d'une impression, société par société, dans l'ordre du dossier
+ * téléchargé (`documentsLies` : réception, puis identifiant).
+ *
+ * Sous un cabinet (`cabinetId`), c'est la MÊME lecture que l'archive : le
+ * mandat, la garde de l'export, et les documents liés. Sans cabinet, ce sont
+ * les pièces que la base rend à la personne (RLS) : les siennes, ou celles de
+ * sa société. Dans les deux cas l'espace privé n'y entre jamais, et une pièce
+ * demandée que la personne ne voit pas fait refuser l'impression entière.
+ */
+export async function documentsAImprimer(
+  db: Requete,
+  cabinetId: string | null,
+  pieces: string[],
+): Promise<SocieteAImprimer[]> {
+  Choix.parse(pieces);
+  const { rows: vues } = await db.query<{ id: string; tenant_id: string }>(
+    `select id, tenant_id from pieces_v where id = any($1::uuid[]) and vis = 'partage'`,
+    [pieces],
+  );
+  if (new Set(pieces).size !== vues.length)
+    throw Object.assign(new Error("refus.introuvable.piece"), { code: "42501" });
+  const parSociete = new Map<string, string[]>();
+  for (const p of vues) parSociete.set(p.tenant_id, [...(parSociete.get(p.tenant_id) ?? []), p.id]);
+  const { rows: societes } = await db.query<{ id: string; nom: string; matricule: string | null }>(
+    `select id, name as nom, legal_id as matricule from organizations_v
+      where id = any($1::uuid[]) order by name, id`,
+    [[...parSociete.keys()]],
+  );
+  if (societes.length !== parSociete.size)
+    throw Object.assign(new Error("refus.introuvable.dossier"), { code: "42501" });
+  const fuseau = cabinetId ? null : await fuseauDeLaPersonne(db);
+  const resultat: SocieteAImprimer[] = [];
+  for (const s of societes) {
+    const choix = parSociete.get(s.id)!;
+    let docs: DocumentComptable[];
+    if (cabinetId) docs = (await documentsLies(db, cabinetId, s.id, choix)).documents;
+    else {
+      const { rows } = await db.query<LigneDocument>(
+        `${DOCUMENTS}
+        where p.tenant_id = $1 and p.vis = 'partage' and p.id = any($2::uuid[])
+        order by p.created_at, p.id`,
+        [s.id, choix, fuseau],
+      );
+      docs = avecMontants(rows);
+    }
+    resultat.push({ tenantId: s.id, nom: s.nom, matricule: s.matricule, documents: docs });
+  }
+  return resultat;
 }
 
 export async function controlesPiece(

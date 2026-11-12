@@ -44,6 +44,7 @@ import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } f
 import { sonderLaBase, sousIdentite } from "./db.ts";
 import { detailTechnique, introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
+import { imprimer } from "./impression.ts";
 import { malica } from "./malica.ts";
 import { moteurDuSecondLecteur } from "./malica/lecture/paddle.ts";
 import { emettreLeGeste, gesteDe } from "./observabilite/gestes.ts";
@@ -581,6 +582,15 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
     res.locals["panne"] = detailTechnique(erreur);
     next(erreur);
   }
+});
+
+/**
+ * Le PDF d'impression d'un document, d'un dossier ou d'une sélection : composé
+ * à la demande, jamais gardé — voir `impression.ts`. Hors de `/rpc`, parce
+ * qu'il rend des octets et dure plus qu'une transaction.
+ */
+app.post("/impressions", exigerIdentite, (req, res, next) => {
+  imprimer(req, res).catch(next);
 });
 
 app.get("/sante", (_req, res) => {
