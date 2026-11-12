@@ -178,12 +178,23 @@ export function lireXlsx(octets: Uint8Array): string[][] {
   return lignes;
 }
 
+/** Un montant d'honoraires écrit à la main : « 250 », « 1 200,500 ». */
+const UN_MONTANT = /^\d+(?:[.,]\d+)?$/;
+
 /**
  * Les lignes à importer. La première ligne est l'en-tête si elle nomme au
  * moins le matricule ; sinon l'ordre attendu est matricule, raison sociale,
- * e-mail du dirigeant.
+ * e-mail du dirigeant, puis les colonnes facultatives.
+ *
+ * Sans en-tête, une cellule facultative se reconnaît à ce qu'elle porte
+ * (recette du 11 novembre 2026, 3.4 : « …;Solo;250 » arrivait sans mandat ni
+ * abonnement) : un montant est l'honoraire mensuel, une offre du catalogue
+ * (`offres`, lu en base par l'écran) est l'offre Malica, le reste l'adresse.
  */
-export function lignesDuTableur(tableau: string[][]): {
+export function lignesDuTableur(
+  tableau: string[][],
+  offres: readonly { code: string; libelle: string }[] = [],
+): {
   lignes: LigneImport[];
   colonnes: ChampImport[];
 } {
@@ -196,16 +207,40 @@ export function lignesDuTableur(tableau: string[][]): {
   const corps = avecEntete ? tableau.slice(1) : tableau;
   const lire = (l: string[], champ: ChampImport) =>
     carte[champ] === undefined ? "" : (l[carte[champ]!] ?? "").trim();
+  const offreDe = (valeur: string) => {
+    const v = sansAccents(valeur);
+    return offres.find((o) => sansAccents(o.code) === v || sansAccents(o.libelle) === v)?.code;
+  };
+  const facultatifs = (l: string[]) => {
+    const f = {
+      adresse: lire(l, "adresse"),
+      offre: lire(l, "offre"),
+      honoraires: lire(l, "honoraires"),
+    };
+    if (avecEntete) return f;
+    for (const cellule of l
+      .slice(3)
+      .map((x) => x.trim())
+      .filter(Boolean)) {
+      if (UN_MONTANT.test(cellule.replace(/\s/g, ""))) f.honoraires ||= cellule;
+      else if (offreDe(cellule)) f.offre ||= cellule;
+      else f.adresse ||= cellule;
+    }
+    return f;
+  };
   return {
     colonnes: Object.keys(carte) as ChampImport[],
-    lignes: corps.map((l) => ({
-      matricule: lire(l, "matricule").toUpperCase(),
-      raison_sociale: lire(l, "raison_sociale"),
-      email: lire(l, "email").toLowerCase(),
-      adresse: lire(l, "adresse"),
-      offre: sansAccents(lire(l, "offre")),
-      honoraires: lire(l, "honoraires").replace(/\s/g, "").replace(",", "."),
-    })),
+    lignes: corps.map((l) => {
+      const f = facultatifs(l);
+      return {
+        matricule: lire(l, "matricule").toUpperCase(),
+        raison_sociale: lire(l, "raison_sociale"),
+        email: lire(l, "email").toLowerCase(),
+        adresse: f.adresse,
+        offre: offreDe(f.offre) ?? sansAccents(f.offre),
+        honoraires: f.honoraires.replace(/\s/g, "").replace(",", "."),
+      };
+    }),
   };
 }
 

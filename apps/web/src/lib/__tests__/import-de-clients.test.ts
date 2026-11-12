@@ -65,3 +65,38 @@ describe("la liste de clients importée", () => {
     });
   });
 });
+
+describe("les lignes collées portent leurs colonnes facultatives (3.4)", () => {
+  const offres = [
+    { code: "solo", libelle: "Solo" },
+    { code: "team", libelle: "Team" },
+  ];
+
+  it("« …;Solo;250 » arrive avec son offre et ses honoraires, comme sous un en-tête", () => {
+    const { lignes } = lignesDuTableur(
+      lireTexte("1234567A/A/M/000;Société A;a@essai.tn;Solo;250\n"),
+      offres,
+    );
+    expect(lignes[0]).toMatchObject({ offre: "solo", honoraires: "250", adresse: "" });
+  });
+
+  it("l'ordre du modèle aussi : adresse, offre, honoraires", () => {
+    const { lignes } = lignesDuTableur(
+      lireTexte("1234567A/A/M/000;Société A;a@essai.tn;12 rue de Tunis;Team;1 200,500\n"),
+      offres,
+    );
+    expect(lignes[0]).toMatchObject({
+      adresse: "12 rue de Tunis",
+      offre: "team",
+      honoraires: "1200.500",
+    });
+  });
+
+  it("une valeur qui n'est ni un montant ni une offre du catalogue reste l'adresse", () => {
+    const { lignes } = lignesDuTableur(
+      lireTexte("1234567A/A/M/000;Société A;a@essai.tn;Sfax\n"),
+      offres,
+    );
+    expect(lignes[0]).toMatchObject({ adresse: "Sfax", offre: "", honoraires: "" });
+  });
+});

@@ -9,6 +9,7 @@
 
 import { configurationCourriel } from "../courriel/brevo.ts";
 import { envoyerInvitation, type StatutCourriel } from "../courriel/invitation.ts";
+import type { LettreAuConfrere, MatriculeExamine } from "@malica/socle/ports/repositories";
 import type { Requete } from "../db.ts";
 import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 
@@ -18,6 +19,8 @@ export interface MandatPropose {
   cabinetTenantId: string;
   cabinet: string;
   proposeLe: string;
+  /** La comptabilité que l'acceptation remplacerait (3.2), ou `null`. */
+  remplace: string | null;
 }
 
 /** Le mandat en cours, vu depuis la PME. */
@@ -187,6 +190,22 @@ export const identite = {
     return rows[0]!.r;
   },
 
+  /**
+   * Le matricule que la comptabilité saisit : complet au format du pack, sa
+   * lettre de contrôle, une société déjà dans Malica (3.8). Rien n'est créé.
+   */
+  async examinerMatricule(
+    db: Requete,
+    cabinetId: string,
+    valeur: string,
+  ): Promise<MatriculeExamine> {
+    const { rows } = await db.query<{ r: MatriculeExamine }>(
+      `select public.matricule_examiner($1, $2) as r`,
+      [cabinetId, valeur],
+    );
+    return rows[0]!.r;
+  },
+
   /** Une liste à importer, vérifiée ligne par ligne. Rien n'est créé. */
   async verifierDossiers(
     db: Requete,
@@ -198,10 +217,12 @@ export const identite = {
       statut: "pret" | "existant" | "deja_client" | "a_corriger";
       motif: string | null;
       organisation: string | null;
+      avertissement: string | null;
     }>
   > {
     const { rows } = await db.query(
-      `select ligne, statut, motif, organisation from public.dossiers_verifier($1, $2::jsonb)`,
+      `select ligne, statut, motif, organisation, avertissement
+         from public.dossiers_verifier($1, $2::jsonb)`,
       [cabinetId, JSON.stringify(lignes)],
     );
     return rows as never;
@@ -440,15 +461,36 @@ export const identite = {
     return r;
   },
 
-  /** La PME répond : oui rend le mandat actif à compter d'aujourd'hui, non le termine. */
+  /**
+   * Le modèle de lettre au confrère remplacé (7.3) : ses éléments, lus en
+   * base pour l'expert de la comptabilité mandatée. `null` sans précédente.
+   */
+  async lettreAuConfrere(
+    db: Requete,
+    cabinetTenantId: string,
+    clientTenantId: string,
+  ): Promise<LettreAuConfrere | null> {
+    const { rows } = await db.query<{ r: LettreAuConfrere | null }>(
+      `select public.lettre_au_confrere_lire($1, $2) as r`,
+      [cabinetTenantId, clientTenantId],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * La PME répond : oui rend le mandat actif à compter d'aujourd'hui, non le
+   * termine. Oui, quand une autre comptabilité est mandatée, la quitte le même
+   * jour, avec le motif qu'elle lira (3.2).
+   */
   async repondreAuMandat(
     db: Requete,
     engagementId: string,
     accepte: boolean,
+    motif: string | null = null,
   ): Promise<{ id: string; status: string }> {
     const { rows } = await db.query<{ r: { id: string; status: string } }>(
-      `select public.mandat_repondre($1, $2) as r`,
-      [engagementId, accepte],
+      `select public.mandat_repondre($1, $2, $3) as r`,
+      [engagementId, accepte, motif],
     );
     const r = rows[0]?.r;
     if (!r) throw new Error("mandat.sans_reponse");

@@ -90,7 +90,7 @@ export function ImportClients({
   });
 
   const charger = (tableau: string[][]) => {
-    const { lignes: l } = lignesDuTableur(tableau);
+    const { lignes: l } = lignesDuTableur(tableau, offres);
     if (l.length === 0) {
       setErreur(t("cab.cli.import.vide"));
       return;
@@ -386,6 +386,12 @@ export function ImportClients({
                                 : v.statut === "deja_client"
                                   ? t("cab.cli.import.r.deja")
                                   : motif(v.motif)}
+                            {/* La lettre de contrôle discordante se dit, sans arrêter la ligne (3.4). */}
+                            {v.avertissement && !faux ? (
+                              <span className="block text-[11.5px] text-marigold">
+                                {t(v.avertissement as MessageKey)}
+                              </span>
+                            ) : null}
                           </td>
                         </tr>
                       );
@@ -498,10 +504,14 @@ export function ImportClients({
                 {t("cab.cli.import.fin", { count: (bilan?.ouverts ?? 0) + (bilan?.mandats ?? 0) })}
               </p>
               <p className="max-w-[560px] text-[14px] text-muted-foreground">
-                {t("cab.cli.import.fin.lede", {
-                  invites: bilan?.invites ?? 0,
-                  mandats: bilan?.mandats ?? 0,
-                })}
+                {/* Chaque nombre s'accorde (3.4) : « 1 société », jamais « 1 sociétés ». */}
+                {[
+                  bilan?.invites ? t("cab.cli.import.fin.invites", { count: bilan.invites }) : null,
+                  bilan?.mandats ? t("cab.cli.import.fin.mandats", { count: bilan.mandats }) : null,
+                  t("cab.cli.import.fin.suite"),
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
               </p>
               {bilan?.echecs.length ? (
                 <ul className="max-w-[640px] space-y-1 text-start text-[12.5px] text-signal-stop">

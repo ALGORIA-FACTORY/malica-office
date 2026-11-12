@@ -54,6 +54,9 @@ const STATUTS_VIDES: Readonly<Record<StatutCabinet, number>> = {
  */
 const PIECES_DU_CABINET = `pieces_v p
          join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
+          -- En vigueur : l'archive d'un mandat terminé se lit (1.6), elle
+          -- n'est pas du travail en cours.
+          and g.status = 'actif'
           and p.tenant_id in (select app.mandats_visibles($1))`;
 
 /**
@@ -145,7 +148,14 @@ export const supervision = {
         `select e.pme_org_id, e.status, e.starts_on, e.ends_on,
                 -- Un mandat terminé garde le nom du client (ANO-013).
                 coalesce(o.name, app.nom_d_un_client_du_cabinet(e.pme_org_id)) as name,
-                o.legal_id, o.jurisdiction, o.currency, o.validation_mode
+                o.legal_id, o.jurisdiction, o.currency, o.validation_mode,
+                -- Aucun mandat en vigueur, et du travail fait : l'archive reste, en
+                -- lecture seule (1.6). Elle vient des mandats clos
+                -- (app.mes_archives), jamais du statut de l'engagement, que
+                -- mandat_proposer repasse à « proposé » (revue de #362).
+                not app.engagement_en_vigueur(e.status, e.starts_on, e.ends_on)
+                  and e.pme_org_id in (select a.pme from app.mes_archives() a
+                                        where a.cabinet = e.cabinet_org_id) as archive
            from engagements_v e
            left join organizations_v o on o.id = e.pme_org_id
           where e.cabinet_org_id = $1
@@ -196,6 +206,7 @@ export const supervision = {
           currency: r["currency"] as string,
           validationMode: (r["validation_mode"] as string) ?? "mandate",
           engagementStatus: r["status"] as string,
+          archive: r["archive"] === true,
           mandatDepuis: (r["starts_on"] as string | null) ?? null,
           mandatJusquau: (r["ends_on"] as string | null) ?? null,
           counts: c?.comptes ?? { ...COMPTES_VIDES },

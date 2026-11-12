@@ -1653,6 +1653,9 @@ export const en: Dict = {
   "cab.notif.kind.mandat.propose": "A mandate was proposed to the file.",
   "cab.notif.kind.mandat.accepte": "The file accepted the accountant’s mandate.",
   "cab.notif.kind.mandat.revoque": "The file ended the engagement.",
+  "cab.notif.kind.mandat.succede": "The client entrusted its accounting to another accountant.",
+  "cab.notif.kind.mandat.lettre_au_confrere":
+    "You succeed another accountant: a template letter to inform your colleague is waiting in the client file.",
   "cab.notif.kind.mandat.refuse": "The file declined the accountant’s mandate.",
   "cab.notif.kind.pv.envoye": "Minutes were sent to the client.",
   "cab.review.rank": "{n} of {total}",
@@ -2323,6 +2326,8 @@ export const en: Dict = {
     "Supervision belongs to the accounting team’s expert or staff member.",
   "refus.ecriture.contre_passee":
     "This entry has already been reversed: it can no longer be supervised.",
+  "refus.ecriture.d_un_confrere":
+    "This entry was recorded by the previous accountant: it is read-only. Reverse it as of today, then record the adjustment.",
   "refus.conversation.auteur_fixe": "A conversation keeps its author.",
   "refus.conversation.dossier_fixe": "A conversation keeps its file.",
   "refus.conversation.question_vide": "Write your question before sending it.",
@@ -2710,6 +2715,8 @@ export const en: Dict = {
   "refus.export.periode_a_l_envers": "The period is reversed: the start comes after the end.",
   "refus.identifiant.invalide":
     "This identifier does not have the expected form: “{valeur}”. Example: “{exemple}”.",
+  "refus.identifiant.lettre_de_controle":
+    "The check letter of this tax ID does not match its digits.",
   "refus.supervision.second_regard":
     "Supervision requires a second look: whoever recorded the entry does not validate it themselves.",
   "refus.moteur.organisation_a_preciser": "Specify the organisation: several concern you.",
@@ -2907,6 +2914,17 @@ export const en: Dict = {
   "statut.cab.validee": "Validated",
   "statut.cab.forcee": "Forced",
   "cab.ecriture.titre": "The entry · editable",
+  "cab.confrere.inscrite": "Recorded by {comptabilite} · read-only",
+  "cab.confrere.aide":
+    "Books are kept without alteration: this entry is neither edited nor returned. To correct it, reverse it as of today, in your name, then record the adjustment.",
+  "cab.confrere.contrePasser": "Reverse as of today",
+  "cab.confrere.lettre.titre": "Letter informing your colleague",
+  "cab.confrere.lettre.aide":
+    "The OECT code of professional duties (art. 12) requires informing the replaced colleague by registered letter with acknowledgement of receipt. Here is a template to adapt: Malica does not send it for you.",
+  "cab.confrere.lettre.modele":
+    "For the attention of {confrere}\n\nSubject: {client} file (tax ID {matricule})\n\nDear colleague,\n\n{client} has entrusted us with keeping its accounts as of {depuis}. In accordance with article 12 of the OECT code of professional duties, we hereby inform you of this appointment.\n\nPlease let us know whether any professional reason stands in the way of this handover, and how you will send us the documents of the file that you hold.\n\nYours sincerely,\n\n{comptabilite}",
+  "cab.confrere.lettre.copier": "Copy the template",
+  "cab.confrere.lettre.copie": "Template copied.",
   "cab.ecriture.rien": "The Socle proposes nothing: enter the entry, it will be “forced”.",
   "cab.ecriture.rien.pourquoi": "Why nothing is proposed",
   "cab.ecriture.date_hors_referentiel": "Document date outside the reference data: to check.",
@@ -3288,6 +3306,10 @@ export const en: Dict = {
     "{cabinet} offers to keep your books. By accepting, the documents you send become visible to that accountant, and to them alone.",
   "pme.mandat.accepter": "Accept the engagement",
   "pme.mandat.refuser": "Decline",
+  "pme.mandat.accepterEtQuitter": "Accept and leave {ancienne}",
+  "pme.mandat.quitter.aide":
+    "{ancienne} currently keeps your accounts. If you accept, it stops today and {cabinet} starts the same day, with no gap. {ancienne} is told your reason and keeps its archive, read-only.",
+  "pme.mandat.quitter.motif": "Why are you leaving {ancienne}?",
   "pme.mandat.accepte": "Engagement accepted: {cabinet} now follows your file.",
   "pme.mandat.refuse": "Engagement declined. The accountant has been told.",
   "pme.mandat.erreur": "I could not record your answer.",
@@ -5099,6 +5121,7 @@ export const en: Dict = {
   "cab.cli.groupe.detail": "{offre} · {societes} companies · extra seats {places}",
   "cab.cli.a.superviser": "{count} to review",
   "cab.cli.mandat.demande": "engagement requested",
+  "cab.cli.mandat.attenteSociete": "awaiting the company",
   "cab.cli.dir.present": "Joined",
   "cab.cli.dir.rejoint": "joined",
   "cab.cli.dir.invite": "Invited · not here yet",
@@ -5143,6 +5166,10 @@ export const en: Dict = {
   "cab.cli.nouveau.existant":
     "This company is already in Malica. Send it an engagement request: once accepted, its file joins you.",
   "cab.cli.nouveau.demander": "Send an engagement request",
+  "cab.cli.nouveau.dejaCliente":
+    "This company is already one of your clients, or is awaiting your engagement request.",
+  "cab.cli.matricule.lettre":
+    "The check letter does not match the digits of this tax ID: make sure it was not mistyped.",
   "cab.cli.nouveau.mandat.ok": "Engagement request sent to {client}",
   "cab.cli.champ.mf": "Tax ID",
   "cab.cli.champ.mf.aide": "Seven digits, a letter, then A/M/000 — as on the tax card.",
@@ -5303,8 +5330,13 @@ export const en: Dict = {
   "cab.cli.import.fin": "{count} clients are in your portfolio.",
   "cab.cli.import.fin#one": "{count} client is in your portfolio.",
   "cab.cli.import.fin#other": "{count} clients are in your portfolio.",
-  "cab.cli.import.fin.lede":
-    "{invites} owners received their invitation and {mandats} companies your engagement request. You'll see each switch to “joined” in the list.",
+  "cab.cli.import.fin.invites": "{count} owners received their invitation.",
+  "cab.cli.import.fin.invites#one": "{count} owner received their invitation.",
+  "cab.cli.import.fin.invites#other": "{count} owners received their invitation.",
+  "cab.cli.import.fin.mandats": "{count} companies received your engagement request.",
+  "cab.cli.import.fin.mandats#one": "{count} company received your engagement request.",
+  "cab.cli.import.fin.mandats#other": "{count} companies received your engagement request.",
+  "cab.cli.import.fin.suite": "You'll see each switch to “joined” in the list.",
   "cab.cli.import.voir": "See my clients",
   "cab.cli.lot.choisis": "{count} selected",
   "cab.cli.lot.choisis#one": "{count} selected",

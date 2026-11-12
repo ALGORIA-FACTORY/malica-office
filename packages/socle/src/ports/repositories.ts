@@ -67,6 +67,11 @@ export interface MandatPropose {
   cabinetTenantId: string;
   cabinet: string;
   proposeLe: string;
+  /**
+   * La comptabilité aujourd'hui mandatée, que l'acceptation remplacerait
+   * (« Accepter et quitter … », 3.2) ; `null` sans mandat en cours.
+   */
+  remplace: string | null;
 }
 
 /** Le mandat en cours, vu depuis la PME : qui tient sa comptabilité, depuis quand. */
@@ -108,6 +113,28 @@ export const DROITS = [
 
 export type Droit = (typeof DROITS)[number];
 
+/** Les éléments du modèle de lettre au confrère : rien n'est envoyé par Malica. */
+/**
+ * Ce qu'est un matricule saisi par une comptabilité (3.8) : complet au format
+ * du pack, sa lettre de contrôle, et s'il désigne une société déjà dans Malica.
+ */
+export type MatriculeExamine =
+  | { complet: false }
+  | {
+      complet: true;
+      lettre: "conforme" | "discordante" | null;
+      societe: "nouvelle" | "existante" | "deja_cliente";
+    };
+
+export interface LettreAuConfrere {
+  confrere: string;
+  comptabilite: string;
+  client: string;
+  matricule: string | null;
+  /** Premier jour du nouveau mandat, AAAA-MM-JJ. */
+  depuis: string;
+}
+
 export interface IdentityRepository {
   listMyOrganizations(): Promise<Array<Organization & { role: string }>>;
   /**
@@ -125,7 +152,15 @@ export interface IdentityRepository {
   mandatsProposes(pmeTenantId: string): Promise<MandatPropose[]>;
   /** Les mêmes, pour toutes les sociétés d'une personne, en un seul appel. */
   mandatsProposesDesSocietes(pmeTenantIds: string[]): Promise<Record<string, MandatPropose[]>>;
-  repondreAuMandat(engagementId: string, accepte: boolean): Promise<{ id: string; status: string }>;
+  /**
+   * Accepter un mandat quand une autre comptabilité est mandatée la quitte
+   * dans le même geste : `motif` est alors exigé, et elle le lira (3.2).
+   */
+  repondreAuMandat(
+    engagementId: string,
+    accepte: boolean,
+    motif?: string | null,
+  ): Promise<{ id: string; status: string }>;
   /** Le mandat en cours du dossier, lu depuis la PME ; `null` sans mandat. */
   monMandat(pmeTenantId: string): Promise<MonMandat | null>;
   /** Le dirigeant met fin au mandat actif, avec un motif que la comptabilité lira. */
@@ -133,6 +168,17 @@ export interface IdentityRepository {
     pmeTenantId: string,
     motif: string,
   ): Promise<{ id: string; statut: "termine"; le: string }>;
+  /**
+   * Le modèle de lettre d'information au confrère que la comptabilité
+   * remplace (code des devoirs professionnels de l'OECT, art. 12) : ce qu'il
+   * faut y écrire. `null` sans comptabilité précédente. Malica ne l'envoie pas.
+   */
+  lettreAuConfrere(
+    cabinetTenantId: string,
+    clientTenantId: string,
+  ): Promise<LettreAuConfrere | null>;
+  /** Le matricule saisi dans « Ajouter un client », examiné en base dès la frappe (3.8). */
+  examinerMatricule(cabinetTenantId: string, valeur: string): Promise<MatriculeExamine>;
   listEntities(tenantId: string): Promise<Entity[]>;
   createOrganization(input: NewOrganization): Promise<string>;
   /**
@@ -317,6 +363,11 @@ export interface LigneVerifiee {
   statut: "pret" | "existant" | "deja_client" | "a_corriger";
   motif: string | null;
   organisation: string | null;
+  /**
+   * Ce qui se signale sans arrêter la ligne : une lettre de contrôle qui ne
+   * répond pas aux chiffres, quand la règle du pack avertit (3.4). Une clé.
+   */
+  avertissement?: string | null;
 }
 
 export interface FicheCourante {
@@ -1324,6 +1375,12 @@ export interface PieceDossier {
   /** Les décimales de la devise de la pièce au référentiel (R4) ; `null` si elle n'y est pas. */
   decimalesDeLaPiece: number | null;
   /**
+   * La pièce se lit dans l'ARCHIVE d'une comptabilité dont le mandat a pris fin
+   * (`mandatClosLe`, AAAA-MM-JJ) : lecture seule, aucun geste. `null` partout
+   * ailleurs — y compris chez la même comptabilité, mandatée de nouveau.
+   */
+  archive: { mandatClosLe: string } | null;
+  /**
    * Où elle en est chez le cabinet — envoyée, vue, corrigée, prise en charge —
    * ou `null` si elle n'y est jamais partie. Le mot se dérive au Socle
    * (`statut-d-envoi.ts`), le même pour la PME et le cabinet.
@@ -1914,6 +1971,12 @@ export interface Ecriture {
    */
   bookedAt: string | null;
   lines: EcritureLine[];
+  /**
+   * Inscrite par une AUTRE comptabilité que celle de la personne (un mandat
+   * précédent) : son nom, et l'écriture se lit seulement — elle ne se corrige
+   * que par une contre-passation au jour, puis une régularisation (7.3).
+   */
+  inscritePar?: string | null;
 }
 
 export interface ProposedEcriture {
@@ -2240,6 +2303,11 @@ export interface OfficeRepository {
    */
   retenuesDuMois(tenantId: string, periode: string): Promise<RetenueDuMois[]>;
   book(ecritureId: string): Promise<void>;
+  /**
+   * Contre-passe, au jour et au nom de la comptabilité, une écriture que sa
+   * devancière a inscrite (7.3). Rend l'identifiant de la contre-passation.
+   */
+  contrePasserLEcritureDuConfrere(ecritureId: string): Promise<string>;
   ecrituresForPiece(pieceId: string): Promise<Ecriture[]>;
   ecrituresByIds(ids: string[]): Promise<Ecriture[]>;
   bookedExtracts(
@@ -2325,6 +2393,11 @@ export interface ClientSummary {
   mandatDepuis: string | null;
   /** Le dernier jour d'un mandat terminé ; rien tant qu'il court. */
   mandatJusquau: string | null;
+  /**
+   * Mandat terminé, travail fait : la comptabilité garde l'archive de ce
+   * qu'elle a pris en charge, en lecture seule (règle 10 du 16 octobre 2026).
+   */
+  archive: boolean;
   /** Pièces partagées par statut — le mur de visibilité est tenu par la base. */
   counts: Record<PieceStatus, number>;
   /** Les mêmes pièces, classées comme la file (Reçue · Vue · Corrigée · Retournée · Validée · Forcée). */

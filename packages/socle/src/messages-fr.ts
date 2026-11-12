@@ -1721,6 +1721,9 @@ export const fr = {
   "cab.notif.kind.mandat.propose": "Un mandat a été proposé au dossier.",
   "cab.notif.kind.mandat.accepte": "Le dossier a accepté le mandat de la comptabilité.",
   "cab.notif.kind.mandat.revoque": "Le dossier a mis fin au mandat.",
+  "cab.notif.kind.mandat.succede": "Le dossier a confié sa comptabilité à une autre comptabilité.",
+  "cab.notif.kind.mandat.lettre_au_confrere":
+    "Vous succédez à une autre comptabilité : un modèle de lettre d’information au confrère vous attend dans la fiche du client.",
   "cab.notif.kind.mandat.refuse": "Le dossier a décliné le mandat de la comptabilité.",
   "cab.notif.kind.pv.envoye": "Un procès-verbal a été envoyé au client.",
   "cab.review.rank": "{n} sur {total}",
@@ -2398,6 +2401,8 @@ export const fr = {
     "La supervision revient à l’expert ou au collaborateur de la comptabilité.",
   "refus.ecriture.contre_passee":
     "Cette écriture est déjà contre-passée : elle ne se supervise plus.",
+  "refus.ecriture.d_un_confrere":
+    "Cette écriture a été inscrite par la comptabilité précédente : elle se lit seulement. Contre-passez-la à la date du jour, puis régularisez.",
   "refus.conversation.auteur_fixe": "Une conversation garde son auteur.",
   "refus.conversation.dossier_fixe": "Une conversation garde son dossier.",
   "refus.conversation.question_vide": "Écrivez votre question avant de l’envoyer.",
@@ -2803,6 +2808,8 @@ export const fr = {
   "refus.export.periode_a_l_envers": "La période est à l’envers : le début suit la fin.",
   "refus.identifiant.invalide":
     "Cet identifiant n’a pas la forme attendue : « {valeur} ». Exemple : « {exemple} ».",
+  "refus.identifiant.lettre_de_controle":
+    "La lettre de contrôle de ce matricule ne correspond pas à ses chiffres.",
   "refus.supervision.second_regard":
     "La supervision exige un second regard : celui qui a inscrit l’écriture ne la valide pas lui-même.",
   "refus.moteur.organisation_a_preciser": "Précisez l’organisation : plusieurs vous concernent.",
@@ -3000,6 +3007,17 @@ export const fr = {
   "statut.cab.validee": "Validée",
   "statut.cab.forcee": "Forcée",
   "cab.ecriture.titre": "L’écriture · modifiable",
+  "cab.confrere.inscrite": "Inscrite par {comptabilite} · lecture seule",
+  "cab.confrere.aide":
+    "Les livres se tiennent sans altération : cette écriture n’est ni modifiée ni retournée. Pour la corriger, contre-passez-la à la date du jour, à votre nom, puis inscrivez la régularisation.",
+  "cab.confrere.contrePasser": "Contre-passer à la date du jour",
+  "cab.confrere.lettre.titre": "Lettre d’information au confrère",
+  "cab.confrere.lettre.aide":
+    "Le code des devoirs professionnels de l’OECT (art. 12) demande d’informer le confrère remplacé par lettre recommandée avec accusé de réception. Voici un modèle à adapter : Malica ne l’envoie pas à votre place.",
+  "cab.confrere.lettre.modele":
+    "À l’attention de {confrere}\n\nObjet : dossier {client} (matricule fiscal {matricule})\n\nCher confrère,\n\nLa société {client} nous a confié la tenue de sa comptabilité à compter du {depuis}. Conformément à l’article 12 du code des devoirs professionnels de l’OECT, nous vous informons de cette désignation.\n\nNous vous remercions de nous faire savoir si une raison professionnelle s’oppose à cette reprise, et de nous indiquer comment nous transmettre les documents du dossier que vous détenez.\n\nVeuillez agréer, cher confrère, l’expression de nos salutations confraternelles.\n\n{comptabilite}",
+  "cab.confrere.lettre.copier": "Copier le modèle",
+  "cab.confrere.lettre.copie": "Modèle copié.",
   "cab.ecriture.rien": "Le Socle ne propose rien : saisissez l’écriture, elle sera « forcée ».",
   "cab.ecriture.rien.pourquoi": "Pourquoi rien n’est proposé",
   "cab.ecriture.date_hors_referentiel": "Date du document hors du référentiel : à vérifier.",
@@ -3386,6 +3404,10 @@ export const fr = {
     "{cabinet} propose de tenir votre comptabilité. En acceptant, vos pièces transmises lui seront visibles, et lui seul.",
   "pme.mandat.accepter": "Accepter le mandat",
   "pme.mandat.refuser": "Refuser",
+  "pme.mandat.accepterEtQuitter": "Accepter et quitter {ancienne}",
+  "pme.mandat.quitter.aide":
+    "{ancienne} tient aujourd’hui votre comptabilité. En acceptant, elle cesse ce jour et {cabinet} commence le même jour, sans interruption. {ancienne} est prévenue avec votre motif et garde son archive en lecture seule.",
+  "pme.mandat.quitter.motif": "Pourquoi quittez-vous {ancienne} ?",
   "pme.mandat.accepte": "Mandat accepté : {cabinet} suit maintenant votre dossier.",
   "pme.mandat.refuse": "Mandat refusé. La comptabilité en est informée.",
   "pme.mandat.erreur": "Je n’ai pas pu enregistrer votre réponse.",
@@ -5310,6 +5332,7 @@ export const fr = {
   "cab.cli.groupe.detail": "{offre} · {societes} sociétés · places en plus {places}",
   "cab.cli.a.superviser": "{count} à superviser",
   "cab.cli.mandat.demande": "mandat demandé",
+  "cab.cli.mandat.attenteSociete": "en attente de la société",
   "cab.cli.dir.present": "A rejoint",
   "cab.cli.dir.rejoint": "a rejoint",
   "cab.cli.dir.invite": "Invité · pas encore venu",
@@ -5356,6 +5379,10 @@ export const fr = {
   "cab.cli.nouveau.existant":
     "Cette société est déjà dans Malica. Envoyez-lui une demande de mandat : elle l'accepte, et son dossier vous rejoint.",
   "cab.cli.nouveau.demander": "Envoyer une demande de mandat",
+  "cab.cli.nouveau.dejaCliente":
+    "Cette société est déjà dans vos clients, ou attend votre demande de mandat.",
+  "cab.cli.matricule.lettre":
+    "La lettre de contrôle ne correspond pas aux chiffres de ce matricule : vérifiez qu’il n’a pas été mal recopié.",
   "cab.cli.nouveau.mandat.ok": "Demande de mandat envoyée à {client}",
   "cab.cli.champ.mf": "Matricule fiscal",
   "cab.cli.champ.mf.aide": "Sept chiffres, une lettre, puis A/M/000 — comme sur la carte fiscale.",
@@ -5520,8 +5547,13 @@ export const fr = {
   "cab.cli.import.fin": "{count} clients sont dans votre portefeuille.",
   "cab.cli.import.fin#one": "{count} client est dans votre portefeuille.",
   "cab.cli.import.fin#other": "{count} clients sont dans votre portefeuille.",
-  "cab.cli.import.fin.lede":
-    "{invites} dirigeants ont reçu leur invitation et {mandats} sociétés votre demande de mandat. Vous verrez chacun passer à « a rejoint » dans la liste.",
+  "cab.cli.import.fin.invites": "{count} dirigeants ont reçu leur invitation.",
+  "cab.cli.import.fin.invites#one": "{count} dirigeant a reçu son invitation.",
+  "cab.cli.import.fin.invites#other": "{count} dirigeants ont reçu leur invitation.",
+  "cab.cli.import.fin.mandats": "{count} sociétés ont reçu votre demande de mandat.",
+  "cab.cli.import.fin.mandats#one": "{count} société a reçu votre demande de mandat.",
+  "cab.cli.import.fin.mandats#other": "{count} sociétés ont reçu votre demande de mandat.",
+  "cab.cli.import.fin.suite": "Vous verrez chacun passer à « a rejoint » dans la liste.",
   "cab.cli.import.voir": "Voir mes clients",
   "cab.cli.lot.choisis": "{count} sélectionnés",
   "cab.cli.lot.choisis#one": "{count} sélectionné",

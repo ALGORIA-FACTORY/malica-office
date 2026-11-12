@@ -1623,6 +1623,9 @@ export const ar: Dict = {
   "cab.notif.kind.mandat.propose": "اقتُرحت وكالة على الملف.",
   "cab.notif.kind.mandat.accepte": "قبِل الملف وكالة المحاسبة.",
   "cab.notif.kind.mandat.revoque": "أنهى الملف الوكالة.",
+  "cab.notif.kind.mandat.succede": "عهد الملف بمحاسبته إلى محاسبة أخرى.",
+  "cab.notif.kind.mandat.lettre_au_confrere":
+    "تخلفون محاسبة أخرى: نموذج رسالة إعلام الزميل في انتظاركم في بطاقة العميل.",
   "cab.notif.kind.mandat.refuse": "رفض الملف وكالة المحاسبة.",
   "cab.notif.kind.pv.envoye": "أُرسل محضر إلى الحريف.",
   "cab.review.rank": "{n} من {total}",
@@ -2260,6 +2263,8 @@ export const ar: Dict = {
   "refus.reserve.cabinet_mandate": "وحدها المحاسبة المكلَّفة بهذا الملف تبتّ في طلب يخصّ وثيقة.",
   "refus.supervision.reservee": "المراجعة من صلاحية الخبير أو المتعاون في المحاسبة.",
   "refus.ecriture.contre_passee": "هذا القيد عُكس مسبقًا: لم يعد يخضع للمراجعة.",
+  "refus.ecriture.d_un_confrere":
+    "سجّلت المحاسبة السابقة هذا القيد: يُقرأ فقط. ألغوه بتاريخ اليوم ثم سجّلوا التسوية.",
   "refus.conversation.auteur_fixe": "تحتفظ المحادثة بصاحبها.",
   "refus.conversation.dossier_fixe": "تحتفظ المحادثة بملفّها.",
   "refus.conversation.question_vide": "اكتب سؤالك قبل إرساله.",
@@ -2607,6 +2612,7 @@ export const ar: Dict = {
   "refus.export.fec_par_dossier": "يُنتَج الملف ذو 18 عمودًا ملفًا بملف: اختر حريفًا.",
   "refus.export.periode_a_l_envers": "الفترة معكوسة: البداية تلي النهاية.",
   "refus.identifiant.invalide": "هذا المعرّف ليس بالشكل المنتظر: «{valeur}». مثال: «{exemple}».",
+  "refus.identifiant.lettre_de_controle": "حرف المراقبة لهذا المعرف الجبائي لا يوافق أرقامه.",
   "refus.supervision.second_regard":
     "تتطلّب المراجعة نظرة ثانية: من سجّل القيد لا يصادق عليه بنفسه.",
   "refus.moteur.organisation_a_preciser": "حدّد المؤسسة: تعنيك أكثر من واحدة.",
@@ -2776,6 +2782,17 @@ export const ar: Dict = {
   "statut.cab.validee": "مُصادَق عليها",
   "statut.cab.forcee": "مفروضة",
   "cab.ecriture.titre": "القيد · قابل للتعديل",
+  "cab.confrere.inscrite": "سجّلته {comptabilite} · للقراءة فقط",
+  "cab.confrere.aide":
+    "تُمسك الدفاتر دون تحريف: لا يُعدَّل هذا القيد ولا يُرجَع. لتصحيحه، ألغوه بتاريخ اليوم باسمكم ثم سجّلوا التسوية.",
+  "cab.confrere.contrePasser": "إلغاء بتاريخ اليوم",
+  "cab.confrere.lettre.titre": "رسالة إعلام الزميل",
+  "cab.confrere.lettre.aide":
+    "تقتضي مدونة الواجبات المهنية لهيئة الخبراء المحاسبين (الفصل 12) إعلام الزميل المُعوَّض برسالة مضمونة الوصول مع الإعلام بالبلوغ. هذا نموذج للتكييف: لا ترسله Malica نيابة عنكم.",
+  "cab.confrere.lettre.modele":
+    "إلى عناية {confrere}\n\nالموضوع: ملف {client} (المعرف الجبائي {matricule})\n\nزميلنا العزيز،\n\nعهدت إلينا شركة {client} بمسك محاسبتها بداية من {depuis}. وطبقًا للفصل 12 من مدونة الواجبات المهنية لهيئة الخبراء المحاسبين، نُعلمكم بهذا التعيين.\n\nنرجو إعلامنا إن كان هناك مانع مهني لهذا التسلّم، وبطريقة إحالة وثائق الملف التي بحوزتكم.\n\nتفضلوا بقبول فائق عبارات التقدير الزمالي.\n\n{comptabilite}",
+  "cab.confrere.lettre.copier": "نسخ النموذج",
+  "cab.confrere.lettre.copie": "تم نسخ النموذج.",
   "cab.ecriture.rien": "لا يقترح السوكل شيئًا: أدخل القيد، وسيُسجَّل «مفروضًا».",
   "cab.ecriture.rien.pourquoi": "لماذا لا يُقترح شيء",
   "cab.ecriture.date_hors_referentiel": "تاريخ الوثيقة خارج المرجع: يجب التحقق منه.",
@@ -3147,6 +3164,10 @@ export const ar: Dict = {
     "{cabinet} يقترح مسك محاسبتك. بقبولك، تصبح الوثائق التي ترسلها مرئية لهذا المحاسب وحده.",
   "pme.mandat.accepter": "قبول الوكالة",
   "pme.mandat.refuser": "رفض",
+  "pme.mandat.accepterEtQuitter": "قبول ومغادرة {ancienne}",
+  "pme.mandat.quitter.aide":
+    "تمسك {ancienne} محاسبتكم حاليًا. بالقبول تنتهي مهمتها اليوم وتبدأ {cabinet} في اليوم نفسه دون انقطاع. تُعلَم {ancienne} بسببكم وتحتفظ بأرشيفها للقراءة فقط.",
+  "pme.mandat.quitter.motif": "لماذا تغادرون {ancienne}؟",
   "pme.mandat.accepte": "قُبلت الوكالة: {cabinet} يتابع ملفك الآن.",
   "pme.mandat.refuse": "رُفضت الوكالة. أُعلم المحاسب بذلك.",
   "pme.mandat.erreur": "لم أستطع تسجيل ردّك.",
@@ -4890,6 +4911,7 @@ export const ar: Dict = {
   "cab.cli.groupe.detail": "{offre} · {societes} شركات · مقاعد إضافية {places}",
   "cab.cli.a.superviser": "{count} للمراجعة",
   "cab.cli.mandat.demande": "تكليف مطلوب",
+  "cab.cli.mandat.attenteSociete": "في انتظار الشركة",
   "cab.cli.dir.present": "انضمّ",
   "cab.cli.dir.rejoint": "انضمّ",
   "cab.cli.dir.invite": "مدعوّ · لم يحضر بعد",
@@ -4933,6 +4955,10 @@ export const ar: Dict = {
   "cab.cli.nouveau.existant":
     "هذه الشركة موجودة في Malica. أرسلوا لها طلب تكليف: عند قبوله ينضمّ ملفها إليكم.",
   "cab.cli.nouveau.demander": "إرسال طلب تكليف",
+  "cab.cli.nouveau.dejaCliente":
+    "هذه الشركة من عملائكم مسبقًا، أو في انتظار طلب التكليف الذي أرسلتموه.",
+  "cab.cli.matricule.lettre":
+    "حرف المراقبة لا يوافق أرقام هذا المعرف الجبائي: تأكدوا من أنه لم يُنسخ خطأً.",
   "cab.cli.nouveau.mandat.ok": "أُرسل طلب التكليف إلى {client}",
   "cab.cli.champ.mf": "المعرّف الجبائي",
   "cab.cli.champ.mf.aide": "سبعة أرقام وحرف ثم A/M/000 — كما في البطاقة الجبائية.",
@@ -5084,8 +5110,13 @@ export const ar: Dict = {
   "cab.cli.import.fin": "{count} عملاء في محفظتكم.",
   "cab.cli.import.fin#one": "عميل واحد في محفظتكم.",
   "cab.cli.import.fin#other": "{count} عملاء في محفظتكم.",
-  "cab.cli.import.fin.lede":
-    "تلقّى {invites} مسيّرين دعوتهم و{mandats} شركات طلب التكليف. سترون كلاً منهم يصبح «انضمّ» في القائمة.",
+  "cab.cli.import.fin.invites": "تلقّى {count} مسيّرين دعوتهم.",
+  "cab.cli.import.fin.invites#one": "تلقّى مسيّر واحد دعوته.",
+  "cab.cli.import.fin.invites#other": "تلقّى {count} مسيّرًا دعوتهم.",
+  "cab.cli.import.fin.mandats": "تلقّت {count} شركات طلب التكليف.",
+  "cab.cli.import.fin.mandats#one": "تلقّت شركة واحدة طلب التكليف.",
+  "cab.cli.import.fin.mandats#other": "تلقّت {count} شركة طلب التكليف.",
+  "cab.cli.import.fin.suite": "سترون كلاً منهم يصبح «انضمّ» في القائمة.",
   "cab.cli.import.voir": "عرض عملائي",
   "cab.cli.lot.choisis": "{count} محدّدة",
   "cab.cli.lot.choisis#one": "واحد محدّد",

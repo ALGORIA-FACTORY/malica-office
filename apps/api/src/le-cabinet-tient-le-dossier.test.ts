@@ -260,8 +260,15 @@ describe("le cabinet tient le dossier", { skip: !BASE_CONFIGUREE }, () => {
     const proposes = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
     const second = proposes.find((p: { id: string }) => p.id);
     assert.ok(second);
+    // Depuis le 12 novembre 2026 (3.2), accepter QUITTE l'ancienne dans le même
+    // geste : sans le motif qu'elle lira, rien ne change, et la base garde
+    // toujours un seul mandat actif (`un_mandat_actif_a_la_fois`).
     await assert.rejects(
       sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, second.id, true)),
+      /refus\.mandat\.motif_de_revocation$/,
+    );
+    await assert.rejects(
+      admin.query(`update identity.engagements set status = 'actif' where id = $1`, [second.id]),
       /refus\.mandat\.un_seul_actif$/,
     );
   });

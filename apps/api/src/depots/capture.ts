@@ -817,6 +817,7 @@ export const capture = {
       { rows: montants },
       { rows: juge },
       { rows: exposant },
+      { rows: archive },
     ] = await Promise.all([
       db.query(
         `select id, contract, payload, flags, created_at
@@ -871,6 +872,12 @@ export const capture = {
                                where x.piece_id = p.id order by x.created_at desc limit 1) x on true
            join ref.devises d on d.code = coalesce(nullif(upper(x.devise), ''), o.currency)
           where p.id = $1`,
+        [pieceId],
+      ),
+      // Le mandat a pris fin : la pièce se lit dans l'archive de la
+      // comptabilité qui l'a prise en charge, sans aucun geste (1.6).
+      db.query<{ a: { mandatClosLe: string } | null }>(
+        `select public.piece_archive_lire($1) as a`,
         [pieceId],
       ),
     ]);
@@ -942,6 +949,7 @@ export const capture = {
         (exposant as Record<string, unknown>[])[0]?.["exposant"] === undefined
           ? null
           : Number((exposant as Record<string, unknown>[])[0]!["exposant"]),
+      archive: archive[0]?.a ?? null,
       suivi: suivi[0] ? versSuivi(suivi[0] as Record<string, unknown>) : null,
       circuit: circuit[0] ? versCircuit(circuit[0] as Record<string, unknown>) : null,
       montantsDuCabinet: versMontantsDuCabinet((montants as Record<string, unknown>[])[0]?.["m"]),

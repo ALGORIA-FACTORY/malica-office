@@ -64,10 +64,12 @@ function MandatsProposes({
   const qc = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  /** Le motif de départ de l'ancienne comptabilité, par proposition (3.2). */
+  const [motifs, setMotifs] = useState<Record<string, string>>({});
 
   const repondre = useMutation({
-    mutationFn: (input: { id: string; cabinet: string; accepte: boolean }) =>
-      office().identity.repondreAuMandat(input.id, input.accepte),
+    mutationFn: (input: { id: string; cabinet: string; accepte: boolean; motif?: string }) =>
+      office().identity.repondreAuMandat(input.id, input.accepte, input.motif ?? null),
     onSuccess: async (_r, input) => {
       setErreur(null);
       setMessage(
@@ -77,6 +79,7 @@ function MandatsProposes({
       );
       await qc.invalidateQueries({ queryKey: ["mandats-proposes"] });
       await qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) });
+      await qc.invalidateQueries({ queryKey: ["mon-mandat", tenantId] });
     },
     onError: (e: unknown) =>
       setErreur(texteDeLErreur(e, "components/malica/MandatsProposes", t("pme.mandat.erreur"))),
@@ -102,14 +105,43 @@ function MandatsProposes({
             <p className="num mt-1 text-[10.5px] text-muted-foreground">
               {dateLisible(m.proposeLe)}
             </p>
+            {/*
+             * Une autre comptabilité est mandatée : accepter la quitte dans le
+             * même geste, sans jour sans comptabilité (3.2). Elle lira le motif.
+             */}
+            {m.remplace ? (
+              <>
+                <p className="mt-2 text-[12.5px] leading-[1.5]">
+                  {t("pme.mandat.quitter.aide", { ancienne: m.remplace, cabinet: m.cabinet })}
+                </p>
+                <input
+                  value={motifs[m.id] ?? ""}
+                  onChange={(e) => setMotifs((x) => ({ ...x, [m.id]: e.target.value }))}
+                  placeholder={t("pme.mandat.quitter.motif", { ancienne: m.remplace })}
+                  aria-label={t("pme.mandat.quitter.motif", { ancienne: m.remplace })}
+                  className="mt-2 h-[42px] w-full border border-border bg-transparent px-3 text-[13px]"
+                />
+              </>
+            ) : null}
             <div className="mt-2.5 flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={repondre.isPending}
-                onClick={() => repondre.mutate({ id: m.id, cabinet: m.cabinet, accepte: true })}
+                disabled={
+                  repondre.isPending || (m.remplace !== null && !(motifs[m.id] ?? "").trim())
+                }
+                onClick={() =>
+                  repondre.mutate({
+                    id: m.id,
+                    cabinet: m.cabinet,
+                    accepte: true,
+                    ...(m.remplace ? { motif: (motifs[m.id] ?? "").trim() } : {}),
+                  })
+                }
                 className="border border-foreground bg-foreground px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-background disabled:opacity-40"
               >
-                {t("pme.mandat.accepter")}
+                {m.remplace
+                  ? t("pme.mandat.accepterEtQuitter", { ancienne: m.remplace })
+                  : t("pme.mandat.accepter")}
               </button>
               <button
                 type="button"

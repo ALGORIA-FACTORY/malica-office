@@ -16,6 +16,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "rea
 
 import { useCabinet } from "@/components/malica/cabinet-context";
 import { MandatDuClient } from "@/components/malica/honoraires-de-la-comptabilite";
+import { LettreAuConfrere } from "@/components/malica/lettre-au-confrere";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -169,6 +170,9 @@ export function Retour({ ok, texte }: { ok: boolean; texte: string | null }) {
 
 /* ------------------------------------------------------------ nouveau client */
 
+/** Le temps de la frappe : le matricule s'examine quand la main s'arrête. */
+const DELAI_D_EXAMEN_MS = 300;
+
 export function NouveauClient({
   fermer,
   ouvrir,
@@ -188,6 +192,23 @@ export function NouveauClient({
   const [adresse, setAdresse] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [existant, setExistant] = useState(false);
+  /*
+   * Le matricule s'examine en base dès la frappe (3.8), un instant après la
+   * dernière touche : complet au format du pack, une société déjà dans Malica
+   * se reconnaît sans attendre la raison sociale ni un clic.
+   */
+  const [mfVu, setMfVu] = useState("");
+  useEffect(() => {
+    const minuterie = setTimeout(() => setMfVu(mf.trim()), DELAI_D_EXAMEN_MS);
+    return () => clearTimeout(minuterie);
+  }, [mf]);
+  const examen = useQuery({
+    queryKey: ["matricule-examine", org.id, mfVu],
+    enabled: mfVu !== "",
+    queryFn: () => office().identity.examinerMatricule(org.id, mfVu),
+  });
+  const vu = mfVu === mf.trim() && examen.data?.complet ? examen.data : null;
+  const dejaDansMalica = existant || vu?.societe === "existante";
 
   const rafraichir = async () => {
     await Promise.all([
@@ -225,11 +246,12 @@ export function NouveauClient({
       ouvrir(r.id, r.courriel === null || r.courriel === "envoye" ? "mandat" : "acces");
     },
     onError: (e: unknown) => {
-      const texte = texteDeLErreur(e, OU, t("common.error"));
-      setExistant(
-        String((e as { message?: string })?.message ?? "").includes("matricule_existant"),
+      // Un seul message : la société existante se dit par son encadré.
+      const existe = String((e as { message?: string })?.message ?? "").includes(
+        "matricule_existant",
       );
-      setErreur(texte);
+      setExistant(existe);
+      setErreur(existe ? null : texteDeLErreur(e, OU, t("common.error")));
     },
   });
 
@@ -243,7 +265,8 @@ export function NouveauClient({
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
-  const pret = mf.trim() !== "" && nom.trim() !== "";
+  const pret =
+    mf.trim() !== "" && nom.trim() !== "" && !dejaDansMalica && vu?.societe !== "deja_cliente";
 
   return (
     <Tiroir
@@ -257,14 +280,16 @@ export function NouveauClient({
             <button type="button" onClick={fermer} className="cab-button cab-button-secondary">
               {t("common.cancel")}
             </button>
-            <button
-              type="submit"
-              form="nouveau-client"
-              disabled={!pret || creer.isPending}
-              className="cab-button cab-button-primary"
-            >
-              {email.trim() ? t("cab.cli.nouveau.creer") : t("cab.cli.nouveau.creer.sans")}
-            </button>
+            {dejaDansMalica ? null : (
+              <button
+                type="submit"
+                form="nouveau-client"
+                disabled={!pret || creer.isPending}
+                className="cab-button cab-button-primary"
+              >
+                {email.trim() ? t("cab.cli.nouveau.creer") : t("cab.cli.nouveau.creer.sans")}
+              </button>
+            )}
           </span>
         </>
       }
@@ -292,35 +317,56 @@ export function NouveauClient({
             />
             <span className={AIDE}>{t("cab.cli.champ.mf.aide")}</span>
           </label>
-          <label className="block">
-            <span className={ETIQUETTE}>{t("cab.cli.champ.nom")} *</span>
-            <input
-              required
-              value={nom}
-              onChange={(e) => setNom(e.target.value)}
-              className={CHAMP}
-            />
-          </label>
-          <label className="block">
-            <span className={ETIQUETTE}>{t("cab.cli.champ.email")}</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={CHAMP}
-            />
-            <span className={AIDE}>{t("cab.cli.champ.email.aide")}</span>
-          </label>
-          <label className="block">
-            <span className={ETIQUETTE}>{t("cab.cli.champ.adresse")}</span>
-            <input value={adresse} onChange={(e) => setAdresse(e.target.value)} className={CHAMP} />
-          </label>
+          {vu?.lettre === "discordante" ? (
+            <p role="status" className="text-[12px] text-marigold sm:col-span-2">
+              {t("cab.cli.matricule.lettre")}
+            </p>
+          ) : null}
+          {vu?.societe === "deja_cliente" ? (
+            <p role="status" className="text-[12.5px] text-muted-foreground sm:col-span-2">
+              {t("cab.cli.nouveau.dejaCliente")}
+            </p>
+          ) : null}
+          {/* Une société déjà dans Malica : aucun autre champ, une demande de mandat. */}
+          {dejaDansMalica ? null : (
+            <>
+              <label className="block">
+                <span className={ETIQUETTE}>{t("cab.cli.champ.nom")} *</span>
+                <input
+                  required
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  className={CHAMP}
+                />
+              </label>
+              <label className="block">
+                <span className={ETIQUETTE}>{t("cab.cli.champ.email")}</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={CHAMP}
+                />
+                <span className={AIDE}>{t("cab.cli.champ.email.aide")}</span>
+              </label>
+              <label className="block">
+                <span className={ETIQUETTE}>{t("cab.cli.champ.adresse")}</span>
+                <input
+                  value={adresse}
+                  onChange={(e) => setAdresse(e.target.value)}
+                  className={CHAMP}
+                />
+              </label>
+            </>
+          )}
         </div>
-        <p className="rounded-lg bg-[#f4f8f5] p-3 text-[12.5px] leading-[1.5] text-text-2">
-          {t("cab.cli.nouveau.note")}
-        </p>
+        {dejaDansMalica ? null : (
+          <p className="rounded-lg bg-[#f4f8f5] p-3 text-[12.5px] leading-[1.5] text-text-2">
+            {t("cab.cli.nouveau.note")}
+          </p>
+        )}
         <Retour ok={false} texte={erreur} />
-        {existant ? (
+        {dejaDansMalica ? (
           <div className="rounded-lg border border-border p-3">
             <p className="text-[12.5px]">{t("cab.cli.nouveau.existant")}</p>
             <button
@@ -365,6 +411,7 @@ export function FicheClient({
   societesDeLaLicence: readonly string[];
 }) {
   const { t } = useI18n();
+  const { org } = useCabinet();
   const [ongletChoisi, setOnglet] = useState<OngletFiche>(ongletInitial);
   // L'onglet « Factures » est celui des notes d'honoraires : éteintes à la
   // tour, il disparaît, et une adresse qui le demandait ouvre la société.
@@ -377,11 +424,14 @@ export function FicheClient({
     queryFn: () => office().identity.ficheCourante(client.tenantId),
   });
 
-  const bandeau = !etat?.dirigeantPresent
-    ? t("cab.cli.bandeau.attente")
-    : client.engagementStatus === "propose"
+  // Le mandat demandé d'abord : la base ne dit rien du dirigeant tant que la
+  // société n'a pas accepté (3.3).
+  const bandeau =
+    client.engagementStatus === "propose"
       ? t("cab.cli.bandeau.mandat")
-      : `${client.legalId ?? ""} · ${t("cab.cli.bandeau.actif")}`;
+      : !etat?.dirigeantPresent
+        ? t("cab.cli.bandeau.attente")
+        : `${client.legalId ?? ""} · ${t("cab.cli.bandeau.actif")}`;
 
   return (
     <Tiroir
@@ -439,6 +489,10 @@ export function FicheClient({
             expert={expert}
             annoncer={annoncer}
           />
+        ) : onglet === "acces" && client.engagementStatus === "propose" ? (
+          <p className="text-[13px] text-muted-foreground">
+            {t("cab.cli.mandat.demande")} · {t("cab.cli.mandat.attenteSociete")}
+          </p>
         ) : onglet === "acces" ? (
           <OngletAcces
             client={client}
@@ -449,7 +503,10 @@ export function FicheClient({
           />
         ) : onglet === "mandat" ? (
           expert ? (
-            <MandatDuClient clientTenantId={client.tenantId} clientName={client.name} />
+            <>
+              <LettreAuConfrere cabinetId={org.id} clientTenantId={client.tenantId} />
+              <MandatDuClient clientTenantId={client.tenantId} clientName={client.name} />
+            </>
           ) : (
             <p className="text-[13px] text-muted-foreground">{t("cab.cli.reserve.expert")}</p>
           )
