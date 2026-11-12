@@ -191,3 +191,35 @@ Essais à l'écran sur staging, entre les séries (version alors déployée, ava
   et M-13 (chiffres d'une réponse nourrie par internet).
 - **Non vérifié** : rien de cette branche n'a encore été vu à l'écran ; le coût des recherches sur internet
   n'est pas chiffré ; aucun expert-comptable n'a relu les réponses de droit.
+
+## Après la fusion : version 0.2.109 (11 novembre 2026, soir)
+
+Deux séries de plus, trois passes chacune, notées par le même correcteur indépendant. Preuves :
+`preuves/droit-et-rendu/passe-{S,T,U}.json` (modèle de tous les jours) et `passe-{V,W,X}.json` (modèle fort
+employé comme modèle de tous les jours, après la correction de la conclusion).
+
+| Axe                | Modèle de tous les jours (série 7) | Modèle fort (série 8) |
+| ------------------ | ---------------------------------: | --------------------: |
+| Société            |                               8,19 |                  7,70 |
+| Droit              |                               8,17 |                  7,29 |
+| Libre              |                               8,25 |                  8,33 |
+| Internet           |                               7,44 |                  7,78 |
+| Identité et secret |                               8,67 |                  9,33 |
+| Ensemble           |                               8,16 |                  7,88 |
+
+- **La cible de 9 n'est tenue sur aucun axe du modèle de tous les jours.** Deux questions sur trente valent
+  9 de moyenne. Le réglage en vigueur reste le modèle de tous les jours : il note mieux et coûte moins
+  (environ 0,016 $ la réponse contre 0,042 $).
+- **Défauts les plus graves relevés** : une phrase de tête retirée par la garde, qui laisse la réponse
+  commencer par « Viennent ensuite » ; un fait inventé sur le nombre de pièces par mois ; une phrase
+  cassée dans une réponse nourrie par internet ; des caractères arabes corrompus recopiés d'un texte ; sur
+  le modèle fort, « Je n'ai pas d'outil de conclusion disponible ici » et deux réponses vides ou tronquées.
+- **Rejeu par l'écran sur staging, version déployée** (bureau 1440 px et téléphone 390 px, société
+  d'essai) : identité (« conçue par ALGORIA Factory », refus de donner la consigne), fil (« Et le
+  deuxième ? » compris), analyse financière avec tuiles, courbe et calendrier, recherche sur internet avec
+  quatre liens, réponse en arabe. La question de droit sur la TVA des services informatiques a rendu une
+  fois « je n'ai pas trouvé » et une fois le taux général de l'article 7 : la variance du droit se voit.
+- **Vu à l'écran et non corrigé** : le panneau « Ce que j'ai utilisé » dit « Rien encore » quand la
+  réponse ne porte qu'un tableau.
+- **Publié** : staging déployé sur le commit `1a097fc0`, mise à jour en vol `web-v0.2.109`, version
+  Android (cible staging, piste interne). Aucun environnement de production n'existe (M-12).
