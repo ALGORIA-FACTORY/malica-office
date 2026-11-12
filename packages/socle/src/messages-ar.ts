@@ -2476,6 +2476,7 @@ export const ar: Dict = {
   "refus.relecture_nuit.passage_ferme": "هذا المرور الليلي مغلق.",
   "refus.facturation_auto.rattrapage_hors_bornes":
     "يشمل الاستدراك شهراً واحداً على الأقل: الشهر الذي أُغلق للتو.",
+  "refus.fonction.inconnue": "هذه الوظيفة غير معروفة لدى برج المراقبة.",
   "refus.facturation_auto.perimetre_inconnu": "نطاق الفوترة هو «cabinets» أو «pme».",
   "refus.facturation.premier_du_mois": "تبدأ فترة الفوترة في أول الشهر.",
   "refus.facturation.destinataire_sans_nom":
@@ -2500,6 +2501,7 @@ export const ar: Dict = {
   "refus.recu.attestation": "وحده الوصل الصادر عن وثيقة يُثبت الدفعات.",
   "refus.recu.sans_reglement": "الوصل لا يُربط بدفعة.",
   "refus.recu.produit": "الوصل يُنتَج: لا يُصوَّر.",
+  "refus.honoraires.notes_eteintes": "مذكرات الأتعاب ستتوفر في نسخة قادمة.",
   "refus.honoraires.avoir_d_une_emise": "لا تُلغى بإشعار دائن إلا الفاتورة الصادرة.",
   "refus.honoraires.avoir_non_annulable": "الإشعار الدائن لا يُلغى.",
   "refus.honoraires.emise_figee":
@@ -3955,6 +3957,17 @@ export const ar: Dict = {
   "tour.relances.etat.ouvertes": "مفعّلة منذ {date}.",
   "tour.relances.etat.suspension": "مفعّلة منذ {date}، مع التعليق التلقائي.",
   "tour.menu.facturation": "الفوترة الآلية",
+  "tour.menu.fonctions": "وظائف المنتج",
+  "tour.fonctions": "وظائف المنتج",
+  "tour.fonctions.aide":
+    "ما يشغّله البرج أو يوقفه للجميع. عند الإيقاف تختفي الوظيفة من الشاشات ويرفضها الخادم؛ لا يُحذف شيء، ويبقى كل قرار في السجل مع سببه.",
+  "tour.fonctions.notes_honoraires": "مذكرات الأتعاب",
+  "tour.fonctions.notes_honoraires.aide":
+    "إنشاء مذكرة أتعاب وإصدارها وتحصيلها، من جهة المحاسبة. التوكيل ومبلغه الجزافي وفاتورة ماليكا والتصديرات والقيود لا تتوقف.",
+  "tour.fonctions.etat.allumee": "مشغّلة منذ {date}.",
+  "tour.fonctions.etat.eteinte": "متوقفة منذ {date}.",
+  "tour.fonctions.allumer": "تشغيل",
+  "tour.fonctions.eteindre": "إيقاف",
   "tour.facturation": "الفوترة الآلية",
   "tour.facturation.aide":
     "نطاقان مستقلان، يُفتح كل منهما أو يُوقف مع ذكر السبب. عند إيقاف نطاق، لا تخرج أي فاتورة منه من تلقاء نفسها.",
