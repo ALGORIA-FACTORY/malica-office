@@ -44,7 +44,7 @@ import {
 import { estUnPdf, imageDeLaPiece, limitesDuRenduPdf, pagesDuPdf } from "./miniature.ts";
 
 /** Une ligne de l'index : ce qu'on lit d'une pièce avant de la tourner. */
-export interface PieceAComposer {
+interface PieceAComposer {
   id: string;
   reference: string | null;
   type: string | null;

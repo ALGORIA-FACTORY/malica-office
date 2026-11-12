@@ -44,6 +44,7 @@
     "licence_motif_suspension": "select (regexp_matches(pg_get_constraintdef(oid), '''([^'']+)''::text', 'g'))[1] from pg_constraint where conrelid = 'facturation.licences'::regclass and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \\(\\(motif_suspension = ANY'",
     "licence_statut": "select (regexp_matches(pg_get_constraintdef(oid), '''([^'']+)''::text', 'g'))[1] from pg_constraint where conrelid = 'facturation.licences'::regclass and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \\(\\(statut = ANY'",
     "mention": "select code from ref.mentions",
+    "mention_d_impression": "select code from ref.mentions_d_impression",
     "moyen_en_ligne": "select code from facturation.moyens_paiement",
     "moyen_paiement": "select code from ref.payment_means",
     "moyen_paiement_par": "select code from ref.payment_means where role_achat is not null",
