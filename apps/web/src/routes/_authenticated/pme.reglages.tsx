@@ -165,6 +165,8 @@ function PmeReglages() {
   const abo = useLAbonnement();
   const f = abo.forfait;
   const verrous = degradation(f, t, catalogue);
+  const societesIncluses =
+    catalogue?.find((o) => o.code === f?.offre)?.organisations_incluses ?? null;
   const bientot = lecturesQuiSAchevent(f);
 
   const apparences: Array<{ cle: Apparence; label: string }> = [
@@ -480,10 +482,12 @@ function PmeReglages() {
              * titulaire (staging, 3 novembre 2026). Le nombre seul, alors.
              */}
             <span>
-              {[...abo.titulaire.values()].every(Boolean)
+              {/* Les sociétés DE la licence sur celles que son offre comprend
+                  (« 1 sur 2 » en Premium ; recette du 11 novembre, 3.1). */}
+              {[...abo.titulaire.values()].every(Boolean) && societesIncluses !== null
                 ? t("pme.reglages.surTotal", {
-                    n: abo.organisations.length,
-                    total: nombre(f?.organisations, locale),
+                    n: nombre(f?.organisations, locale),
+                    total: nombre(societesIncluses, locale),
                   })
                 : nombre(abo.organisations.length, locale)}
             </span>
@@ -504,43 +508,43 @@ function PmeReglages() {
            * disparaît dans aucun des deux cas.
            */}
           <div className="grp">
-            {verrous.societes.ouvert ? (
-              <Link to="/onboarding" className="inv">
-                <i>
-                  <IcPlus />
-                </i>
-                <span className="bd">
-                  <b>{t("pme.reglages.orgs.ajouter")}</b>
-                  {/* Le prix est lu dans la grille, et dit au web et à la PWA seulement. */}
-                  {prixEnPlus.data && Number(prixEnPlus.data.prix_organisation_sup) > 0 ? (
-                    <span>
-                      {t("pme.reglages.orgs.prix", {
-                        inclus: String(prixEnPlus.data.organisations_incluses),
-                        prix: aLEchelle(prixEnPlus.data.prix_organisation_sup),
-                        devise: pme.currency,
-                      })}
-                    </span>
-                  ) : null}
-                </span>
-              </Link>
-            ) : COMMERCE ? (
-              /*
-               * `data-verrou` est la marque commune des cartes verrouillées : elle
-               * les rend repérables d'un écran à l'autre, et c'est elle qu'une
-               * épreuve peut interroger pour vérifier qu'aucune n'a été masquée.
-               */
-              <div className="inv off" data-verrou={verrous.societes.offre}>
-                <i>
-                  <IcCadenas />
-                </i>
-                <span className="bd">
-                  <b>{t("pme.home.societes")}</b>
-                  <span>{t("pme.reglages.societes.verrou")}</span>
-                  <em>{verrous.societes.offre}</em>
-                  {verrous.societes.raison ? <span>{verrous.societes.raison}</span> : null}
-                </span>
-              </div>
-            ) : null}
+            {/*
+             * La même entrée pour toutes les offres (recette du 11 novembre, 3.1) :
+             * une société se crée toujours. Hors de l'offre qui les regroupe, elle
+             * vit sur sa propre licence, et l'entrée dit, sur le web seulement,
+             * l'offre qui les regroupe. La coque ne nomme ni offre ni prix.
+             */}
+            <Link
+              to="/onboarding"
+              className="inv"
+              data-verrou={verrous.societes.ouvert ? undefined : verrous.societes.offre}
+            >
+              <i>
+                <IcPlus />
+              </i>
+              <span className="bd">
+                <b>{t("pme.reglages.orgs.ajouter")}</b>
+                {/* Le prix est lu dans la grille, et dit au web et à la PWA seulement. */}
+                {verrous.societes.ouvert &&
+                prixEnPlus.data &&
+                Number(prixEnPlus.data.prix_organisation_sup) > 0 ? (
+                  <span>
+                    {t("pme.reglages.orgs.prix", {
+                      inclus: String(prixEnPlus.data.organisations_incluses),
+                      prix: aLEchelle(prixEnPlus.data.prix_organisation_sup),
+                      devise: pme.currency,
+                    })}
+                  </span>
+                ) : null}
+                {!verrous.societes.ouvert && COMMERCE ? (
+                  <>
+                    <span>{t("pme.reglages.societes.verrou")}</span>
+                    <em>{verrous.societes.offre}</em>
+                    {verrous.societes.raison ? <span>{verrous.societes.raison}</span> : null}
+                  </>
+                ) : null}
+              </span>
+            </Link>
           </div>
         </>
       ) : null}
