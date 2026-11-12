@@ -250,9 +250,14 @@ export function computePivot(input: PivotInput): PivotV1 {
   // Le RÉGIME dit « sans TVA » (un taux nul au référentiel), pas un montant
   // arrondi à zéro : une base à 19 % dont la TVA s'arrondit à 0 F CFA garde
   // son code sur la ligne de TVA, comme toute base taxable.
+  //
+  // Et une base taxable aussi, quand la pièce n'a qu'un code (recette du
+  // 11 novembre 2026) : l'export portait le code sur la ligne de TVA et le
+  // laissait vide sur la ligne de charge, dont il est pourtant la base. Le
+  // chemin ventilé le posait déjà sur chaque base ; plusieurs codes sur une
+  // seule ligne de charge ne se départagent pas, et la ligne reste sans code.
   const codesDesLignes = [...new Set(perLineRate.map(({ line }) => line.tax_code))];
-  const regimeSansTva = perLineRate.every(({ rate }) => rate !== null && D(rate.rate).isZero());
-  const codeDeLaBase = regimeSansTva && codesDesLignes.length === 1 ? codesDesLignes[0] : undefined;
+  const codeDeLaBase = codesDesLignes.length === 1 ? codesDesLignes[0] : undefined;
 
   // Les bases ventilées : une par compte et par taux, dans l'ordre d'apparition (R11).
   const ventilation = input.ventilation_des_bases;
