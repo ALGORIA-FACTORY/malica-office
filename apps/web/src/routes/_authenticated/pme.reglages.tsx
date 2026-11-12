@@ -33,7 +33,7 @@ import { plier } from "@/lib/mes-societes";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
-import { nombre as entier, ouverturesDuForfait } from "@/lib/forfait";
+import { nombre as entier, ouverturesDuForfait, utilisateursInclus } from "@/lib/forfait";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -303,9 +303,7 @@ function PmeReglages() {
                 <b>{t("pme.reglages.sieges")}</b>
                 <span>{t("pme.reglages.abo.siegesOccupes")}</span>
               </span>
-              <span className="v">
-                {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
-              </span>
+              <span className="v">{utilisateurs(f ?? null, locale)}</span>
               <IcChevron />
             </Link>
           </div>
@@ -382,9 +380,7 @@ function PmeReglages() {
               </div>
               <div>
                 <u>{t("pme.reglages.abo.siegesOccupes")}</u>
-                <b>
-                  {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
-                </b>
+                <b>{utilisateurs(f ?? null, locale)}</b>
               </div>
               <div>
                 <u>{t("pme.reglages.abo.siegesMax")}</u>
@@ -565,9 +561,7 @@ function PmeReglages() {
               />
             </h2>
             {/* Le même compte que la ligne de l'abonnement : occupés sur inclus. */}
-            <span>
-              {nombre(f?.sieges_occupes, locale)} / {nombre(f?.sieges_inclus, locale)}
-            </span>
+            <span>{utilisateurs(f ?? null, locale)}</span>
           </div>
           <Sieges abo={abo} verrou={verrous.sieges} />
 
@@ -1837,6 +1831,14 @@ const ABSENT = "—";
 function nombre(n: number | string | null | undefined, locale: string): string {
   const v = entier(n);
   return v === null ? ABSENT : v.toLocaleString(locale);
+}
+
+/** « occupés / inclus », propriétaire compris (`utilisateursInclus`), ou l'absence. */
+function utilisateurs(f: MonForfait | null, locale: string): string {
+  const u = utilisateursInclus(f);
+  return u === null
+    ? `${ABSENT} / ${ABSENT}`
+    : `${u.occupes.toLocaleString(locale)} / ${u.inclus.toLocaleString(locale)}`;
 }
 
 /**
