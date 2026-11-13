@@ -1,4 +1,9 @@
 // @vitest-environment jsdom
+/**
+ * La vue « Toutes les sociétés » de l'en-tête PME se garde pour la session : un rechargement
+ * ne doit pas la perdre en silence (recette du 13 novembre 2026), et un stockage de session
+ * indisponible ne doit jamais faire échouer l'écran.
+ */
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { readVueConsolidee, writeVueConsolidee } from "../active-org";
