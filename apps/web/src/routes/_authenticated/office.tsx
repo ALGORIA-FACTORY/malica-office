@@ -24,6 +24,7 @@ import { LienMonEspaceParti } from "@/components/malica/mon-espace-parti";
 import { PackBanner } from "@/components/malica/PackBanner";
 import { SeDeconnecter } from "@/components/malica/se-deconnecter";
 import { useI18n } from "@/i18n";
+import { compterLesMandatsActifs } from "@/lib/portefeuille-actif";
 import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/office")({
@@ -179,7 +180,7 @@ function OfficeHome() {
                 title={t("landing.surfaces.cabinet.title")}
                 body={t("landing.surfaces.cabinet.body")}
                 cta={t("cab.brand")}
-                meta={`${t("portal.cabinet.count")} : ${clientsQuery.data?.length ?? 0}`}
+                meta={`${t("portal.cabinet.count")} : ${compterLesMandatsActifs(clientsQuery.data ?? [])}`}
                 tenants={cabinetOrgs.map((o) => o.name)}
               />
             ) : null}

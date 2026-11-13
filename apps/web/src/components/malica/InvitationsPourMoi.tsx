@@ -8,6 +8,7 @@
  * geste — ou décline. Pas de lien, pas de courriel : le compte est la preuve.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { useI18n } from "@/i18n";
@@ -113,6 +114,20 @@ export function InvitationsPourMoi() {
               <p className="num mt-0.5 text-[11px] text-muted-foreground">
                 {t("portal.invitations.expire", { date: dateLisible(i.expiresAt) })}
               </p>
+              {/* Sans comptabilité, « Rejoindre » est grisé : on dit pourquoi, et
+                  on propose d'en créer une — l'écran d'accueil rend ensuite à l'invitation. */}
+              {pourLaComptabilite(i) && mesOrgs.isSuccess && !maComptabilite ? (
+                <p className="mt-2 max-w-[56ch] text-[12.5px] text-muted-foreground">
+                  {t("portal.invitations.creer.pourquoi")}{" "}
+                  <Link
+                    to="/onboarding"
+                    search={{ nature: "cabinet" }}
+                    className="font-semibold text-foreground underline underline-offset-4"
+                  >
+                    {t("portal.invitations.creer")}
+                  </Link>
+                </p>
+              ) : null}
             </div>
             <div className="flex gap-2">
               <button
