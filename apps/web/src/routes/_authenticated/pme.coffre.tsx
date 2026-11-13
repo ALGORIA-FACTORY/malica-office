@@ -10,6 +10,7 @@
  * Le mur est tenu par la base : seules les pièces personnelles de leur auteur paraissent
  * ici (RLS). « Supprimer » n'est offert que si chaque papier choisi se supprime.
  */
+import { piecesCompteesDe } from "@/lib/lecture";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useRef, useState } from "react";
@@ -213,9 +214,9 @@ function PmeCoffre() {
   // Seules les pièces gardées pour soi. Ce qui est dans la société se regarde
   // dans « Vos documents », avec son statut.
   const toutes = pieces.data ?? [];
-  const privees = toutes
-    .filter((p) => p.vis === "personnel")
-    .sort((a, b) => (b.dateDocument ?? b.createdAt).localeCompare(a.dateDocument ?? a.createdAt));
+  const privees = piecesCompteesDe(toutes.filter((p) => p.vis === "personnel")).sort((a, b) =>
+    (b.dateDocument ?? b.createdAt).localeCompare(a.dateDocument ?? a.createdAt),
+  );
   const rangement = (p: PieceLue) => rangements.parPiece.get(p.id) ?? null;
   const rayonDe = (p: PieceLue) => {
     const r = rangement(p)?.rayon;

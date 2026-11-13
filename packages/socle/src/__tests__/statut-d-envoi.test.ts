@@ -195,3 +195,38 @@ describe("le passage siège → propriétaire", () => {
     ).toBe("prise_en_charge");
   });
 });
+
+describe("sans comptabilité, une pièce est rangée — elle n'a nulle part où partir", () => {
+  it("« Rangée », jamais « À envoyer », quand la société n'a pas de comptabilité", () => {
+    expect(statutPme({ vis: "entite", status: "lue", suivi: null, comptabilite: false })).toBe(
+      "rangee",
+    );
+    expect(TON_PME.rangee).toBe("neutre");
+  });
+
+  it("Rangée même si la personne l'avait « gardée » : la société n'a personne à qui l'envoyer", () => {
+    expect(
+      statutPme({
+        vis: "entite",
+        status: "lue",
+        gardeeLe: envoi,
+        suivi: null,
+        comptabilite: false,
+      }),
+    ).toBe("rangee");
+  });
+
+  it("avec une comptabilité, ou sans que l'on sache, rien ne change", () => {
+    expect(statutPme({ vis: "entite", status: "lue", suivi: null, comptabilite: true })).toBe(
+      "a_envoyer",
+    );
+    expect(statutPme({ vis: "entite", status: "lue", suivi: null })).toBe("a_envoyer");
+  });
+
+  it("un espace privé reste privé, une pièce déjà partie reste partie", () => {
+    expect(statutPme({ vis: "personnel", status: "lue", comptabilite: false })).toBe("mon_espace");
+    expect(statutPme({ vis: "partage", status: "lue", suivi: suivi(), comptabilite: false })).toBe(
+      "envoyee",
+    );
+  });
+});

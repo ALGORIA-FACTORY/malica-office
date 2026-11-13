@@ -2287,7 +2287,6 @@
 [data-surface="pme"] [data-ecran="capture"] .c-liste .gestes .pr{border:0;background:var(--tx);color:var(--bg)}
 [data-surface="pme"] [data-ecran="capture"] .c-liste .gestes .sc{border:1px solid var(--hr);background:transparent;color:var(--tx)}
 [data-surface="pme"] [data-ecran="capture"] .c-liste .gestes button:disabled{opacity:.5;cursor:default}
-[data-surface="pme"] [data-ecran="capture"] .c-rang{margin:.5rem 0 0;font-family:var(--mono);font-size:.8125rem;font-weight:600;color:var(--t3)}
 [data-surface="pme"] [data-ecran="capture"] .c-piece{margin-top:.75rem;display:flex;gap:.875rem;align-items:center}
 [data-surface="pme"] [data-ecran="capture"] .c-grande{flex:none;width:84px;height:112px;border:0;border-radius:10px;padding:0;overflow:hidden; background:var(--s2);cursor:pointer}
 [data-surface="pme"] [data-ecran="capture"] .c-grande .apercu{width:100%;height:100%}
