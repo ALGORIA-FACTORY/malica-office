@@ -35,6 +35,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { montant as montantDuSocle, montantEtDevise } from "@/lib/lisible";
 import { ETAT_DE_FACTURE } from "@/lib/paiement";
 import { cn } from "@/lib/utils";
 import { initialesDe } from "@/lib/initiales";
@@ -133,13 +134,9 @@ export function AbonnementsDuCabinet({
 
   const libelleOffre = (code: string) =>
     (offres.data ?? []).find((o) => o.code === code)?.libelle ?? code;
+  // Un seul formateur (le Socle) ; l'échelle est celle que la base sert pour la devise.
   const montant = (v: string, devise = org.currency) =>
-    new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: devise,
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3,
-    }).format(Number(v));
+    montantEtDevise(montantDuSocle(v, locale), devise);
   const date = (iso: string | null) =>
     iso
       ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(

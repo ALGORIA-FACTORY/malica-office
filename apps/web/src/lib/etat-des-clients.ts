@@ -129,6 +129,7 @@ export type EffetDuChoix =
   | "montee"
   | "descente"
   | "actuelle"
+  | "prise_en_charge"
   | "couvrir";
 
 export function effetDuChoix(
@@ -142,7 +143,12 @@ export function effetDuChoix(
     return e.dirigeantPresent ? "attente_reponse" : "attente_dirigeant";
   // L'offre que la comptabilité paie, ou celle où le client est monté à sa
   // charge : on ne « monte » pas vers ce qu'il a déjà (recette du 11 novembre, 1.2).
-  if (choix === e.accesOffre || choix === offreActuelle(e, offres)) return "actuelle";
+  if (choix === e.accesOffre) return "actuelle";
+  // Monté à sa charge au-dessus de ce que la comptabilité paie : elle peut prendre son offre en
+  // charge (recette du 13 novembre, B7) ; au-dessous de ce qu'elle paie, rien à reprendre.
+  if (choix === offreActuelle(e, offres)) {
+    return rangDe(choix, offres) > rangDe(e.accesOffre, offres) ? "prise_en_charge" : "actuelle";
+  }
   return rangDe(choix, offres) > rangDe(e.accesOffre, offres) ? "montee" : "descente";
 }
 

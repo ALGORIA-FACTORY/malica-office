@@ -4341,6 +4341,8 @@ export interface FacturationRepository {
   catalogueDesOffres(): Promise<OffreAuCatalogue[]>;
   /** La grille en vigueur, et ce qui empêcherait d'y passer (un CODE). */
   mesOffres(tenantId?: string): Promise<OffreDeLaGrille[]>;
+  /** Le devis d'une montée : null pour une descente, pendant l'année, ou hors propriétaire principal. */
+  monteeDevis(offre: string, tenantId?: string): Promise<DevisDeMontee | null>;
   /** Le TTC d'un HT, par la fiscalité de la facture ; `null` sans émetteur. */
   prixTtc(ht: string): Promise<PrixTtc | null>;
   /** Les lectures du mois dernier reportées sur celui-ci (déjà dans le droit). */
@@ -4504,6 +4506,21 @@ export interface OffreAuCatalogue {
   recharges_permises: boolean;
 }
 
+export interface DevisDeMontee {
+  offre: string;
+  ecart_mensuel_ht: number;
+  jours_restants: number;
+  jours_du_mois: number;
+  a_regler_ht: number;
+  /** `null` tant qu'aucun émetteur n'est désigné : on ne suppose aucune TVA. */
+  a_regler_tva: number | null;
+  /** Le timbre seulement si la montée se règle par la facture du jour ; 0 pour un acompte. */
+  timbre: number | null;
+  a_regler_ttc: number | null;
+  devise: string | null;
+  prix_plein_ttc: number | null;
+}
+
 export interface OffreDeLaGrille {
   code: string;
   libelle: string;
@@ -4643,7 +4660,7 @@ export interface PaiementEnLigne {
   montant_ttc: string;
   devise: string;
   /** `remplace` : un acompte de montée que le forfait suivant a remplacé ; il ne se paie plus. */
-  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace";
+  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace" | "non_abouti";
   prestataire: string | null;
   reference: string | null;
   lien: string | null;

@@ -36,8 +36,11 @@ interface PaiementLu {
   montant_tva: string;
   montant_ttc: string;
   devise: string;
-  /** `remplace` : un acompte de montée que le forfait suivant a remplacé ; il ne se paie plus. */
-  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace";
+  /**
+   * `remplace` : un acompte de montée que le forfait suivant a remplacé ; il ne se paie plus.
+   * `non_abouti` : un lien ouvert que personne n'a conclu dans la durée arrêtée en base ; on le rouvre.
+   */
+  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace" | "non_abouti";
   prestataire: string | null;
   reference: string | null;
   lien: string | null;
@@ -452,6 +455,18 @@ export const facturation = {
         order by code, effective_from desc`,
     );
     return [...rows].sort((a, b) => Number(a["rang"]) - Number(b["rang"]));
+  },
+
+  /**
+   * Ce que la montée vers `offre` fait régler aujourd'hui et le prix plein des mois suivants.
+   * Lecture seule ; la base appelle la même formule que la préparation du paiement.
+   */
+  async monteeDevis(db: Requete, offre: string, tenantId?: string) {
+    const { rows } = await db.query<{ r: Record<string, unknown> | null }>(
+      `select public.montee_devis($1, $2) as r`,
+      [offre, tenantId ?? null],
+    );
+    return rows[0]?.r ?? null;
   },
 
   async mesOffres(db: Requete, tenantId?: string) {

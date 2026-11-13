@@ -34,7 +34,7 @@ import { useSuperposition } from "@/hooks/use-superposition";
 import { plier } from "@/lib/mes-societes";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
-import { dateEnLettres } from "@/lib/lisible";
+import { dateEnLettres, quantite } from "@/lib/lisible";
 import { nombre as entier, ouverturesDuForfait, utilisateursInclus } from "@/lib/forfait";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
@@ -1267,7 +1267,7 @@ function TtcEtReport({ ht }: { ht: string | null }) {
       ) : null}
       {n > 0 ? (
         <p className="ttc">
-          {t("pme.reglages.abo.report", { count: n, n: new Intl.NumberFormat(locale).format(n) })}
+          {t("pme.reglages.abo.report", { count: n, n: quantite(String(n), locale) })}
         </p>
       ) : null}
     </>
@@ -1836,7 +1836,7 @@ const ABSENT = "—";
 
 function nombre(n: number | string | null | undefined, locale: string): string {
   const v = entier(n);
-  return v === null ? ABSENT : v.toLocaleString(locale);
+  return v === null ? ABSENT : quantite(String(v), locale);
 }
 
 /** « occupés / inclus », propriétaire compris (`utilisateursInclus`), ou l'absence. */
@@ -1844,7 +1844,7 @@ function utilisateurs(f: MonForfait | null, locale: string): string {
   const u = utilisateursInclus(f);
   return u === null
     ? `${ABSENT} / ${ABSENT}`
-    : `${u.occupes.toLocaleString(locale)} / ${u.inclus.toLocaleString(locale)}`;
+    : `${quantite(String(u.occupes), locale)} / ${quantite(String(u.inclus), locale)}`;
 }
 
 /**
