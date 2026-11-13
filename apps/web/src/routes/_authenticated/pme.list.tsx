@@ -29,6 +29,7 @@ import { piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
 import { statutDuCircuit, TON_PME } from "@malica/socle/statut-d-envoi";
 import { motDuStatut } from "@/lib/statut";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { useLaPlusBasseDesLectures } from "@/hooks/use-lectures-des-societes";
 import { nombre } from "@/lib/forfait";
 import { jourOuInstant, momentDeLEnvoi, montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
@@ -360,6 +361,11 @@ function Bibliotheque() {
     jourOuInstant(p.dateDocument ?? p.createdAt, locale, { day: "2-digit", month: "short" });
 
   const f = pme.forfait.ligne;
+  /*
+   * Sous « Toutes les sociétés », le compteur n'est plus celui de la société ouverte : chaque
+   * société a sa licence, donc on montre la plus basse, nommée — jamais un total (13 novembre 2026).
+   */
+  const basse = useLaPlusBasseDesLectures(pme.societeAffichee === null && pme.dossiers.length > 1);
 
   /*
    * LE PLAFOND, QUAND IL MORD : des pièces RÉELLEMENT refusées pour cause de
@@ -408,9 +414,23 @@ function Bibliotheque() {
         <p className="sub">
           {t("pme.doc.compte", { count: ici.length })}
           <br />
-          {compte(f?.lectures_restantes)} / {compte(f?.lectures_droit)} · {t("pme.home.lectures")}
-          {/* Le compteur est celui d'une société : il la nomme quand il y en a plusieurs. */}
-          {pme.dossiers.length > 1 ? ` · ${pme.orgName}` : null}
+          {basse ? (
+            <>
+              {t("pme.toutes.lecturePlusBasse", {
+                restantes: compte(basse.restantes),
+                droit: compte(basse.droit),
+                societe: basse.name,
+              })}{" "}
+              · {t("pme.home.lectures")}
+            </>
+          ) : (
+            <>
+              {compte(f?.lectures_restantes)} / {compte(f?.lectures_droit)} ·{" "}
+              {t("pme.home.lectures")}
+              {/* Le compteur est celui d'une société : il la nomme quand il y en a plusieurs. */}
+              {pme.dossiers.length > 1 && pme.societeAffichee !== null ? ` · ${pme.orgName}` : null}
+            </>
+          )}
         </p>
 
         <TransmettreCeQuiReste pieces={brutes} />

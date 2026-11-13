@@ -20,20 +20,15 @@
  *
  * Rien de commercial : ni offre, ni prix (coque Android).
  */
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import { CIBLE_COQUE } from "@/capabilities/coque";
 import { ParTranches } from "@/components/malica/par-tranches";
 import { usePme } from "@/components/malica/pme-context";
-import { usePiecesLuesDesSocietes } from "@/hooks/use-pieces-lues";
+import { useSocietesEnBref } from "@/hooks/use-societes-en-bref";
 import { useRevenir } from "@/hooks/use-revenir";
 import { useI18n } from "@/i18n";
-import { piecesALire } from "@/lib/lecture";
 import { epinglees, type Ligne, plier, type Tri, trierLesLignes } from "@/lib/mes-societes";
-import { attendUnGeste, seMontreIci } from "@/lib/libelle-de-notification";
-import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/societes")({
   component: MesSocietes,
@@ -47,54 +42,7 @@ function MesSocietes() {
   const [cherche, setCherche] = useState("");
   const [tri, setTri] = useState<Tri>("attend");
 
-  const ids = pme.dossiers.length > 0 ? pme.dossiers.map((d) => d.id) : [pme.tenantId];
-
-  // Les alertes : la même lecture que la cloche, sous la même clé.
-  const alertes = useQuery({
-    queryKey: ["notifications", "cloche", ...ids],
-    queryFn: () => office().collab.notifications(ids),
-    refetchInterval: 60_000,
-  });
-  // Les pièces : la même lecture que la bibliothèque, groupée en un appel.
-  const pieces = usePiecesLuesDesSocietes(ids);
-  // Les échéances : la même lecture que l'accueil et l'écran des échéances.
-  const derivation = useQuery({
-    queryKey: ["echeances-derivation", ...ids],
-    queryFn: () => office().collab.deriverEcheances(ids),
-    staleTime: 60_000,
-  });
-  const echeances = useQuery({
-    queryKey: ["echeances", ...ids, locale],
-    queryFn: () => office().collab.echeances(ids, locale),
-    enabled: derivation.isFetched,
-  });
-
-  const lignes = useMemo<Ligne[]>(() => {
-    const parSociete = <T,>(liste: readonly T[], tenant: (x: T) => string) => {
-      const m = new Map<string, number>();
-      for (const x of liste) m.set(tenant(x), (m.get(tenant(x)) ?? 0) + 1);
-      return m;
-    };
-    const aTraiter = parSociete(
-      (alertes.data ?? []).filter((n) => attendUnGeste(n) && seMontreIci(n.kind, CIBLE_COQUE)),
-      (n) => n.tenantId,
-    );
-    const enRetard = parSociete(
-      (echeances.data ?? []).filter((e) => e.status === "en_retard"),
-      (e) => e.tenantId,
-    );
-    return pme.dossiers.map((d, i) => ({
-      id: d.id,
-      name: d.name,
-      matricule: d.matricule ?? null,
-      aTraiter: aTraiter.get(d.id) ?? 0,
-      aLire: piecesALire(pieces[i]?.data ?? []).length,
-      enRetard: enRetard.get(d.id) ?? 0,
-    }));
-  }, [alertes.data, echeances.data, pieces, pme.dossiers]);
-
-  const total = (k: "aTraiter" | "aLire" | "enRetard") => lignes.reduce((n, l) => n + l[k], 0);
-  const charge = alertes.isPending || pieces.some((p) => p.isPending) || echeances.isPending;
+  const { lignes, total, charge } = useSocietesEnBref();
   const q = plier(cherche.trim());
   const visibles = trierLesLignes(
     q

@@ -12,6 +12,7 @@ import { Aide } from "@/components/malica/aide";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useDossiers } from "@/hooks/use-dossiers";
+import { SocietesALaLigne } from "@/components/malica/societes-a-la-ligne";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
 import { texteDeLErreur, vientDeNous } from "@/lib/erreur-lisible";
@@ -921,6 +922,10 @@ function PmeCapturer() {
 
   return (
     <div data-ecran="capture" className="rg-rise">
+      {/* Sous « Toutes les sociétés » : la pièce va à UNE société, la personne la choisit. */}
+      {pme.societeAffichee === null && etape === 0 && !plusTard ? (
+        <SocietesALaLigne note="pme.toutes.pourQuelleSociete" mode="choisir" />
+      ) : null}
       {/*
        * Le haut de l'écran (planche 9) : à l'ouverture, une croix et le titre ;
        * ensuite, le retour, le nom de l'étape, « n sur m » et un trait qui
