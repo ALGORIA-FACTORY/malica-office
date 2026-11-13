@@ -482,7 +482,7 @@ export const fr = {
   "pme.home.echecs.titre": "{count} pièces n’ont pas pu être lues",
   "pme.home.echecs.titre#one": "1 pièce n’a pas pu être lue",
   "pme.home.echecs.titre#other": "{count} pièces n’ont pas pu être lues",
-  "pme.capture.verif.rang": "{n} sur {total}",
+  "pme.capture.verif.rang": "Pièce {n} sur {total}",
   "pme.capture.verif.suivante": "C’est bon · suivante",
   "pme.capture.verif.bon": "C’est bon",
   "pme.capture.pay.titre#one": "Déjà payée ?",
@@ -2287,7 +2287,7 @@ export const fr = {
   "envoi.titre": "Envoyée.",
   "envoi.piece.sansNom": "Cette pièce",
   "envoi.piece.chez": "{piece} est chez {qui} depuis {quand}.",
-  "envoi.piece.suite": "{qui} la prend en charge. Vous serez prévenu s'il a une question.",
+  "envoi.piece.suite": "{qui} la prend en charge. Vous serez prévenu si elle a une question.",
   "envoi.trace": "Transmise à {qui} · {jour}",
   "envoi.suivante": "Pièce suivante",
   "envoi.voir": "Voir où elle en est",
@@ -2300,11 +2300,11 @@ export const fr = {
   "envoi.lot.tout#one": "Envoyée.",
   "envoi.lot.tout#other": "{count} envoyées.",
   "envoi.lot.chez":
-    "Elles sont chez {qui} depuis {quand}. {qui} les prend en charge ; vous serez prévenu s'il a une question.",
+    "Elles sont chez {qui} depuis {quand}. {qui} les prend en charge ; vous serez prévenu si elle a une question.",
   "envoi.lot.chez#one":
-    "Elle est chez {qui} depuis {quand}. {qui} la prend en charge ; vous serez prévenu s'il a une question.",
+    "Elle est chez {qui} depuis {quand}. {qui} la prend en charge ; vous serez prévenu si elle a une question.",
   "envoi.lot.chez#other":
-    "Elles sont chez {qui} depuis {quand}. {qui} les prend en charge ; vous serez prévenu s'il a une question.",
+    "Elles sont chez {qui} depuis {quand}. {qui} les prend en charge ; vous serez prévenu si elle a une question.",
   "envoi.lot.restee": "Restées chez vous",
   "envoi.lot.restee#one": "Restée chez vous",
   "envoi.lot.restee#other": "Restées chez vous",
@@ -2963,6 +2963,7 @@ export const fr = {
   "statut.pme.mon_espace": "Espace privé",
   "statut.pme.a_envoyer": "À envoyer",
   "statut.pme.gardee": "Gardée",
+  "statut.pme.rangee": "Rangée",
   "statut.pme.envoyee": "Envoyée",
   "statut.pme.vue": "Vue",
   "statut.pme.retour": "Retour",
@@ -4596,9 +4597,9 @@ export const fr = {
 
   /* ───────────────────────────────────── le dossier d'une pièce, côté PME */
   "pme.piece.sens.inconnu": "Sens non tranché",
-  "pme.piece.chaine.pieces": "{count} PIÈCES",
-  "pme.piece.chaine.pieces#one": "{count} PIÈCE",
-  "pme.piece.chaine.pieces#other": "{count} PIÈCES",
+  "pme.piece.chaine.pieces": "{count} DOCUMENTS",
+  "pme.piece.chaine.pieces#one": "{count} DOCUMENT",
+  "pme.piece.chaine.pieces#other": "{count} DOCUMENTS",
   "pme.piece.chaine.issueDe": "Issue de cette pièce",
   "pme.piece.chaine.vide": "Aucun reçu ni justificatif n’est encore rattaché à cette pièce.",
   "pme.piece.chaine.foot":

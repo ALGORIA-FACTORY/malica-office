@@ -432,6 +432,8 @@ function PieceScreen() {
         gardeeLe: dossier.data.piece.gardeeLe,
         suivi: dossier.data.suivi,
         circuit: dossier.data.circuit,
+        // Le même fait que la liste : sans comptabilité, la pièce est « Rangée ».
+        comptabilite: cabinet.isSuccess ? cabinet.data !== null : null,
       })
     : null;
   const retour = useQuery({

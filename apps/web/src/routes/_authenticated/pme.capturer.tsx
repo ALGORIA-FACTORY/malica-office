@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { LectureEnCours, ValeursTrouvees } from "@/components/malica/pendant-la-lecture";
 import { PourQuiSociete } from "@/components/malica/pour-qui";
 import { RayonsPrives } from "@/components/malica/rayons-prives";
 import { useRangementsPrives } from "@/hooks/use-rangements-prives";
-import { rayonsASoi } from "@/lib/rayons-prives";
+import { RAYON_PAR_DEFAUT, rayonsASoi } from "@/lib/rayons-prives";
 import { Aide } from "@/components/malica/aide";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
@@ -18,8 +18,15 @@ import { texteDeLErreur, vientDeNous } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
 import { jourEtMois, jourOuInstant, momentDeLEnvoi, montant } from "@/lib/lisible";
 import { lectureEnSuspens, presentation, SUIVI_DE_LECTURE_MS } from "@/lib/lecture";
-import { identifiantsDuLot, lireLotDeCapture, type LotDeCapture } from "@/lib/lot-de-capture";
-import { etapesVisibles } from "@/lib/etapes-de-capture";
+import {
+  identifiantsDuLot,
+  lireLotDeCapture,
+  type LotDeCapture,
+  piecesDuLot,
+  urlDeLaReprise,
+  suiteDuPassage,
+} from "@/lib/lot-de-capture";
+import { etapesVisibles, rangDeLEtape } from "@/lib/etapes-de-capture";
 import { office } from "@/verticals/malica-office/composition";
 import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import type { PieceLue } from "@malica/socle/ports/repositories";
@@ -312,8 +319,17 @@ function PmeCapturer() {
     return null;
   })();
 
-  const [etape, setEtape] = useState(0);
-  const [dest, setDest] = useState<Destination | null>(null);
+  /*
+   * La progression survit au rechargement (G6b) : l'étape et le lot sont dans
+   * l'URL (`etape`, `pieces`), reprise ici une fois. Un lot sans étape (la
+   * photo qu'on vient de prendre) commence à l'étape 0.
+   */
+  const [etape, setEtape] = useState(lotDemande.etape ?? 0);
+  // Reprise après l'étape « Pour qui ? » : la destination répondue est la société
+  // (la fin privée, étape 8, ne se reprend pas).
+  const [dest, setDest] = useState<Destination | null>(
+    lotDemande.etape !== undefined && lotDemande.etape >= 2 ? "societe" : null,
+  );
   /** « Où la ranger », à l'étape « Pour qui ? » : la société, sauf choix contraire. */
   /*
    * « Dans quel rayon ? » (planche 10) : un papier gardé pour soi se range
@@ -432,14 +448,15 @@ function PmeCapturer() {
    * la destination de trente et une pièces d'un coup.
    */
   const duPassage = useMemo(() => identifiantsDuLot(lotDemande.pieces), [lotDemande.pieces]);
-  const candidats = useMemo(() => {
-    const nonLues = (pieces.data ?? []).filter((p) => p.status === "capturee");
-    // Les pièces demandées peuvent n'être pas encore visibles de la liste (la
-    // requête est antérieure au dépôt) : on ne retombe alors pas sur tout le
-    // dossier, on attend. Un écran qui élargit tout seul la question est pire
-    // qu'un écran qui patiente.
-    return duPassage.length === 0 ? nonLues : nonLues.filter((p) => duPassage.includes(p.id));
-  }, [pieces.data, duPassage]);
+  // Les pièces demandées peuvent n'être pas encore visibles de la liste (la
+  // requête est antérieure au dépôt) : on ne retombe alors pas sur tout le
+  // dossier, on attend. Un écran qui élargit tout seul la question est pire
+  // qu'un écran qui patiente. Une pièce déjà gardée pour soi n'en est pas
+  // (G2) : `piecesDuLot` la laisse là où la personne l'a rangée.
+  const candidats = useMemo(
+    () => piecesDuLot(pieces.data ?? [], duPassage),
+    [pieces.data, duPassage],
+  );
 
   /*
    * ================================== LE LOT SE FIGE QUAND ON RÉPOND POUR LUI
@@ -454,7 +471,9 @@ function PmeCapturer() {
    * Dès qu'on quitte l'étape 0, le lot est donc une LISTE D'IDENTIFIANTS, et
    * elle ne bouge plus jusqu'à « la suivante ».
    */
-  const [fige, setFige] = useState<readonly string[] | null>(null);
+  const [fige, setFige] = useState<readonly string[] | null>(
+    lotDemande.etape !== undefined && lotDemande.etape >= 1 ? duPassage : null,
+  );
   const lot = useMemo(() => {
     if (fige === null) return candidats;
     const parId = new Map((pieces.data ?? []).map((p) => [p.id, p]));
@@ -465,6 +484,19 @@ function PmeCapturer() {
   }, [fige, candidats, pieces.data]);
 
   const retenues = useMemo(() => lot.filter((p) => !exclues.includes(p.id)), [lot, exclues]);
+  /*
+   * Reprise après rechargement (G6b) : les pièces décochées à l'étape 2 sont
+   * gardées en base, mais l'état local est perdu. Une fois, quand le lot est
+   * là, celles que la personne a gardées pour soi redeviennent « décochées » —
+   * sinon l'étape 3 les montrerait « à lire ».
+   */
+  const exclusesRetrouvees = useRef(lotDemande.etape === undefined || lotDemande.etape < 3);
+  useEffect(() => {
+    if (exclusesRetrouvees.current || fige === null || pieces.data === undefined) return;
+    exclusesRetrouvees.current = true;
+    const gardees = lot.filter((p) => p.gardeeLe).map((p) => p.id);
+    if (gardees.length > 0) setExclues(gardees);
+  }, [fige, pieces.data, lot]);
   const ids = useMemo(() => retenues.map((p) => p.id), [retenues]);
   /**
    * Les pièces du lot que la base a LUES. Vérifier, régler et envoyer ne
@@ -844,6 +876,33 @@ function PmeCapturer() {
     }
   }, [lotDemande.depart, etape, fige, candidats]);
 
+  /*
+   * ============================== « POUR MOI » S'INSCRIT DÈS QU'ON LE CHOISIT
+   *
+   * Recette du 13 novembre 2026 (G2) : une pièce « Pour moi », abandonnée à
+   * « Dans quel rayon ? », n'avait rien décidé en base (elle naît `personnel`
+   * sans `gardeeLe`) : elle revenait « à lire », la lecture la rangeait dans
+   * Achats de la société, et le comptable interne la voyait. La décision
+   * s'inscrit donc à l'arrivée sur le rayon — rangée dans « autres » par défaut
+   * (le choix d'un autre rayon la reclasse), puis gardée. Une fois par lot.
+   */
+  const rangeeParDefaut = useRef<string>("");
+  useEffect(() => {
+    if (!(etape === 1 && rayonner) || plusTard || lot.length === 0) return;
+    const cle = lot.map((p) => p.id).join(",");
+    if (rangeeParDefaut.current === cle) return;
+    rangeeParDefaut.current = cle;
+    rangements.ranger.mutate(
+      { ids: lot.map((p) => p.id), rayon: RAYON_PAR_DEFAUT, nom: null },
+      {
+        onSuccess: () => garder.mutate(lot),
+        onError: () => {
+          rangeeParDefaut.current = "";
+        },
+      },
+    );
+  }, [etape, rayonner, plusTard, lot, rangements.ranger, garder]);
+
   function reculer() {
     setARemplacer(null);
     if (plusTard) {
@@ -911,11 +970,28 @@ function PmeCapturer() {
   const plusTardPossible =
     !plusTard && (etape === 1 || etape === 2 || (etape === 0 && lot.length > 0));
 
-  const visibles = etapesVisibles(finPrivee, vide5, vide6);
-  const rangVisible =
-    visibles.indexOf(etape) >= 0
-      ? visibles.indexOf(etape) + 1
-      : Math.max(1, visibles.filter((e) => e <= etape).length);
+  const visibles = etapesVisibles(finPrivee);
+  const rangVisible = rangDeLEtape(etape, finPrivee);
+
+  /*
+   * La progression dans l'URL (G6b) : l'étape et le lot, remplacés sur place
+   * (pas d'entrée d'historique par étape). Rechargé, l'écran reprend là.
+   * Choix de l'URL plutôt que d'un stockage : elle se rejoue au rechargement
+   * et au retour, déjà portée par `pieces`, et ne dépend d'aucun stockage qui
+   * peut manquer (navigation privée, données effacées). À l'étape 0 ou à la fin
+   * (8), rien n'est à reprendre : l'étape sort de l'URL.
+   */
+  const urlCourante = useRef("");
+  useEffect(() => {
+    if (fige === null || plusTard) return;
+    const search = urlDeLaReprise(etape, fige, lotDemande);
+    const cle = JSON.stringify(search);
+    if (cle === urlCourante.current) return;
+    urlCourante.current = cle;
+    void navigate({ to: "/pme/capturer", search, replace: true });
+    // `lotDemande` n'est lu que pour le contexte (dossier, « pour moi »).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etape, fige, plusTard, navigate]);
 
   /* ── l'écran ─────────────────────────────────────────────────────────── */
 
@@ -1449,12 +1525,14 @@ function PmeCapturer() {
             s'ajoute, elle n'écrase jamais). */}
         {!plusTard && etape === 4 && enVerification ? (
           <>
-            <p className="c-rang">
-              {t("pme.capture.verif.rang", {
-                n: Math.min(verifiee, lues.length - 1) + 1,
-                total: lues.length,
-              })}
-            </p>
+            {lues.length > 1 ? (
+              <p className="c-rang">
+                {t("pme.capture.verif.rang", {
+                  n: Math.min(verifiee, lues.length - 1) + 1,
+                  total: lues.length,
+                })}
+              </p>
+            ) : null}
             <div className="c-piece">
               <button
                 type="button"

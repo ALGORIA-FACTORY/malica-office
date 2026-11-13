@@ -11,7 +11,10 @@ import { describe, expect, it } from "vitest";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
 import {
+  attendLaPersonne,
   avancementDeLaListe,
+  estUnePiece,
+  piecesCompteesDe,
   etatDeLAccueil,
   lectureEnSuspens,
   piecesALire,
@@ -177,5 +180,38 @@ describe("l'état de l'accueil", () => {
     expect(etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0 })).toBe("en_ordre");
     expect(etatDeLAccueil({ avancement: 0.5, enAttente: 2, retournees: 0 })).toBe("a_envoyer");
     expect(etatDeLAccueil({ avancement: null, enAttente: 0, retournees: 0 })).toBe("vide");
+  });
+});
+
+describe("un document joint n'est pas une pièce (recette du 13 novembre 2026, G8)", () => {
+  it("ni un reçu ou un justificatif qui accompagne, ni un document joint", () => {
+    expect(estUnePiece(piece("facture"))).toBe(true);
+    expect(estUnePiece(piece("recu", { accompagne: true }))).toBe(false);
+    expect(estUnePiece(piece("bon", { jointe: true }))).toBe(false);
+  });
+
+  it("une facture et son bon de livraison : une pièce, pas deux", () => {
+    const liste = [
+      piece("facture"),
+      piece("bon", { jointe: true }),
+      piece("recu", { accompagne: true }),
+    ];
+    expect(piecesCompteesDe(liste).map((p) => p.id)).toEqual(["facture"]);
+  });
+});
+
+describe("sans comptabilité, l'accueil n'attend aucune réponse (recette du 13 novembre 2026, G5)", () => {
+  const rangee = piece("a", { status: "lue", vis: "entite", comptabilite: false });
+
+  it("la pièce est « rangée », et rien n'attend la personne", () => {
+    expect(statutDeLaPieceLue(rangee)).toBe("rangee");
+    expect(avancementDeLaListe([rangee]).enAttente).toBe(0);
+    expect(attendLaPersonne(rangee)).toBe(false);
+  });
+
+  it("avec une comptabilité, la même pièce reste « à envoyer » et attend une réponse", () => {
+    const aEnvoyer = piece("b", { status: "lue", vis: "entite", comptabilite: true });
+    expect(statutDeLaPieceLue(aEnvoyer)).toBe("a_envoyer");
+    expect(avancementDeLaListe([aEnvoyer]).enAttente).toBe(1);
   });
 });

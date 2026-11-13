@@ -32,7 +32,25 @@ const plusRecenteDAbord = (x: PieceLue, y: PieceLue) => y.createdAt.localeCompar
  * Une pièce dont la lecture a ÉCHOUÉ n'est pas « à lire » : elle attend un
  * geste précis, et `piecesEnEchec` la porte. La plus récente d'abord.
  */
-type LigneDeLaListe = Pick<PieceLue, "vis" | "status" | "gardeeLe" | "suivi" | "circuit">;
+type LigneDeLaListe = Pick<
+  PieceLue,
+  "vis" | "status" | "gardeeLe" | "suivi" | "circuit" | "comptabilite"
+>;
+
+/**
+ * Une pièce, au sens qu'on compte : ni un reçu ou un justificatif qui
+ * accompagne, ni un document joint à sa pièce (G8, 13 novembre 2026). La
+ * comptabilité les écarte par la même règle (`EST_JOINTE`) : un seul critère.
+ */
+export const estUnePiece = (p: Pick<PieceLue, "accompagne" | "jointe">): boolean =>
+  !p.accompagne && !p.jointe;
+
+/** Ce qui se compte d'une liste : les pièces, pas leurs documents. */
+export function piecesCompteesDe<T extends Pick<PieceLue, "accompagne" | "jointe">>(
+  liste: readonly T[],
+): T[] {
+  return liste.filter(estUnePiece);
+}
 
 /** Le statut d'une pièce de la liste, côté PME (« Malica sans blocage », §2). */
 export function statutDeLaPieceLue(p: LigneDeLaListe): StatutPme {
@@ -42,6 +60,7 @@ export function statutDeLaPieceLue(p: LigneDeLaListe): StatutPme {
     gardeeLe: p.gardeeLe ?? null,
     suivi: p.suivi ?? null,
     circuit: p.circuit ?? null,
+    comptabilite: p.comptabilite ?? null,
   });
 }
 
