@@ -6,12 +6,13 @@ les importe pas.
 
 ## Fichiers
 
-| Fichier           | Surface                     | Écrans                                                             |
-| ----------------- | --------------------------- | ------------------------------------------------------------------ |
-| `malica.html`     | PME mobile 392×846          | 20 (accueil → restitution, thème Ink, arabe RTL, espace personnel) |
-| `comptable.html`  | Cabinet 2 colonnes 1320×836 | 7 — **itération antérieure, dépassée**                             |
-| `comptable2.html` | Cabinet 3 colonnes 1460×880 | 9 (onboarding → arabe RTL)                                         |
-| `comptable3.html` | Cabinet 3 colonnes 1460×880 | 16 (rapprochement → client 360)                                    |
+| Fichier                        | Surface                     | Écrans                                                                                               |
+| ------------------------------ | --------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `malica.html`                  | PME mobile 392×846          | 20 (accueil → restitution, thème Ink, arabe RTL, espace personnel)                                   |
+| `comptable.html`               | Cabinet 2 colonnes 1320×836 | 7 — **itération antérieure, dépassée**                                                               |
+| `comptable2.html`              | Cabinet 3 colonnes 1460×880 | 9 (onboarding → arabe RTL)                                                                           |
+| `comptable3.html`              | Cabinet 3 colonnes 1460×880 | 16 (rapprochement → client 360)                                                                      |
+| `pme-toutes-les-societes.html` | PME mobile + RTL            | « Toutes les sociétés » écran par écran — **proposition du 13 nov. 2026, à valider avant tout code** |
 
 **Référence cabinet = `comptable2.html` + `comptable3.html`** : grille
 nav 218px / centre / **panneau Malica 300px** permanent à droite.
