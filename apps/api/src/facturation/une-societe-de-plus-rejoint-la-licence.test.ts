@@ -49,21 +49,6 @@ const creerSociete = (db: pg.PoolClient, qui: string, nom: string) =>
     return rows[0]!.id;
   });
 
-/** Un propriétaire qui a déjà une société, sur la licence de l'offre `offre`. */
-async function proprietaire(db: pg.PoolClient, offre: string) {
-  const qui = randomUUID();
-  await personnesDEssai(db, qui);
-  const premiere = await creerSociete(db, qui, "Première société");
-  await db
-    .query(
-      `update facturation.licences set offre_code = $2
-      where id = (select licence_id from facturation.licence_organisations where tenant_id = $1)`,
-      [premiere, offre],
-    )
-    .catch(() => undefined);
-  return { qui, premiere };
-}
-
 const licencesDe = async (db: pg.PoolClient, qui: string) =>
   (
     await db.query<{ id: string; organisations: number; offre: string; prix: string }>(

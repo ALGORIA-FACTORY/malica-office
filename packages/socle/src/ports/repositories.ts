@@ -4509,9 +4509,10 @@ export interface OffreAuCatalogue {
 export interface DevisDeMontee {
   offre: string;
   ecart_mensuel_ht: number;
-  jours_restants: number;
-  jours_du_mois: number;
-  a_regler_ht: number;
+  /** Les montants à régler sont `null` quand ils ne se devinent pas (périmètre « PME » ouvert, sans émetteur). */
+  jours_restants: number | null;
+  jours_du_mois: number | null;
+  a_regler_ht: number | null;
   /** `null` tant qu'aucun émetteur n'est désigné : on ne suppose aucune TVA. */
   a_regler_tva: number | null;
   /** Le timbre seulement si la montée se règle par la facture du jour ; 0 pour un acompte. */

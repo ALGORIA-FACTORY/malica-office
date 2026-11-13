@@ -347,8 +347,9 @@ declare
   p         record;
   f         record;
   v_tva     numeric;
-  v_timbre  numeric;
+  v_devise  text;
   v_plein   numeric;
+  v_chiffre boolean;
 begin
   if v_licence is null then
     return null;   -- seul le propriétaire principal paie : il est le seul à qui on chiffre.
@@ -371,32 +372,37 @@ begin
   select * into p from facturation.montee_prorata(v_ecart, p_le);
   select m.prix_ttc into v_plein from public.mes_offres(p_tenant, p_le) m where m.code = p_offre;
 
-  -- Sans émetteur désigné, ALGORIA ne facture pas encore : le prorata hors taxe se dit, la TVA non (R4).
-  if p.ht > 0 and exists (select 1 from facturation.emetteurs e where e.valide_des <= p_le) then
+  -- Périmètre « PME » ouvert : la montée se règle par la facture du jour, sur sa période
+  -- d'avance (l'échéance de la société, pas la fin du mois civil). Le devis ne devine pas ce
+  -- montant : il ne chiffre que le prix plein, et le complément figure sur la facture.
+  -- Sans émetteur désigné, ALGORIA ne facture pas encore : pas de TVA supposée (R4).
+  v_chiffre := not plateforme.facturation_auto_ouverte('pme')
+               and p.ht > 0
+               and exists (select 1 from facturation.emetteurs e where e.valide_des <= p_le);
+  if v_chiffre then
     select * into f from facturation.fiscalite_en_vigueur(p_le);
     v_tva := round(p.ht * f.taux, 3);
-    -- Périmètre « PME » ouvert : la montée se règle par la facture du jour, qui porte son timbre
-    -- (`facturer_sur_le_champ`). Fermé : c'est un acompte, sans timbre — il est sur la facture du mois.
-    v_timbre := case when plateforme.facturation_auto_ouverte('pme') then f.timbre else 0 end;
+    v_devise := f.devise;
   end if;
   return jsonb_build_object(
     'offre', p_offre,
     'ecart_mensuel_ht', v_ecart,
-    'jours_restants', p.restants,
-    'jours_du_mois', p.jours,
-    'a_regler_ht', p.ht,
+    'jours_restants', case when v_chiffre then p.restants end,
+    'jours_du_mois', case when v_chiffre then p.jours end,
+    'a_regler_ht', case when v_chiffre then p.ht end,
     'a_regler_tva', v_tva,
-    'timbre', v_timbre,
-    'a_regler_ttc', case when v_tva is null then null else p.ht + v_tva + v_timbre end,
-    'devise', f.devise,
+    'timbre', case when v_chiffre then 0 end,
+    'a_regler_ttc', case when v_chiffre then p.ht + v_tva end,
+    'devise', v_devise,
     'prix_plein_ttc', v_plein);
 end
 $$;
 
 comment on function public.montee_devis(text, uuid, date) is
-  'Lecture seule : ce que la montée vers `p_offre` fait régler aujourd''hui (prorata, TVA du jour ; le '
-  'timbre seulement si la montée se règle par la facture du jour) et le prix plein TTC des mois suivants. Même formule que '
-  'paiement_montee_preparer ; null pour une descente, pendant l''année, ou hors titulaire.';
+  'Lecture seule : ce que la montée vers `p_offre` fait régler aujourd''hui (prorata du mois, TVA du jour, '
+  'sans timbre : un acompte) et le prix plein TTC des mois suivants. Même formule que '
+  'paiement_montee_preparer. Les montants à régler sont null quand ils ne se devinent pas (périmètre '
+  '« PME » ouvert, sans émetteur) ; null pour une descente, pendant l''année, ou hors titulaire.';
 
 revoke all on function public.montee_devis(text, uuid, date) from public, anon;
 grant execute on function public.montee_devis(text, uuid, date) to authenticated;

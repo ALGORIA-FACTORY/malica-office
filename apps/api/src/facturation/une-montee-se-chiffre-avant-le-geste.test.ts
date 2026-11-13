@@ -28,9 +28,9 @@ const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
 interface Devis {
   offre: string;
   ecart_mensuel_ht: number;
-  jours_restants: number;
-  jours_du_mois: number;
-  a_regler_ht: number;
+  jours_restants: number | null;
+  jours_du_mois: number | null;
+  a_regler_ht: number | null;
   a_regler_tva: number | null;
   timbre: number | null;
   a_regler_ttc: number | null;
@@ -112,14 +112,6 @@ const MOIS = [
 const jourDuMois = (debut: string, n: number) =>
   `${debut.slice(0, 8)}${String(n).padStart(2, "0")}`;
 
-const timbreMillimes = async (db: pg.PoolClient, le: string) => {
-  const { rows } = await db.query<{ t: string }>(
-    "select (timbre * 1000)::int::text as t from facturation.fiscalite_en_vigueur($1::date)",
-    [le],
-  );
-  return Number(rows[0]!.t);
-};
-
 describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
   after(async () => {
     await pool?.end();
@@ -179,46 +171,20 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
     });
   }
 
-  // Périmètre ouvert : la montée se règle par la facture du jour (`facturer_sur_le_champ`, qui
-  // lit l'horloge de la base) : seul « aujourd'hui » se prouve. Le complément porte son timbre,
-  // et le devis le dit.
-  // Le premier du mois, la montée remplace la facture d'avance d'un mois pas encore émise : le
-  // devis d'un jour de plein mois ne la décrit pas — INCERTAIN, à reprendre avec la tour.
-  const premier = new Date().getDate() === 1;
-  it(
-    "périmètre « PME » ouvert : le devis d'aujourd'hui est la facture du jour, timbre compris",
-    { skip: premier },
-    async () => {
-      await aBlanc(async (db) => {
-        const { rows } = await db.query<{ jour: string; mois: string; n: number; reste: number }>(
-          `select current_date::text as jour, date_trunc('month', current_date)::date::text as mois,
-                extract(day from date_trunc('month', current_date) + interval '1 month'
-                        - interval '1 day')::int as n,
-                extract(day from current_date)::int as reste`,
-        );
-        const { jour, mois, n, reste } = rows[0]!;
-        const d = await decor(db, "basic", mois);
-        await ouvrirLePerimetrePme(db, d);
-        const [ecart, taux, timbre] = [
-          (await prixMillimes(db, "team", jour)) - (await prixMillimes(db, "basic", jour)),
-          await tauxMillieme(db, jour),
-          await timbreMillimes(db, jour),
-        ];
-        const a = attendu(ecart, reste, n, taux);
-        const devis = await devisDu(db, d, "team", jour);
-        assert.ok(devis);
-        assert.equal(mm(devis.timbre), timbre);
-        assert.equal(mm(devis.a_regler_ttc), a.ht + a.tva + timbre);
-        const p = await monterLe(db, d, "team", jour);
-        assert.ok(p, "une montée prépare un paiement, périmètre ouvert");
-        assert.equal(
-          mm(p.montant_ttc),
-          mm(devis.a_regler_ttc),
-          "la facture du jour dit ce que le devis a dit",
-        );
-      });
-    },
-  );
+  // Périmètre ouvert : la montée se règle par la facture du jour, sur sa période d'avance (l'échéance
+  // de la société, pas la fin du mois civil). Le devis ne devine pas ce montant : il se tait, et ne
+  // dit que le prix plein (relevé de #381).
+  it("périmètre « PME » ouvert : le devis ne chiffre pas l'acompte, il dit le prix plein", async () => {
+    await aBlanc(async (db) => {
+      const d = await decor(db, "basic", "2026-11-01");
+      await ouvrirLePerimetrePme(db, d);
+      const devis = await devisDu(db, d, "team", "2026-11-13");
+      assert.ok(devis);
+      assert.equal(devis.a_regler_ht, null);
+      assert.equal(devis.a_regler_ttc, null);
+      assert.ok(devis.prix_plein_ttc, "le prix plein reste dit");
+    });
+  });
 
   it("le prix plein des mois suivants est celui que la grille affiche pour l'offre", async () => {
     await aBlanc(async (db) => {
