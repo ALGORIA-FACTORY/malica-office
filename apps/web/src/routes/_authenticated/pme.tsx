@@ -39,6 +39,7 @@ import {
   writeActiveOrgId,
   writeVueConsolidee,
 } from "@/lib/active-org";
+import { vueSousToutes } from "@/lib/toutes-les-societes";
 import { vidage } from "@/lib/hors-ligne";
 import { FilePleine } from "@/lib/hors-ligne/vidage";
 import { nomDeLaPersonne } from "@/lib/nom-de-la-personne";
@@ -194,21 +195,14 @@ function PmeLayout() {
     setConsolideeEtat(ouverte);
     writeVueConsolidee(ouverte);
   };
-  const societeAffichee = consolidee ? null : (org?.id ?? null);
-  /** Les écrans qui savent montrer toutes les sociétés ensemble. */
-  const ecranConsolidable =
-    path.startsWith("/pme/list") ||
-    path.startsWith("/pme/dossier") ||
-    path.startsWith("/pme/echeances") ||
-    path.startsWith("/pme/comptabilite") ||
-    // Malica sait comparer les sociétés de la personne : « Toutes les sociétés »,
-    // choisi dans l'en-tête, reste sur la conversation et lui en ouvre le périmètre.
-    path.startsWith("/pme/malica") ||
-    path.startsWith("/pme/societes");
-  // L'accueil est celui d'UNE société : y revenir quitte la vue consolidée.
-  useEffect(() => {
-    if (path === "/pme" || path === "/pme/") setConsolidee(false);
-  }, [path]);
+  // Une seule société : il n'y a pas de « Toutes » (un drapeau de session resté levé n'y change rien).
+  const societeAffichee = consolidee && pmeOrgs.length > 1 ? null : (org?.id ?? null);
+  /*
+   * Ce que chaque écran fait de « Toutes » : `lib/toutes-les-societes` (maquette du 13 novembre
+   * 2026). Plus de redirection muette : l'écran montre le consolidé, une société par ligne, ou
+   * reste tel quel. L'accueil sait lui-même se montrer consolidé.
+   */
+  const sousToutes = vueSousToutes(path);
   const afficherSociete = (id: string | null) => {
     if (id === null) {
       setConsolidee(true);
@@ -769,8 +763,7 @@ function PmeLayout() {
                    * « Toutes les sociétés » ouvre l'écran « Mes sociétés ».
                    */
                   ouverte: org.id,
-                  surMesSocietes:
-                    path.startsWith("/pme/societes") || (consolidee && ecranConsolidable),
+                  surMesSocietes: path.startsWith("/pme/societes") || consolidee,
                   /*
                    * 9 novembre 2026 : sur la bibliothèque, ses dossiers et les
                    * échéances, l'en-tête choisit ce que l'écran montre, et l'on
@@ -780,13 +773,15 @@ function PmeLayout() {
                    */
                   onOuvrir: (id: string) => {
                     afficherSociete(id);
-                    if (!ecranConsolidable || path.startsWith("/pme/societes"))
+                    if (
+                      sousToutes === "inchangee" ||
+                      sousToutes === "laSocieteDeLaPiece" ||
+                      path.startsWith("/pme/societes")
+                    )
                       void navigate({ to: "/pme" });
                   },
-                  onToutes: () => {
-                    setConsolidee(true);
-                    if (!ecranConsolidable) void navigate({ to: "/pme/societes" });
-                  },
+                  // L'écran ouvert ne change pas : il dit ce qu'il fait de « Toutes ».
+                  onToutes: () => setConsolidee(true),
                 }
               : undefined
           }

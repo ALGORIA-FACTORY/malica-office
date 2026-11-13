@@ -20,6 +20,7 @@ import { usePme } from "@/components/malica/pme-context";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod, useTvaPeriod } from "@/hooks/use-tva";
 import { Aide } from "@/components/malica/aide";
+import { UneSocieteALaFois } from "@/components/malica/societes-a-la-ligne";
 import { useI18n } from "@/i18n";
 import { moisLocal, montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -55,7 +56,11 @@ export const Route = createFileRoute("/_authenticated/pme/tva")({
       ? { mois }
       : {};
   },
-  component: PmeTva,
+  component: () => (
+    <UneSocieteALaFois>
+      <PmeTva />
+    </UneSocieteALaFois>
+  ),
 });
 
 /**

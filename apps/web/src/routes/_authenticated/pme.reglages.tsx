@@ -32,6 +32,7 @@ import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
 import { useSuperposition } from "@/hooks/use-superposition";
 import { plier } from "@/lib/mes-societes";
+import { SocietesALaLigne } from "@/components/malica/societes-a-la-ligne";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres, quantite } from "@/lib/lisible";
@@ -308,7 +309,12 @@ function PmeReglages() {
         </>
       ) : null}
 
-      {page === "abonnement" && COMMERCE ? (
+      {/* Sous « Toutes les sociétés » : l'abonnement est celui d'UNE société, on la choisit. */}
+      {page === "abonnement" && COMMERCE && pme.societeAffichee === null ? (
+        <SocietesALaLigne note="pme.toutes.parSociete" mode="ouvrir" />
+      ) : null}
+
+      {page === "abonnement" && COMMERCE && pme.societeAffichee !== null ? (
         <>
           {/* ─────────────────────────────────────────────── l'abonnement */}
           {/* « Mon abonnement » s'ouvre ici depuis l'accueil (`#mon-abonnement`). */}
