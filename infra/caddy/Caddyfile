@@ -19,6 +19,7 @@
 	@api {
 		path /rpc /rpc/* /moi /moi/* /sante /sante/* /pieces /pieces/*
 		path /journal-atelier /journal-atelier/* /malica/* /auth/* /exports/*
+		path /impressions /impressions/*
 	}
 
 	# Une lecture par Malica peut durer des minutes.

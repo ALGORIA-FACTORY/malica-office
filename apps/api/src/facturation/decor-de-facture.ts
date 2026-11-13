@@ -74,7 +74,12 @@ async function uneOrganisation(db: pg.PoolClient, kind: string, nom: string): Pr
 }
 
 /** Une PME dont la licence est née le premier du mois, à l'offre `offre`, et un émetteur. */
-export async function decor(db: pg.PoolClient, offre: string): Promise<Decor> {
+export async function decor(
+  db: pg.PoolClient,
+  offre: string,
+  /** Le jour où la licence naît sur cette offre ; le premier du mois en cours par défaut. */
+  depuis?: string,
+): Promise<Decor> {
   const [operateur, titulaire] = [randomUUID(), randomUUID()];
   await personnesDEssai(db, operateur, titulaire);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
@@ -114,7 +119,7 @@ export async function decor(db: pg.PoolClient, offre: string): Promise<Decor> {
   await db.query(
     `insert into facturation.licences (id, titulaire, offre_code, offre_depuis)
      values ($1, $2, $3, $4::date)`,
-    [licence, titulaire, offre, d[0]!.mois],
+    [licence, titulaire, offre, depuis ?? d[0]!.mois],
   );
   await db.query(
     "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",

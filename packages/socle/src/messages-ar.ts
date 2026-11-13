@@ -4205,6 +4205,13 @@ export const ar: Dict = {
   "pme.reglages.recharges.auto.palier": "الرصيد",
   "pme.reglages.recharges.auto.plafond": "السقف الشهري (دون الأداء)",
   "pme.reglages.recharges.auto.activer": "تفعيل",
+  "pme.reglages.recharges.auto.besoinPlafond":
+    "لتفعيل الشحن التلقائي، اختاروا فئة وحدّدوا سقفًا شهريًا.",
+  "pme.reglages.paiement.nonAbouti": "لم يكتمل الدفع — أعيدوا المحاولة",
+  "pme.reglages.offres.devis":
+    "المبلغ المستحق الآن: {ttc} {devise} مع الأداء، عن آخر {jours} أيام من شهر من {total} يومًا. ثم {plein} {devise} شهريًا مع الأداء والطابع.",
+  "pme.reglages.offres.devis.timbre":
+    "المبلغ المستحق الآن: {ttc} {devise} مع الأداء والطابع، عن آخر {jours} أيام من شهر من {total} يومًا. ثم {plein} {devise} شهريًا مع الأداء والطابع.",
   "pme.reglages.recharges.auto.arreter": "إيقاف",
   "pme.reglages.recharges.auto.active": "مفعّل: {palier}، حتى {plafond} {devise} دون الأداء شهريا.",
   "pme.reglages.recharges.auto.inactive": "غير مفعّل.",
@@ -5075,6 +5082,9 @@ export const ar: Dict = {
   "cab.cli.abo.regle":
     "لا يرى المسيّر السعر أبداً. يمكنه الترقية على حسابه، ولا يمكنه النزول تحت اختياركم.",
   "cab.cli.abo.proposer": "اقتراح هذا العرض",
+  "cab.cli.abo.effet.prise_en_charge":
+    "ارتقى إلى {offre} على حسابه. عند تحمّلكم لها، يستمرّ ما دفعه مسبقًا إلى أجله، ثم تدفعون العرض كاملًا.",
+  "cab.cli.abo.prendre": "تحمّل {offre}",
   "cab.cli.abo.appliquer": "تطبيق",
   "cab.cli.abo.demander": "طلب التخفيض",
   "cab.cli.abo.retirer": "سحب الاقتراح",

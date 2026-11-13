@@ -25,7 +25,7 @@ import {
   useCatalogueDesOffres,
 } from "@/hooks/use-offres";
 import { useI18n, type MessageKey } from "@/i18n";
-import { dateEnLettres, montant } from "@/lib/lisible";
+import { dateEnLettres, montant, montantEtDevise, quantite } from "@/lib/lisible";
 import { ETAT_DE_FACTURE, libelleDuPaiement } from "@/lib/paiement";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { sommeDecimale } from "@malica/socle/somme-decimale";
@@ -338,6 +338,14 @@ export function ChangerDOffre() {
   });
   const [armee, setArmee] = useState<string | null>(null);
   const [retour, setRetour] = useState<string | null>(null);
+  // Le devis se lit au premier geste, avant que le second n'engage : la base le calcule
+  // avec la formule de la préparation du paiement, l'écran ne calcule rien (R3).
+  const devis = useQuery({
+    queryKey: ["devis-de-montee", pme.tenantId, armee],
+    queryFn: () => office().facturation.monteeDevis(armee!, pme.tenantId),
+    enabled: principal && armee !== null,
+    retry: false,
+  });
 
   const changer = useMutation({
     mutationFn: (code: string) => office().facturation.changerForfait(code, pme.tenantId),
@@ -365,7 +373,7 @@ export function ChangerDOffre() {
     );
   }
 
-  const entier = (n: number) => new Intl.NumberFormat(locale).format(n);
+  const entier = (n: number) => quantite(String(n), locale);
   // La comptabilité a choisi l'abonnement : les prix montrés sont le seul
   // complément que la société paierait elle-même (décision du 8 novembre 2026).
   const comptabilite = pme.forfait.ligne?.pris_en_charge_par ?? null;
@@ -421,6 +429,24 @@ export function ChangerDOffre() {
                     prix: aLEchelle(o.prix_ttc),
                     devise: pme.currency,
                   })}
+                </p>
+              ) : null}
+              {armee === o.code &&
+              devis.data?.a_regler_ttc != null &&
+              devis.data.prix_plein_ttc != null ? (
+                <p className="t-body" data-devis-de-montee aria-live="polite">
+                  {t(
+                    (devis.data.timbre ?? 0) > 0
+                      ? "pme.reglages.offres.devis.timbre"
+                      : "pme.reglages.offres.devis",
+                    {
+                      ttc: aLEchelle(devis.data.a_regler_ttc),
+                      jours: String(devis.data.jours_restants),
+                      total: String(devis.data.jours_du_mois),
+                      plein: aLEchelle(devis.data.prix_plein_ttc),
+                      devise: devis.data.devise ?? pme.currency,
+                    },
+                  )}
                 </p>
               ) : null}
               {o.empechement ? (
@@ -498,7 +524,9 @@ export function PayerALAnnee() {
       <div className="card abo">
         <div className="nm">
           <b>{t("pme.reglages.annuel.enCours")}</b>
-          <span className="px">{`${aLEchelle(a.en_cours.montant_ht)} ${pme.currency}`}</span>
+          <span className="px">
+            {montantEtDevise(aLEchelle(a.en_cours.montant_ht), pme.currency)}
+          </span>
         </div>
         <p className="t-body">
           {t("pme.reglages.annuel.enCours.sous", {
@@ -724,7 +752,7 @@ export function MesRecharges() {
             aria-pressed={choisi?.code === p.code}
             onClick={() => setPalier(p.code)}
           >
-            <b>{new Intl.NumberFormat(locale).format(p.lectures)}</b>
+            <b>{quantite(String(p.lectures), locale)}</b>
             <span>{t("pme.reglages.recharges.lectures")}</span>
             <em>
               {t("pme.reglages.recharges.prix", {
@@ -780,14 +808,15 @@ export function MesRecharges() {
               </option>
             ))}
           </select>
-          <input
-            inputMode="decimal"
-            value={plafond}
-            onChange={(e) => setPlafond(e.target.value)}
-            placeholder={t("pme.reglages.recharges.auto.plafond")}
-            aria-label={t("pme.reglages.recharges.auto.plafond")}
-            className={champ}
-          />
+          <label className="grid gap-1 t-body">
+            <span>{t("pme.reglages.recharges.auto.plafond")}</span>
+            <input
+              inputMode="decimal"
+              value={plafond}
+              onChange={(e) => setPlafond(e.target.value)}
+              className={champ}
+            />
+          </label>
           <button
             type="button"
             className="btn"
@@ -797,6 +826,11 @@ export function MesRecharges() {
           >
             {t("pme.reglages.recharges.auto.activer")}
           </button>
+          {palierAuto === "" || plafond.trim() === "" ? (
+            <p className="t-body" data-besoin-plafond>
+              {t("pme.reglages.recharges.auto.besoinPlafond")}
+            </p>
+          ) : null}
           {auto.data?.active ? (
             <button
               type="button"
@@ -978,10 +1012,13 @@ export function ARegler() {
       {ouverts.map((p) => (
         <div key={p.paiement_id} className="ln" data-paiement={p.paiement_id}>
           <b>{libelleDuPaiement(p, t)}</b>
-          <span className="mt">
-            {montant(p.montant_ttc, locale)} {p.devise}
-          </span>
+          <span className="mt">{montantEtDevise(montant(p.montant_ttc, locale), p.devise)}</span>
           {/* Le verdict qu'on vient de recevoir se dit une fois, sous la carte. */}
+          {p.etat === "non_abouti" ? (
+            <p className="warn" data-non-abouti>
+              {t("pme.reglages.paiement.nonAbouti")}
+            </p>
+          ) : null}
           {p.etat === "refuse" && !(retour && revenu === p.paiement_id) ? (
             <p className="warn">{t("pme.reglages.paiement.refuse")}</p>
           ) : null}
@@ -1108,7 +1145,7 @@ export function MesFactures() {
               </button>
             ) : (
               <span className="mt">
-                {montant(f.montant_ttc, locale)} {f.devise}
+                {montantEtDevise(montant(f.montant_ttc, locale), f.devise)}
               </span>
             )}
           </div>

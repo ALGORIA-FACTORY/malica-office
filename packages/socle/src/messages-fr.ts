@@ -4506,6 +4506,13 @@ export const fr = {
   "pme.reglages.recharges.auto.palier": "Palier",
   "pme.reglages.recharges.auto.plafond": "Plafond par mois (HT)",
   "pme.reglages.recharges.auto.activer": "Activer",
+  "pme.reglages.recharges.auto.besoinPlafond":
+    "Pour activer la recharge automatique, choisissez un palier et indiquez un plafond par mois.",
+  "pme.reglages.paiement.nonAbouti": "Paiement non abouti — réessayer",
+  "pme.reglages.offres.devis":
+    "À régler maintenant : {ttc} {devise} TTC, pour les {jours} derniers jours du mois sur {total}. Ensuite : {plein} {devise} TTC par mois, TVA et timbre compris.",
+  "pme.reglages.offres.devis.timbre":
+    "À régler maintenant : {ttc} {devise} TTC, timbre compris, pour les {jours} derniers jours du mois sur {total}. Ensuite : {plein} {devise} TTC par mois, TVA et timbre compris.",
   "pme.reglages.recharges.auto.arreter": "Arrêter",
   "pme.reglages.recharges.auto.active":
     "Active : {palier}, jusqu'à {plafond} {devise} HT par mois.",
@@ -5510,6 +5517,9 @@ export const fr = {
   "cab.cli.abo.regle":
     "Le dirigeant ne voit jamais le prix. Il peut monter à sa charge, jamais descendre sous votre choix.",
   "cab.cli.abo.proposer": "Proposer cette offre",
+  "cab.cli.abo.effet.prise_en_charge":
+    "Il est monté à sa charge vers {offre}. En la prenant en charge, ce qu'il a réglé d'avance court jusqu'à son terme, puis vous payez l'offre en entier.",
+  "cab.cli.abo.prendre": "Prendre en charge {offre}",
   "cab.cli.abo.appliquer": "Appliquer",
   "cab.cli.abo.demander": "Demander la descente",
   "cab.cli.abo.retirer": "Retirer la proposition",

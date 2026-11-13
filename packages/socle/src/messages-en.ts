@@ -4377,6 +4377,13 @@ export const en: Dict = {
   "pme.reglages.recharges.auto.palier": "Top-up",
   "pme.reglages.recharges.auto.plafond": "Monthly cap (excl. VAT)",
   "pme.reglages.recharges.auto.activer": "Turn on",
+  "pme.reglages.recharges.auto.besoinPlafond":
+    "To turn on automatic top-ups, choose a tier and enter a monthly cap.",
+  "pme.reglages.paiement.nonAbouti": "Payment not completed — try again",
+  "pme.reglages.offres.devis":
+    "Due now: {ttc} {devise} incl. VAT, for the last {jours} days of the {total}-day month. Then {plein} {devise} per month incl. VAT and stamp duty.",
+  "pme.reglages.offres.devis.timbre":
+    "Due now: {ttc} {devise} incl. VAT and stamp duty, for the last {jours} days of the {total}-day month. Then {plein} {devise} per month incl. VAT and stamp duty.",
   "pme.reglages.recharges.auto.arreter": "Turn off",
   "pme.reglages.recharges.auto.active":
     "On: {palier}, up to {plafond} {devise} excl. VAT per month.",
@@ -5291,6 +5298,9 @@ export const en: Dict = {
   "cab.cli.abo.regle":
     "The owner never sees the price. They can upgrade at their own cost, never go below your choice.",
   "cab.cli.abo.proposer": "Offer this plan",
+  "cab.cli.abo.effet.prise_en_charge":
+    "They upgraded to {offre} at their own cost. Taking it over, what they prepaid runs to its end, then you pay the full plan.",
+  "cab.cli.abo.prendre": "Take over {offre}",
   "cab.cli.abo.appliquer": "Apply",
   "cab.cli.abo.demander": "Request the downgrade",
   "cab.cli.abo.retirer": "Withdraw the offer",

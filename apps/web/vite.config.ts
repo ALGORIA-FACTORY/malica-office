@@ -10,7 +10,7 @@
  * Ici, chaque greffon est nommé, son ordre est visible, et la cible n'est plus
  * décidée par un tiers.
  */
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -130,6 +130,31 @@ export default defineConfig(({ mode }) => {
                     recursive: true,
                     force: true,
                   });
+                },
+              },
+            },
+            /*
+             * Le tampon des écrans : la version du dépôt, celle que
+             * `versionClient()` affiche (« Écrans x.y.z »), écrite dans le
+             * bundle lui-même. `outils/ecrans-embarques.mjs` le relit dans
+             * l'AAB, l'APK de l'émulateur et le bundle Capgo, et échoue s'il
+             * diffère de `package.json` : un APK dont les écrans sont plus
+             * anciens que le site ne part plus. Même source que le `define`
+             * ci-dessus ; `versionName` Gradle (la version NATIVE) n'y entre pas.
+             */
+            {
+              name: "malica:tampon-des-ecrans",
+              apply: "build" as const,
+              closeBundle: {
+                order: "post" as const,
+                sequential: true,
+                handler() {
+                  const sortie = new URL("./.output/public/", import.meta.url);
+                  mkdirSync(sortie, { recursive: true });
+                  writeFileSync(
+                    new URL("ecrans.json", sortie),
+                    `${JSON.stringify({ ecrans: VERSION })}\n`,
+                  );
                 },
               },
             },
