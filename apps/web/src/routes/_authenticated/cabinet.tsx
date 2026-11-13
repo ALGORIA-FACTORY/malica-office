@@ -262,6 +262,10 @@ function Coquille({
   const clients = useQuery({
     queryKey: ["cab-clients", org.id],
     queryFn: () => office().supervision.listClients(org.id),
+    // Une société peut révoquer son mandat depuis un autre poste : l'en-tête
+    // (« N sociétés clientes ») se relit toutes les trente secondes, onglet
+    // visible, au lieu de rester faux jusqu'au prochain focus (13 novembre 2026, D1).
+    refetchInterval: 30_000,
   });
   const queue = useQuery({
     queryKey: ["cab-queue", org.id],
