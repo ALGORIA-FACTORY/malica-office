@@ -896,9 +896,10 @@ function PmeCapturer() {
       { ids: lot.map((p) => p.id), rayon: RAYON_PAR_DEFAUT, nom: null },
       {
         onSuccess: () => garder.mutate(lot),
-        onError: () => {
-          rangeeParDefaut.current = "";
-        },
+        // Un échec reste verrouillé : sans cela, l'état d'erreur de la mutation
+        // relancerait l'effet, et la requête, sans fin. Il se dit, et le choix
+        // d'un rayon (qui range lui-même) reste le geste de reprise.
+        onError: echoue,
       },
     );
   }, [etape, rayonner, plusTard, lot, rangements.ranger, garder]);
