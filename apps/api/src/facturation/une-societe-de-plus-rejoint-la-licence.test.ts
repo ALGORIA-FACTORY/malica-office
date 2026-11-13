@@ -129,6 +129,69 @@ describe("une société de plus rejoint la licence de son propriétaire", { skip
     });
   });
 
+  // Revue de #388 : la licence qui accueille n'est pas forcément celle de la société ouverte. Le devis
+  // de l'écran lit la MÊME règle que la porte qui rattache.
+  it("le devis dit la licence qui accueille vraiment la société, celle que la porte choisit", async () => {
+    await aBlanc(async (db) => {
+      const qui = randomUUID();
+      await personnesDEssai(db, qui);
+      await creerSociete(db, qui, "Première société"); // Basic, pleine (une société)
+      const seconde = await creerSociete(db, qui, "Seconde société"); // sa propre licence Basic
+      await enPremium(db, qui, seconde);
+      const g = await grille(db, "premium");
+
+      const devis = await enPersonne(db, qui, async () => {
+        const { rows } = await db.query<{
+          r: {
+            offre: string;
+            organisations: number;
+            organisations_incluses: number;
+            prix_organisation_sup: string;
+          } | null;
+        }>("select public.societe_en_plus_devis() as r");
+        return rows[0]!.r;
+      });
+      assert.ok(devis, "une licence accueille");
+      assert.equal(
+        devis.offre,
+        "premium",
+        "le Premium, pas la licence Basic de la première société",
+      );
+      assert.equal(devis.organisations, 1);
+      assert.equal(devis.organisations_incluses, g.incluses);
+      assert.equal(Number(devis.prix_organisation_sup), Number(g.sup));
+
+      const troisieme = await creerSociete(db, qui, "Troisième société");
+      const { rows } = await db.query<{ offre: string }>(
+        `select d.offre_code as offre
+           from facturation.licence_organisations lo
+           join facturation.droits_v d on d.licence_id = lo.licence_id
+          where lo.tenant_id = $1`,
+        [troisieme],
+      );
+      assert.equal(
+        rows[0]!.offre,
+        devis.offre,
+        "la porte rattache à la licence que le devis a dite",
+      );
+    });
+  });
+
+  it("aucune licence n'accueille : le devis est vide, la société aura sa propre licence", async () => {
+    await aBlanc(async (db) => {
+      const qui = randomUUID();
+      await personnesDEssai(db, qui);
+      await creerSociete(db, qui, "Première société"); // Basic : une société, plafond atteint
+      const devis = await enPersonne(db, qui, async () => {
+        const { rows } = await db.query<{ r: unknown }>(
+          "select public.societe_en_plus_devis() as r",
+        );
+        return rows[0]!.r;
+      });
+      assert.equal(devis, null);
+    });
+  });
+
   it("une offre à une société (Basic) : la seconde naît sur sa propre licence, comme avant", async () => {
     await aBlanc(async (db) => {
       const qui = randomUUID();

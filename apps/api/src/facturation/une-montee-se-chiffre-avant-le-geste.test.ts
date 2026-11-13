@@ -16,15 +16,19 @@
  *     --test src/facturation/une-montee-se-chiffre-avant-le-geste.test.ts
  */
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+
+import { personnesDEssai } from "../personne-d-essai.ts";
 
 import {
   decor,
   enPersonne,
   facturesDAvance,
   ouvrirLePerimetrePme,
+  prix,
   type Decor,
 } from "./decor-de-facture.ts";
 
@@ -253,6 +257,55 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
       });
     }
     assert.ok(chiffres >= 28, `le devis chiffre presque toutes les ancres (${chiffres}/31)`);
+  });
+
+  // Les places en plus déjà payées sont couvertes : le complément n'est pas l'écart des prix de base
+  // (revue de #388). Team + 3 collaborateurs → Premium : le devis égale la facture émise.
+  it("périmètre « PME » ouvert, avec des places en plus déjà payées : le devis est la facture complément émise", async () => {
+    await aBlanc(async (db) => {
+      const { rows: n } = await db.query<{ naissance: string }>(
+        "select (current_date - 9)::text as naissance",
+      );
+      const d = await decor(db, "team", n[0]!.naissance);
+      const collaborateurs = [randomUUID(), randomUUID(), randomUUID()];
+      await personnesDEssai(db, ...collaborateurs);
+      for (const c of collaborateurs) {
+        await db.query(
+          "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
+          [d.tenant, c],
+        );
+      }
+      await ouvrirLePerimetrePme(db, d);
+      await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+      const [base] = await facturesDAvance(db, d.licence);
+      assert.ok(base, "une facture d'avance couvre le jour");
+      const prixTeam = await prix(db, "team");
+      assert.ok(
+        base.part_mensuelle_ht > prixTeam,
+        `des places en plus sont payées (${base.part_mensuelle_ht} > ${prixTeam})`,
+      );
+      const { rows: j } = await db.query<{ aujourdhui: string }>(
+        "select (now() at time zone plateforme.fuseau_de_la_plateforme())::date::text as aujourdhui",
+      );
+      const devis = await devisDu(db, d, "premium", j[0]!.aujourdhui);
+      assert.ok(devis);
+      await enPersonne(db, d.titulaire, () =>
+        db.query("select public.forfait_changer('premium', $1, $2::date)", [
+          d.tenant,
+          j[0]!.aujourdhui,
+        ]),
+      );
+      await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+      const { rows: c } = await db.query<{ ht: string; ttc: string }>(
+        `select montant_ht::text as ht, montant_ttc::text as ttc
+           from facturation.factures
+          where licence_id = $1 and nature = 'complement' and avoir_de is null`,
+        [d.licence],
+      );
+      assert.equal(c.length, 1, "la montée émet un complément");
+      assert.equal(mm(devis.a_regler_ht), mm(c[0]!.ht), "HT");
+      assert.equal(mm(devis.a_regler_ttc), mm(c[0]!.ttc), "TTC");
+    });
   });
 
   it("périmètre « PME » ouvert, sans facture d'avance qui couvre le jour : le devis se tait, il dit le prix plein", async () => {

@@ -4214,6 +4214,14 @@ export interface PrixEnPlus {
   organisations_incluses: number;
 }
 
+/** Ce que dit « Ajouter une société » avant le geste : la licence qui l'accueillerait. */
+export interface SocieteEnPlusDevis {
+  offre: string;
+  organisations: number;
+  organisations_incluses: number;
+  prix_organisation_sup: string;
+}
+
 export interface MonForfait {
   /** `basic` · `solo` · `team` · `premium` — un CODE, jamais traduit. */
   offre: string | null;
@@ -4300,6 +4308,8 @@ export interface FacturationRepository {
   monForfait(tenantId?: string): Promise<MonForfait | null>;
   /** Le prix d'une place et d'une société en plus ; `null` à qui n'est pas titulaire. */
   mesPrixEnPlus(tenantId: string): Promise<PrixEnPlus | null>;
+  /** La licence qui accueillerait une société de plus ; `null` : elle aura sa propre licence. */
+  societeEnPlusDevis(): Promise<SocieteEnPlusDevis | null>;
   /** Les sièges vus depuis la société ouverte (`tenantId`) ; sans elle, ceux de mes licences. */
   sieges(tenantId?: string): Promise<SiegeDeLaLicence[]>;
   /** Les sociétés de la licence qui couvre la société ouverte, elle en tête. */

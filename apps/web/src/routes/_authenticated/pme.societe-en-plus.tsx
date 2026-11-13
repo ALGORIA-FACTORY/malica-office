@@ -10,7 +10,7 @@
  * les sociétés qu'elle comprend, le prix d'une société en plus (`mes_prix_en_plus`). Sur la
  * coque Android, aucune ligne d'offre ni de prix : elle ne vend rien.
  */
-import { useQueryClient } from "@tanstack/react-query";
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -18,7 +18,6 @@ import { COMMERCE } from "@/capabilities/coque";
 import { usePme } from "@/components/malica/pme-context";
 import { usePrix } from "@/hooks/use-decimales";
 import { libelleDOffre, useCatalogueDesOffres } from "@/hooks/use-offres";
-import { usePrixEnPlus } from "@/hooks/use-prix-en-plus";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { ligneDeLaSocieteEnPlus } from "@/lib/societe-en-plus";
@@ -37,7 +36,11 @@ function SocieteEnPlus() {
   const pme = usePme();
   const aLEchelle = usePrix();
   const catalogue = useCatalogueDesOffres().data;
-  const prixEnPlus = usePrixEnPlus(pme.tenantId);
+  const accueil = useQuery({
+    queryKey: ["societe-en-plus-devis"],
+    // `__COMMERCE__` : l'appel disparaît du paquet de la coque, qui ne vend rien.
+    queryFn: __COMMERCE__ ? () => office().facturation.societeEnPlusDevis() : skipToken,
+  });
 
   const [matricule, setMatricule] = useState("");
   const [nom, setNom] = useState("");
@@ -48,28 +51,30 @@ function SocieteEnPlus() {
   const retour = () => void navigate({ to: "/pme/reglages", search: { page: "societes" } });
 
   /**
-   * Ce que la base a déjà dit de la licence, composé en une phrase. Rien n'est calculé ici :
-   * « n sur m » et le prix viennent de la licence et de la grille ; un chiffre absent n'est
-   * pas dit (jamais « 0 »).
+   * Ce que la base dit de la licence qui accueillerait la société — pas celle de la société
+   * ouverte, qui n'est pas forcément celle-là (un propriétaire de plusieurs licences). Rien n'est
+   * calculé ici ; tant que la base n'a pas répondu, aucune phrase.
    */
   const ligne = (() => {
-    const f = pme.forfait.ligne;
-    if (!COMMERCE || !f?.offre || f.titulaire !== true) return null;
-    const offre = libelleDOffre(catalogue, f.offre);
-    const l = ligneDeLaSocieteEnPlus(
-      f.organisations === null ? null : Number(f.organisations),
-      catalogue?.find((o) => o.code === f.offre)?.organisations_incluses ?? null,
-      prixEnPlus.data?.prix_organisation_sup ?? null,
-    );
+    if (!COMMERCE || accueil.data === undefined) return null;
+    const l = ligneDeLaSocieteEnPlus(accueil.data);
     switch (l.cle) {
       case "pme.societe.rejointInclus":
-        return t(l.cle, { offre, n: String(l.n), total: String(l.total) });
+        return t(l.cle, {
+          offre: libelleDOffre(catalogue, l.offre),
+          n: String(l.n),
+          total: String(l.total),
+        });
       case "pme.societe.rejointEnPlus":
-        return t(l.cle, { offre, prix: aLEchelle(l.prix), devise: pme.currency });
+        return t(l.cle, {
+          offre: libelleDOffre(catalogue, l.offre),
+          prix: aLEchelle(l.prix),
+          devise: pme.currency,
+        });
       case "pme.societe.propreAbonnement":
         return t(l.cle);
       case "pme.societe.rejoint":
-        return t(l.cle, { offre });
+        return t(l.cle, { offre: libelleDOffre(catalogue, l.offre) });
     }
   })();
 

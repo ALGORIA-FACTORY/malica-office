@@ -17,10 +17,14 @@
 --  avec (début, fin) = `facturation.echeance_de(ancre, aujourd'hui)`, l'ancre
 --  étant celle de la facture d'avance qui couvre le jour.
 --
+--  Le complément porte le tarif TOTAL de la nouvelle offre (places et sociétés en plus aux
+--  occupations du jour) moins ce que les factures d'avance couvrent déjà.
+--
 --  Ce que le devis NE chiffre PAS, et dit en se taisant : un jour qui n'est
 --  pas celui de la base (la facture du jour est datée de l'horloge de la base),
 --  une société sans facture d'avance qui la couvre (la première émission
---  facture la base, pas un complément), une année en cours (déjà exclue).
+--  facture la base, pas un complément), une année en cours (déjà exclue), un accès payé par une comptabilité ou une offre
+--  gardée (la part de la PME n'est plus le tarif total).
 --  Un chiffre faux est pire que pas de chiffre.
 --
 --  REJEU (R11) : aucune donnée de référence écrite ; le corps d'une fonction
@@ -48,6 +52,9 @@ declare
   v_jour    date := (now() at time zone plateforme.fuseau_de_la_plateforme())::date;
   p         record;
   v_ech     record;
+  v_o       record;
+  v_sieges  integer;
+  v_orgs    integer;
   f         record;
   v_ht      numeric;
   v_restants integer;
@@ -83,7 +90,12 @@ begin
     v_ht := p.ht;
     v_restants := p.restants;
     v_jours := p.jours;
-  elsif p_le = v_jour then
+  elsif p_le = v_jour
+        and not coalesce(v_avant.garde_jusqu_au > p_le, false)
+        and not exists (select 1 from facturation.acces a
+                         where a.licence_id = v_licence and a.canal = 'cabinet'
+                           and a.effet_du is not null and a.effet_du <= p_le
+                           and (a.effet_au is null or a.effet_au > p_le)) then
     -- La facture d'avance qui couvre le jour donne l'ancre de l'échéance.
     select x.ancre into v_ancre
       from facturation.factures x
@@ -94,11 +106,24 @@ begin
        and x.couvre_du <= p_le and x.couvre_au > p_le
      order by x.couvre_au desc
      limit 1;
-    if v_ancre is not null and v_ecart > 0 then
-      select * into v_ech from facturation.echeance_de(v_ancre, p_le);
-      v_restants := v_ech.fin - p_le;
-      v_jours := v_ech.fin - v_ech.debut;
-      v_ht := round(v_ecart * v_restants / v_jours, 3);
+    if v_ancre is not null then
+      -- Le complément facture le tarif TOTAL de la nouvelle offre (places et sociétés en plus
+      -- comprises, aux occupations d'aujourd'hui) moins ce que les factures d'avance couvrent
+      -- déjà : le même calcul que `facturation_du_titulaire`, pas l'écart des seuls prix de base.
+      select d.sieges_occupes, d.organisations into v_sieges, v_orgs
+        from facturation.droits_reels_v d where d.licence_id = v_licence;
+      select * into v_o from ref.offre_a(p_offre, p_le);
+      v_ecart := greatest(0,
+        v_o.prix_mensuel_ht
+        + v_o.prix_siege_sup * greatest(0, coalesce(v_sieges, 0) - v_o.sieges_inclus)
+        + v_o.prix_organisation_sup * greatest(0, coalesce(v_orgs, 0) - v_o.organisations_incluses)
+        - facturation.tarif_couvert_le(v_licence, p_le));
+      if v_ecart > 0 then
+        select * into v_ech from facturation.echeance_de(v_ancre, p_le);
+        v_restants := v_ech.fin - p_le;
+        v_jours := v_ech.fin - v_ech.debut;
+        v_ht := round(v_ecart * v_restants / v_jours, 3);
+      end if;
     end if;
   end if;
 

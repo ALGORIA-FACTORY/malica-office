@@ -2,35 +2,39 @@ import { describe, expect, it } from "vitest";
 
 import { ligneDeLaSocieteEnPlus } from "../societe-en-plus";
 
+const premium = (organisations: number, prix = "29.000") => ({
+  offre: "premium",
+  organisations,
+  organisations_incluses: 2,
+  prix_organisation_sup: prix,
+});
+
 describe("la société en plus se dit avant le geste", () => {
-  it("dans l'inclus : « n sur m », où n compte la nouvelle", () => {
-    expect(ligneDeLaSocieteEnPlus(1, 2, "29.000")).toEqual({
+  it("dans l'inclus de la licence d'accueil : « n sur m », où n compte la nouvelle", () => {
+    expect(ligneDeLaSocieteEnPlus(premium(1))).toEqual({
       cle: "pme.societe.rejointInclus",
+      offre: "premium",
       n: 2,
       total: 2,
     });
   });
 
   it("au-delà de l'inclus : le prix de la grille, tel quel", () => {
-    expect(ligneDeLaSocieteEnPlus(2, 2, "29.000")).toEqual({
+    expect(ligneDeLaSocieteEnPlus(premium(2))).toEqual({
       cle: "pme.societe.rejointEnPlus",
+      offre: "premium",
       prix: "29.000",
     });
   });
 
-  it("au-delà de l'inclus sans prix lu, ou à prix nul : rien d'inventé", () => {
-    expect(ligneDeLaSocieteEnPlus(2, 2, null)).toEqual({ cle: "pme.societe.rejoint" });
-    expect(ligneDeLaSocieteEnPlus(2, 2, "0.000")).toEqual({ cle: "pme.societe.rejoint" });
-  });
-
-  it("une offre à une société : la nouvelle a son propre abonnement", () => {
-    expect(ligneDeLaSocieteEnPlus(1, 1, "29.000")).toEqual({
-      cle: "pme.societe.propreAbonnement",
+  it("au-delà de l'inclus à prix nul : rien d'inventé", () => {
+    expect(ligneDeLaSocieteEnPlus(premium(2, "0.000"))).toEqual({
+      cle: "pme.societe.rejoint",
+      offre: "premium",
     });
   });
 
-  it("un chiffre pas lu n'est pas dit comme un zéro", () => {
-    expect(ligneDeLaSocieteEnPlus(null, 2, "29.000")).toEqual({ cle: "pme.societe.rejoint" });
-    expect(ligneDeLaSocieteEnPlus(1, null, "29.000")).toEqual({ cle: "pme.societe.rejoint" });
+  it("aucune licence ne l'accueille : la société aura sa propre licence", () => {
+    expect(ligneDeLaSocieteEnPlus(null)).toEqual({ cle: "pme.societe.propreAbonnement" });
   });
 });
