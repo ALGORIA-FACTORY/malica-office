@@ -20,6 +20,8 @@ export function useLaPlusBasseDesLectures(actif: boolean) {
       staleTime: 5 * 60 * 1000,
     })),
   });
+  // Désactivée, une requête garde ses données en cache : hors « Toutes », on ne les lit pas.
+  if (!actif) return null;
   return laPlusBasse(
     pme.dossiers.map((d, i) => ({
       id: d.id,
