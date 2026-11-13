@@ -1324,6 +1324,15 @@ export function LeMandat({
         qc.invalidateQueries({ queryKey: ["abonnements-pour-moi", tenantId] }),
         qc.invalidateQueries({ queryKey: [CLE_FORFAIT, tenantId] }),
         qc.invalidateQueries({ queryKey: [CLE_FORFAIT, "fiches-des-societes"] }),
+        /*
+         * L'en-tête de la comptabilité (« TN · 1 société cliente ») et ses clients
+         * se relisaient au bout de trente secondes : une comptabilité qui
+         * ouvre l'application dans la foulée voyait encore le mandat révoqué
+         * (13 novembre 2026, D1).
+         */
+        qc.invalidateQueries({ queryKey: ["cab-clients"] }),
+        qc.invalidateQueries({ queryKey: ["cab-queue"] }),
+        qc.invalidateQueries({ queryKey: ["cab-etat-clients"] }),
       ]);
     },
     onError: (e: unknown) => {

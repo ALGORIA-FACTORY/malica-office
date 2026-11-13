@@ -26,6 +26,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { DemandesDeMandat } from "@/components/malica/DemandesDeMandat";
 import { MiseEnRouteDuJour } from "@/components/malica/mise-en-route-du-jour";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
 import { EmptyState, MalicaNote, SectionTitle } from "@/components/malica/office-ui";
@@ -35,7 +36,7 @@ import { dansLeFiltre, prisesEnChargeDepuis, type FiltreDeLaFile } from "@/lib/f
 import { initialesDe } from "@/lib/initiales";
 import { jourDeLEcriture } from "@/lib/jour-de-l-ecriture";
 import { enDebutDePhrase } from "@/lib/lisible";
-import { idsDesMandatsActifs } from "@/lib/portefeuille-actif";
+import { compterLesMandatsActifs, idsDesMandatsActifs } from "@/lib/portefeuille-actif";
 import { oublierLOrdre } from "@/lib/ordre-de-revue";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { cn } from "@/lib/utils";
@@ -107,7 +108,7 @@ function CabinetToday() {
   const toReview = compteParFiltre("a_traiter");
   const doublons = compteParFiltre("doublons");
   // Les clients mandatés : ni le mandat révoqué, ni le refusé (ANO-013).
-  const clientCount = (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length;
+  const clientCount = compterLesMandatsActifs(clients.data ?? []);
 
   /* ---- filtres : statut, collaborateur, texte */
   const [filtreChoisi, setFiltre] = useState<FiltreDeLaFile>("tout");
@@ -271,6 +272,7 @@ function CabinetToday() {
           ) : null}
         </div>
       </header>
+      <DemandesDeMandat cabinetId={org.id} />
       <MiseEnRouteDuJour />
       <div className="cab-day-columns">
         {/* ---- la file */}
@@ -434,7 +436,7 @@ function CabinetToday() {
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="truncate text-[13px]">{c.email}</span>
                       <span className="num text-[11px] text-muted-foreground">
-                        {t("cab.rail.mandats", { count: c.mandats })}
+                        {t("cab.today.charge.dossiers", { count: c.mandats })}
                       </span>
                     </div>
                     <span aria-hidden className="mt-1.5 block h-[3px] w-full bg-secondary">

@@ -65,6 +65,11 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { initialesDe } from "@/lib/initiales";
 import { compteDuBadge, montant } from "@/lib/lisible";
 import { plier } from "@/lib/mes-societes";
+import {
+  compterLesMandatsActifs,
+  dossiersAOuvrir,
+  idsDesMandatsActifs,
+} from "@/lib/portefeuille-actif";
 import { nomDeLaPersonne } from "@/lib/nom-de-la-personne";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -268,16 +273,14 @@ function Coquille({
     queryKey: ["cab-conseil-stats", org.id],
     queryFn: () => office().conseil.statistiques(org.id),
   });
-  const mandatsActifs = new Set(
-    (clients.data ?? []).filter((c) => c.engagementStatus === "actif").map((c) => c.tenantId),
-  );
+  const mandatsActifs = idsDesMandatsActifs(clients.data ?? []);
   const aSuperviser = (queue.data ?? []).filter(
     (r) => mandatsActifs.has(r.tenantId) && A_TRAITER.has(r.statut),
   ).length;
   const nonLues = (notifications.data ?? []).filter((n) => !n.readAt).length;
   // Un mandat révoqué ou refusé reste lisible dans la liste, mais il ne compte
   // plus parmi les dossiers tenus (ANO-013, 21 octobre 2026).
-  const nbClients = (clients.data ?? []).filter((c) => c.engagementStatus === "actif").length;
+  const nbClients = compterLesMandatsActifs(clients.data ?? []);
 
   const compte = useQuery({ queryKey: ["compte"], queryFn: () => office().auth.session() });
   // Le nom donné à l'inscription ou dans les Réglages : l'en-tête le montre
@@ -565,7 +568,7 @@ function Rail({
               {org.name}
             </Link>
             <span className="num mt-0.5 block text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">
-              {org.jurisdiction} · {t("cab.rail.mandats", { count: nbClients })}
+              {org.jurisdiction} · {t("cab.rail.societes", { count: nbClients })}
             </span>
           </span>
         ) : null}
@@ -1111,7 +1114,7 @@ function BandeauDossier({
             aria-label={t("cab.dossier.change")}
             className="max-w-[240px] border border-border bg-card px-2.5 py-1.5 text-[12.5px]"
           >
-            {clients.map((c) => (
+            {dossiersAOuvrir(clients).map((c) => (
               <option key={c.tenantId} value={c.tenantId}>
                 {c.name}
               </option>
