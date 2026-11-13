@@ -32,6 +32,7 @@ describe("qui relaie quoi", () => {
     expect(estPourLApi("/moi")).toBe(true);
     expect(estPourLApi("/pieces")).toBe(true);
     expect(estPourLApi("/pieces/abc/contenu")).toBe(true);
+    expect(estPourLApi("/impressions")).toBe(true);
     // Le journal d'atelier. Sans ce relais, la pile d'appels d'une erreur reste
     // sur l'appareil qui l'a produite, et le défaut se corrige à l'aveugle —
     // ce qui a coûté trois corrections inutiles.
