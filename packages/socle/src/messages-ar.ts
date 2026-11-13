@@ -3062,7 +3062,7 @@ export const ar: Dict = {
   "pme.toutes.prochainesEcheances": "الاستحقاقات القادمة",
   "pme.toutes.vosSocietes": "شركاتك",
   "pme.toutes.aucuneEcheance": "لا استحقاق قادم.",
-  "pme.toutes.lecturePlusBasse": "{restantes} / {droit} · {societe} (الأدنى)",
+  "pme.toutes.lecturePlusBasse": "القراءات المتبقّية · الأدنى: {societe} {restantes} / {droit}",
   "pme.mesSocietes.enRetardN": "{count} آجال متأخرة",
   "pme.mesSocietes.enRetardN#one": "أجل واحد متأخر",
   "pme.mesSocietes.enRetardN#other": "{count} آجال متأخرة",

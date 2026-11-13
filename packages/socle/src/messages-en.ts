@@ -3199,7 +3199,7 @@ export const en: Dict = {
   "pme.toutes.prochainesEcheances": "Upcoming deadlines",
   "pme.toutes.vosSocietes": "Your companies",
   "pme.toutes.aucuneEcheance": "No upcoming deadline.",
-  "pme.toutes.lecturePlusBasse": "{restantes} / {droit} · {societe} (lowest)",
+  "pme.toutes.lecturePlusBasse": "Reads left · lowest: {societe} {restantes} / {droit}",
   "pme.mesSocietes.enRetardN": "{count} overdue deadlines",
   "pme.mesSocietes.enRetardN#one": "{count} overdue deadline",
   "pme.mesSocietes.enRetardN#other": "{count} overdue deadlines",

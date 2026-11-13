@@ -11,6 +11,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useSocietesEnBref } from "@/hooks/use-societes-en-bref";
 import { useI18n } from "@/i18n";
 
+import { LectureLaPlusBasse } from "./lecture-la-plus-basse";
 import { usePme } from "./pme-context";
 
 /** Combien d'échéances l'accueil en montre. */
@@ -55,6 +56,10 @@ export function AccueilConsolide() {
           <small>{t("pme.mesSocietes.enRetard")}</small>
           <b>{charge ? "—" : total("enRetard")}</b>
         </div>
+      </div>
+
+      <div className="invite [&:empty]:hidden">
+        <LectureLaPlusBasse />
       </div>
 
       <h2 className="mt-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

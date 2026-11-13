@@ -3297,7 +3297,8 @@ export const fr = {
   "pme.toutes.prochainesEcheances": "Prochaines échéances",
   "pme.toutes.vosSocietes": "Vos sociétés",
   "pme.toutes.aucuneEcheance": "Aucune échéance à venir.",
-  "pme.toutes.lecturePlusBasse": "{restantes} / {droit} · {societe} (la plus basse)",
+  "pme.toutes.lecturePlusBasse":
+    "Lectures restantes · la plus basse : {societe} {restantes} / {droit}",
   "pme.mesSocietes.enRetardN": "{count} échéances en retard",
   "pme.mesSocietes.enRetardN#one": "{count} échéance en retard",
   "pme.mesSocietes.enRetardN#other": "{count} échéances en retard",
