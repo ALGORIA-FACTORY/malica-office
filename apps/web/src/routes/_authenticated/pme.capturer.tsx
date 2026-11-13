@@ -902,6 +902,8 @@ function PmeCapturer() {
         onError: echoue,
       },
     );
+    // `echoue` change à chaque rendu : le verrou (`rangeeParDefaut`) suffit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [etape, rayonner, plusTard, lot, rangements.ranger, garder]);
 
   function reculer() {
@@ -938,6 +940,8 @@ function PmeCapturer() {
      * « capturer la suivante » rouvrirait l'étape 0 sur une liste de pièces
      * désormais lues — c'est-à-dire sur rien, sans dire pourquoi.
      */
+    urlEcrite.current = false;
+    urlCourante.current = "";
     void navigate({ to: "/pme/capturer", search: {}, replace: true });
     setEtape(0);
     setFige(null);
@@ -982,17 +986,31 @@ function PmeCapturer() {
    * peut manquer (navigation privée, données effacées). À l'étape 0 ou à la fin
    * (8), rien n'est à reprendre : l'étape sort de l'URL.
    */
-  const urlCourante = useRef("");
+  // Ce que l'URL porte déjà : une reprise ne la réécrit pas (sinon un nouvel
+  // ajout, qui remonte l'écran sur l'ancienne URL, la retrouverait en place).
+  const urlCourante = useRef(
+    lotDemande.etape !== undefined && fige !== null
+      ? JSON.stringify(urlDeLaReprise(lotDemande.etape, fige, lotDemande))
+      : "",
+  );
+  const urlEcrite = useRef(lotDemande.etape !== undefined);
   useEffect(() => {
     if (fige === null || plusTard) return;
     const search = urlDeLaReprise(etape, fige, lotDemande);
     const cle = JSON.stringify(search);
     if (cle === urlCourante.current) return;
     urlCourante.current = cle;
+    urlEcrite.current = true;
     void navigate({ to: "/pme/capturer", search, replace: true });
     // `lotDemande` n'est lu que pour le contexte (dossier, « pour moi »).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [etape, fige, plusTard, navigate]);
+  // L'URL perd son lot (un nouvel ajout, un lien vers l'écran nu) : le passage
+  // est fini, l'écran repart de l'étape 0 — comme avant la reprise par l'URL.
+  useEffect(() => {
+    if (urlEcrite.current && fige !== null && lotDemande.pieces === undefined) recommencer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lotDemande.pieces]);
 
   /* ── l'écran ─────────────────────────────────────────────────────────── */
 
