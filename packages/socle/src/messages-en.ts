@@ -3882,6 +3882,15 @@ export const en: Dict = {
     "Several companies, one engagement each, and a consolidated view that belongs to you alone.",
   "pme.reglages.verrou.nonLu": "Locked because the plan was not read, not because it was refused.",
   "pme.reglages.surTotal": "{n} of {total}",
+  "pme.societe.titre": "Add a company",
+  "pme.societe.rejoint": "It joins your {offre} subscription.",
+  "pme.societe.rejointInclus": "It joins your {offre} subscription ({n} of {total} companies).",
+  "pme.societe.rejointEnPlus":
+    "It joins your {offre} subscription. Extra company: {prix} {devise} excl. VAT per month.",
+  "pme.societe.propreAbonnement":
+    "Your plan covers a single company: the new one will have its own subscription.",
+  "pme.societe.ajouter": "Add the company",
+  "pme.societe.annuler": "Cancel",
   "tour.quitter": "Leave the tower",
   "tour.menu.clients": "Clients",
   "tour.menu.cabinets": "Accountants",

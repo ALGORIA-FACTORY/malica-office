@@ -3727,6 +3727,15 @@ export const ar: Dict = {
   "pme.reglages.societes.verrou": "عدّة شركات، لكلّ واحدة تكليفها، ونظرة موحّدة لا تملكها غيرك.",
   "pme.reglages.verrou.nonLu": "مقفل لأنّ الاشتراك لم يُقرأ، لا لأنّه مرفوض.",
   "pme.reglages.surTotal": "{n} من {total}",
+  "pme.societe.titre": "إضافة شركة",
+  "pme.societe.rejoint": "تنضمّ إلى اشتراكك {offre}.",
+  "pme.societe.rejointInclus": "تنضمّ إلى اشتراكك {offre} ({n} من {total} شركات).",
+  "pme.societe.rejointEnPlus":
+    "تنضمّ إلى اشتراكك {offre}. شركة إضافية: {prix} {devise} دون احتساب الأداء على القيمة المضافة شهرياً.",
+  "pme.societe.propreAbonnement":
+    "عرضك لا يشمل إلا شركة واحدة: سيكون للشركة الجديدة اشتراكها الخاص.",
+  "pme.societe.ajouter": "إضافة الشركة",
+  "pme.societe.annuler": "إلغاء",
   "tour.quitter": "مغادرة البرج",
   "tour.menu.clients": "العملاء",
   "tour.menu.cabinets": "المحاسبات",
