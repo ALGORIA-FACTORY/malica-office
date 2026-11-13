@@ -71,6 +71,48 @@ left join pieces p on p.created_at >= s.lundi and p.created_at < s.lundi + inter
 group by s.lundi
 order by s.lundi desc;
 
+-- ------------------------------------------------------------ pièces sans proposition
+-- LE BLOC D'ALERTE (G1, 13 novembre 2026). Une pièce reçue depuis plus que
+-- `fabrique.seuil.travail.proposition_attente_min` (lu en base, jamais écrit
+-- ici) et sans lecture : sa proposition d'écriture ne se calcule pas. Une ligne
+-- par cause — l'état du dernier travail de lecture et son motif —, et
+-- « aucun_travail » quand la lecture n'a jamais été demandée. Zéro ligne : rien
+-- à signaler. Ce que la tour lit sans le superutilisateur est la vue
+-- `plateforme.lectures_en_souffrance_v` (la file seule, jamais une pièce).
+with livre as (
+  select s.code, s.value_num
+    from ref.socle_params s
+   where s.code = 'fabrique.seuil.travail.proposition_attente_min'
+     and s.valid_from <= current_date and (s.valid_to is null or s.valid_to >= current_date)
+   order by s.valid_from desc limit 1
+),
+derniers as (
+  select distinct on (t.piece_id) t.piece_id, t.etat, t.dernier_motif
+    from fabrique.etat_des_travaux_v t
+   where t.nature = 'lecture_piece'
+   order by t.piece_id, t.demande_le desc
+)
+select coalesce(d.etat, 'aucun_travail')                                  as cause,
+       d.dernier_motif                                                    as motif,
+       count(*)                                                           as pieces,
+       count(distinct p.tenant_id)                                        as dossiers,
+       floor(extract(epoch from now() - min(p.created_at)) / 60)::integer as plus_ancienne_min,
+       max(coalesce(f.value_num, l.value_num))::integer                   as seuil_min
+  from capture.pieces p
+  cross join livre l
+  -- Le seuil que le cabinet a arrêté pour ce dossier l'emporte sur le défaut.
+  left join parametrage.fabrique_seuils f on f.tenant_id = p.tenant_id and f.code = l.code
+  left join derniers d on d.piece_id = p.id
+ where p.created_at < now() - make_interval(mins => coalesce(f.value_num, l.value_num)::integer)
+   and not exists (select 1 from capture.remplacements r where r.piece_id = p.id)
+   and p.archivee_le is null
+   and not exists (select 1 from capture.extractions e where e.piece_id = p.id)
+   -- Un document joint à sa pièce part avec elle, sans lecture.
+   and p.source_piece_id is null
+   and coalesce(d.etat, '') <> 'termine'
+ group by 1, 2
+ order by pieces desc;
+
 -- ------------------------------------------------------------ délais
 -- Photo → proposition : de la pièce à sa première écriture proposée.
 -- Photo → validée : de la pièce à l'écriture comptabilisée par le cabinet.
