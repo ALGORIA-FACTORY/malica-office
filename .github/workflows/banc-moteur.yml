@@ -26,6 +26,10 @@ on:
         description: "Cas à rejouer seuls (ex. 001,042) ; vide : tous"
         required: false
         default: ""
+      cote_max:
+        description: "Grand côté maximal de l'image lue par l'OCR, en pixels (OCR_COTE_MAX) ; vide : le défaut du service"
+        required: false
+        default: ""
 
 concurrency:
   group: banc-moteur-${{ github.ref }}
@@ -67,11 +71,18 @@ jobs:
           cache-from: type=gha,scope=malica-ocr
           cache-to: type=gha,mode=max,scope=malica-ocr
 
+      # La résolution lue est un réglage du service (`OCR_COTE_MAX`, 1600 par
+      # défaut, fixé le 14 octobre 2026 sur une seule facture imprimée) : le banc
+      # peut la changer pour la mesurer, et la clé du cache la porte, sans quoi
+      # une seconde passe relirait les relevés de la première.
       - name: Le service OCR, démarré
+        env:
+          COTE_MAX: ${{ inputs.cote_max }}
         run: |
           docker run -d --name ocr -p 8095:8000 \
             -e OMP_NUM_THREADS=2 -e OCR_LECTEURS=2 \
             -e OCR_MODELE_RECONNAISSANCE_ARABE=arabic_PP-OCRv5_mobile_rec \
+            ${COTE_MAX:+-e OCR_COTE_MAX=$COTE_MAX} \
             malica-ocr:banc
           for i in $(seq 1 60); do
             curl -fsS http://127.0.0.1:8095/sante && break
@@ -100,7 +111,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: sortie/releves
-          key: releves-${{ hashFiles('infra/ocr/**', 'outils/jeu-algoria/**', 'outils/jeu-synthetique/**') }}
+          key: releves-${{ inputs.cote_max && format('cote{0}-', inputs.cote_max) || '' }}${{ hashFiles('infra/ocr/**', 'outils/jeu-algoria/**', 'outils/jeu-synthetique/**') }}
 
       # Le banc échoue (code 1) dès qu'une valeur affirmée est fausse ou
       # inventée : c'est une mesure, son code est rapporté, et l'artefact part

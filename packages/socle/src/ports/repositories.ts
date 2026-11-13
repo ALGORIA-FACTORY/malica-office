@@ -1611,6 +1611,13 @@ export interface PieceLue {
   dateDocument: string | null;
   kind: "facture_achat" | "facture_vente" | null;
   /**
+   * La société a une comptabilité (un mandat en vigueur) : le même fait que
+   * `identity.monCabinet`, lu une fois par société dans la liste. `false` : la
+   * pièce n'a personne à qui partir (`statutPme` : « Rangée »). Absent : on ne
+   * sait pas, et le statut ne change pas.
+   */
+  comptabilite?: boolean;
+  /**
    * Le type de document retenu par la base (`pieces.document_kind`), tous
    * types confondus — celui qui range la pièce dans son dossier. `kind`, lui,
    * ne dit que le sens lu (achat ou vente).
@@ -4341,6 +4348,8 @@ export interface FacturationRepository {
   catalogueDesOffres(): Promise<OffreAuCatalogue[]>;
   /** La grille en vigueur, et ce qui empêcherait d'y passer (un CODE). */
   mesOffres(tenantId?: string): Promise<OffreDeLaGrille[]>;
+  /** Le devis d'une montée : null pour une descente, pendant l'année, ou hors propriétaire principal. */
+  monteeDevis(offre: string, tenantId?: string): Promise<DevisDeMontee | null>;
   /** Le TTC d'un HT, par la fiscalité de la facture ; `null` sans émetteur. */
   prixTtc(ht: string): Promise<PrixTtc | null>;
   /** Les lectures du mois dernier reportées sur celui-ci (déjà dans le droit). */
@@ -4504,6 +4513,22 @@ export interface OffreAuCatalogue {
   recharges_permises: boolean;
 }
 
+export interface DevisDeMontee {
+  offre: string;
+  ecart_mensuel_ht: number;
+  /** Les montants à régler sont `null` quand ils ne se devinent pas (périmètre « PME » ouvert, sans émetteur). */
+  jours_restants: number | null;
+  jours_du_mois: number | null;
+  a_regler_ht: number | null;
+  /** `null` tant qu'aucun émetteur n'est désigné : on ne suppose aucune TVA. */
+  a_regler_tva: number | null;
+  /** Le timbre seulement si la montée se règle par la facture du jour ; 0 pour un acompte. */
+  timbre: number | null;
+  a_regler_ttc: number | null;
+  devise: string | null;
+  prix_plein_ttc: number | null;
+}
+
 export interface OffreDeLaGrille {
   code: string;
   libelle: string;
@@ -4643,7 +4668,7 @@ export interface PaiementEnLigne {
   montant_ttc: string;
   devise: string;
   /** `remplace` : un acompte de montée que le forfait suivant a remplacé ; il ne se paie plus. */
-  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace";
+  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace" | "non_abouti";
   prestataire: string | null;
   reference: string | null;
   lien: string | null;

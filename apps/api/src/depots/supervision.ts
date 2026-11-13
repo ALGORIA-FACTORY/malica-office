@@ -57,7 +57,10 @@ const PIECES_DU_CABINET = `pieces_v p
           -- En vigueur : l'archive d'un mandat terminé se lit (1.6), elle
           -- n'est pas du travail en cours.
           and g.status = 'actif'
-          and p.tenant_id in (select app.mandats_visibles($1))`;
+          and p.tenant_id in (select app.mandats_visibles($1))
+          -- Un retour fait par la comptabilité d'avant attend la réponse du
+          -- CLIENT : il n'est pas à la file de celle-ci (13 novembre 2026, A5).
+          and (p.status <> 'retournee' or app.retour_du_cabinet(p.id, g.cabinet_org_id))`;
 
 /**
  * Ce qui a été TRANSMIS au cabinet : une pièce « chez vous » n'y paraît pas,
@@ -195,34 +198,40 @@ export const supervision = {
       c.parStatut[statutAuCabinet(brut, r)] += 1;
     }
 
-    return (mandats.rows as Record<string, unknown>[])
-      .map((r) => {
-        const tenant = r["pme_org_id"] as string;
-        const c = parClient.get(tenant);
-        const parStatut = c?.parStatut ?? { ...STATUTS_VIDES };
-        return {
-          tenantId: tenant,
-          name: (r["name"] as string) ?? "—",
-          legalId: (r["legal_id"] as string | null) ?? null,
-          // Les deux colonnes sont NOT NULL en base, et la jointure part du
-          // mandat : le repli ne pouvait rien sauver, seulement afficher
-          // « Tunisie, dinar » sur un dossier qui dirait autre chose.
-          jurisdiction: r["jurisdiction"] as string,
-          currency: r["currency"] as string,
-          validationMode: (r["validation_mode"] as string) ?? "mandate",
-          engagementStatus: r["status"] as string,
-          archive: r["archive"] === true,
-          mandatDepuis: (r["starts_on"] as string | null) ?? null,
-          mandatJusquau: (r["ends_on"] as string | null) ?? null,
-          counts: c?.comptes ?? { ...COMPTES_VIDES },
-          parStatut,
-          // La même règle que la file : `A_TRAITER` du Socle.
-          aTraiter: (Object.keys(parStatut) as StatutCabinet[])
-            .filter((st) => A_TRAITER.has(st))
-            .reduce((n, st) => n + parStatut[st], 0),
-        };
-      })
-      .sort((a, b) => b.aTraiter - a.aTraiter);
+    return (
+      (mandats.rows as Record<string, unknown>[])
+        // Un mandat terminé qui n'a laissé aucune archive — la société l'a refusé,
+        // ou la comptabilité n'a rien pris en charge — n'ouvre plus aucun dossier :
+        // un refus n'est pas une archive (13 novembre 2026, A6).
+        .filter((r) => r["status"] !== "termine" || r["archive"] === true)
+        .map((r) => {
+          const tenant = r["pme_org_id"] as string;
+          const c = parClient.get(tenant);
+          const parStatut = c?.parStatut ?? { ...STATUTS_VIDES };
+          return {
+            tenantId: tenant,
+            name: (r["name"] as string) ?? "—",
+            legalId: (r["legal_id"] as string | null) ?? null,
+            // Les deux colonnes sont NOT NULL en base, et la jointure part du
+            // mandat : le repli ne pouvait rien sauver, seulement afficher
+            // « Tunisie, dinar » sur un dossier qui dirait autre chose.
+            jurisdiction: r["jurisdiction"] as string,
+            currency: r["currency"] as string,
+            validationMode: (r["validation_mode"] as string) ?? "mandate",
+            engagementStatus: r["status"] as string,
+            archive: r["archive"] === true,
+            mandatDepuis: (r["starts_on"] as string | null) ?? null,
+            mandatJusquau: (r["ends_on"] as string | null) ?? null,
+            counts: c?.comptes ?? { ...COMPTES_VIDES },
+            parStatut,
+            // La même règle que la file : `A_TRAITER` du Socle.
+            aTraiter: (Object.keys(parStatut) as StatutCabinet[])
+              .filter((st) => A_TRAITER.has(st))
+              .reduce((n, st) => n + parStatut[st], 0),
+          };
+        })
+        .sort((a, b) => b.aTraiter - a.aTraiter)
+    );
   },
 
   async queue(db: Requete, cabinetTenantId: string, tenantId?: string) {

@@ -33,7 +33,12 @@ import { useI18n, type MessageKey } from "@/i18n";
 import { libelleHorsArbre } from "@/i18n/dictionnaires";
 import { ouverturesDuForfait } from "@/lib/forfait";
 import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
-import { readActiveOrgId, writeActiveOrgId } from "@/lib/active-org";
+import {
+  readActiveOrgId,
+  readVueConsolidee,
+  writeActiveOrgId,
+  writeVueConsolidee,
+} from "@/lib/active-org";
 import { vidage } from "@/lib/hors-ligne";
 import { FilePleine } from "@/lib/hors-ligne/vidage";
 import { nomDeLaPersonne } from "@/lib/nom-de-la-personne";
@@ -184,7 +189,11 @@ function PmeLayout() {
    * la vue consolidée sur ces écrans ; ailleurs, il ouvre « Mes sociétés ».
    * `null` : toutes.
    */
-  const [consolidee, setConsolidee] = useState(false);
+  const [consolidee, setConsolideeEtat] = useState<boolean>(() => readVueConsolidee());
+  const setConsolidee = (ouverte: boolean) => {
+    setConsolideeEtat(ouverte);
+    writeVueConsolidee(ouverte);
+  };
   const societeAffichee = consolidee ? null : (org?.id ?? null);
   /** Les écrans qui savent montrer toutes les sociétés ensemble. */
   const ecranConsolidable =

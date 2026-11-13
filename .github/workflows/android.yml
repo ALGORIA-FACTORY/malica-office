@@ -120,6 +120,11 @@ jobs:
       - name: Synchroniser le projet Android
         run: npm run coque:sync -w @malica/web
 
+      # Les écrans que le projet Gradle va embarquer sont ceux du dépôt (la
+      # version affichée « Écrans x.y.z »), pas ceux d'un bundle resté en cache.
+      - name: Les écrans embarqués sont ceux du dépôt
+        run: node outils/ecrans-embarques.mjs android/app/src/main/assets/public
+
       - name: Poser la clé d'envoi
         if: env.CLE_PRESENTE == 'true'
         run: |
@@ -142,6 +147,14 @@ jobs:
             -PversionName="$(node -p "require('../package.json').version")" \
             -PversionCode="$((github_run_number + DECALAGE_VERSION))" \
             --no-daemon
+
+      # La preuve sur le paquet lui-même : l'AAB porte les écrans du dépôt.
+      - name: Les écrans de l'AAB sont ceux du dépôt
+        run: |
+          aab="$(ls android/app/build/outputs/bundle/*/*.aab | head -n 1)"
+          dossier="$(mktemp -d)"
+          unzip -q "$aab" 'base/assets/public/ecrans.json' -d "$dossier"
+          node outils/ecrans-embarques.mjs "$dossier/base/assets/public"
 
       - uses: actions/upload-artifact@v7
         with:

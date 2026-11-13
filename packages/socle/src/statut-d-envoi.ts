@@ -66,6 +66,8 @@ export type StatutPme =
   | "mon_espace"
   | "a_envoyer"
   | "gardee"
+  // Sans comptabilité : la pièce est rangée, elle n'a nulle part où partir.
+  | "rangee"
   | "envoyee"
   | "vue"
   | "retour"
@@ -105,6 +107,7 @@ export const TON_PME: Readonly<Record<StatutPme, TonDuStatut>> = {
   mon_espace: "neutre",
   a_envoyer: "am",
   gardee: "neutre",
+  rangee: "neutre",
   envoyee: "az",
   vue: "az",
   retour: "am",
@@ -146,7 +149,21 @@ export interface FaitsDeLaPiece {
   jointe?: boolean | null;
   /** Le dernier refus de lecture inscrit (`PieceLue.lectureRefusee`). */
   lectureRefusee?: LectureRefusee | null;
+  /**
+   * La société a une comptabilité : un mandat en vigueur
+   * (`PieceLue.comptabilite`, lu une fois par société côté base). `false` : la
+   * pièce n'a personne à qui partir — elle est « Rangée », pas « À envoyer ».
+   * Absent ou `null` : on ne sait pas, et rien ne change (jamais de repli).
+   */
+  comptabilite?: boolean | null;
 }
+
+/**
+ * Dans la société, rien n'est parti : « Rangée » quand elle n'a pas de
+ * comptabilité (aucune destination), sinon « Gardée » (décidé) ou « À envoyer ».
+ */
+const rangeeOuAEnvoyer = (p: FaitsDeLaPiece): StatutPme =>
+  p.comptabilite === false ? "rangee" : p.gardeeLe ? "gardee" : "a_envoyer";
 
 const rien = (statut: StatutPme): StatutDuCircuit => ({ statut, chez: null, qui: null });
 
@@ -168,7 +185,7 @@ export function statutDuCircuit(p: FaitsDeLaPiece): StatutDuCircuit {
           return rien("corrigee");
       }
       if (c.dernier === "retournee") return { statut: "retournee", chez: "siege", qui: c.auteur };
-      return rien(p.gardeeLe ? "gardee" : "a_envoyer");
+      return rien(rangeeOuAEnvoyer(p));
     }
     // Le siège : son passage chez le propriétaire.
     if (c?.dernier === "retournee")
@@ -180,7 +197,7 @@ export function statutDuCircuit(p: FaitsDeLaPiece): StatutDuCircuit {
     // « Garder » est la décision du propriétaire, sur l'envoi au comptable :
     // elle ne retient pas le siège, dont l'étape est d'envoyer au propriétaire.
     if (c && !c.recoit) return rien("a_envoyer");
-    return rien(p.gardeeLe ? "gardee" : "a_envoyer");
+    return rien(rangeeOuAEnvoyer(p));
   }
 
   // Chez le comptable.

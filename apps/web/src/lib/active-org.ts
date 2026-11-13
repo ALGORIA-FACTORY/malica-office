@@ -25,3 +25,32 @@ export function writeActiveOrgId(id: string | null): void {
     /* stockage indisponible : la sélection reste celle de la session */
   }
 }
+
+/*
+ * « Toutes les sociétés », choisi dans l'en-tête, est une VUE et non une
+ * société : elle n'a pas d'identifiant à garder dans `malica.pme.org`. Elle
+ * vivait dans un état local de l'écran, donc un rechargement ou un nouvel
+ * onglet la perdait en silence (recette du 13 novembre 2026) : l'en-tête
+ * redisait la société active, et la bibliothèque ses pièces à elle seule.
+ * Gardée pour la SESSION : elle suit le rechargement, pas l'appareil.
+ */
+const CLE_VUE = "malica.pme.toutes";
+
+export function readVueConsolidee(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(CLE_VUE) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeVueConsolidee(ouverte: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (ouverte) window.sessionStorage.setItem(CLE_VUE, "1");
+    else window.sessionStorage.removeItem(CLE_VUE);
+  } catch {
+    /* stockage indisponible : la vue reste celle de l'écran ouvert */
+  }
+}

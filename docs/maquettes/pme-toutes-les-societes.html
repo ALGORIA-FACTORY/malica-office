@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toutes les sociétés — maquette</title>
+<style>
+:root{--ink:#0A0A0A;--paper:#FAFAFA;--g1:#1a1a1a;--g2:#2a2a2a;--g3:#8a8a8a;--g4:#d9d9d9;--ok:#3A8F54;--err:#BF4424;--warn:#B58614;--run:#2968A5}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;padding:24px 16px 64px;max-width:1280px;margin:auto}
+h1{font-size:26px;letter-spacing:-.02em}h2{font-size:18px;margin:40px 0 8px}p.l{color:#555;max-width:70ch}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px}
+.row{display:flex;flex-wrap:wrap;gap:24px;margin-top:16px}
+.ph{width:300px;background:var(--ink);color:var(--paper);border-radius:22px;padding:14px;min-height:560px;border:1px solid #333}
+.ph[dir=rtl]{text-align:right}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.chip{flex:1;background:var(--g1);border-radius:20px;padding:7px 12px;font-weight:600;font-size:13px;display:flex;justify-content:space-between}
+.chip i{font-style:normal;color:var(--g3)}
+.av{width:30px;height:30px;border-radius:50%;background:#9be3b0;color:var(--ink);display:grid;place-items:center;font-weight:700;font-size:13px}
+.k{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 14px}
+.k b{display:block;font-size:22px}.k span{font:11px "IBM Plex Mono",monospace;color:var(--g3);text-transform:uppercase}
+.card{background:var(--g1);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px}
+.card small{display:block;color:var(--g3);font-size:11.5px}
+.tag{font:10.5px "IBM Plex Mono",monospace;background:var(--g2);border-radius:6px;padding:1px 6px;color:#ccc}
+.sec{font:11px "IBM Plex Mono",monospace;color:var(--g3);text-transform:uppercase;margin:14px 0 6px}
+.note{border:1px solid var(--run);border-radius:10px;padding:9px 11px;font-size:12.5px;margin:8px 0 12px;color:#cfe0f2}
+.warn{color:var(--warn)}.ok{color:var(--ok)}.btn{background:var(--paper);color:var(--ink);border-radius:10px;padding:9px;text-align:center;font-weight:600;font-size:13px;margin-top:10px}
+table{border-collapse:collapse;width:100%;margin-top:12px;font-size:13.5px}th,td{border-bottom:1px solid var(--g4);padding:8px 10px;text-align:start;vertical-align:top}th{background:#f0f0f0}
+.cap{font-size:12.5px;color:#555;margin-top:8px;max-width:300px}
+@media(max-width:640px){.ph{width:100%}}
+</style>
+</head>
+<body>
+<h1>« Toutes les sociétés » — plus jamais une redirection muette</h1>
+<p class="l"><span class="mono">MAQUETTE — rien n'est codé.</span> Consigne du dirigeant (13 novembre 2026) : « Toutes » doit toujours marcher. Règle unique proposée : <b>choisir « Toutes » ne change jamais d'écran sans le dire.</b> Chaque écran fait l'une de trois choses : <b>montrer le consolidé</b>, <b>montrer une société par ligne</b> (écran par nature d'une seule société), ou <b>rester tel quel</b> parce qu'il n'est lié à aucune société. L'action est toujours une ligne touchable.</p>
+
+<h2>1 · Décision écran par écran</h2>
+<table>
+<tr><th>Écran</th><th>Aujourd'hui (constaté 13/11)</th><th>Proposé sous « Toutes »</th><th>Pourquoi</th></tr>
+<tr><td>Accueil</td><td>redirige vers « Mes sociétés »</td><td><b>Accueil consolidé</b> (planche A) : compteurs additionnés, prochaines échéances de toutes les sociétés, une ligne par société</td><td>Compteurs et échéances s'additionnent sans ambiguïté</td></tr>
+<tr><td>Bibliothèque, Dossier, Échéances, Malica</td><td>consolidés</td><td>inchangés ; ligne de lectures corrigée (planche D)</td><td>Déjà conçus ainsi (9 novembre)</td></tr>
+<tr><td>Notifications</td><td>redirige</td><td><b>Consolidé</b> : le filtre société de l'écran existe déjà, il se pose sur « Toutes »</td><td>Une cloche regarde tout</td></tr>
+<tr><td>Capturer</td><td>redirige</td><td>L'écran reste ; une rangée <b>« Pour quelle société ? »</b> (planche C) précède la prise, dernière société utilisée préchoisie</td><td>Une pièce appartient à UNE société : le choix doit être fait par la personne, pas deviné</td></tr>
+<tr><td>TVA, Charges</td><td>redirigent</td><td><b>Une société par ligne</b> avec son chiffre du mois (planche B) ; toucher ouvre l'écran de cette société</td><td>Une déclaration de TVA est celle d'une société ; additionner des soldes de sociétés distinctes (devises, juridictions possibles) n'a pas de sens — R3 : aucun total que le moteur ne rend</td></tr>
+<tr><td>Réglages</td><td>redirige</td><td>Les réglages <b>personnels</b> (langue, profil, notifications) s'affichent ; les réglages <b>de société</b> sont remplacés par la liste des sociétés (planche B)</td><td>Ils ne se confondent pas</td></tr>
+<tr><td>Pièce</td><td>redirige</td><td>La pièce reste ouverte ; bandeau « Cette pièce est celle de {société} » + lien « Voir toutes les pièces »</td><td>Une pièce est d'une société ; la fermer sans le dire fait croire à un bug</td></tr>
+<tr><td>Coffre (« Privé »)</td><td>redirige</td><td><b>Inchangé</b> : l'en-tête garde « Toutes », aucune redirection</td><td>Le coffre est à la personne, pas à une société</td></tr>
+<tr><td>Mes sociétés</td><td>reste</td><td>reste (accessible par la ligne « Voir mes sociétés » de l'accueil consolidé)</td><td>—</td></tr>
+</table>
+
+<h2>2 · Planches</h2>
+<div class="row">
+
+<div><div class="ph"><div class="bar"><svg width="26" height="26" viewBox="0 0 26 26"><text x="0" y="20" fill="#FAFAFA" font-size="20" font-weight="700">rG</text></svg><div class="chip">Toutes les sociétés <i>3</i></div><div class="av">D</div></div>
+<div class="sec">Toutes les sociétés · aujourd'hui</div>
+<div class="k"><div><b>0</b><span>à traiter</span></div><div><b>5</b><span>à lire</span></div><div><b class="warn">1</b><span>en retard</span></div></div>
+<div class="sec">Prochaines échéances</div>
+<div class="card"><div>TVA — juin<small>SOTUMAG SARL</small></div><span class="tag warn">3 j</span></div>
+<div class="card"><div>CNSS — T2<small>Medina Textile</small></div><span class="tag">12 j</span></div>
+<div class="sec">Vos sociétés</div>
+<div class="card"><div>SOTUMAG SARL<small>4 pièces à lire</small></div>›</div>
+<div class="card"><div>Medina Textile<small>1 pièce à lire</small></div>›</div>
+<div class="card"><div>Atelier Zitouna<small class="ok">À jour</small></div>›</div>
+<div class="btn">Voir mes sociétés</div></div>
+<p class="cap"><b>A · Accueil consolidé.</b> Compteurs additionnés, échéances de toutes les sociétés avec la société nommée, une ligne par société (ouvre son accueil). Aucun montant additionné.</p></div>
+
+<div><div class="ph"><div class="bar"><svg width="26" height="26" viewBox="0 0 26 26"><text x="0" y="20" fill="#FAFAFA" font-size="20" font-weight="700">rG</text></svg><div class="chip">Toutes les sociétés <i>3</i></div><div class="av">D</div></div>
+<div class="sec">La TVA du mois</div>
+<div class="note">La TVA se déclare société par société. Touchez une société pour ouvrir la sienne.</div>
+<div class="card"><div>SOTUMAG SARL<small>à payer</small></div><span class="mono">4 120,000 TND</span></div>
+<div class="card"><div>Medina Textile<small>reporté</small></div><span class="mono">860,500 TND</span></div>
+<div class="card"><div>Atelier Zitouna<small>à payer</small></div><span class="mono">212,000 TND</span></div>
+<div class="sec">Charges, Réglages de société : même rangée</div></div>
+<p class="cap"><b>B · Écran d'une seule société.</b> TVA, Charges, réglages de société. Chaque ligne porte le chiffre que le <i>moteur</i> rend pour cette société ; jamais de total. Les montants ci-dessus sont des exemples de mise en page, pas des chiffres.</p></div>
+
+<div><div class="ph"><div class="bar"><svg width="26" height="26" viewBox="0 0 26 26"><text x="0" y="20" fill="#FAFAFA" font-size="20" font-weight="700">rG</text></svg><div class="chip">Toutes les sociétés <i>3</i></div><div class="av">D</div></div>
+<div class="sec">Ajouter une pièce</div>
+<div class="note">Pour quelle société ?</div>
+<div class="card"><div>SOTUMAG SARL<small>dernière utilisée</small></div><span class="ok">●</span></div>
+<div class="card"><div>Medina Textile</div>○</div>
+<div class="card"><div>Atelier Zitouna</div>○</div>
+<div class="btn">Photographier</div>
+<div class="sec" style="margin-top:22px">Pièce ouverte sous « Toutes »</div>
+<div class="note">Cette pièce est celle de <b>SOTUMAG SARL</b>. <u>Voir toutes les pièces</u></div></div>
+<p class="cap"><b>C · Capturer et Pièce.</b> Une pièce a une société : choix explicite à la prise, bandeau sur la pièce. Coffre : aucun changement, aucun bandeau.</p></div>
+
+<div><div class="ph" dir="rtl"><div class="bar"><div class="av">D</div><div class="chip">جميع الشركات <i>3</i></div></div>
+<div class="sec">جميع الشركات · اليوم</div>
+<div class="k"><div><b>0</b><span>للمعالجة</span></div><div><b>5</b><span>للقراءة</span></div><div><b class="warn">1</b><span>متأخر</span></div></div>
+<div class="sec">القراءات المتبقية</div>
+<div class="card"><div>الأدنى : Medina Textile<small>4 / 30</small></div><span class="tag warn">!</span></div>
+<div class="note">ليست مجموعاً : لكل شركة رخصتها. (libellés ar à valider par ref.labels)</div></div>
+<p class="cap"><b>D · Lectures restantes + RTL.</b> Sous « Toutes », la bibliothèque et l'accueil ne montrent plus « 30 / 30 · Atelier Zitouna ». Voir la décision ci-dessous. Maquette arabe en miroir, libellés provisoires.</p></div>
+
+</div>
+
+<h2>3 · « Lectures restantes · Atelier Zitouna » sous « Toutes »</h2>
+<p class="l">Constaté : le quota de la société <i>active</i> est affiché sous un en-tête « Toutes ». Chaque société a sa licence, donc <b>un total masquerait une société à court</b> (3 sociétés à 30 + une à 0 = « 90 restantes »). <b>Proposition :</b> sous « Toutes », afficher <b>la plus basse</b>, nommée : « Lectures · la plus basse : Medina Textile 4 / 30 », touchable vers cette société. Sous une société : inchangé. Alternative écartée : le total.</p>
+
+<h2>4 · Clés de libellé à créer (ref.labels fr / en / ar)</h2>
+<p class="l mono">pme.toutes.accueil.titre · pme.toutes.echeances · pme.toutes.voirSocietes · pme.toutes.uneParSociete (« se déclare société par société ») · pme.toutes.pourQuelleSociete · pme.toutes.dernierUtilisee · pme.toutes.pieceDe (« Cette pièce est celle de {société} ») · pme.toutes.voirToutesLesPieces · pme.toutes.lecturesLaPlusBasse. Aucun libellé en dur ; « cabinet » n'apparaît nulle part.</p>
+
+<h2>5 · À valider avant tout code</h2>
+<p class="l">1. L'accueil consolidé remplace-t-il « Mes sociétés » comme destination, ou s'y ajoute-t-il (ci-dessus : il s'y ajoute, par « Voir mes sociétés ») ? 2. « La plus basse » pour les lectures, ou une autre règle ? 3. Côté comptabilité, « Changer de dossier » n'a pas de « tous » : besoin à confirmer par le dirigeant (non maquetté, hors de cette PR).</p>
+</body></html>

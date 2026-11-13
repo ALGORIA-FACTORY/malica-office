@@ -45,6 +45,9 @@ export const RAYONS_PROPOSES = [
   teinte: string;
 }>;
 
+/** Le rayon où se range un papier avant que la personne en choisisse un (G2). */
+export const RAYON_PAR_DEFAUT = "autres" satisfies (typeof RAYONS_PROPOSES)[number]["code"];
+
 /** Le nom d'un rayon à l'écran : traduit s'il est proposé, tel qu'écrit sinon. */
 export function libelleDuRayon(rayon: string, t: (k: MessageKey) => string): string {
   const propose = RAYONS_PROPOSES.find((r) => r.code === rayon);

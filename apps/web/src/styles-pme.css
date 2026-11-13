@@ -2174,12 +2174,12 @@
 [data-surface="pme"] [data-ecran="parametres"] .invite .roles{display:grid;gap:.625rem}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role{display:grid;gap:.5rem;padding:.875rem 1rem;border-radius:18px;border:1.5px solid transparent;background:var(--d2);color:var(--tx);font-family:inherit;text-align:start;cursor:pointer;touch-action:manipulation;transition:border-color .18s,background .18s}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role[aria-checked="true"]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--d1))}
-[data-surface="pme"] [data-ecran="parametres"] .invite .role .hd{display:flex;align-items:center;gap:.625rem}
+[data-surface="pme"] [data-ecran="parametres"] .invite .role .hd{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .625rem}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role .hd i{width:20px;height:20px;border-radius:50%;flex:none;border:2px solid var(--t3);display:grid;place-items:center}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role[aria-checked="true"] .hd i{border-color:var(--acc)}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role[aria-checked="true"] .hd i::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--acc)}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role .hd b{flex:1;font-size:1rem;font-weight:700;letter-spacing:-.02em}
-[data-surface="pme"] [data-ecran="parametres"] .invite .role .hd small{font-size:.6875rem;font-weight:600;color:var(--acc)}
+[data-surface="pme"] [data-ecran="parametres"] .invite .role .hd small{flex-basis:100%;padding-inline-start:calc(20px + .625rem);font-size:.6875rem;font-weight:600;line-height:1.4;color:var(--acc)}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role ul{margin:0;padding-block:0;padding-inline:1.875rem 0;list-style:none;display:grid;gap:.3125rem}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role li{position:relative;font-size:.78125rem;line-height:1.4;color:var(--t2)}
 [data-surface="pme"] [data-ecran="parametres"] .invite .role li::before{content:"";position:absolute;inset-inline-start:-1.125rem;top:.3125rem;width:9px;height:5px;border-left:2px solid var(--acc);border-bottom:2px solid var(--acc);transform:rotate(-45deg)}
@@ -2287,7 +2287,6 @@
 [data-surface="pme"] [data-ecran="capture"] .c-liste .gestes .pr{border:0;background:var(--tx);color:var(--bg)}
 [data-surface="pme"] [data-ecran="capture"] .c-liste .gestes .sc{border:1px solid var(--hr);background:transparent;color:var(--tx)}
 [data-surface="pme"] [data-ecran="capture"] .c-liste .gestes button:disabled{opacity:.5;cursor:default}
-[data-surface="pme"] [data-ecran="capture"] .c-rang{margin:.5rem 0 0;font-family:var(--mono);font-size:.8125rem;font-weight:600;color:var(--t3)}
 [data-surface="pme"] [data-ecran="capture"] .c-piece{margin-top:.75rem;display:flex;gap:.875rem;align-items:center}
 [data-surface="pme"] [data-ecran="capture"] .c-grande{flex:none;width:84px;height:112px;border:0;border-radius:10px;padding:0;overflow:hidden; background:var(--s2);cursor:pointer}
 [data-surface="pme"] [data-ecran="capture"] .c-grande .apercu{width:100%;height:100%}

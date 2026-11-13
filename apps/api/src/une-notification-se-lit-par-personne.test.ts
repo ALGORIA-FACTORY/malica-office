@@ -121,8 +121,10 @@ describe("une notification se lit par personne", { skip: !BASE_CONFIGUREE }, () 
     const ancienne = async () =>
       (
         await admin.query<{ id: string }>(
+          // « Ancienne » : plus vieille que les cent suivantes, mais écrite depuis le
+          // début du mandat du cabinet — avant, il ne la lit plus (13 novembre 2026, A5).
           `insert into collab.notifications (tenant_id, kind, payload, created_at)
-           values ($1, 'piece.reponse_client', '{}'::jsonb, now() - interval '30 days')
+           values ($1, 'piece.reponse_client', '{}'::jsonb, current_date::timestamptz)
            returning id`,
           [pme],
         )
