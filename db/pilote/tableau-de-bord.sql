@@ -79,8 +79,8 @@ order by s.lundi desc;
 -- « aucun_travail » quand la lecture n'a jamais été demandée. Zéro ligne : rien
 -- à signaler. Ce que la tour lit sans le superutilisateur est la vue
 -- `plateforme.lectures_en_souffrance_v` (la file seule, jamais une pièce).
-with seuil as (
-  select s.value_num::integer as minutes
+with livre as (
+  select s.code, s.value_num
     from ref.socle_params s
    where s.code = 'fabrique.seuil.travail.proposition_attente_min'
      and s.valid_from <= current_date and (s.valid_to is null or s.valid_to >= current_date)
@@ -97,10 +97,13 @@ select coalesce(d.etat, 'aucun_travail')                                  as cau
        count(*)                                                           as pieces,
        count(distinct p.tenant_id)                                        as dossiers,
        floor(extract(epoch from now() - min(p.created_at)) / 60)::integer as plus_ancienne_min,
-       (select minutes from seuil)                                        as seuil_min
+       max(coalesce(f.value_num, l.value_num))::integer                   as seuil_min
   from capture.pieces p
+  cross join livre l
+  -- Le seuil que le cabinet a arrêté pour ce dossier l'emporte sur le défaut.
+  left join parametrage.fabrique_seuils f on f.tenant_id = p.tenant_id and f.code = l.code
   left join derniers d on d.piece_id = p.id
- where p.created_at < now() - make_interval(mins => (select minutes from seuil))
+ where p.created_at < now() - make_interval(mins => coalesce(f.value_num, l.value_num)::integer)
    and not exists (select 1 from capture.remplacements r where r.piece_id = p.id)
    and p.archivee_le is null
    and not exists (select 1 from capture.extractions e where e.piece_id = p.id)

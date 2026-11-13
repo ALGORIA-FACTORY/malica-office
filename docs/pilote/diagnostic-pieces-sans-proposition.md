@@ -53,12 +53,11 @@ forme exacte du champ (`apps/api/src/app.ts`, `/sante/profonde`).
 ```bash
 # Depuis l'hôte de l'API : le lecteur répond-il ? (OCR_URL est dans le .env du serveur)
 docker compose --project-directory /srv/malica/depot/infra --env-file /srv/malica/.env \
-  exec -T api sh -c 'wget -qO- --timeout=5 "$OCR_URL/health" || echo INJOIGNABLE'
+  exec -T api sh -c 'wget -qO- --timeout=5 "$OCR_URL/sante" || echo INJOIGNABLE'
 ```
 
-INCERTAIN : le chemin de santé du lecteur (`/health`) n'a pas été vérifié ;
-à défaut, un `wget` sur `$OCR_URL` suffit à voir si le tunnel répond. Et le
-journal des exécutions :
+Le chemin de santé du lecteur est `/sante` (`infra/ocr/service.py`, repris par
+`infra/compose.yml`). Et le journal des exécutions :
 
 ```sql
 select agent, model, status, left(error, 120) as erreur, count(*), max(created_at)
