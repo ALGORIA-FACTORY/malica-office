@@ -430,7 +430,6 @@ export const ar: Dict = {
   "pme.home.echecs.titre": "{count} وثائق لم تُقرأ",
   "pme.home.echecs.titre#one": "وثيقة واحدة لم تُقرأ",
   "pme.home.echecs.titre#other": "{count} وثائق لم تُقرأ",
-  "pme.capture.verif.rang": "الوثيقة {n} من {total}",
   "pme.capture.verif.suivante": "صحيح · التالية",
   "pme.capture.verif.bon": "صحيح",
   "pme.capture.pay.titre#one": "مدفوعة بالفعل؟",

@@ -444,7 +444,6 @@ export const en: Dict = {
   "pme.home.echecs.titre": "{count} documents couldn’t be read",
   "pme.home.echecs.titre#one": "1 document couldn’t be read",
   "pme.home.echecs.titre#other": "{count} documents couldn’t be read",
-  "pme.capture.verif.rang": "Document {n} of {total}",
   "pme.capture.verif.suivante": "Looks right · next",
   "pme.capture.verif.bon": "Looks right",
   "pme.capture.pay.titre#one": "Already paid?",

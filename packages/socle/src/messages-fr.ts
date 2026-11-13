@@ -482,7 +482,6 @@ export const fr = {
   "pme.home.echecs.titre": "{count} pièces n’ont pas pu être lues",
   "pme.home.echecs.titre#one": "1 pièce n’a pas pu être lue",
   "pme.home.echecs.titre#other": "{count} pièces n’ont pas pu être lues",
-  "pme.capture.verif.rang": "Pièce {n} sur {total}",
   "pme.capture.verif.suivante": "C’est bon · suivante",
   "pme.capture.verif.bon": "C’est bon",
   "pme.capture.pay.titre#one": "Déjà payée ?",

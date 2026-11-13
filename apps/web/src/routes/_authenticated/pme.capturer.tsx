@@ -1525,14 +1525,6 @@ function PmeCapturer() {
             s'ajoute, elle n'écrase jamais). */}
         {!plusTard && etape === 4 && enVerification ? (
           <>
-            {lues.length > 1 ? (
-              <p className="c-rang">
-                {t("pme.capture.verif.rang", {
-                  n: Math.min(verifiee, lues.length - 1) + 1,
-                  total: lues.length,
-                })}
-              </p>
-            ) : null}
             <div className="c-piece">
               <button
                 type="button"

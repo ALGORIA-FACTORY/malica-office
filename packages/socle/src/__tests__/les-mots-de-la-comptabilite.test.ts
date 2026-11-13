@@ -58,8 +58,8 @@ describe("les mots de la comptabilité", () => {
     expect(cle("fr", "statut.pme.rangee")).toBe("Rangée");
   });
 
-  it("« Dans quel rayon ? », « Vérifier » : jamais « cabinet » à l'écran", () => {
-    for (const k of ["pme.capture.verif.rang", "statut.pme.rangee"])
+  it("« Rangée » : jamais « cabinet » à l'écran", () => {
+    for (const k of ["statut.pme.rangee"])
       for (const l of LANGUES) expect(cle(l, k) ?? "", `${l}/${k}`).not.toMatch(/cabinet/i);
   });
 });
