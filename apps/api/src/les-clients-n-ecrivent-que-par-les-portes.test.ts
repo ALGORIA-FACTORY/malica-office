@@ -278,15 +278,24 @@ describe("les clients n'écrivent que par les portes", { skip: !BASE_CONFIGUREE 
       sql("sonia", `update audit.event_log set payload = '{}' where tenant_id = $1`, [s.pme]),
       /permission denied for table event_log/,
     );
+    await refuse(
+      sql(
+        "sonia",
+        `insert into notif.envois (tenant_id, destinataire, code, canal, sujet_cle, decision, donnees)
+         values ($1, $2, 'piece.renvoyee', 'app', $3, 'a_remettre', jsonb_build_object('piece_id', $3::text))`,
+        [s.pme, s.gens.sami.id, id],
+      ),
+      /permission denied for table envois/,
+    );
+    // La porte du moteur n'est pas ouverte aux clients : ni pour une personne, ni pour la société.
     for (const destinataire of [s.gens.sami.id, null])
       await refuse(
         sql(
           "sonia",
-          `insert into collab.notifications (tenant_id, user_id, kind, payload)
-           values ($1, $2, 'piece.renvoyee', jsonb_build_object('piece_id', $3::text))`,
-          [s.pme, destinataire, id],
+          `select notif.emettre($1, 'piece.renvoyee', jsonb_build_object('piece_id', $2::text), $3)`,
+          [s.pme, id, destinataire],
         ),
-        /permission denied for table notifications/,
+        /permission denied for function emettre/,
       );
   });
 
@@ -364,13 +373,12 @@ describe("les clients n'écrivent que par les portes", { skip: !BASE_CONFIGUREE 
       [s.pme, s.gens.sonia.id, POISON],
     );
     await s.admin.query(
-      `insert into collab.notifications (tenant_id, kind, payload)
-       values ($1, 'piece.renvoyee', jsonb_build_object('piece_id', $2::text))`,
+      `select notif.emettre($1, 'piece.renvoyee', jsonb_build_object('piece_id', $2::text))`,
       [s.pme, POISON],
     );
     for (const qui of ["amel", "sami", "expert"] as const) {
       await sql(qui, `select count(*) from event_log_v where tenant_id = $1`, [s.pme]);
-      await sql(qui, `select count(*) from collab.notifications where tenant_id = $1`, [s.pme]);
+      await sql(qui, `select count(*) from notif.envois where tenant_id = $1`, [s.pme]);
     }
     await s.fait("amel", "supervision.journalDuMandat", s.pme, 5);
   });
@@ -624,7 +632,8 @@ describe("aucune écriture directe, famille par famille", { skip: !BASE_CONFIGUR
         "capture.analyses_verifiees",
         "capture.extractions",
         "capture.paiements",
-        "collab.notifications",
+        "notif.envois",
+        "notif.suites",
       ),
       [
         `insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id)

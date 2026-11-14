@@ -150,9 +150,10 @@ export const collab = {
     const { rows } = await db.query(
       `select p.*, (select r.recu_le from public.pv_receptions_v r
                     where r.pv_id = p.id and r.membre_id = auth.uid()) as recu_le,
-             (select n.payload->>'cabinet' from public.notifications_v n
-               where n.tenant_id = p.client_tenant_id and n.kind = 'pv.envoye'
-                 and n.payload->>'pv_id' = p.id::text order by n.created_at desc limit 1) as comptabilite
+             (select n.donnees->>'cabinet' from notif.envois n
+               where n.tenant_id = p.client_tenant_id and n.canal = 'app' and n.code = 'pv.envoye'
+                 and n.donnees->>'pv_id' = p.id::text and n.destinataire = auth.uid()
+               order by n.cree_le desc limit 1) as comptabilite
          from public.collab_pv_v p
         where p.client_tenant_id = $1 and p.statut = 'envoye'
         order by p.envoye_le desc, p.created_at desc`,
@@ -346,12 +347,12 @@ export const collab = {
   async notifications(db: Requete, tenantIds: string[]) {
     if (tenantIds.length === 0) return [];
     const { rows } = await db.query(
-      // La lecture est celle de la personne (27 octobre 2026). Toutes les non
-      // lues et les cent dernières (5 novembre 2026) : une notification non
-      // lue ne sort jamais de la liste. Une seule lecture (9 novembre 2026) :
-      // la règle par ligne coûtait 4,7 s pour 846 notifications.
+      // Le centre de la personne : ses lignes, écrites pour elle par le moteur
+      // (`notif.emettre`), pour les sociétés auxquelles elle a accès aujourd'hui.
+      // Toutes les non lues et les cent dernières : une notification non lue ne
+      // sort jamais de la liste.
       `select id, tenant_id, kind, payload, created_at, read_at
-         from app.notifications_des_societes($1::uuid[])
+         from notif.centre($1::uuid[])
         order by created_at desc, id`,
       [tenantIds],
     );

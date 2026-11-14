@@ -142,8 +142,8 @@ describe("le mandat se lit et se révoque depuis la PME", { skip: !BASE_CONFIGUR
     // Il la lit chez lui, sous sa propre identité, après la fin du mandat.
     const vues = await sousIdentite(expert.id, async (db) => {
       const { rows } = await db.query<{ motif: string }>(
-        `select payload ->> 'motif' as motif from collab.notifications
-          where tenant_id = $1 and kind = 'mandat.revoque'`,
+        `select donnees ->> 'motif' as motif from notif.envois
+          where tenant_id = $1 and canal = 'app' and code = 'mandat.revoque'`,
         [cabinet],
       );
       return rows;

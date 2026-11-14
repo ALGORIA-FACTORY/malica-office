@@ -149,10 +149,10 @@ describe("la page Clients unique de la comptabilité", { skip: !BASE_CONFIGUREE 
     assert.equal(r.effet, "immediat");
     assert.equal(await forfait(pme), "premium");
     const notes = await admin.query(
-      `select 1 from collab.notifications where tenant_id = $1 and kind = 'acces.monte'`,
+      `select 1 from notif.envois where tenant_id = $1 and canal = 'app' and code = 'acces.monte'`,
       [pme],
     );
-    assert.equal(notes.rowCount, 1);
+    assert.ok(notes.rowCount! >= 1, "le dirigeant est prévenu");
   });
 
   it("les sociétés d'un même dirigeant se regroupent sous sa licence", async () => {
@@ -188,8 +188,9 @@ describe("la page Clients unique de la comptabilité", { skip: !BASE_CONFIGUREE 
 
   it("une proposition tranchée ne reste pas à traiter", async () => {
     const { rows } = await admin.query(
-      `select 1 from collab.notifications
-        where tenant_id = $1 and kind = 'acces.propose' and read_at is null`,
+      `select 1 from notif.envois e
+        where e.tenant_id = $1 and e.canal = 'app' and e.code = 'acces.propose'
+          and not exists (select 1 from notif.suites s where s.envoi_id = e.id)`,
       [pme],
     );
     assert.equal(rows.length, 0);
@@ -242,10 +243,10 @@ describe("la page Clients unique de la comptabilité", { skip: !BASE_CONFIGUREE 
     assert.equal(r.effet, "rendu_au_dirigeant");
     assert.equal(await forfait(pme), "team");
     const notes = await admin.query(
-      `select 1 from collab.notifications where tenant_id = $1 and kind = 'acces.arrete'`,
+      `select 1 from notif.envois where tenant_id = $1 and canal = 'app' and code = 'acces.arrete'`,
       [pme],
     );
-    assert.equal(notes.rowCount, 1);
+    assert.ok(notes.rowCount! >= 1, "le dirigeant est prévenu");
     const p = await commeExpert((db) =>
       identite.placePourLeClient(db, cabinet, pme, `compta-${marque}@essai.local`),
     );

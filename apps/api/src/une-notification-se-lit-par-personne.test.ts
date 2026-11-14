@@ -2,13 +2,9 @@
  * Une notification se lit par personne (audit du 27 octobre 2026).
  *
  * Le cabinet ne pouvait pas marquer comme lue une notification du dossier de
- * son client : la seule politique de modification de `collab.notifications`
- * exige d'être membre du dossier. L'`update` touchait zéro ligne, sans erreur,
- * et la notification restait « non lue » à vie, badge compris.
- *
- * Et l'eût-il pu, c'eût été faux : un seul `read_at` pour deux lecteurs — la
- * lecture du cabinet aurait effacé le « non lu » du dirigeant. Chaque
- * personne a désormais sa propre lecture.
+ * son client, et un seul `read_at` pour deux lecteurs aurait fait lire l'un à
+ * la place de l'autre. Le moteur écrit une ligne PAR PERSONNE, et « lue » est un
+ * fait de plus, à elle : chacun marque la sienne, et la sienne seulement.
  *
  *   node --experimental-strip-types --test src/une-notification-se-lit-par-personne.test.ts
  */
@@ -44,14 +40,20 @@ describe("une notification se lit par personne", { skip: !BASE_CONFIGUREE }, () 
     }>;
     return liste.find((n) => n.id === id)?.readAt ?? null;
   };
-  const notifier = async () =>
-    (
-      await admin.query<{ id: string }>(
-        `insert into collab.notifications (tenant_id, kind, payload)
-         values ($1, 'piece.reponse_client', '{}'::jsonb) returning id`,
-        [pme],
-      )
-    ).rows[0]!.id;
+  /** Une notification de société : sa ligne chez le dirigeant, sa ligne chez le cabinet. */
+  const notifier = async () => {
+    const marqueur = `${marque}-${Math.random()}`;
+    await admin.query(
+      `select notif.emettre($1, 'piece.reponse_client', jsonb_build_object('marque', $2::text))`,
+      [pme, marqueur],
+    );
+    const { rows } = await admin.query<{ id: string; destinataire: string }>(
+      `select id, destinataire from notif.envois where canal = 'app' and donnees ->> 'marque' = $1`,
+      [marqueur],
+    );
+    const de = (u: Utilisateur) => rows.find((r) => r.destinataire === u.id)!.id;
+    return { dirigeant: de(dirigeant), expert: de(expert) };
+  };
 
   before(async () => {
     const d = await creerCompte(`dirigeant-${marque}@essai.local`, "MotDePasseTresLong2026!");
@@ -93,22 +95,27 @@ describe("une notification se lit par personne", { skip: !BASE_CONFIGUREE }, () 
   });
 
   it("le cabinet marque lue une notification du dossier de son client", async () => {
-    const id = await notifier();
+    const { expert: id } = await notifier();
     assert.equal(await lue(expert, id), null);
     await rpc(expert, "markRead", id);
     assert.notEqual(await lue(expert, id), null, "le cabinet la voit toujours non lue");
   });
 
   it("la lecture du cabinet ne lit pas à la place du dirigeant, et inversement", async () => {
-    const id = await notifier();
-    await rpc(expert, "markRead", id);
-    assert.equal(await lue(dirigeant, id), null, "le dirigeant l'a perdue sans la lire");
-    await rpc(dirigeant, "markRead", id);
-    assert.notEqual(await lue(dirigeant, id), null);
+    const ids = await notifier();
+    await rpc(expert, "markRead", ids.expert);
+    assert.equal(await lue(dirigeant, ids.dirigeant), null, "le dirigeant l'a perdue sans la lire");
+    // Et nul ne marque la ligne d'un autre : elle n'existe pas pour lui.
+    await assert.rejects(
+      rpc(expert, "markRead", ids.dirigeant),
+      /refus\.introuvable\.notification$/,
+    );
+    await rpc(dirigeant, "markRead", ids.dirigeant);
+    assert.notEqual(await lue(dirigeant, ids.dirigeant), null);
   });
 
   it("marquer deux fois ne fait rien de plus ; une notification inconnue est refusée", async () => {
-    const id = await notifier();
+    const { expert: id } = await notifier();
     await rpc(expert, "markRead", id);
     await rpc(expert, "markRead", id);
     await assert.rejects(
@@ -121,19 +128,21 @@ describe("une notification se lit par personne", { skip: !BASE_CONFIGUREE }, () 
     const ancienne = async () =>
       (
         await admin.query<{ id: string }>(
-          `insert into collab.notifications (tenant_id, kind, payload, created_at)
-           values ($1, 'piece.reponse_client', '{}'::jsonb, now() - interval '30 days')
+          `insert into notif.envois (tenant_id, destinataire, code, canal, sujet_cle, decision, donnees, cree_le)
+           values ($1, $2, 'piece.reponse_client', 'app', 'ancienne', 'a_remettre', '{}'::jsonb,
+                   now() - interval '30 days')
            returning id`,
-          [pme],
+          [pme, expert.id],
         )
       ).rows[0]!.id;
     const enAttente = await ancienne();
     const dejaLue = await ancienne();
     await rpc(expert, "markRead", dejaLue);
     await admin.query(
-      `insert into collab.notifications (tenant_id, kind, payload)
-       select $1, 'piece.reponse_client', '{}'::jsonb from generate_series(1, 100)`,
-      [pme],
+      `insert into notif.envois (tenant_id, destinataire, code, canal, sujet_cle, decision, donnees)
+       select $1, $2, 'piece.reponse_client', 'app', 'recente-' || g, 'a_remettre', '{}'::jsonb
+         from generate_series(1, 100) g`,
+      [pme, expert.id],
     );
     const ids = ((await rpc(expert, "notifications", [pme])) as Array<{ id: string }>).map(
       (n) => n.id,

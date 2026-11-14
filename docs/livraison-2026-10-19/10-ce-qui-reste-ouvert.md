@@ -983,3 +983,23 @@ comptabilité, comme sur `main`). Sa place reste affichée dans Réglages › So
 trancher avant toute mise en production** : une société qui n'a qu'un comptable interne ne peut plus
 inscrire ses propres écritures (`refus.inscription.reservee_au_cabinet`, règle C-1), et son comptable ne
 peut pas encore les revoir. Deux voies : construire l'espace, ou ne pas livrer la règle C-1 avant lui.
+
+### C-5 — Le moteur de notifications écrit une ligne par destinataire (13 novembre 2026)
+
+Tranché par le dirigeant : **remplacement total** de l'ancien fil (`collab.notifications`) par le
+moteur (`docs/moteur-de-notifications.md`). Ce que cela change pour le produit, à confirmer par Wissem
+avant toute mise en production :
+
+- **Qui lit quoi est décidé une fois, à l'écriture.** Une personne qui obtient plus tard l'accès à une
+  pièce ou à une société ne retrouve pas les notifications passées. L'accès perdu, lui, cache le centre
+  aussitôt.
+- **Les opérateurs de la plateforme ne reçoivent plus de copie par société.** L'ancien lecteur leur
+  montrait tout ; le nouveau ne leur adresse rien et leur laisse la lecture de la table.
+- **`facture.emise` ne part pas par courriel**, malgré son modèle : seuls les quatre paliers de relance
+  d'impayé sont diffusés (`notif.diffusions`). Un genre de plus est une ligne datée.
+- **Coût d'une émission** : `notif.audience` rejoue la règle de lecture par candidat. Mesuré : 19 ms pour
+  six candidats ; 495 ms pour un client engagé avec un cabinet de cinquante membres, ramenés à 26 ms en
+  ne retenant des cabinets que leurs experts et les collaborateurs affectés. À remesurer sur un volume réel
+  avant les opérations en masse.
+- **Non éprouvé sur le poste** : l'envoi réel par Brevo (clé et expéditeur absents). Les épreuves des
+  relances passent avec le changement de rôle neutralisé ; elles demandent `set role malica_api`.

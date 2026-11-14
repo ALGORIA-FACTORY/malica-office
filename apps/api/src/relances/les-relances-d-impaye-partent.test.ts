@@ -161,15 +161,17 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       await regler(db, d.operateur, true, false);
       await relancer(db);
       const envois = await envoisDe(db, d.titulaire);
-      assert.deepEqual(
-        envois.map((e) => [e.code, e.canal]),
-        [["impaye.rappel", "email"]],
-      );
+      // Une ligne dans l'application (le centre de la personne) et le courriel que
+      // la table des diffusions prévoit pour ce palier : deux lignes, jamais plus.
+      assert.deepEqual(envois.map((e) => [e.code, e.canal]).sort(), [
+        ["impaye.rappel", "app"],
+        ["impaye.rappel", "email"],
+      ]);
       await relancer(db);
       const tout = await db.query("select 1 from notif.envois where destinataire = $1", [
         d.titulaire,
       ]);
-      assert.equal(tout.rows.length, 1, "le second passage se tait et n'inscrit rien");
+      assert.equal(tout.rows.length, envois.length, "le second passage se tait et n'inscrit rien");
     });
   });
 
@@ -229,7 +231,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       assert.equal(i.rows.length, 1);
       assert.equal(i.rows[0]!.operateur, null);
       assert.deepEqual(
-        (await envoisDe(db, d.titulaire)).map((e) => e.code),
+        (await envoisDe(db, d.titulaire)).filter((e) => e.canal === "email").map((e) => e.code),
         ["impaye.suspension"],
         "l'annonce part, puisque la suspension a eu lieu",
       );
