@@ -141,10 +141,7 @@ export const enBibliotheque: MessagesDeLaBibliotheque = {
   "pme.export.rien": "No document to export.",
   "pme.export.aucunFichier": "Choose at least one file.",
   "pme.accueil.aExporter": "To export · {count}",
-  "pme.accueil.aExporterTexte": "{count} documents have not yet been handed to your accountant.",
-  "pme.accueil.aExporterTexte#one": "{count} document has not yet been handed to your accountant.",
-  "pme.accueil.aExporterTexte#other":
-    "{count} documents have not yet been handed to your accountant.",
+  "pme.accueil.aExporterTexte": "These documents have not yet been handed to your accountant.",
   "pme.accueil.exporter": "Export",
   "pme.accueil.remisLe": "Handed over on {date}",
   "cab.biblio.imprimer.selectionner": "Select",

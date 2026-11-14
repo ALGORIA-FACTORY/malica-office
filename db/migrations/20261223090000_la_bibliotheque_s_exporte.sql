@@ -165,6 +165,11 @@ create index exports_pieces_piece_idx on collab.exports_pieces (piece_id);
 select app.enable_tenant_rls('collab', 'exports_pieces', false, true);
 -- Aucun client n'écrit : la porte export_bibliotheque_inscrire écrit pour lui (R6).
 revoke insert, update, delete on collab.exports_pieces from authenticated;
+-- Le relecteur de nuit n'y touche pas : ni écriture, ni lecture (le-relecteur-de-nuit).
+create trigger service_hors_perimetre before insert or update or delete on collab.exports_pieces
+  for each statement execute function app.service_hors_perimetre();
+create policy service_hors_perimetre on collab.exports_pieces as restrictive for select
+  to authenticated using ((select app.service()) is null);
 
 create or replace view public.exports_pieces_v with (security_invoker = true) as
 select export_id, piece_id, tenant_id, remis_le from collab.exports_pieces;

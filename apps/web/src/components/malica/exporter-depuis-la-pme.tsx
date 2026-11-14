@@ -31,6 +31,7 @@ export function ExporterDepuisLaPme({
   titre,
   classe,
   classeDuTexte,
+  quandFerme,
 }: {
   pieces: readonly string[];
   societes: readonly SocieteExportee[];
@@ -41,18 +42,22 @@ export function ExporterDepuisLaPme({
   classe: string;
   /** La classe du texte qui dit où en est l'export. */
   classeDuTexte: string;
+  /** L'écran qui montre le geste peut le retirer une fois la feuille refermée. */
+  quandFerme?: () => void;
 }) {
   const { t, locale } = useI18n();
   const [ouvert, setOuvert] = useState(false);
   const [zip, setZip] = useState(true);
   const [excel, setExcel] = useState(true);
   const exp = useExportBibliotheque();
-  const vide = pieces.length === 0;
+  // Une fois les fichiers prêts, les pièces ne sont plus « à exporter » : l'état prêt reste dit.
   const issue = exp.issue;
+  const vide = pieces.length === 0 && issue === null;
 
   const fermer = () => {
     setOuvert(false);
     exp.oublier();
+    quandFerme?.();
   };
   const perimetre =
     societes.length > 1
@@ -72,7 +77,7 @@ export function ExporterDepuisLaPme({
       {ouvert ? (
         <div className="exp" role="group" aria-label={titre}>
           <h3>{titre}</h3>
-          {vide ? (
+          {issue?.genre === "pret" ? null : vide ? (
             <p role="status" className={classeDuTexte}>
               {t("pme.export.rien")}
             </p>
@@ -160,7 +165,7 @@ export function ExporterDepuisLaPme({
               </button>
             ) : null}
             <button type="button" className={classe} onClick={fermer}>
-              {t("cab.biblio.cancel")}
+              {issue?.genre === "pret" ? t("common.fermer") : t("cab.biblio.cancel")}
             </button>
           </div>
         </div>

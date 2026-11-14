@@ -14,7 +14,7 @@ import { InvitationsPourMoi } from "@/components/malica/InvitationsPourMoi";
 import { sensDuSolde } from "@/lib/sens-du-solde";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
@@ -452,6 +452,10 @@ function PmeHome() {
   const sansComptabilite = cabinet.isSuccess && cabinet.data === null;
   const aExporter = sansComptabilite ? piecesAExporter(lues.data ?? []) : [];
   const remisLe = sansComptabilite ? derniereRemise(lues.data ?? []) : null;
+  // Une fois l'export lancé, les pièces sortent de « à exporter » : la feuille reste ouverte
+  // jusqu'à ce que la personne la referme, et ne disparaît pas avec son compteur.
+  const [exportMonte, setExportMonte] = useState(false);
+  if (!exportMonte && aExporter.length > 0) setExportMonte(true);
   /*
    * 24 octobre 2026, Wissem : « rien ne dit que la lecture casse ». Une pièce
    * dont la lecture a échoué se voit ici, en rouge, avec sa raison ; la carte
@@ -715,18 +719,21 @@ function PmeHome() {
         </div>
 
         {/* ── 3 bis. à exporter : une société sans comptabilité remet ses pièces ─── */}
-        {aExporter.length > 0 || remisLe ? (
+        {exportMonte || remisLe ? (
           <div className="exp-home" data-testid="a-exporter">
-            {aExporter.length > 0 ? (
+            {exportMonte ? (
               <>
-                <p>
-                  <b>{t("pme.accueil.aExporter", { count: aExporter.length })}</b>{" "}
-                  {t("pme.accueil.aExporterTexte", { count: aExporter.length })}
-                </p>
+                {aExporter.length > 0 ? (
+                  <p>
+                    <b>{t("pme.accueil.aExporter", { count: aExporter.length })}</b>{" "}
+                    {t("pme.accueil.aExporterTexte")}
+                  </p>
+                ) : null}
                 <ExporterDepuisLaPme
+                  quandFerme={() => setExportMonte(false)}
                   pieces={aExporter.map((p) => p.id)}
                   societes={[{ id: pme.tenantId, nom: pme.orgName, n: aExporter.length }]}
-                  titre={t("pme.accueil.aExporter", { count: aExporter.length })}
+                  titre={t("pme.accueil.exporter")}
                   libelle={t("pme.accueil.exporter")}
                   classe="more"
                   classeDuTexte="sub"

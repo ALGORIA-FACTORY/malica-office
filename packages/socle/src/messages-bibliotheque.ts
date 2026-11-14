@@ -144,10 +144,7 @@ export const frBibliotheque = {
   "pme.export.rien": "Aucune pièce à exporter.",
   "pme.export.aucunFichier": "Choisissez au moins un fichier.",
   "pme.accueil.aExporter": "À exporter · {count}",
-  "pme.accueil.aExporterTexte": "{count} pièces n'ont pas encore été remises à votre comptable.",
-  "pme.accueil.aExporterTexte#one": "{count} pièce n'a pas encore été remise à votre comptable.",
-  "pme.accueil.aExporterTexte#other":
-    "{count} pièces n'ont pas encore été remises à votre comptable.",
+  "pme.accueil.aExporterTexte": "Ces pièces n'ont pas encore été remises à votre comptable.",
   "pme.accueil.exporter": "Exporter",
   "pme.accueil.remisLe": "Remis le {date}",
   "cab.biblio.imprimer.selectionner": "Sélectionner",

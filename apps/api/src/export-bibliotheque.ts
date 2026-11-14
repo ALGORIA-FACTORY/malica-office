@@ -156,8 +156,8 @@ async function preparer(db: Requete, demande: Demande): Promise<Plan> {
     value: string;
   }>(
     `select ns, key, locale, value from ref.labels
-      where ns in ('export_bibliotheque', 'document_type', 'dossier')
-        and locale = any($1::text[])`,
+      where locale = any($1::text[])
+        and (ns = 'export_bibliotheque' or ns = 'document_type' or ns = 'dossier')`,
     [[demande.langue, "fr"]],
   );
   // La langue demandée, à défaut le français : un libellé jamais en carrés vides ni absent.
