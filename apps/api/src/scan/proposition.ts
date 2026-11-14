@@ -983,7 +983,10 @@ async function proposerDepuisLeJugement(
             a.pack_version_id, p.tenant_id, o.jurisdiction, o.currency as devise_du_dossier,
             app.cours_du_jugement_a_jour(p.tenant_id, a.controles) as cours_a_jour,
             app.reglages_du_jugement_a_jour(p.tenant_id, a.controles) as reglages_a_jour,
-            case when p.document_kind_statut = 'confirme' then p.document_kind end as sens_dit,
+            -- Le type que la personne a DÉCLARÉ à l'import (« a_confirmer ») ou CONFIRMÉ
+            -- (« confirme ») : c'est le sens de la pièce. Un type seulement lu n'a pas de
+            -- statut sur la table, et la lecture le porte déjà dans le payload.
+            case when p.document_kind_statut in ('a_confirmer', 'confirme') then p.document_kind end as sens_dit,
             (select q.valeur from capture.precisions q
               where q.piece_id = p.id and q.champ = 'document_date'
               order by q.decided_at desc limit 1) as date_dite,
