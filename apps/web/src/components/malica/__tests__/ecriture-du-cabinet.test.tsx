@@ -341,6 +341,21 @@ describe("la pièce côté comptable", () => {
     expect(screen.queryByText(/aucun pack n'est en vigueur/)).toBeNull();
   });
 
+  it("rien de proposé faute de type : la raison du serveur se lit à l'écran, sans ouvrir le i (recette du 14 novembre)", () => {
+    // Recette G1 : le formulaire s'affichait vide, la raison n'était que dans le i.
+    const raison = "Aucune écriture ne se propose : à compléter — type.";
+    monter({
+      ok: false,
+      verdict: "à comptabiliser avec réserve",
+      verdictCode: "reserve",
+      raison,
+      raisonCode: "a_completer",
+      aCompleter: ["type"],
+    } as unknown as PropositionDePiece);
+    expect(screen.getByText("cab.ecriture.rien")).toBeTruthy();
+    expect(screen.getByText(raison)).toBeTruthy();
+  });
+
   it("rien de proposé : le comptable SAISIT l'écriture, elle part forcée", async () => {
     api.forcer.mockResolvedValue("e1");
     monter(RIEN);

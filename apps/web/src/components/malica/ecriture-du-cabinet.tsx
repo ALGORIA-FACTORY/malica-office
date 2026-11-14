@@ -406,18 +406,22 @@ export function EcritureDuCabinet({
             />
           </p>
         ) : (
-          <p className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
-            {t("cab.ecriture.rien")}
-            <Aide
-              titre={t("cab.ecriture.rien.pourquoi")}
-              /*
-               * La raison vient du serveur, en français, et porte les motifs des
-               * contrôles : une seule phrase, construite là où le jugement est
-               * posé. Elle va dans le i : l'écran dit un mot et un geste.
-               */
-              paragraphes={[{ texte: proposition.raison }]}
-            />
-          </p>
+          <div className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
+            <p>
+              {t("cab.ecriture.rien")}
+              <Aide
+                titre={t("cab.ecriture.rien.pourquoi")}
+                /*
+                 * La raison vient du serveur, en français, et porte les motifs des
+                 * contrôles : une seule phrase, construite là où le jugement est
+                 * posé. Elle va dans le i, et s'affiche aussi à côté : un formulaire
+                 * vide sans sa cause fait croire à une panne (recette du 14 novembre).
+                 */
+                paragraphes={[{ texte: proposition.raison }]}
+              />
+            </p>
+            <p className="mt-1 text-[12.5px] text-foreground">{proposition.raison}</p>
+          </div>
         )
       ) : null}
 
