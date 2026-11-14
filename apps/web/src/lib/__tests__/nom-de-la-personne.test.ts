@@ -5,7 +5,28 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { nomDeLaPersonne, nomPourSaluer } from "../nom-de-la-personne";
+import { identitePourAffichage, nomDeLaPersonne, nomPourSaluer } from "../nom-de-la-personne";
+
+describe("la carte du Compte", () => {
+  // Recette du 14 novembre 2026, C4 : la carte montrait « S » et l'e-mail au lieu du nom saisi.
+  it("affiche le nom de l'inscription, son initiale, et l'e-mail en second", () => {
+    expect(identitePourAffichage({ display_name: "Amira Trabelsi" }, "amira@exemple.test")).toEqual(
+      { nom: "Amira Trabelsi", initiale: "A", courriel: "amira@exemple.test" },
+    );
+  });
+
+  it("sans nom écrit, l'e-mail sert de nom et ne se répète pas", () => {
+    expect(identitePourAffichage({ display_name: null }, "amira@exemple.test")).toEqual({
+      nom: "amira@exemple.test",
+      initiale: "A",
+      courriel: null,
+    });
+  });
+
+  it("sans nom ni e-mail, un trait et une initiale neutre", () => {
+    expect(identitePourAffichage(null, null)).toEqual({ nom: "—", initiale: "·", courriel: null });
+  });
+});
 
 describe("le nom de la personne", () => {
   it("le nom de l'inscription sert quand rien d'autre n'est écrit", () => {

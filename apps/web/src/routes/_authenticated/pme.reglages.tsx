@@ -36,6 +36,7 @@ import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
 import { nombre as entier, ouverturesDuForfait, utilisateursInclus } from "@/lib/forfait";
+import { identitePourAffichage } from "@/lib/nom-de-la-personne";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -159,6 +160,8 @@ function PmeReglages() {
     queryKey: ["mon-profil"],
     queryFn: () => office().identity.monProfil(),
   });
+  // Le nom que la personne a donné (inscription, puis Réglages), jamais l'adresse seule (C4).
+  const identite = identitePourAffichage(profil.data, compte.data?.email ?? null);
   const acces = useMonAcces(pme.tenantId);
   // Ma photo, quand j'en ai une : elle prend la place de l'initiale.
   const maPhoto = usePhotosDeProfil(compte.data ? [compte.data.id] : [])[compte.data?.id ?? ""];
@@ -220,17 +223,10 @@ function PmeReglages() {
            */}
           <div className="card profil">
             <span className="av" aria-hidden>
-              {maPhoto ? (
-                <img src={maPhoto} alt="" />
-              ) : (
-                initiale(profil.data?.prenom || compte.data?.email || null)
-              )}
+              {maPhoto ? <img src={maPhoto} alt="" /> : identite.initiale}
             </span>
-            <b>
-              {[profil.data?.prenom, profil.data?.nom].filter(Boolean).join(" ") ||
-                (compte.data?.email ?? ABSENT)}
-            </b>
-            {profil.data?.prenom ? <span className="ml">{compte.data?.email}</span> : null}
+            <b>{identite.nom}</b>
+            {identite.courriel ? <span className="ml">{identite.courriel}</span> : null}
             <span className="pills">
               {acces.data?.role ? (
                 <span className="pill">{roleLisible(acces.data.role, t)}</span>
