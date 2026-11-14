@@ -98,6 +98,13 @@ export async function decor(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [tenant, titulaire],
   );
+  // Le jour de la plateforme, pas celui du serveur. La facturation immédiate et le robot datent leurs
+  // factures au jour de la plateforme (son fuseau, lu au référentiel de l'émetteur) ; le reste du
+  // moteur lit `current_date`, celui de la session. Entre 23 h et minuit UTC, les deux ne sont pas le
+  // même jour (CI de main, nuit du 14 au 15 novembre 2026, fuseau de Tunis). La transaction d'essai
+  // prend donc le fuseau de la plateforme — ce que fait le robot dans sa propre transaction — et
+  // `current_date` y est partout le jour de la plateforme.
+  await db.query("select set_config('TimeZone', plateforme.fuseau_de_la_plateforme(), true)");
   const { rows: d } = await db.query<{
     jour: string;
     mois: string;

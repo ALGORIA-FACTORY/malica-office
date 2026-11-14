@@ -990,3 +990,17 @@ comptabilité, comme sur `main`). Sa place reste affichée dans Réglages › So
 trancher avant toute mise en production** : une société qui n'a qu'un comptable interne ne peut plus
 inscrire ses propres écritures (`refus.inscription.reservee_au_cabinet`, règle C-1), et son comptable ne
 peut pas encore les revoir. Deux voies : construire l'espace, ou ne pas livrer la règle C-1 avant lui.
+
+### Deux jours dans le moteur : celui du serveur et celui de la plateforme (nuit du 14 au 15 novembre 2026)
+
+La CI de `main` est tombée rouge entre 23 h et minuit UTC (`une-descente-n-efface-pas-une-montee`, « la facture part
+chaque jour ») : le moteur lit **deux jours**. 69 fonctions lisent `current_date` (le jour de la SESSION, UTC pour
+l'API) ; la facturation immédiate (`facturer_sur_le_champ`) et le robot du jour datent leurs factures au jour de la
+PLATEFORME (`plateforme.fuseau_de_la_plateforme()`, Tunis = UTC+1). De 23 h à 24 h UTC, un changement d'offre prend
+effet le 14 et son complément se facture à partir du 15 : un jour de l'offre haute n'est facturé nulle part. Dakar
+(UTC+0) n'est pas concerné.
+
+Corrigé ici, **côté épreuves seulement** : la transaction d'essai prend le fuseau de la plateforme (ce que le robot fait
+déjà dans sa propre transaction), `current_date` y est partout le jour de la plateforme. **Reste ouvert, à trancher** :
+faire de même pour les sessions de l'API (`sousClaims`, `apps/api/src/db.ts` : `set_config('TimeZone', fuseau de la
+plateforme, true)` au début de chaque transaction) — un changement transverse que ce correctif ne prend pas.
