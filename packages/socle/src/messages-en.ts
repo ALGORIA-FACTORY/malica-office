@@ -4897,6 +4897,20 @@ export const en: Dict = {
   "pme.bienvenue.regle":
     "Typing it in remains possible, but it is flagged: a typed tax ID does not carry the same proof as one read from the card.",
   "pme.bienvenue.exact": "That's right — get started",
+  "pme.suite.barre": "Your plan and your accountant",
+  "pme.suite.titre": "Choose your plan, then your accountant.",
+  "pme.suite.etape1": "1 · Your plan",
+  "pme.suite.etape1.sous": "You can change plan at any time in Settings.",
+  "pme.suite.forfait.voir": "See the plans",
+  "pme.suite.forfait.aide": "Each plan says what it includes and what it costs.",
+  "pme.suite.continuer": "Continue",
+  "pme.suite.etape2": "2 · Your accountant",
+  "pme.suite.etape2.sous": "They keep your books, if you wish.",
+  "pme.suite.compta.inviter": "Invite my accountant",
+  "pme.suite.compta.inviter.aide": "Your chartered accountant receives an invitation by e-mail.",
+  "pme.suite.compta.sans": "Continue without an accountant",
+  "pme.suite.compta.sans.aide":
+    "A company without a mandate works: you capture, you read, you export.",
   "pme.bienvenue.corriger": "Edit · type it in",
   "pme.bienvenue.pied":
     "Next: choose your plan, then invite your accountant — or not. A company without an engagement works: you capture, you read, you export.",

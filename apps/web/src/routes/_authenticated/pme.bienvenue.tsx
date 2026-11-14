@@ -125,11 +125,13 @@ function Bienvenue() {
     void navigate({ to: "/pme" });
   };
 
-  /** « C'est exact » : on entre dans le produit, l'obturateur ouvert. */
+  /**
+   * « C'est exact » : on entre dans le produit. Qui a promis la suite (forfait, puis
+   * comptabilité) la voit d'abord ; les autres entrent par « Ajouter des pièces » (C1).
+   */
   const commencer = () => {
     marquerBienvenueVue();
-    // Planche 9 : « Ajouter des pièces », le même écran que le « + ».
-    void navigate({ to: "/pme/capturer" });
+    void navigate({ to: promettreLaSuite ? "/pme/suite" : "/pme/capturer" });
   };
 
   /** « Corriger » : la fiche, seul écran qui écrit ces champs. */

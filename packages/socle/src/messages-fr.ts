@@ -5061,6 +5061,20 @@ export const fr = {
   "pme.bienvenue.regle":
     "La saisie au clavier reste possible, mais elle est signalée : un matricule tapé n'a pas la même valeur de preuve qu'un matricule lu sur la carte.",
   "pme.bienvenue.exact": "C'est exact — commencer",
+  "pme.suite.barre": "Votre abonnement et votre comptabilité",
+  "pme.suite.titre": "Choisissez votre forfait, puis votre comptabilité.",
+  "pme.suite.etape1": "1 · Votre forfait",
+  "pme.suite.etape1.sous": "Le forfait se change à tout moment dans les Réglages.",
+  "pme.suite.forfait.voir": "Voir les forfaits",
+  "pme.suite.forfait.aide": "Chaque forfait dit ce qu'il comprend et ce qu'il coûte.",
+  "pme.suite.continuer": "Continuer",
+  "pme.suite.etape2": "2 · Votre comptabilité",
+  "pme.suite.etape2.sous": "Elle tient vos écritures si vous le souhaitez.",
+  "pme.suite.compta.inviter": "Inviter ma comptabilité",
+  "pme.suite.compta.inviter.aide": "Votre expert-comptable reçoit une invitation par courriel.",
+  "pme.suite.compta.sans": "Continuer sans comptabilité",
+  "pme.suite.compta.sans.aide":
+    "Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
   "pme.bienvenue.corriger": "Corriger · saisie au clavier",
   "pme.bienvenue.pied":
     "Ensuite : choisir votre forfait, puis inviter votre comptabilité — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",

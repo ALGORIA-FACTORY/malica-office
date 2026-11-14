@@ -41,7 +41,7 @@ vi.mock("@/i18n", () => ({
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
   Link: ({ children, to }: { children?: ReactNode; to?: string }) => <a href={to}>{children}</a>,
-  useNavigate: () => vi.fn(),
+  useNavigate: () => nav.aller,
 }));
 vi.mock("@/components/malica/InvitationsPourMoi", () => ({ InvitationsPourMoi: () => null }));
 vi.mock("@/components/malica/LanguageSwitcher", () => ({ LanguageSwitcher: () => null }));
@@ -55,6 +55,8 @@ vi.mock("@/components/malica/pme-context", () => ({
     forfait: { ligne: monde.forfait },
   }),
 }));
+
+const nav = vi.hoisted(() => ({ aller: vi.fn() }));
 
 const vide = async () => [];
 const depot = (m: Record<string, unknown>) => new Proxy(m, { get: (c, n: string) => c[n] ?? vide });
@@ -79,6 +81,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
 import { Route as RouteBienvenue } from "@/routes/_authenticated/pme.bienvenue";
 import { Route as RouteOffice } from "@/routes/_authenticated/office";
 import { Route as RouteOnboarding } from "@/routes/_authenticated/onboarding";
+import { Route as RouteSuite } from "@/routes/_authenticated/pme.suite";
 
 const composant = (route: unknown) =>
   (route as { options: { component: () => ReactNode } }).options.component;
@@ -198,5 +201,32 @@ describe("le matricule fiscal : l'écran ne dit « voici » que ce qu'il montre"
     rendre(composant(RouteBienvenue));
     expect(screen.queryByText("pme.bienvenue.ditTitre")).toBeNull();
     expect(screen.getByText("pme.bienvenue.ditSansMatricule")).toBeTruthy();
+  });
+});
+
+describe("C1 — « C'est exact » mène au forfait, puis à la comptabilité", () => {
+  // Recette du 14 novembre 2026 : « C'est exact — commencer » ouvrait « Ajouter des pièces ».
+  it("qui promet la suite va d'abord au forfait et à la comptabilité", () => {
+    monde.forfait = { titulaire: true, pris_en_charge_par: null };
+    rendre(composant(RouteBienvenue));
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.exact" }));
+    expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/suite" });
+  });
+
+  it("les autres entrent directement par « Ajouter des pièces »", () => {
+    monde.forfait = { titulaire: false, pris_en_charge_par: null };
+    rendre(composant(RouteBienvenue));
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.exact" }));
+    expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/capturer" });
+  });
+
+  it("la suite montre le forfait, puis la comptabilité ou « sans comptabilité »", () => {
+    rendre(composant(RouteSuite));
+    expect(screen.getByText("pme.suite.forfait.voir")).toBeTruthy();
+    expect(screen.queryByText("pme.suite.compta.sans")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "pme.suite.continuer" }));
+    expect(screen.getByText("pme.suite.compta.inviter")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^pme\.suite\.compta\.sans/ }));
+    expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/capturer" });
   });
 });
