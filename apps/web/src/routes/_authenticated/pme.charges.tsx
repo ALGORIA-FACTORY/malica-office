@@ -19,6 +19,7 @@ import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { currentPeriod } from "@/hooks/use-tva";
+import { UneSocieteALaFois } from "@/components/malica/societes-a-la-ligne";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { nombre } from "@/lib/forfait";
@@ -46,7 +47,12 @@ export const Route = createFileRoute("/_authenticated/pme/charges")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: ChargesScreen,
+  component: () => (
+    // Sous « Toutes » : le total du mois de chaque société, rendu par le moteur du Socle.
+    <UneSocieteALaFois chiffre={{ nature: "charges", periode: currentPeriod() }}>
+      <ChargesScreen />
+    </UneSocieteALaFois>
+  ),
 });
 
 const THRESHOLD_CODE = "FAMILLE_CONSO";

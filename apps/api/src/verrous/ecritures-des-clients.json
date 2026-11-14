@@ -469,6 +469,11 @@
       "chemins": ["public.comptabilite_invitation_accepter", "public.comptabilite_inviter"]
     },
     {
+      "objet": "identity.memberships",
+      "privilege": "DELETE",
+      "chemins": ["public.comptable_interne_retirer"]
+    },
+    {
       "objet": "identity.organizations",
       "privilege": "UPDATE",
       "chemins": ["public.organisation_adresse_poser", "public.organisation_definir"]

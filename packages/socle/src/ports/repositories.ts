@@ -1611,6 +1611,13 @@ export interface PieceLue {
   dateDocument: string | null;
   kind: "facture_achat" | "facture_vente" | null;
   /**
+   * La société a une comptabilité (un mandat en vigueur) : le même fait que
+   * `identity.monCabinet`, lu une fois par société dans la liste. `false` : la
+   * pièce n'a personne à qui partir (`statutPme` : « Rangée »). Absent : on ne
+   * sait pas, et le statut ne change pas.
+   */
+  comptabilite?: boolean;
+  /**
    * Le type de document retenu par la base (`pieces.document_kind`), tous
    * types confondus — celui qui range la pièce dans son dossier. `kind`, lui,
    * ne dit que le sens lu (achat ou vente).

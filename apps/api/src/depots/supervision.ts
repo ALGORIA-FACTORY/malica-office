@@ -53,11 +53,14 @@ const STATUTS_VIDES: Readonly<Record<StatutCabinet, number>> = {
  * file en montre deux.
  */
 const PIECES_DU_CABINET = `pieces_v p
-         join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
+         join app.mandats_du_cabinet($1) g on g.pme_org_id = p.tenant_id
           -- En vigueur : l'archive d'un mandat terminé se lit (1.6), elle
           -- n'est pas du travail en cours.
           and g.status = 'actif'
-          and p.tenant_id in (select app.mandats_visibles($1))`;
+          and p.tenant_id in (select app.mandats_visibles($1))
+          -- Un retour fait par la comptabilité d'avant attend la réponse du
+          -- CLIENT : il n'est pas à la file de celle-ci (13 novembre 2026, A5).
+          and (p.status <> 'retournee' or app.retour_du_cabinet(p.id, g.cabinet_org_id))`;
 
 /**
  * Ce qui a été TRANSMIS au cabinet : une pièce « chez vous » n'y paraît pas,
@@ -124,12 +127,17 @@ export const supervision = {
   async listMyCabinets(db: Requete) {
     // `auth.uid()` est déjà posé : l'appartenance se joint en base, là où
     // l'adaptateur faisait deux requêtes et croisait les identifiants.
+    // Et la société que la personne tient en interne : son espace est celui-ci.
     const { rows } = await db.query(
       `select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency, o.validation_mode
          from organizations_v o
          join mes_adhesions_v m on m.tenant_id = o.id
         where o.kind = 'cabinet'
-        order by o.name`,
+       union
+       select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency, o.validation_mode
+         from organizations_v o
+        where o.id in (select app.dossiers_du_comptable_interne())
+        order by name`,
     );
     return (rows as Record<string, unknown>[]).map((o) => ({
       id: o["id"] as string,
@@ -156,7 +164,7 @@ export const supervision = {
                 not app.engagement_en_vigueur(e.status, e.starts_on, e.ends_on)
                   and e.pme_org_id in (select a.pme from app.mes_archives() a
                                         where a.cabinet = e.cabinet_org_id) as archive
-           from engagements_v e
+           from app.mandats_du_cabinet($1) e
            left join organizations_v o on o.id = e.pme_org_id
           where e.cabinet_org_id = $1
             -- Chacun voit ses mandats : tous pour l'expert, les siens pour le collaborateur.
@@ -190,34 +198,40 @@ export const supervision = {
       c.parStatut[statutAuCabinet(brut, r)] += 1;
     }
 
-    return (mandats.rows as Record<string, unknown>[])
-      .map((r) => {
-        const tenant = r["pme_org_id"] as string;
-        const c = parClient.get(tenant);
-        const parStatut = c?.parStatut ?? { ...STATUTS_VIDES };
-        return {
-          tenantId: tenant,
-          name: (r["name"] as string) ?? "—",
-          legalId: (r["legal_id"] as string | null) ?? null,
-          // Les deux colonnes sont NOT NULL en base, et la jointure part du
-          // mandat : le repli ne pouvait rien sauver, seulement afficher
-          // « Tunisie, dinar » sur un dossier qui dirait autre chose.
-          jurisdiction: r["jurisdiction"] as string,
-          currency: r["currency"] as string,
-          validationMode: (r["validation_mode"] as string) ?? "mandate",
-          engagementStatus: r["status"] as string,
-          archive: r["archive"] === true,
-          mandatDepuis: (r["starts_on"] as string | null) ?? null,
-          mandatJusquau: (r["ends_on"] as string | null) ?? null,
-          counts: c?.comptes ?? { ...COMPTES_VIDES },
-          parStatut,
-          // La même règle que la file : `A_TRAITER` du Socle.
-          aTraiter: (Object.keys(parStatut) as StatutCabinet[])
-            .filter((st) => A_TRAITER.has(st))
-            .reduce((n, st) => n + parStatut[st], 0),
-        };
-      })
-      .sort((a, b) => b.aTraiter - a.aTraiter);
+    return (
+      (mandats.rows as Record<string, unknown>[])
+        // Un mandat terminé qui n'a laissé aucune archive — la société l'a refusé,
+        // ou la comptabilité n'a rien pris en charge — n'ouvre plus aucun dossier :
+        // un refus n'est pas une archive (13 novembre 2026, A6).
+        .filter((r) => r["status"] !== "termine" || r["archive"] === true)
+        .map((r) => {
+          const tenant = r["pme_org_id"] as string;
+          const c = parClient.get(tenant);
+          const parStatut = c?.parStatut ?? { ...STATUTS_VIDES };
+          return {
+            tenantId: tenant,
+            name: (r["name"] as string) ?? "—",
+            legalId: (r["legal_id"] as string | null) ?? null,
+            // Les deux colonnes sont NOT NULL en base, et la jointure part du
+            // mandat : le repli ne pouvait rien sauver, seulement afficher
+            // « Tunisie, dinar » sur un dossier qui dirait autre chose.
+            jurisdiction: r["jurisdiction"] as string,
+            currency: r["currency"] as string,
+            validationMode: (r["validation_mode"] as string) ?? "mandate",
+            engagementStatus: r["status"] as string,
+            archive: r["archive"] === true,
+            mandatDepuis: (r["starts_on"] as string | null) ?? null,
+            mandatJusquau: (r["ends_on"] as string | null) ?? null,
+            counts: c?.comptes ?? { ...COMPTES_VIDES },
+            parStatut,
+            // La même règle que la file : `A_TRAITER` du Socle.
+            aTraiter: (Object.keys(parStatut) as StatutCabinet[])
+              .filter((st) => A_TRAITER.has(st))
+              .reduce((n, st) => n + parStatut[st], 0),
+          };
+        })
+        .sort((a, b) => b.aTraiter - a.aTraiter)
+    );
   },
 
   async queue(db: Requete, cabinetTenantId: string, tenantId?: string) {
@@ -411,7 +425,7 @@ export const supervision = {
                 count(distinct e.piece_id)::int as supervisees
            from prises_en_charge_v pc
            join ecritures_v e on e.id = pc.ecriture_id and e.nature = 'piece'
-           join engagements_v g on g.pme_org_id = pc.client_tenant_id and g.cabinet_org_id = $1
+           join app.mandats_du_cabinet($1) g on g.pme_org_id = pc.client_tenant_id
            left join cabinet_members_v m on m.user_id = pc.par and m.tenant_id = $1
           where pc.tenant_id = $1
             and pc.prise_le >= date_trunc('month', now()) - interval '11 months'
@@ -423,7 +437,7 @@ export const supervision = {
         `select coalesce(demandee.value, francais.value, mo.code) as label,
                 count(*)::int as retours
            from ecritures_v e
-           join engagements_v g on g.pme_org_id = e.tenant_id and g.cabinet_org_id = $1
+           join app.mandats_du_cabinet($1) g on g.pme_org_id = e.tenant_id
            join ref_rejet_motifs_v mo on mo.id = e.review_motif_id
            left join ref_labels_v demandee
              on demandee.ns = 'rejet_motif' and demandee.key = mo.code and demandee.locale = $2
@@ -437,7 +451,7 @@ export const supervision = {
       ),
       db.query(
         `with mandats as (
-           select g.pme_org_id as tenant_id from engagements_v g where g.cabinet_org_id = $1
+           select g.pme_org_id as tenant_id from app.mandats_du_cabinet($1) g
          ),
          lues as (
            select count(distinct x.piece_id)::int as n

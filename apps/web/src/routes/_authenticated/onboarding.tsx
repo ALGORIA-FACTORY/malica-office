@@ -37,6 +37,10 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  // Depuis une invitation à tenir la comptabilité d'une société, l'écran s'ouvre
+  // déjà sur « comptabilité » : la personne revient ensuite à l'invitation.
+  validateSearch: (search: Record<string, unknown>): { nature?: "cabinet" } =>
+    search["nature"] === "cabinet" ? { nature: "cabinet" } : {},
   component: Onboarding,
 });
 
@@ -45,7 +49,8 @@ function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [kind, setKind] = useState<OrgKind>("pme");
+  const { nature } = Route.useSearch();
+  const [kind, setKind] = useState<OrgKind>(nature ?? "pme");
   const [name, setName] = useState("");
   const [legalId, setLegalId] = useState("");
   const [mode, setMode] = useState<ValidationMode>("mandate");

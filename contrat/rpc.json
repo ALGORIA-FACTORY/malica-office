@@ -89,6 +89,7 @@
     "pvReceptions",
     "repondreAInvitation",
     "repondreSurPiece",
+    "retirerComptableInterne",
     "setPieceVis",
     "stats",
     "transmettreLesPieces"

@@ -34,6 +34,7 @@ import {
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { montant, montantSigne } from "@/lib/lisible";
+import { dossiersAOuvrir } from "@/lib/portefeuille-actif";
 import { estNul, sommeDecimale } from "@malica/socle/somme-decimale";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -176,7 +177,7 @@ function CabinetImmobilisations() {
     queryKey: ["cab-clients", org.id],
     queryFn: () => office().supervision.listClients(org.id),
   });
-  const rows = clients.data ?? [];
+  const rows = dossiersAOuvrir(clients.data ?? []);
   const client =
     rows.find((c) => c.tenantId === tenantId) ??
     // Sans choix ici, l'onglet s'ouvre sur le dossier courant du cabinet.
