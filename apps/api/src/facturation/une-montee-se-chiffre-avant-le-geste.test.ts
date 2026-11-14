@@ -16,11 +16,21 @@
  *     --test src/facturation/une-montee-se-chiffre-avant-le-geste.test.ts
  */
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
 
-import { decor, enPersonne, ouvrirLePerimetrePme, type Decor } from "./decor-de-facture.ts";
+import { personnesDEssai } from "../personne-d-essai.ts";
+
+import {
+  decor,
+  enPersonne,
+  facturesDAvance,
+  ouvrirLePerimetrePme,
+  prix,
+  type Decor,
+} from "./decor-de-facture.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -171,10 +181,134 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
     });
   }
 
-  // Périmètre ouvert : la montée se règle par la facture du jour, sur sa période d'avance (l'échéance
-  // de la société, pas la fin du mois civil). Le devis ne devine pas ce montant : il se tait, et ne
-  // dit que le prix plein (relevé de #381).
-  it("périmètre « PME » ouvert : le devis ne chiffre pas l'acompte, il dit le prix plein", async () => {
+  // Périmètre ouvert : la montée se règle par la facture « complément » du jour, sur l'échéance de
+  // la société (son ancre), avec timbre. Le devis relit la même arithmétique ; l'épreuve le compare à
+  // la facture que la montée émet VRAIMENT, pour 31 ancres différentes (une licence née il y a k jours).
+  it("périmètre « PME » ouvert : le devis est la facture complément que la montée émet, pour chaque ancre", async () => {
+    let chiffres = 0;
+    for (let k = 0; k <= 30; k++) {
+      await aBlanc(async (db) => {
+        // La licence naît il y a k jours (l'ancre de son échéance). La fuseau de la plateforme se lit
+        // une fois l'émetteur désigné : on le relit après, et l'on écarte la minute où les deux dates
+        // (celle du serveur, celle de la plateforme) diffèrent.
+        const { rows: n } = await db.query<{ naissance: string }>(
+          "select (current_date - $1::int)::text as naissance",
+          [k],
+        );
+        const d = await decor(db, "basic", n[0]!.naissance);
+        const { rows: j } = await db.query<{ aujourdhui: string; pareil: boolean }>(
+          `select (now() at time zone plateforme.fuseau_de_la_plateforme())::date::text as aujourdhui,
+                  (now() at time zone plateforme.fuseau_de_la_plateforme())::date = current_date as pareil`,
+        );
+        if (!j[0]!.pareil) return;
+        await ouvrirLePerimetrePme(db, d);
+        // La facture d'avance, sur l'offre actuelle : ce que fait le déclencheur du changement au commit
+        // (il ne tire pas dans une transaction annulée). Pas le robot du jour : il prend un verrou
+        // global, et 31 tours ralentiraient les autres épreuves de facturation.
+        await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+        const avant = await facturesDAvance(db, d.licence);
+        const devis = await devisDu(db, d, "team", j[0]!.aujourdhui);
+        assert.ok(devis, `k=${k} : un devis`);
+        await enPersonne(db, d.titulaire, () =>
+          db.query("select public.forfait_changer('team', $1, $2::date)", [
+            d.tenant,
+            j[0]!.aujourdhui,
+          ]),
+        );
+        // Ce que le déclencheur du changement fait au commit (il ne tire pas dans une transaction annulée).
+        await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+        const { rows: c } = await db.query<{
+          ht: string;
+          tva: string;
+          timbre: string;
+          ttc: string;
+        }>(
+          `select montant_ht::text as ht, montant_tva::text as tva, timbre::text, montant_ttc::text as ttc
+             from facturation.factures
+            where licence_id = $1 and nature = 'complement' and avoir_de is null`,
+          [d.licence],
+        );
+        if (devis.a_regler_ht === null) {
+          // Le devis se tait : il n'a pas de certitude. On vérifie qu'il ne se tait que faute de facture
+          // d'avance couvrant le jour AVANT le geste (alors la montée émet la base, pas un complément).
+          const couvert = avant.some(
+            (f) =>
+              f.nature === "base" &&
+              f.couvre_du <= j[0]!.aujourdhui &&
+              f.couvre_au > j[0]!.aujourdhui,
+          );
+          assert.equal(
+            couvert,
+            false,
+            `k=${k} : une facture d'avance couvre le jour, le devis devait chiffrer`,
+          );
+          return;
+        }
+        chiffres += 1;
+        assert.equal(c.length, 1, `k=${k} : la montée émet un complément`);
+        assert.equal(mm(devis.a_regler_ht), mm(c[0]!.ht), `k=${k} : HT`);
+        assert.equal(mm(devis.a_regler_tva), mm(c[0]!.tva), `k=${k} : TVA`);
+        assert.equal(mm(devis.timbre), mm(c[0]!.timbre), `k=${k} : timbre`);
+        assert.ok(
+          mm(devis.timbre) > 0,
+          `k=${k} : un complément est une facture, elle porte le timbre`,
+        );
+        assert.equal(mm(devis.a_regler_ttc), mm(c[0]!.ttc), `k=${k} : TTC`);
+      });
+    }
+    assert.ok(chiffres >= 28, `le devis chiffre presque toutes les ancres (${chiffres}/31)`);
+  });
+
+  // Les places en plus déjà payées sont couvertes : le complément n'est pas l'écart des prix de base
+  // (revue de #388). Team + 3 collaborateurs → Premium : le devis égale la facture émise.
+  it("périmètre « PME » ouvert, avec des places en plus déjà payées : le devis est la facture complément émise", async () => {
+    await aBlanc(async (db) => {
+      const { rows: n } = await db.query<{ naissance: string }>(
+        "select (current_date - 9)::text as naissance",
+      );
+      const d = await decor(db, "team", n[0]!.naissance);
+      const collaborateurs = [randomUUID(), randomUUID(), randomUUID()];
+      await personnesDEssai(db, ...collaborateurs);
+      for (const c of collaborateurs) {
+        await db.query(
+          "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
+          [d.tenant, c],
+        );
+      }
+      await ouvrirLePerimetrePme(db, d);
+      await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+      const [base] = await facturesDAvance(db, d.licence);
+      assert.ok(base, "une facture d'avance couvre le jour");
+      const prixTeam = await prix(db, "team");
+      assert.ok(
+        base.part_mensuelle_ht > prixTeam,
+        `des places en plus sont payées (${base.part_mensuelle_ht} > ${prixTeam})`,
+      );
+      const { rows: j } = await db.query<{ aujourdhui: string }>(
+        "select (now() at time zone plateforme.fuseau_de_la_plateforme())::date::text as aujourdhui",
+      );
+      const devis = await devisDu(db, d, "premium", j[0]!.aujourdhui);
+      assert.ok(devis);
+      await enPersonne(db, d.titulaire, () =>
+        db.query("select public.forfait_changer('premium', $1, $2::date)", [
+          d.tenant,
+          j[0]!.aujourdhui,
+        ]),
+      );
+      await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+      const { rows: c } = await db.query<{ ht: string; ttc: string }>(
+        `select montant_ht::text as ht, montant_ttc::text as ttc
+           from facturation.factures
+          where licence_id = $1 and nature = 'complement' and avoir_de is null`,
+        [d.licence],
+      );
+      assert.equal(c.length, 1, "la montée émet un complément");
+      assert.equal(mm(devis.a_regler_ht), mm(c[0]!.ht), "HT");
+      assert.equal(mm(devis.a_regler_ttc), mm(c[0]!.ttc), "TTC");
+    });
+  });
+
+  it("périmètre « PME » ouvert, sans facture d'avance qui couvre le jour : le devis se tait, il dit le prix plein", async () => {
     await aBlanc(async (db) => {
       const d = await decor(db, "basic", "2026-11-01");
       await ouvrirLePerimetrePme(db, d);

@@ -146,6 +146,31 @@ export const facturation = {
    * ouverte ; sans elle, la base ne répond que s'il n'y a qu'une réponse.
    */
   /**
+   * La licence qui accueillerait une société de plus (`public.societe_en_plus_devis`, la même
+   * règle que la porte `create_organization`) : son offre, ses sociétés, son inclus, le prix
+   * d'une société en plus. `null` : la société aura sa propre licence.
+   */
+  async societeEnPlusDevis(db: Requete) {
+    const { rows } = await db.query<{
+      r: {
+        offre: string;
+        organisations: number;
+        organisations_incluses: number;
+        prix_organisation_sup: string;
+      } | null;
+    }>(`select public.societe_en_plus_devis() as r`);
+    const r = rows[0]?.r ?? null;
+    return r
+      ? {
+          offre: r.offre,
+          organisations: Number(r.organisations),
+          organisations_incluses: Number(r.organisations_incluses),
+          prix_organisation_sup: String(r.prix_organisation_sup),
+        }
+      : null;
+  },
+
+  /**
    * Le prix d'une place et d'une société au-delà de l'offre en cours
    * (`mes_prix_en_plus`, 20261117120000) : ce que « Inviter » et « Sociétés »
    * disent avant le geste. `null` à qui n'est pas titulaire.

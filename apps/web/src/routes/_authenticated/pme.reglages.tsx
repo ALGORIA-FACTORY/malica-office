@@ -517,7 +517,7 @@ function PmeReglages() {
              * l'offre qui les regroupe. La coque ne nomme ni offre ni prix.
              */}
             <Link
-              to="/onboarding"
+              to="/pme/societe-en-plus"
               className="inv"
               data-verrou={verrous.societes.ouvert ? undefined : verrous.societes.offre}
             >

@@ -4020,6 +4020,15 @@ export const fr = {
   "pme.reglages.verrou.nonLu":
     "Verrouillé parce que le forfait n’est pas lu, pas parce qu’il est refusé.",
   "pme.reglages.surTotal": "{n} sur {total}",
+  "pme.societe.titre": "Ajouter une société",
+  "pme.societe.rejoint": "Elle rejoint votre abonnement {offre}.",
+  "pme.societe.rejointInclus": "Elle rejoint votre abonnement {offre} ({n} sociétés sur {total}).",
+  "pme.societe.rejointEnPlus":
+    "Elle rejoint votre abonnement {offre}. Société en plus : {prix} {devise} HT par mois.",
+  "pme.societe.propreAbonnement":
+    "Votre offre ne comprend qu’une société : la nouvelle aura son propre abonnement.",
+  "pme.societe.ajouter": "Ajouter la société",
+  "pme.societe.annuler": "Annuler",
   "tour.quitter": "Quitter la tour",
   "tour.menu.clients": "Clients",
   "tour.menu.cabinets": "Comptabilités",

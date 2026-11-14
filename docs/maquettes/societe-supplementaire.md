@@ -1,9 +1,11 @@
 # Ajouter une société — maquette PROPOSÉE (A3, recette du 13 novembre 2026)
 
-**Statut : proposée, non approuvée. Aucun écran n'est codé** (règle du projet : pas d'écran
-sans maquette approuvée). La base et l'épreuve sont faites
-(`20261222110000`, `une-societe-de-plus-rejoint-la-licence.test.ts`) : l'écran n'a plus qu'à
-appeler `identity.createOrganization`, qui rattache la société à la licence du propriétaire.
+**Statut : écran livré sur demande du dirigeant (« on fait ce qui n'est pas fait »), avec les deux
+arbitrages ci-dessous tranchés par défaut** (`docs/livraison-2026-10-19/10-ce-qui-reste-ouvert.md`, A3).
+La base et l'épreuve : `20261222110000`, `une-societe-de-plus-rejoint-la-licence.test.ts`. L'écran :
+`apps/web/src/routes/_authenticated/pme.societe-en-plus.tsx`, qui appelle `identity.createOrganization`.
+La ligne d'état est composée côté écran à partir de ce que la base a dit (offre, sociétés incluses, prix de
+la grille) : `lib/societe-en-plus.ts`.
 
 ## Parcours
 
