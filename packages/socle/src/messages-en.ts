@@ -323,6 +323,8 @@ export const en: Dict = {
     "A return of this document has been requested from the accountant: wait for their answer.",
   "refus.licence.transmission": "Sending suspended: a payment on your subscription is overdue.",
   "refus.licence.export": "Export suspended: this client's subscription is not up to date.",
+  "refus.journal.immuable":
+    "A journal entry is never rewritten or deleted: a dated fact is recorded instead.",
   "refus.place.comptable_prise":
     "The “In-house accountant” place included in the plan is already taken ({places} in total).",
   "refus.invitation.choisir_la_comptabilite":
@@ -1490,6 +1492,10 @@ export const en: Dict = {
   "cab.today.charge.pieces#other": "{count} documents waiting",
   "cab.rail.role": "Accounting",
   "cab.rail.role.expert": "Head of accounting",
+  "cab.rail.role.comptable": "In-house accountant",
+  "cab.societes.choisir": "Company",
+  "cab.cli.grise.externe":
+    "Reserved for the external accounting firm: fees and subscription are handled with it.",
   "cab.rail.role.dirigeant": "Owner",
   "cab.rail.role.collaborateur": "Staff member",
   "cab.rail.role.assistant": "Assistant",

@@ -387,21 +387,25 @@ describe("le comptable interne tient les livres", { skip: !BASE_CONFIGUREE }, ()
 
   /* ==================== 4 · AVEC UNE COMPTABILITÉ EXTERNE, IL PRÉPARE SEULEMENT */
 
-  it("en coexistence : il prépare, la comptabilité externe inscrit", async () => {
+  it("sous mandat externe (B) : la comptabilité externe prépare et inscrit, il ne tient plus les livres", async () => {
     await embaucher(externe.gens.amel, comptableDeLExterne, externe.pme);
     const id = await externe.deposer("amel", "entite");
     await externe.lire("amel", id);
     await externe.fait("amel", "collab.envoyer", id);
     assert.equal(await lit(comptableDeLExterne, "capture.pieces", id), true);
 
-    const ecriture = await preparer(comptableDeLExterne, id);
-    assert.match(
-      await refus(fait(comptableDeLExterne, "office.book", ecriture)),
-      /refus\.inscription\.reservee_au_cabinet/,
+    // Il ne prépare plus : la proposition est refusée.
+    assert.notEqual(
+      await refus(preparer(comptableDeLExterne, id)),
+      "accepte",
+      "le comptable interne ne prépare pas sous un mandat externe",
     );
-    // La comptabilité externe inscrit ce que le comptable a préparé.
+    // La comptabilité externe prépare et inscrit.
+    const ecriture = await preparer(externe.gens.expert, id);
     await externe.fait("expert", "office.book", ecriture);
-    assert.equal(await lit(comptableDeLExterne, "socle.ecritures", ecriture), true);
+    // Il ne lit plus les écritures de cette société : droits de lecture à confirmer
+    // (propriétaire non principal, place payée : décision ouverte).
+    assert.equal(await lit(comptableDeLExterne, "socle.ecritures", ecriture), false);
     // Il ne valide pas, et ne retourne pas.
     assert.match(
       await refus(
@@ -409,7 +413,7 @@ describe("le comptable interne tient les livres", { skip: !BASE_CONFIGUREE }, ()
           db.query(`select public.socle_ecriture_review($1, 'valide')`, [ecriture]),
         ),
       ),
-      /refus\.supervision\.reservee/,
+      /refus\./,
     );
     const autrePiece = await externe.deposer("amel", "entite");
     await externe.lire("amel", autrePiece);
@@ -423,6 +427,14 @@ describe("le comptable interne tient les livres", { skip: !BASE_CONFIGUREE }, ()
         }),
       ),
       /refus\.supervision\.reservee/,
+    );
+    // Sa société sous mandat externe ne s'ouvre plus dans son espace de comptabilité.
+    const mes = (await fait(comptableDeLExterne, "supervision.listMyCabinets")) as Array<{
+      id: string;
+    }>;
+    assert.ok(
+      !mes.some((o) => o.id === externe.pme),
+      "pas d'espace de comptabilité sous mandat externe",
     );
   });
 });

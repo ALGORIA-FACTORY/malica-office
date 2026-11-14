@@ -932,9 +932,16 @@ Le prompt laissait la règle à la maquette. **Tranché par défaut, la plus sim
 
 - **sans comptabilité externe**, le comptable interne tient les livres : il inscrit, valide, force et
   retourne. Le propriétaire n'inscrit plus lui-même : la société n'est plus « autonome » ;
-- **quand une comptabilité externe a un mandat actif**, c'est elle qui inscrit, valide, force et retourne.
-  Le comptable interne **prépare** seulement : il voit les pièces, établit leur type et propose
-  l'écriture, que la comptabilité externe inscrit.
+- **quand une comptabilité externe a un mandat actif**, c'est elle qui fait TOUT : inscrit, valide,
+  force et retourne. Le comptable interne **ne prépare plus, ne propose plus, ne valide plus, ne force plus**.
+  Il reçoit le rôle de propriétaire non principal de la société, pour **transmettre** les pièces à la
+  comptabilité externe (décision du dirigeant, 12 novembre 2026, **tranché** : elle remplace la règle
+  « prépare seulement » ci-dessus). Sous mandat externe, il n'a pas d'espace de comptabilité : il reste
+  dans l'espace PME. Mise en œuvre : migration `20261222110000` (`app.dossiers_du_comptable_interne`
+  exclut les sociétés à mandat externe actif). **Ouvert** : le siège PME pris par le comptable interne
+  compte-t-il dans les places de l'offre, ou est-il gratuit ? Le rôle de propriétaire non principal
+  occupe une place payée dans le modèle du 19 octobre (`20261022110000`) ; la transmission n'est pas
+  encore livrée (aucun droit élargi).
 
 Deux prédicats en base portent la règle : `app.prepare_le_dossier` (préparer) et
 `app.supervise_le_dossier` (trancher). Changer la règle, c'est changer ce second prédicat, pas les
