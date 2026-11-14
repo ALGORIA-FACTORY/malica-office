@@ -258,7 +258,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
             titre: string;
             corps: string;
             action_route: string | null;
-          }>("select * from notif.courriels_a_remettre(500)");
+          }>("select * from notif.reserver_courriels(500, interval '10 minutes')");
           return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
         });
       const avant = await lire();
@@ -279,7 +279,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       await regler(db, d.operateur, false, false);
       const file = await sous(db, "malica_api", null, async () => {
         const { rows } = await db.query<{ email: string }>(
-          "select email from notif.courriels_a_remettre(500)",
+          "select email from notif.reserver_courriels(500, interval '10 minutes')",
         );
         return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
       });
@@ -298,7 +298,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       );
       await assert.rejects(
         sous(db, "authenticated", d.titulaire, () =>
-          db.query("select * from notif.courriels_a_remettre(1)"),
+          db.query("select * from notif.reserver_courriels(1, interval '10 minutes')"),
         ),
         /permission denied/,
       );

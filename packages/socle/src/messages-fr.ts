@@ -2547,6 +2547,8 @@ export const fr = {
   "refus.referentiel.famille_absente":
     "Aucune famille du pack ne correspond à « {designation} » : le référentiel est incomplet.",
   "refus.referentiel.gabarit_absent": "Aucun modèle de message {code} pour le canal {canal}.",
+  "refus.relances.reglage_absent":
+    "Le réglage des relances n'est pas pris : aucun courriel ne part tant que l'exploitant ne l'a pas fixé.",
   "refus.referentiel.parametre_fiscal_absent":
     "Paramètre fiscal introuvable : {code} ({juridiction}) au {date}. Aucune valeur par défaut n’est appliquée.",
   "refus.referentiel.parametre_fiscal_non_etabli":

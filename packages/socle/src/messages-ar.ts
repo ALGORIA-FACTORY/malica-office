@@ -2394,6 +2394,8 @@ export const ar: Dict = {
   "refus.referentiel.famille_absente":
     "لا توجد عائلة في الحزمة تطابق «{designation}»: المرجع غير مكتمل.",
   "refus.referentiel.gabarit_absent": "لا يوجد قالب رسالة {code} للقناة {canal}.",
+  "refus.relances.reglage_absent":
+    "لم يُحدَّد إعداد التذكيرات بعد: لا يُرسل أي بريد إلكتروني حتى يضبطه المشغّل.",
   "refus.referentiel.parametre_fiscal_absent":
     "المعيار الجبائي غير موجود: {code} ({juridiction}) بتاريخ {date}. لا تُطبَّق أي قيمة افتراضية.",
   "refus.referentiel.parametre_fiscal_non_etabli":

@@ -2466,6 +2466,8 @@ export const en: Dict = {
   "refus.referentiel.famille_absente":
     "No family of the pack matches “{designation}”: the reference data is incomplete.",
   "refus.referentiel.gabarit_absent": "No message template {code} for channel {canal}.",
+  "refus.relances.reglage_absent":
+    "The relance setting is not decided: no email leaves until the operator sets it.",
   "refus.referentiel.parametre_fiscal_absent":
     "Tax parameter not found: {code} ({juridiction}) on {date}. No default value is applied.",
   "refus.referentiel.parametre_fiscal_non_etabli":

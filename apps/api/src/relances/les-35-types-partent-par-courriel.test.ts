@@ -2,7 +2,7 @@
  * Les 35 types d'événement partent par courriel — sur la base, sans envoi.
  *
  * Pour chaque type : le moteur (`notif.emettre`) décide un courriel à remettre à
- * la personne ; la file que lit le travailleur (`notif.courriels_a_remettre`) le
+ * la personne ; la file que lit le travailleur (`notif.reserver_courriels`) le
  * rend avec son ton ; le gabarit commun le met en forme, et la requête Brevo qui
  * l'emporterait se construit. Rien ne part : le transport n'est pas appelé, et
  * toute la transaction est annulée. L'envoi réel par Brevo n'est pas éprouvé ici.
@@ -140,6 +140,12 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
         [titulaire],
       );
 
+      // La file ne rend rien sans réglage de relances : on en pose un, dans la transaction.
+      await db.query(
+        "insert into plateforme.reglages_relances (actives, suspension_automatique, motif, decide_par) values (false, false, 'essai', $1)",
+        [titulaire],
+      );
+
       for (const code of Object.keys(TON_ATTENDU)) {
         await db.query("select notif.emettre($1, $2, $3::jsonb, $4)", [
           tenant,
@@ -159,7 +165,7 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
           action_route: string | null;
           ton: string;
           envoi_id: string;
-        }>("select * from notif.courriels_a_remettre(1000000)");
+        }>("select * from notif.reserver_courriels(1000000, interval '10 minutes')");
         return rows.filter((r) => r.email === email);
       })();
 

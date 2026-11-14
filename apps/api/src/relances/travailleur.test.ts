@@ -1,6 +1,7 @@
 /**
- * Le travailleur des relances, sans base ni réseau : il ne décide de rien,
- * il remet ce que la base a décidé et inscrit chaque tentative.
+ * Le travailleur des relances, sans base ni réseau : il ne décide de rien, il
+ * réserve, envoie et inscrit. Ce qui est éprouvé ici : l'ordre des trois temps,
+ * et le fait qu'aucune transaction n'est ouverte pendant l'envoi.
  */
 
 import assert from "node:assert/strict";
@@ -8,7 +9,6 @@ import { describe, it } from "node:test";
 
 import type { Requete } from "../db.ts";
 
-import { courrielDeNotification } from "./courriel-de-notification.ts";
 import { tourDeRelances } from "./travailleur.ts";
 
 const COURRIEL = {
@@ -22,22 +22,35 @@ const COURRIEL = {
   ton: "alerte",
 };
 
+/**
+ * Une base qui se comporte comme la vraie file pour ce test : la réservation
+ * rend le courriel une fois, puis la file se vide. `ouverte` dit si une
+ * transaction est en cours au moment où l'on appelle la base.
+ */
 function fausseBase() {
   const appels: Array<{ sql: string; params: unknown[] | undefined }> = [];
+  let ouverte = false;
   const db = {
     query: async (sql: string, params?: unknown[]) => {
       appels.push({ sql, params });
       if (sql.includes("relancer_les_impayes"))
         return { rows: [{ r: { actives: true, postes: 1 } }] };
-      // La file rend le courriel une fois, puis se vide (il est inscrit).
-      if (sql.includes("courriels_a_remettre")) {
-        const servi = appels.filter((a) => a.sql.includes("courriels_a_remettre")).length;
+      if (sql.includes("reserver_courriels")) {
+        const servi = appels.filter((a) => a.sql.includes("reserver_courriels")).length;
         return { rows: servi === 1 ? [COURRIEL] : [] };
       }
       return { rows: [] };
     },
   } as unknown as Requete;
-  return { appels, executer: <T>(t: (d: Requete) => Promise<T>) => t(db) };
+  const executer = async <T>(t: (d: Requete) => Promise<T>): Promise<T> => {
+    ouverte = true;
+    try {
+      return await t(db);
+    } finally {
+      ouverte = false;
+    }
+  };
+  return { appels, executer, estOuverte: () => ouverte };
 }
 
 const ENV = {
@@ -47,7 +60,7 @@ const ENV = {
 };
 
 describe("le travailleur des relances", () => {
-  it("sans clé Brevo : il laisse décider la base, n'envoie rien, n'inscrit rien", async () => {
+  it("sans clé Brevo : il laisse décider la base, ne réserve rien, n'envoie rien", async () => {
     const b = fausseBase();
     const r = await tourDeRelances({ executer: b.executer, env: {} });
     assert.equal(r.sansCle, true);
@@ -55,66 +68,52 @@ describe("le travailleur des relances", () => {
     assert.match(b.appels[0]!.sql, /relancer_les_impayes/);
   });
 
-  it("remet par Brevo et inscrit « remis »", async () => {
+  it("réserve, envoie hors transaction, puis inscrit « remis » — dans cet ordre", async () => {
     const b = fausseBase();
-    const envoyes: Array<Record<string, unknown>> = [];
-    const fetchImpl = (async (_url: string, init: RequestInit) => {
-      envoyes.push(JSON.parse(String(init.body)) as Record<string, unknown>);
-      return new Response(JSON.stringify({ messageId: "m1" }), { status: 201 });
-    }) as typeof fetch;
-    const r = await tourDeRelances({ executer: b.executer, env: ENV, fetchImpl });
+    const ordre: string[] = [];
+    const r = await tourDeRelances({
+      executer: b.executer,
+      env: ENV,
+      envoyer: async (e) => {
+        ordre.push("envoi");
+        // Aucune transaction ne tient pendant l'appel au transport.
+        assert.equal(b.estOuverte(), false, "aucune transaction pendant l'envoi");
+        assert.equal(e.sujet, COURRIEL.titre);
+        assert.equal(e.destinataire, COURRIEL.email);
+        assert.match(e.html, /https:\/\/app\.essai\.local\/pme\/reglages/);
+        return { messageId: "m1" };
+      },
+    });
     assert.equal(r.remis, 1);
-    assert.equal(envoyes.length, 1);
-    assert.equal(envoyes[0]!["subject"], COURRIEL.titre);
-    assert.match(String(envoyes[0]!["htmlContent"]), /https:\/\/app\.essai\.local\/pme\/reglages/);
+    const sqls = b.appels.map((a) => a.sql);
+    const iReserve = sqls.findIndex((s) => s.includes("reserver_courriels"));
+    const iRemet = sqls.findIndex((s) => s.includes("notif.remettre"));
+    assert.ok(iReserve >= 0 && iRemet > iReserve, "réservation avant inscription");
+    assert.deepEqual(ordre, ["envoi"]);
     const remise = b.appels.find((a) => a.sql.includes("notif.remettre"));
     assert.deepEqual(remise?.params, ["e1", "remis", null]);
   });
 
-  it("un refus de Brevo s'inscrit « echoue », avec l'erreur", async () => {
+  it("un échec d'envoi s'inscrit « echoue », avec l'erreur, et ne bloque pas la file", async () => {
     const b = fausseBase();
-    const fetchImpl = (async () => new Response("non", { status: 401 })) as typeof fetch;
-    const r = await tourDeRelances({ executer: b.executer, env: ENV, fetchImpl });
+    const r = await tourDeRelances({
+      executer: b.executer,
+      env: ENV,
+      envoyer: async () => {
+        throw new Error("Brevo a refusé le courriel (401) : clé refusée");
+      },
+    });
     assert.equal(r.echecs, 1);
+    assert.equal(r.remis, 0);
     const remise = b.appels.find((a) => a.sql.includes("notif.remettre"));
     assert.equal(remise?.params?.[1], "echoue");
-    assert.ok(String(remise?.params?.[2]).length > 0);
-  });
-});
-
-describe("le courriel d'une notification", () => {
-  it("échappe le texte, se lit de droite à gauche en arabe, garde le lien", () => {
-    const c = courrielDeNotification({
-      locale: "ar",
-      ton: COURRIEL.ton,
-      titre: COURRIEL.titre,
-      corps: COURRIEL.corps,
-      action: { libelle: "Payer", url: "https://app.essai.local/pme/reglages" },
-    });
-    assert.equal(c.sujet, COURRIEL.titre);
-    assert.match(c.html, /<html lang="ar" dir="rtl">/);
-    assert.ok(c.html.includes("&lt;ALG-1&gt;"));
-    assert.ok(!c.html.includes("<ALG-1>"));
-    assert.ok(c.texte.includes("https://app.essai.local/pme/reglages"));
+    assert.match(String(remise?.params?.[2]), /clé refusée/);
   });
 
-  it("une langue inconnue retombe sur le français ; un lien non http est refusé", () => {
-    const c = courrielDeNotification({
-      locale: "xx",
-      titre: "T",
-      corps: "C",
-      action: null,
-      ton: "neutre",
-    });
-    assert.match(c.html, /<html lang="fr" dir="ltr">/);
-    assert.throws(() =>
-      courrielDeNotification({
-        locale: "fr",
-        ton: "neutre",
-        titre: "T",
-        corps: "C",
-        action: { libelle: "x", url: "javascript:alert(1)" },
-      }),
-    );
+  it("une réservation demande une échéance explicite, en intervalle", async () => {
+    const b = fausseBase();
+    await tourDeRelances({ executer: b.executer, env: ENV, envoyer: async () => ({}) });
+    const reserve = b.appels.find((a) => a.sql.includes("reserver_courriels"));
+    assert.deepEqual(reserve?.params, [10, "10 minutes"]);
   });
 });

@@ -75,3 +75,20 @@ Le collaborateur affecté et le comptable interne sont éprouvés comme destinat
 `set role malica_api` est refusé sur le serveur partagé du poste.
 
 **Non éprouvé** : l'envoi réel par Brevo, faute de clé et d'expéditeur sur le poste.
+
+## Remise des courriels : réserver, envoyer, inscrire
+
+Le travailleur remet les courriels en trois temps, chacun dans sa propre
+transaction (`apps/api/src/relances/travailleur.ts`) :
+
+1. `notif.reserver_courriels(limite, durée)` pose une réservation
+   (`notif.reservations`, ajout seul, échéance) et rend les lignes. Le verrou de
+   la ligne ne dure que cette transaction.
+2. L'envoi Brevo se fait **hors de toute transaction** : aucun verrou ne tient
+   pendant un appel lent. Une épreuve le vérifie (`la-file-reserve-sans-verrou.test.ts`).
+3. `notif.remettre` inscrit le résultat (`remis` ou `echoue`).
+
+Une réservation sans résultat à son échéance repart au tour suivant. Le plafond
+d'essais est le réglage de relances de l'exploitant : **absent, la file lève
+`refus.relances.reglage_absent`** et rien ne part, relances comprises, jusqu'à
+ce que `plateforme.relances_regler` ait été appelé.
