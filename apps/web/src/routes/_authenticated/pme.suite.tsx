@@ -20,14 +20,6 @@ export const Route = createFileRoute("/_authenticated/pme/suite")({
   validateSearch: (s: Record<string, unknown>): { etape: Etape } => ({
     etape: s["etape"] === "comptabilite" ? "comptabilite" : "forfait",
   }),
-  head: () => ({
-    meta: [
-      { title: "Votre abonnement et votre comptabilité — Malica Office" },
-      { name: "description", content: "Choisissez votre forfait, puis votre comptabilité." },
-      { property: "og:title", content: "Votre abonnement et votre comptabilité — Malica Office" },
-      { property: "og:type", content: "website" },
-    ],
-  }),
   component: Suite,
 });
 
