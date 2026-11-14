@@ -80,8 +80,8 @@ une base jetable.
 
 Le gel du 12 au 15 novembre est levé. Les correctifs et les lots de la recette du 13 novembre entrent sur `main` comme d'habitude : une PR par lot, CI verte sur la tête, fusion sur l'ordre du dirigeant. Ce qui demeure :
 
-- #372 (espace comptable interne) reste ouverte ; sa date de fusion est inchangée (lundi 16 novembre) tant que le dirigeant n'en dit pas autre chose.
-- Le tag pilote se pose sur un commit vert depuis 48 h sur staging, et aucun déploiement ni rotation n'a lieu du 25 au 28 novembre.
+- Le 14 novembre 2026, Wissem Barouni (CEO) a aussi levé, par ordre : la date du 16 novembre de #372 (elle se fusionne comme un lot, sur son ordre), la règle des 48 h de staging vert avant l'étiquette pilote, et l'interdiction de déployer ou de tourner un secret du 25 au 28 novembre. Ces trois points figurent encore dans `docs/pilote/diagnostic-2026-11-12.md` ; l'ordre du dirigeant les remplace.
+- Ce qui demeure : une étiquette `v*` se pose sur un commit dont la CI est verte, et un déploiement sur le pilote ou la production passe par `deployer.yml`, avec l'approbation de l'environnement GitHub.
 - Le diagnostic de référence est `docs/pilote/diagnostic-2026-11-12.md` (PR #375).
 
 ## Journal
