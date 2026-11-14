@@ -141,6 +141,12 @@ export const frBibliotheque = {
   "pme.export.reessayer": "Réessayer",
   "pme.export.volume":
     "Cet export pèse {taille} Mo : au-delà de la limite de {max} Mo. Choisissez moins de pièces.",
+  "pme.export.absents":
+    "{count} originaux introuvables : non inclus, ces pièces restent à exporter.",
+  "pme.export.absents#one":
+    "{count} original introuvable : non inclus, cette pièce reste à exporter.",
+  "pme.export.absents#other":
+    "{count} originaux introuvables : non inclus, ces pièces restent à exporter.",
   "pme.export.rien": "Aucune pièce à exporter.",
   "pme.export.aucunFichier": "Choisissez au moins un fichier.",
   "pme.accueil.aExporter": "À exporter · {count}",

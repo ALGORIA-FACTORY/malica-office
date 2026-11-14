@@ -12,10 +12,10 @@
 --   1. les LIMITES d'un export (taille, conservation, simultanés), à la tour,
 --      datées, motivées, en ajout seul — défaut livré, changé sans migration
 --      (R10, R4) ;
---   2. le JOURNAL des exports reçoit deux formats, une date d'expiration (la
---      conservation) et un drapeau « plusieurs sociétés » : un fichier qui en
---      réunit plusieurs ne se relit que par son auteur, parce qu'un membre
---      d'une seule de ces sociétés n'a pas le droit de lire les autres ;
+--   2. le JOURNAL des exports reçoit deux formats et une date d'expiration (la
+--      conservation) ; un export de bibliothèque ne se relit que par son
+--      auteur, parce qu'un membre qui ne voit pas une pièce n'a pas le droit
+--      d'en lire l'original dans le fichier d'un autre ;
 --   3. les PIÈCES REMISES (`collab.exports_pieces`) : ce qui dit « à exporter »
 --      (jamais remise) puis « remis le » ;
 --   4. la PORTE d'inscription (R6) : elle ne journalise que des pièces que
@@ -129,13 +129,11 @@ alter table collab.exports add constraint exports_format_check
 
 -- La conservation : au-delà, le fichier ne se relit plus. Nul : sans échéance (le journal du jour).
 alter table collab.exports add column if not exists expire_le timestamptz;
--- Un fichier qui réunit plusieurs sociétés ne se relit que par son auteur.
-alter table collab.exports add column if not exists plusieurs_societes boolean not null default false;
 
 create or replace view public.exports_v with (security_invoker = true) as
 select id, tenant_id, client_tenant_id, format, du, au, lignes, taille_octets, empreinte,
        pack_version_id, created_by, created_at, numero, ecritures, contre_passees,
-       fuseau, nom_de_fichier, type_mime, expire_le, plusieurs_societes
+       fuseau, nom_de_fichier, type_mime, expire_le
   from collab.exports;
 revoke all on public.exports_v from public, anon, service_role;
 grant select on public.exports_v to authenticated;
@@ -147,7 +145,9 @@ create policy collab_exports_sel on collab.exports
     ((tenant_id in (select app.member_orgs()))
       or (tenant_id in (select app.engaged_orgs()))
       or (select app.is_platform()))
-    and (not plusieurs_societes or created_by = (select auth.uid()) or (select app.is_platform()))
+    -- Un export de bibliothèque ne se relit que par son auteur : un membre qui ne voit pas
+    -- une pièce n'a pas le droit de lire son original dans le fichier d'un autre.
+    and (format not like 'bibliotheque\_%' or created_by = (select auth.uid()))
   );
 
 -- ------------------------------------------------- 3. Les pièces remises
@@ -236,9 +236,9 @@ begin
 
   insert into collab.exports
     (tenant_id, client_tenant_id, format, du, au, lignes, taille_octets, empreinte,
-     nom_de_fichier, type_mime, expire_le, plusieurs_societes)
+     nom_de_fichier, type_mime, expire_le)
   values (p_societe, null, p_format, p_du, p_au, p_lignes, p_taille, p_empreinte,
-          p_nom_de_fichier, p_type_mime, v_expire, v_societes > 1)
+          p_nom_de_fichier, p_type_mime, v_expire)
   returning id into v_id;
 
   insert into collab.exports_pieces (export_id, piece_id, tenant_id)

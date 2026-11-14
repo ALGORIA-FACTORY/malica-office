@@ -135,6 +135,9 @@ export const arBibliotheque: MessagesDeLaBibliotheque = {
   "pme.export.reessayer": "إعادة المحاولة",
   "pme.export.volume":
     "حجم هذا التصدير {taille} ميغابايت: يتجاوز الحدّ البالغ {max} ميغابايت. اختر وثائق أقل.",
+  "pme.export.absents": "{count} أصول غير موجودة: لم تُدرج، وتبقى هذه الوثائق للتصدير.",
+  "pme.export.absents#one": "أصل واحد غير موجود: لم يُدرج، وتبقى هذه الوثيقة للتصدير.",
+  "pme.export.absents#other": "{count} أصول غير موجودة: لم تُدرج، وتبقى هذه الوثائق للتصدير.",
   "pme.export.rien": "لا توجد وثيقة للتصدير.",
   "pme.export.aucunFichier": "اختر ملفًا واحدًا على الأقل.",
   "pme.accueil.aExporter": "للتصدير · {count}",

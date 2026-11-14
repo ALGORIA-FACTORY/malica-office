@@ -2669,6 +2669,8 @@ export const fr = {
     "La licence ne se transmet qu’à un propriétaire de la société.",
   "refus.export.trop_de_demandes":
     "Un export de cette société est déjà en préparation. Réessayez dans un instant.",
+  "refus.export.originaux_absents":
+    "Aucun original de ces pièces n'est lisible : rien n'a été exporté.",
   "refus.export.reglage_absent":
     "Les limites d'un export ne sont pas encore réglées : l'export n'est pas disponible pour l'instant.",
   "refus.place.offre_pleine": "Toutes les places de cette offre sont prises ({places} au total).",

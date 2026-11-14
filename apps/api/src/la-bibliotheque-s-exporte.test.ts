@@ -194,6 +194,15 @@ describe("la bibliothèque s'exporte", { skip: !CONFIGUREE }, () => {
       null,
     );
     await ajouter(
+      "orphelin",
+      societeA,
+      "entite",
+      "ticket_caisse",
+      "2026-11-09T09:00:00Z",
+      dirigeant.id,
+      null,
+    );
+    await ajouter(
       "privee",
       societeA,
       "personnel",
@@ -307,17 +316,15 @@ describe("la bibliothèque s'exporte", { skip: !CONFIGUREE }, () => {
         format: string;
         empreinte: string;
         expire_le: Date;
-        plusieurs_societes: boolean;
         created_by: string;
       }>(
-        `select format, empreinte, expire_le, plusieurs_societes, created_by
+        `select format, empreinte, expire_le, created_by
            from collab.exports where id = any($1::uuid[])`,
         [fichiers.map((f) => f.id)],
       );
       assert.equal(rows.length, 2);
       for (const e of rows) {
         assert.equal(e.created_by, dirigeant.id);
-        assert.equal(e.plusieurs_societes, false);
         // Sept jours, le défaut livré de la base.
         const jours = (e.expire_le.getTime() - Date.now()) / 86_400_000;
         assert.ok(jours > 6.9 && jours < 7.1);
@@ -429,11 +436,61 @@ describe("la bibliothèque s'exporte", { skip: !CONFIGUREE }, () => {
       assert.equal((await relire(intrus, id)).status, 404);
     });
 
+    it("un export ne se relit que par son auteur, même d'un membre de la même société", async () => {
+      const r = (await (
+        await exporter(dirigeant, { pieces: [piece["ticket"]] })
+      ).json()) as Reponse;
+      const id = r.fichiers![0]!.id;
+      assert.equal((await relire(dirigeant, id)).status, 200);
+      // Le collaborateur ne voit pas ce ticket : il n'en lira pas l'original dans un fichier.
+      assert.equal((await relire(collaborateurA, id)).status, 404);
+      const lues = await sousIdentite(collaborateurA.id, (db) =>
+        db.query(`select 1 from exports_v where id = $1`, [id]),
+      );
+      assert.equal(lues.rowCount, 0, "la ligne du journal non plus");
+    });
+
     it("un collaborateur n'exporte que ce qu'il voit : ni la pièce du dirigeant, ni le privé", async () => {
       const duDirigeant = await exporter(collaborateurA, { pieces: [piece["ticket"]] });
       assert.equal(duDirigeant.status, 404);
       const privee = await exporter(collaborateurA, { pieces: [piece["privee"]] });
       assert.equal(privee.status, 404);
+    });
+  });
+
+  describe("un original absent ne se déclare pas remis", () => {
+    it("le ZIP l'omet, la réponse le nomme, et la pièce reste « à exporter »", async () => {
+      await rm(path.join(racine, societeA, piece["orphelin"]!), { force: true });
+      const r = (await (
+        await exporter(dirigeant, { pieces: [piece["orphelin"], piece["ticket"]], excel: false })
+      ).json()) as Reponse & { absents: string[] };
+      assert.equal(r.etat, "pret");
+      assert.deepEqual(r.absents, [piece["orphelin"]]);
+      const zip = r.fichiers![0]!;
+      const entrees = unzipSync(
+        new Uint8Array(await (await relire(dirigeant, zip.id)).arrayBuffer()),
+      );
+      assert.equal(Object.keys(entrees).length, 1);
+      const remises = await admin.query<{ piece_id: string }>(
+        `select piece_id from collab.exports_pieces where export_id = $1`,
+        [zip.id],
+      );
+      assert.deepEqual(
+        remises.rows.map((x) => x.piece_id),
+        [piece["ticket"]],
+      );
+      const jamais = await admin.query(`select 1 from collab.exports_pieces where piece_id = $1`, [
+        piece["orphelin"],
+      ]);
+      assert.equal(jamais.rowCount, 0);
+    });
+
+    it("sans aucun original lisible, rien n'est exporté ni inscrit", async () => {
+      const avant = await exportsInscrits([societeA]);
+      const r = await exporter(dirigeant, { pieces: [piece["orphelin"]], excel: false });
+      assert.equal(r.status, 400);
+      assert.equal(((await r.json()) as Reponse).erreur, "refus.export.originaux_absents");
+      assert.equal(await exportsInscrits([societeA]), avant);
     });
   });
 
@@ -472,11 +529,6 @@ describe("la bibliothèque s'exporte", { skip: !CONFIGUREE }, () => {
       // Le collaborateur est membre de la société A, où le fichier est rangé.
       assert.equal((await relire(collaborateurA, zip.id)).status, 404);
       assert.equal((await relire(intrus, zip.id)).status, 404);
-      const { rows } = await admin.query<{ plusieurs_societes: boolean; tenant_id: string }>(
-        `select plusieurs_societes, tenant_id from collab.exports where id = $1`,
-        [zip.id],
-      );
-      assert.equal(rows[0]!.plusieurs_societes, true);
     });
 
     it("remet les pièces de chaque société, chacune sous sa société", async () => {

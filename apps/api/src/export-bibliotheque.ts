@@ -388,6 +388,20 @@ export async function exporterLaBibliotheque(req: Request, res: Response): Promi
           octets: composerLExcel(plan, demande.langue, demande.zip, chemins, absents),
         });
 
+      /*
+       * Un original absent ou illisible n'entre pas dans le ZIP : la pièce n'est alors PAS
+       * remise — elle reste « à exporter », et la réponse la nomme. Un export incomplet ne
+       * se déclare pas complet (revue de #390).
+       */
+      const remises = plan.pieces.filter((id) => !absents.has(id));
+      if (remises.length === 0) {
+        res.locals["refus"] = "refus.export.originaux_absents";
+        res.status(400).json({ erreur: "refus.export.originaux_absents" });
+        return;
+      }
+      // Le fichier se range sous une société qui a l'une des pièces remises.
+      const societeDe = new Map(plan.societes.flatMap((s) => s.pieces.map((p) => [p.id, s.id])));
+      const rangement = societeDe.get(remises[0]!)!;
       const du = dates[0]!;
       const au = dates.at(-1)!;
       const gardes = await sousLAppelant(req, async (db) => {
@@ -403,10 +417,10 @@ export async function exporterLaBibliotheque(req: Request, res: Response): Promi
             `select public.export_bibliotheque_inscrire($1, $2::uuid[], $3, $4, $5, $6, $7, $8,
                                                         $9::date, $10::date) as r`,
             [
-              ancre,
-              plan.pieces,
+              rangement,
+              remises,
               f.format,
-              plan.pieces.length,
+              remises.length,
               f.octets.length,
               empreinte(f.octets),
               f.nom,
@@ -417,7 +431,7 @@ export async function exporterLaBibliotheque(req: Request, res: Response): Promi
           );
           const inscrit = rows[0]!.r;
           // Dans la transaction : si les octets ne s'écrivent pas, rien n'est inscrit.
-          await garderUnExport(ancre!, inscrit.id, f.octets);
+          await garderUnExport(rangement, inscrit.id, f.octets);
           sortie.push({
             id: inscrit.id,
             format: f.format,
@@ -430,7 +444,12 @@ export async function exporterLaBibliotheque(req: Request, res: Response): Promi
       });
       // La conservation : ce qui a expiré se retire à l'occasion d'un nouvel export.
       await sousLAppelant(req, (db) => retirerLesExportsExpires(db)).catch(() => undefined);
-      res.json({ etat: "pret", fichiers: gardes, pieces: plan.pieces.length });
+      res.json({
+        etat: "pret",
+        fichiers: gardes,
+        pieces: remises.length,
+        absents: [...absents],
+      });
     } finally {
       const n = (preparationsEnCours.get(ancre) ?? 1) - 1;
       if (n <= 0) preparationsEnCours.delete(ancre);

@@ -22,7 +22,7 @@ export interface FichierExporte {
 }
 
 export type IssueDExport =
-  | { genre: "pret"; fichiers: FichierExporte[] }
+  | { genre: "pret"; fichiers: FichierExporte[]; absents: number }
   | { genre: "trop_volumineuse"; octets: number; octetsMax: number };
 
 export interface DemandeDExport {
@@ -44,6 +44,7 @@ export function useExportBibliotheque() {
       const corps = (await reponse.json().catch(() => null)) as {
         etat?: "pret" | "trop_volumineuse";
         fichiers?: FichierExporte[];
+        absents?: string[];
         octets?: number;
         octetsMax?: number;
         erreur?: string;
@@ -59,7 +60,7 @@ export function useExportBibliotheque() {
           octets: corps.octets ?? 0,
           octetsMax: corps.octetsMax ?? 0,
         };
-      return { genre: "pret", fichiers: corps.fichiers ?? [] };
+      return { genre: "pret", fichiers: corps.fichiers ?? [], absents: corps.absents?.length ?? 0 };
     },
     // Les pièces remises changent d'état : « À exporter » se relit.
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pieces-lues"] }),

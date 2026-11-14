@@ -138,6 +138,10 @@ export const enBibliotheque: MessagesDeLaBibliotheque = {
   "pme.export.reessayer": "Try again",
   "pme.export.volume":
     "This export weighs {taille} MB: over the {max} MB limit. Choose fewer documents.",
+  "pme.export.absents": "{count} originals not found: left out, these documents stay to export.",
+  "pme.export.absents#one": "{count} original not found: left out, this document stays to export.",
+  "pme.export.absents#other":
+    "{count} originals not found: left out, these documents stay to export.",
   "pme.export.rien": "No document to export.",
   "pme.export.aucunFichier": "Choose at least one file.",
   "pme.accueil.aExporter": "To export · {count}",

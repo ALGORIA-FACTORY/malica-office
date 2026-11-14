@@ -140,6 +140,11 @@ export function ExporterDepuisLaPme({
               <p role="status" className={classeDuTexte}>
                 {t("pme.export.pret", { count: issue.fichiers.length })}
               </p>
+              {issue.absents > 0 ? (
+                <p role="alert" className={`${classeDuTexte} exp-err`}>
+                  {t("pme.export.absents", { count: issue.absents })}
+                </p>
+              ) : null}
               {issue.fichiers.map((f) => (
                 <button key={f.id} type="button" className={classe} onClick={() => exp.remettre(f)}>
                   {t("pme.export.telecharger", { nom: f.nomDeFichier })}
