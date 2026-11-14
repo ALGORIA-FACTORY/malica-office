@@ -45,6 +45,7 @@ import { sonderLaBase, sousIdentite } from "./db.ts";
 import { detailTechnique, introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
 import { origineAutorisee } from "./origines.ts";
 import { imprimer } from "./impression.ts";
+import { exporterLaBibliotheque } from "./export-bibliotheque.ts";
 import { malica } from "./malica.ts";
 import { moteurDuSecondLecteur } from "./malica/lecture/paddle.ts";
 import { emettreLeGeste, gesteDe } from "./observabilite/gestes.ts";
@@ -591,6 +592,14 @@ app.post("/rpc", exigerAppelant, async (req, res, next) => {
  */
 app.post("/impressions", exigerIdentite, (req, res, next) => {
   imprimer(req, res).catch(next);
+});
+
+/**
+ * L'export d'une bibliothèque (un ZIP des originaux, un Excel d'une ligne par
+ * pièce), gardé et relu par `/exports/:id/contenu` — voir `export-bibliotheque.ts`.
+ */
+app.post("/exports/bibliotheque", exigerIdentite, (req, res, next) => {
+  exporterLaBibliotheque(req, res).catch(next);
 });
 
 app.get("/sante", (_req, res) => {

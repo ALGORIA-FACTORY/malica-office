@@ -3275,3 +3275,17 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] [data-ecran="a-la-ligne"] .lignes{display:grid}
 [data-surface="pme"] [data-ecran="a-la-ligne"] .lignes button[aria-checked="true"]{box-shadow:inset 0 0 0 2px var(--acc)}
 [dir="rtl"] [data-surface="pme"] [data-ecran="a-la-ligne"] .lignes svg{transform:scaleX(-1)}
+
+/* L'export de la bibliothèque : la feuille posée sous « Exporter » (G5). Jetons de l'écran, rien de neuf. */
+[data-surface="pme"] .exp{margin:.5rem 0 .75rem;padding:.75rem .9375rem;border:1px solid var(--hr);border-radius:12px;display:flex;flex-direction:column;gap:.5rem}
+[data-surface="pme"] .exp h3{margin:0;font-size:.9375rem;font-weight:600}
+[data-surface="pme"] .exp-ligne{display:flex;align-items:flex-start;gap:.75rem;min-height:44px;cursor:pointer}
+[data-surface="pme"] .exp-ligne input{width:20px;height:20px;flex:none;margin-top:.125rem;accent-color:var(--acc)}
+[data-surface="pme"] .exp-ligne span{display:flex;flex-direction:column;gap:.125rem}
+[data-surface="pme"] .exp-ligne small{font-size:.75rem;color:var(--t3)}
+[data-surface="pme"] .exp-err{color:var(--ve)}
+[data-surface="pme"] .exp-gestes{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:.25rem}
+[data-surface="pme"] .exp .more{width:auto;padding:.5rem 0}
+[data-surface="pme"] .exp-home{margin:1rem 0;display:flex;flex-direction:column;gap:.25rem}
+[data-surface="pme"] .exp-home p{margin:0;font-size:.875rem;line-height:1.4}
+[data-surface="pme"] .exp-home .more{border:0;background:none;color:var(--acc);font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer;text-align:start}
