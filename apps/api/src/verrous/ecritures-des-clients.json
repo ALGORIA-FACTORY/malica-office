@@ -73,6 +73,7 @@
         "public.comptabilite_invitation_accepter",
         "public.comptabilite_inviter",
         "public.etablissement_archiver",
+        "public.export_bibliotheque_inscrire",
         "public.export_journaliser",
         "public.fait_consigner",
         "public.immo_depreciation_constater",
@@ -286,7 +287,16 @@
     {
       "objet": "collab.exports",
       "privilege": "INSERT",
-      "chemins": ["public.export_journaliser", "public.journal_export_journaliser"]
+      "chemins": [
+        "public.export_bibliotheque_inscrire",
+        "public.export_journaliser",
+        "public.journal_export_journaliser"
+      ]
+    },
+    {
+      "objet": "collab.exports_pieces",
+      "privilege": "INSERT",
+      "chemins": ["public.export_bibliotheque_inscrire"]
     },
     {
       "objet": "collab.notification_lectures",

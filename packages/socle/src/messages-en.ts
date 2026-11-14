@@ -2582,6 +2582,12 @@ export const en: Dict = {
   "refus.licence.absente": "This company has no licence.",
   "refus.licence.deja_titulaire": "The licence already belongs to this person.",
   "refus.licence.a_un_proprietaire": "The licence can only be passed to an owner of the company.",
+  "refus.export.trop_de_demandes":
+    "An export for this company is already being prepared. Try again in a moment.",
+  "refus.export.originaux_absents":
+    "None of these documents has a readable original: nothing was exported.",
+  "refus.export.reglage_absent":
+    "The export limits are not set yet: exporting is not available for now.",
   "refus.place.offre_pleine": "All the seats of this plan are taken ({places} in total).",
   "refus.abonnement.deja_propose":
     "A subscription is already offered to or assigned to this file by an accountant.",

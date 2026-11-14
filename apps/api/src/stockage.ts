@@ -614,10 +614,24 @@ async function ligneDUnExport(db: Requete, exportId: string): Promise<LigneExpor
   if (!UUID.test(exportId)) return null;
   const { rows } = await db.query<LigneExport>(
     `select id, tenant_id, nom_de_fichier, type_mime from exports_v
-      where id = $1 and numero is not null and nom_de_fichier is not null`,
+      where id = $1 and nom_de_fichier is not null
+        and (expire_le is null or expire_le > now())`,
     [exportId],
   );
   return rows[0] ?? null;
+}
+
+/**
+ * La conservation : retire les octets des exports de bibliothèque expirés que
+ * l'appelant voit. La ligne du journal reste (R7) ; seul le fichier s'en va.
+ */
+export async function retirerLesExportsExpires(db: Requete): Promise<number> {
+  const { rows } = await db.query<{ id: string; tenant_id: string }>(
+    `select id, tenant_id from exports_v
+      where expire_le is not null and expire_le <= now() and nom_de_fichier is not null`,
+  );
+  for (const e of rows) await rm(cheminDUnExport(e.tenant_id, e.id), { force: true });
+  return rows.length;
 }
 
 /** Les octets d'un export gardé, sous l'identité de l'appelant ; `null` : absent ou interdit. */

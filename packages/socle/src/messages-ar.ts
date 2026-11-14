@@ -2500,6 +2500,9 @@ export const ar: Dict = {
   "refus.licence.absente": "ليس لهذه الشركة رخصة.",
   "refus.licence.deja_titulaire": "الرخصة لهذا الشخص مسبقًا.",
   "refus.licence.a_un_proprietaire": "لا تُنقل الرخصة إلا إلى مالك للشركة.",
+  "refus.export.trop_de_demandes": "يجري بالفعل تحضير تصدير لهذه الشركة. أعد المحاولة بعد لحظة.",
+  "refus.export.originaux_absents": "لا يوجد أصل مقروء لهذه الوثائق: لم يُصدَّر شيء.",
+  "refus.export.reglage_absent": "لم تُضبط حدود التصدير بعد: التصدير غير متاح حاليًا.",
   "refus.place.offre_pleine": "كلّ مقاعد هذه الباقة مشغولة ({places} في المجموع).",
   "refus.abonnement.deja_propose": "اشتراك مقترح أو مُسند مسبقًا لهذا الملف من محاسبة.",
   "refus.abonnement.deja_l_offre_du_client":
