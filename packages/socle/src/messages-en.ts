@@ -4911,6 +4911,9 @@ export const en: Dict = {
   "pme.suite.compta.sans": "Continue without an accountant",
   "pme.suite.compta.sans.aide":
     "A company without a mandate works: you capture, you read, you export.",
+  "pme.bienvenue.matricule.saisir": "Tax ID",
+  "pme.bienvenue.matricule.aide": "Entered once: it cannot be changed afterwards.",
+  "pme.bienvenue.matricule.enregistrer": "Save the tax ID",
   "pme.bienvenue.corriger": "Edit · type it in",
   "pme.bienvenue.pied":
     "Next: choose your plan, then invite your accountant — or not. A company without an engagement works: you capture, you read, you export.",
@@ -5424,6 +5427,7 @@ export const en: Dict = {
   "cab.mer.abo.lede": "Optional — on the same page, row by row or in bulk.",
   "cab.mer.fait": "done",
   "cab.mer.a_faire": "to do",
+  "refus.organisation.matricule_fige": "The tax ID cannot be changed once it is recorded.",
   "refus.dossier.matricule_fige":
     "The tax ID can no longer change: a document has already arrived in this file.",
   "refus.dossier.dirigeant_attendu": "Seats open once the owner has joined.",

@@ -5075,6 +5075,9 @@ export const fr = {
   "pme.suite.compta.sans": "Continuer sans comptabilité",
   "pme.suite.compta.sans.aide":
     "Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
+  "pme.bienvenue.matricule.saisir": "Matricule fiscal",
+  "pme.bienvenue.matricule.aide": "Saisi une seule fois : il ne se change plus ensuite.",
+  "pme.bienvenue.matricule.enregistrer": "Enregistrer le matricule",
   "pme.bienvenue.corriger": "Corriger · saisie au clavier",
   "pme.bienvenue.pied":
     "Ensuite : choisir votre forfait, puis inviter votre comptabilité — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
@@ -5643,6 +5646,7 @@ export const fr = {
   "cab.mer.abo.lede": "Facultatif — sur la même page, ligne par ligne ou en lot.",
   "cab.mer.fait": "fait",
   "cab.mer.a_faire": "à faire",
+  "refus.organisation.matricule_fige": "Le matricule fiscal ne se change plus une fois inscrit.",
   "refus.dossier.matricule_fige":
     "Le matricule ne se change plus : une pièce est déjà arrivée dans ce dossier.",
   "refus.dossier.dirigeant_attendu": "Les places s'ouvrent quand le dirigeant a rejoint.",

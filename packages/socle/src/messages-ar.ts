@@ -4712,6 +4712,9 @@ export const ar: Dict = {
   "pme.suite.compta.inviter.aide": "يتلقى خبير المحاسبة لديكم دعوة عبر البريد الإلكتروني.",
   "pme.suite.compta.sans": "المتابعة بدون محاسب",
   "pme.suite.compta.sans.aide": "تعمل الشركة بدون تفويض: تلتقطون وتقرأون وتصدّرون.",
+  "pme.bienvenue.matricule.saisir": "المعرّف الجبائي",
+  "pme.bienvenue.matricule.aide": "يُدخل مرة واحدة، ولا يُغيَّر بعد ذلك.",
+  "pme.bienvenue.matricule.enregistrer": "حفظ المعرّف الجبائي",
   "pme.bienvenue.corriger": "تصحيح · إدخال يدوي",
   "pme.bienvenue.pied":
     "بعد ذلك: اختاروا باقتكم، ثم ادعوا محاسبكم — أو لا. تعمل الشركة دون وكالة: أنتم تلتقطون وتقرؤون وتصدّرون.",
@@ -5202,6 +5205,7 @@ export const ar: Dict = {
   "cab.mer.abo.lede": "اختياري — في الصفحة نفسها، سطراً سطراً أو دفعة واحدة.",
   "cab.mer.fait": "تمّ",
   "cab.mer.a_faire": "للإنجاز",
+  "refus.organisation.matricule_fige": "لا يُغيَّر المعرّف الجبائي بعد تسجيله.",
   "refus.dossier.matricule_fige": "لم يعد بالإمكان تغيير المعرّف: وصلت وثيقة إلى هذا الملف.",
   "refus.dossier.dirigeant_attendu": "تُفتح المقاعد بعد انضمام المسيّر.",
   "refus.import.trop_de_lignes": "تُراجع القائمة بـ500 سطر على الأكثر: قسّموها.",
