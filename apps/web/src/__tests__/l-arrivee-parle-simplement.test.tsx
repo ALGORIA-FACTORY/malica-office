@@ -20,6 +20,7 @@ const monde = vi.hoisted(() => ({
   operateur: false,
   orgs: [] as unknown[],
   forfait: null as null | { titulaire: boolean; pris_en_charge_par: string | null },
+  matricule: "1234567A/A/M/000" as string | null,
 }));
 const appels = vi.hoisted(() => ({
   creer: vi.fn(async (..._a: unknown[]) => "org-1"),
@@ -48,7 +49,7 @@ vi.mock("@/components/malica/mon-espace-parti", () => ({ LienMonEspaceParti: () 
 vi.mock("@/components/malica/se-deconnecter", () => ({ SeDeconnecter: () => null }));
 vi.mock("@/components/malica/pme-context", () => ({
   usePme: () => ({
-    matricule: "1234567A/A/M/000",
+    matricule: monde.matricule,
     orgName: "Atelier Samia",
     adresse: null,
     forfait: { ligne: monde.forfait },
@@ -105,7 +106,12 @@ const SOCIETE = {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
-  Object.assign(monde, { operateur: false, orgs: [], forfait: null });
+  Object.assign(monde, {
+    operateur: false,
+    orgs: [],
+    forfait: null,
+    matricule: "1234567A/A/M/000",
+  });
 });
 
 describe("4.1 — choisissez votre espace", () => {
@@ -176,5 +182,21 @@ describe("4.3 — la bienvenue ne promet que ce qu'on peut faire", () => {
     monde.forfait = { titulaire: false, pris_en_charge_par: null };
     rendre(composant(RouteBienvenue));
     expect(screen.queryByText("pme.bienvenue.pied")).toBeNull();
+  });
+});
+
+describe("le matricule fiscal : l'écran ne dit « voici » que ce qu'il montre", () => {
+  // Recette du 14 novembre 2026, point 3 : « Voici votre matricule fiscal » au-dessus d'un « — ».
+  it("un matricule lu s'annonce comme tel", () => {
+    rendre(composant(RouteBienvenue));
+    expect(screen.getByText("pme.bienvenue.ditTitre")).toBeTruthy();
+    expect(screen.queryByText("pme.bienvenue.ditSansMatricule")).toBeNull();
+  });
+
+  it("sans matricule, l'écran ne prétend pas en montrer un", () => {
+    monde.matricule = null;
+    rendre(composant(RouteBienvenue));
+    expect(screen.queryByText("pme.bienvenue.ditTitre")).toBeNull();
+    expect(screen.getByText("pme.bienvenue.ditSansMatricule")).toBeTruthy();
   });
 });

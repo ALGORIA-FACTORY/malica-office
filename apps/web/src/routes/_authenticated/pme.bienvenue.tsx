@@ -192,9 +192,12 @@ function Bienvenue() {
           </span>
           <b>{t("malica.chat.her")}</b>
         </div>
+        {/* « Voici votre matricule » n'est dit que quand on le montre (recette du 14 novembre). */}
         <div className="dit">
-          {t("pme.bienvenue.ditTitre")}
-          <em>{t("pme.bienvenue.ditSous")}</em>
+          {pme.matricule ? t("pme.bienvenue.ditTitre") : t("pme.bienvenue.ditSansMatricule")}
+          <em>
+            {pme.matricule ? t("pme.bienvenue.ditSous") : t("pme.bienvenue.ditSousSansMatricule")}
+          </em>
         </div>
 
         {/* ── les trois champs lus, chacun corrigeable ────────────────── */}

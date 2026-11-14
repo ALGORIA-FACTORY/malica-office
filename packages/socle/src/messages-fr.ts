@@ -5048,6 +5048,9 @@ export const fr = {
   "pme.bienvenue.ditTitre": "Voici votre matricule fiscal.",
   "pme.bienvenue.ditSous":
     "Je l'inscris une seule fois. Dès que votre première pièce sera reçue, il ne changera plus — ni par vous, ni par moi, ni par votre comptabilité. Vérifiez-le maintenant.",
+  "pme.bienvenue.ditSansMatricule": "Votre matricule fiscal n'est pas encore enregistré.",
+  "pme.bienvenue.ditSousSansMatricule":
+    "Il figure sur votre carte d'identification fiscale. Sans lui, les reçus de paiement ne peuvent pas être produits.",
   "pme.bienvenue.secEtat": "à confirmer",
   "pme.bienvenue.champAdresse": "Adresse du siège",
   /**

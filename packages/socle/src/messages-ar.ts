@@ -4691,6 +4691,9 @@ export const ar: Dict = {
   "pme.bienvenue.ditTitre": "هذا معرّفكم الجبائي.",
   "pme.bienvenue.ditSous":
     "أسجّله مرة واحدة فقط. بمجرد استلام أول وثيقة لكم، لن يتغيّر بعد ذلك — لا من قبلكم ولا من قبلي ولا من قبل محاسبكم. تحقّقوا منه الآن.",
+  "pme.bienvenue.ditSansMatricule": "لم يُسجَّل معرّفكم الجبائي بعد.",
+  "pme.bienvenue.ditSousSansMatricule":
+    "يرد في بطاقة تعريفكم الجبائية. بدونه لا يمكن إصدار وصولات الدفع.",
   "pme.bienvenue.secEtat": "للتأكيد",
   "pme.bienvenue.champAdresse": "عنوان المقر",
   "pme.bienvenue.regle":

@@ -4889,6 +4889,9 @@ export const en: Dict = {
   "pme.bienvenue.ditTitre": "Here is your tax ID.",
   "pme.bienvenue.ditSous":
     "I record it only once. As soon as your first document is received, it will no longer change — not by you, not by me, not by your accountant. Check it now.",
+  "pme.bienvenue.ditSansMatricule": "Your tax ID is not recorded yet.",
+  "pme.bienvenue.ditSousSansMatricule":
+    "It is on your tax identification card. Without it, payment receipts cannot be produced.",
   "pme.bienvenue.secEtat": "to confirm",
   "pme.bienvenue.champAdresse": "Registered address",
   "pme.bienvenue.regle":
