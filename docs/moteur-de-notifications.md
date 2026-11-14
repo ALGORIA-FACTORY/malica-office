@@ -45,6 +45,12 @@ jamais l'opération qui notifie : il se dit au journal du serveur.
 Le travailleur (`apps/api/src/relances/travailleur.ts`) remet par Brevo les envois
 `email` décidés, un par transaction, et inscrit chaque tentative.
 
+**Le push n'est pas livré.** Aucun code n'enregistre d'appareil dans `collab.push_devices`,
+et aucun émetteur APNs ou FCM n'existe. `notif.poster` abandonne donc chaque push en
+`canal_absent`, et la ligne le dit. Ouvrir le push demande une décision produit, un
+enregistrement d'appareil côté mobile (`android/`, Capacitor) et des identifiants APNs/FCM
+tenus par la plateforme.
+
 ## Ce qui a été retiré
 
 `collab.notifications`, `collab.notification_lectures`, `public.notifications_v`,

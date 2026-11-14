@@ -52,7 +52,7 @@ begin
         '{"date":"28 octobre","pieces":"7"}'::jsonb, org,'push');
   raise notice 'pendant silence: poste=% motif=%', r->>'poste', coalesce(r->>'motif','—');
   raise notice '  mais le centre de notifications, lui, a recu : % ligne(s)',
-    (select count(*) from collab.notifications where user_id=u and kind='echeance.approche');
+    (select count(*) from notif.envois e where e.destinataire=u and e.code='echeance.approche' and e.canal='app');
 
   -- verrou cadence
   update notif.preferences set silence_de=time '23:59', silence_a=time '00:01',
