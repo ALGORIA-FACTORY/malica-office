@@ -133,7 +133,15 @@ function Bienvenue() {
    * « C'est exact » : on entre dans le produit. Qui a promis la suite (forfait, puis
    * comptabilité) la voit d'abord ; les autres entrent par « Ajouter des pièces » (C1).
    */
-  const commencer = () => {
+  const commencer = async () => {
+    // Le matricule saisi s'écrit AVANT d'entrer : il est enregistré, pas seulement affiché.
+    if (!pme.matricule && saisie.trim() !== "") {
+      try {
+        await enregistrer.mutateAsync();
+      } catch {
+        return; // le message est déjà à l'écran ; l'arrivée n'est pas marquée vue
+      }
+    }
     marquerBienvenueVue();
     void navigate({ to: promettreLaSuite ? "/pme/suite" : "/pme/capturer" });
   };
@@ -259,13 +267,6 @@ function Bienvenue() {
                 onChange={(e) => setSaisie(e.target.value)}
                 autoComplete="off"
               />
-              <button
-                type="button"
-                disabled={saisie.trim() === "" || enregistrer.isPending}
-                onClick={() => enregistrer.mutate()}
-              >
-                {t("pme.bienvenue.matricule.enregistrer")}
-              </button>
               {erreur ? <span role="alert">{erreur}</span> : null}
             </span>
           </div>
@@ -299,7 +300,7 @@ function Bienvenue() {
 
         {/* ── les deux départs ───────────────────────────────────────── */}
         <div className="go">
-          <button type="button" className="pr" onClick={commencer}>
+          <button type="button" className="pr" onClick={() => void commencer()}>
             {t("pme.bienvenue.exact")}
           </button>
           <button type="button" className="sc2" onClick={corriger}>

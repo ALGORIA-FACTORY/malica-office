@@ -15,6 +15,7 @@ import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
+import { identite } from "./depots/identite.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
 
@@ -28,6 +29,8 @@ describe("le matricule se saisit après l'inscription, une fois", { skip: !BASE_
   const mf = matriculeDEssai("A", "M");
   const autre = matriculeDEssai("A", "M");
   let dirigeant: Utilisateur;
+  let expert: Utilisateur;
+  let cabinet = "";
   let pme = "";
   const admin = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
 
@@ -42,7 +45,15 @@ describe("le matricule se saisit après l'inscription, une fois", { skip: !BASE_
 
   before(async () => {
     dirigeant = (await creerCompte(`dirigeant-${marque}@essai.local`, mdp))!;
-    assert.ok(dirigeant);
+    expert = (await creerCompte(`expert-${marque}@essai.local`, mdp))!;
+    assert.ok(dirigeant && expert);
+    cabinet = await sousIdentite(expert.id, async (db) => {
+      const { rows } = await db.query<{ id: string }>(
+        `select public.create_organization('cabinet', $1, 'mandate', null, 'TN', 'TND') as id`,
+        [`CABINET MATRICULE ${marque}`],
+      );
+      return rows[0]!.id;
+    });
     pme = await sousIdentite(dirigeant.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome', null, 'TN', 'TND') as id`,
@@ -57,8 +68,8 @@ describe("le matricule se saisit après l'inscription, une fois", { skip: !BASE_
       await admin.query(
         `update identity.organizations
             set archived_at = now(), archived_reason = 'fixture de test automatisé'
-          where id = $1::uuid and archived_at is null`,
-        [pme],
+          where id = any($1::uuid[]) and archived_at is null`,
+        [[pme, cabinet].filter(Boolean)],
       );
     } finally {
       await admin.end();
@@ -115,5 +126,25 @@ describe("le matricule se saisit après l'inscription, une fois", { skip: !BASE_
         [ailleurs],
       );
     }
+  });
+
+  it("une fois saisi, le matricule se lit par la société et par son cabinet", async () => {
+    await definir(mf);
+    // Le mandat se propose par le matricule : il ne peut venir qu'après qu'il est inscrit.
+    await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, mf));
+    const [propose] = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
+    await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, propose!.id, true));
+    const moi = (await sousIdentite(dirigeant.id, (db) =>
+      executerRpc(db, { depot: "identite", methode: "listMyOrganizations", args: [] }),
+    )) as Array<{ id: string; legalId: string | null }>;
+    assert.equal(moi.find((o) => o.id === pme)?.legalId, mf, "la société le lit");
+    const lu = await sousIdentite(expert.id, async (db) => {
+      const { rows } = await db.query<{ legal_id: string | null }>(
+        `select legal_id from organizations_v where id = $1::uuid`,
+        [pme],
+      );
+      return rows[0]?.legal_id ?? null;
+    });
+    assert.equal(lu, mf, "le cabinet, par le mandat, le lit");
   });
 });

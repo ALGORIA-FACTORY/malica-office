@@ -246,15 +246,16 @@ describe("C1 — « C'est exact » mène au forfait, puis à la comptabilité", 
   });
 });
 
-describe("le matricule se saisit une fois, depuis l'arrivée", () => {
-  it("sans matricule, la saisie part à la base avec la société et sa juridiction", async () => {
+describe("le matricule se saisit une fois, et se confirme avec « C'est exact »", () => {
+  it("sans matricule, « C'est exact » l'enregistre dans la société, puis entre", async () => {
     monde.matricule = null;
+    monde.forfait = { titulaire: false, pris_en_charge_par: null };
     rendre(composant(RouteBienvenue));
     fireEvent.change(screen.getByLabelText(/pme\.bienvenue\.matricule\.saisir/), {
       target: { value: "1234567A/A/M/000" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.matricule.enregistrer" }));
-    await waitFor(() => expect(saisie.definir).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.exact" }));
+    await waitFor(() => expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/capturer" }));
     expect(saisie.definir.mock.calls[0]![0]).toMatchObject({
       tenantId: "org-1",
       name: "Atelier Samia",
@@ -262,14 +263,16 @@ describe("le matricule se saisit une fois, depuis l'arrivée", () => {
       jurisdiction: "TN",
     });
   });
-});
 
-describe("C1 — la flèche des Réglages revient à la suite", () => {
-  it("venue de la suite, elle ramène à la même étape ; sinon à l'accueil des Réglages", () => {
-    expect(cibleDeRetourDesReglages("comptabilite")).toEqual({
-      to: "/pme/suite",
-      search: { etape: "comptabilite" },
+  it("si l'enregistrement échoue, l'écran reste et le dit : rien n'est marqué vu", async () => {
+    monde.matricule = null;
+    saisie.definir.mockRejectedValueOnce(new Error("refus.identifiant.invalide"));
+    rendre(composant(RouteBienvenue));
+    fireEvent.change(screen.getByLabelText(/pme\.bienvenue\.matricule\.saisir/), {
+      target: { value: "PAS-VALIDE" },
     });
-    expect(cibleDeRetourDesReglages(undefined)).toEqual({ to: "/pme/reglages", search: {} });
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.exact" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expect(nav.aller).not.toHaveBeenCalled();
   });
 });
