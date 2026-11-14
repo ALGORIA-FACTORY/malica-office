@@ -9,12 +9,17 @@
  * Il ne crée ni ne change rien lui-même : il mène aux écrans qui écrivent. Le retour ramène à
  * l'accueil ; l'arrivée est déjà marquée vue par « C'est exact ».
  */
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { useI18n } from "@/i18n";
 
+type Etape = "forfait" | "comptabilite";
+
 export const Route = createFileRoute("/_authenticated/pme/suite")({
+  // L'étape vit dans l'adresse : la flèche des Réglages y ramène à la même étape.
+  validateSearch: (s: Record<string, unknown>): { etape: Etape } => ({
+    etape: s["etape"] === "comptabilite" ? "comptabilite" : "forfait",
+  }),
   head: () => ({
     meta: [
       { title: "Votre abonnement et votre comptabilité — Malica Office" },
@@ -26,12 +31,10 @@ export const Route = createFileRoute("/_authenticated/pme/suite")({
   component: Suite,
 });
 
-type Etape = "forfait" | "comptabilite";
-
 function Suite() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [etape, setEtape] = useState<Etape>("forfait");
+  const { etape } = useSearch({ from: "/_authenticated/pme/suite" });
 
   return (
     <div
@@ -62,14 +65,24 @@ function Suite() {
               <h2>{t("pme.suite.etape1")}</h2>
               <span>{t("pme.suite.etape1.sous")}</span>
             </div>
-            <Link to="/pme/reglages" search={{ page: "abonnement" }} className="rw">
+            <Link
+              to="/pme/reglages"
+              search={{ page: "abonnement", depuis: "forfait" }}
+              className="rw"
+            >
               <span className="bd">
                 <b>{t("pme.suite.forfait.voir")}</b>
                 <span>{t("pme.suite.forfait.aide")}</span>
               </span>
             </Link>
             <div className="go">
-              <button type="button" className="pr" onClick={() => setEtape("comptabilite")}>
+              <button
+                type="button"
+                className="pr"
+                onClick={() =>
+                  void navigate({ to: "/pme/suite", search: { etape: "comptabilite" } })
+                }
+              >
                 {t("pme.suite.continuer")}
               </button>
             </div>
@@ -80,7 +93,11 @@ function Suite() {
               <h2>{t("pme.suite.etape2")}</h2>
               <span>{t("pme.suite.etape2.sous")}</span>
             </div>
-            <Link to="/pme/reglages" search={{ page: "societes" }} className="rw">
+            <Link
+              to="/pme/reglages"
+              search={{ page: "societes", depuis: "comptabilite" }}
+              className="rw"
+            >
               <span className="bd">
                 <b>{t("pme.suite.compta.inviter")}</b>
                 <span>{t("pme.suite.compta.inviter.aide")}</span>

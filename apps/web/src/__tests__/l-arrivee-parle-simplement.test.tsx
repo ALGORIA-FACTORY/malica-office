@@ -42,6 +42,7 @@ vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
   Link: ({ children, to }: { children?: ReactNode; to?: string }) => <a href={to}>{children}</a>,
   useNavigate: () => nav.aller,
+  useSearch: () => ({ etape: etapeDeLaSuite.valeur }),
 }));
 vi.mock("@/components/malica/InvitationsPourMoi", () => ({ InvitationsPourMoi: () => null }));
 vi.mock("@/components/malica/LanguageSwitcher", () => ({ LanguageSwitcher: () => null }));
@@ -52,11 +53,15 @@ vi.mock("@/components/malica/pme-context", () => ({
     matricule: monde.matricule,
     orgName: "Atelier Samia",
     adresse: null,
+    tenantId: "org-1",
+    jurisdiction: "TN",
     forfait: { ligne: monde.forfait },
   }),
 }));
 
 const nav = vi.hoisted(() => ({ aller: vi.fn() }));
+const saisie = vi.hoisted(() => ({ definir: vi.fn(async (..._a: unknown[]) => ({})) }));
+const etapeDeLaSuite = vi.hoisted(() => ({ valeur: "forfait" as "forfait" | "comptabilite" }));
 
 const vide = async () => [];
 const depot = (m: Record<string, unknown>) => new Proxy(m, { get: (c, n: string) => c[n] ?? vide });
@@ -67,6 +72,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
         identity: depot({
           listMyOrganizations: async () => monde.orgs,
           createOrganization: appels.creer,
+          definirOrganisation: saisie.definir,
         }),
         tour: depot({ suisJePlateforme: async () => monde.operateur }),
         referential: depot({
@@ -82,6 +88,7 @@ import { Route as RouteBienvenue } from "@/routes/_authenticated/pme.bienvenue";
 import { Route as RouteOffice } from "@/routes/_authenticated/office";
 import { Route as RouteOnboarding } from "@/routes/_authenticated/onboarding";
 import { Route as RouteSuite } from "@/routes/_authenticated/pme.suite";
+import { cibleDeRetourDesReglages } from "@/lib/suite-de-l-arrivee";
 
 const composant = (route: unknown) =>
   (route as { options: { component: () => ReactNode } }).options.component;
@@ -221,12 +228,48 @@ describe("C1 — « C'est exact » mène au forfait, puis à la comptabilité", 
   });
 
   it("la suite montre le forfait, puis la comptabilité ou « sans comptabilité »", () => {
+    etapeDeLaSuite.valeur = "forfait";
     rendre(composant(RouteSuite));
     expect(screen.getByText("pme.suite.forfait.voir")).toBeTruthy();
     expect(screen.queryByText("pme.suite.compta.sans")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "pme.suite.continuer" }));
+    expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/suite", search: { etape: "comptabilite" } });
+  });
+
+  it("à l'étape comptabilité : inviter, ou continuer sans comptabilité", () => {
+    etapeDeLaSuite.valeur = "comptabilite";
+    rendre(composant(RouteSuite));
     expect(screen.getByText("pme.suite.compta.inviter")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^pme\.suite\.compta\.sans/ }));
     expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/capturer" });
+    etapeDeLaSuite.valeur = "forfait";
+  });
+});
+
+describe("le matricule se saisit une fois, depuis l'arrivée", () => {
+  it("sans matricule, la saisie part à la base avec la société et sa juridiction", async () => {
+    monde.matricule = null;
+    rendre(composant(RouteBienvenue));
+    fireEvent.change(screen.getByLabelText(/pme\.bienvenue\.matricule\.saisir/), {
+      target: { value: "1234567A/A/M/000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.matricule.enregistrer" }));
+    await waitFor(() => expect(saisie.definir).toHaveBeenCalledTimes(1));
+    expect(saisie.definir.mock.calls[0]![0]).toMatchObject({
+      tenantId: "org-1",
+      name: "Atelier Samia",
+      legalId: "1234567A/A/M/000",
+      jurisdiction: "TN",
+    });
+  });
+});
+
+describe("C1 — la flèche des Réglages revient à la suite", () => {
+  it("venue de la suite, elle ramène à la même étape ; sinon à l'accueil des Réglages", () => {
+    expect(cibleDeRetourDesReglages("comptabilite")).toEqual({
+      to: "/pme/suite",
+      search: { etape: "comptabilite" },
+    });
+    expect(cibleDeRetourDesReglages(undefined)).toEqual({ to: "/pme/reglages", search: {} });
   });
 });

@@ -37,6 +37,7 @@ import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
 import { nombre as entier, ouverturesDuForfait, utilisateursInclus } from "@/lib/forfait";
 import { identitePourAffichage } from "@/lib/nom-de-la-personne";
+import { cibleDeRetourDesReglages } from "@/lib/suite-de-l-arrivee";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -53,8 +54,13 @@ type PageDesReglages = "abonnement" | "societes" | "utilisateurs";
 const PAGES: readonly PageDesReglages[] = ["abonnement", "societes", "utilisateurs"];
 
 export const Route = createFileRoute("/_authenticated/pme/reglages")({
-  validateSearch: (s: Record<string, unknown>): { page?: PageDesReglages } =>
-    PAGES.includes(s["page"] as PageDesReglages) ? { page: s["page"] as PageDesReglages } : {},
+  // `depuis` : la suite de l'arrivée (C1). La flèche de retour y ramène, à la même étape.
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { page?: PageDesReglages; depuis?: "forfait" | "comptabilite" } => ({
+    ...(PAGES.includes(s["page"] as PageDesReglages) ? { page: s["page"] as PageDesReglages } : {}),
+    ...(s["depuis"] === "forfait" || s["depuis"] === "comptabilite" ? { depuis: s["depuis"] } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Réglages — Malica Office" },
@@ -130,7 +136,7 @@ function PmeReglages() {
   const { t, locale, setLocale } = useI18n();
   const { apparence, choisir } = useApparence();
   const { cote: coteDuPlus } = useCoteDuPlus();
-  const { page } = Route.useSearch();
+  const { page, depuis } = Route.useSearch();
   const navigate = useNavigate();
   const pme = usePme();
   const aLEchelle = usePrix();
@@ -188,7 +194,7 @@ function PmeReglages() {
             type="button"
             className="bk"
             aria-label={t("pme.regler.retour")}
-            onClick={() => void navigate({ to: "/pme/reglages", search: {} })}
+            onClick={() => void navigate(cibleDeRetourDesReglages(depuis))}
           >
             <svg viewBox="0 0 24 24" className="g" aria-hidden>
               <path d="M14.5 5.5L8 12l6.5 6.5" />
