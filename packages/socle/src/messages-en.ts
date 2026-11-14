@@ -2970,6 +2970,11 @@ export const en: Dict = {
   "cab.ecriture.libelle.manque": "Write the entry label.",
   "cab.ecriture.type": "Document type",
   "cab.ecriture.type.choisir": "Choose the type",
+  "cab.sens.origine.declare":
+    "Sense declared by the company: nobody has read or confirmed it on the document yet.",
+  "cab.sens.origine.lu": "Sense read on the document, matching the company's declaration.",
+  "cab.sens.origine.confirme": "Sense decided by a person (company or accountant).",
+  "cab.sens.origine.changer": "Change the sense",
   "cab.sens.titre": "Purchase or sale?",
   "cab.sens.aide.pourquoi":
     "The reading does not say whether this document is a purchase or a sale, or it contradicts itself: the issuer's name does not match the direction read. You decide; the client confirms nothing.",
@@ -4912,8 +4917,7 @@ export const en: Dict = {
   "pme.suite.compta.sans.aide":
     "A company without a mandate works: you capture, you read, you export.",
   "pme.bienvenue.matricule.saisir": "Tax ID",
-  "pme.bienvenue.matricule.aide": "Entered once: it cannot be changed afterwards.",
-  "pme.bienvenue.matricule.enregistrer": "Save the tax ID",
+  "pme.bienvenue.matricule.aide": "Typed by hand, once: it cannot be changed afterwards.",
   "pme.bienvenue.corriger": "Edit · type it in",
   "pme.bienvenue.pied":
     "Next: choose your plan, then invite your accountant — or not. A company without an engagement works: you capture, you read, you export.",

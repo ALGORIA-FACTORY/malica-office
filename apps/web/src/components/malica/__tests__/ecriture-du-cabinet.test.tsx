@@ -341,6 +341,14 @@ describe("la pièce côté comptable", () => {
     expect(screen.queryByText(/aucun pack n'est en vigueur/)).toBeNull();
   });
 
+  it("le sens déclaré par la PME se dit comme tel, et le cabinet le change d'un geste (recette du 14 novembre)", async () => {
+    api.trancherLeSens.mockResolvedValue({ type: "facture_vente" });
+    monter({ ...PROPOSITION, sensOrigine: "declare" } as unknown as PropositionDePiece);
+    expect(screen.getByText("cab.sens.origine.declare")).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Facture de vente" }));
+    await waitFor(() => expect(api.trancherLeSens).toHaveBeenCalledWith("p1", "facture_vente"));
+  });
+
   it("rien de proposé faute de type : la raison du serveur se lit à l'écran, sans ouvrir le i (recette du 14 novembre)", () => {
     // Recette G1 : le formulaire s'affichait vide, la raison n'était que dans le i.
     const raison = "Aucune écriture ne se propose : à compléter — type.";

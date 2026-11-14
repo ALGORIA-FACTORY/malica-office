@@ -3064,6 +3064,11 @@ export const fr = {
   "cab.ecriture.libelle.manque": "Écrivez le libellé de l’écriture.",
   "cab.ecriture.type": "Type de pièce",
   "cab.ecriture.type.choisir": "Choisir le type",
+  "cab.sens.origine.declare":
+    "Sens déclaré par la PME : personne ne l'a encore lu ni confirmé sur la pièce.",
+  "cab.sens.origine.lu": "Sens lu sur la pièce, conforme à la déclaration de la PME.",
+  "cab.sens.origine.confirme": "Sens tranché par une personne (PME ou comptabilité).",
+  "cab.sens.origine.changer": "Changer le sens",
   "cab.sens.titre": "Achat ou vente ?",
   "cab.sens.aide.pourquoi":
     "La lecture ne dit pas si cette pièce est un achat ou une vente, ou elle se contredit : le nom de l'émetteur ne correspond pas au sens lu. C'est à vous de trancher ; le client ne confirme rien.",
@@ -5076,8 +5081,8 @@ export const fr = {
   "pme.suite.compta.sans.aide":
     "Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
   "pme.bienvenue.matricule.saisir": "Matricule fiscal",
-  "pme.bienvenue.matricule.aide": "Saisi une seule fois : il ne se change plus ensuite.",
-  "pme.bienvenue.matricule.enregistrer": "Enregistrer le matricule",
+  "pme.bienvenue.matricule.aide":
+    "Saisi au clavier, une seule fois : il ne se change plus ensuite.",
   "pme.bienvenue.corriger": "Corriger · saisie au clavier",
   "pme.bienvenue.pied":
     "Ensuite : choisir votre forfait, puis inviter votre comptabilité — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",

@@ -26,6 +26,7 @@ import type {
   CoursASaisir,
   FactureDOrigine,
   FiscalCharge,
+  OrigineDuSens,
   PropositionDePiece,
   RaisonSansEcriture,
   TaxRate,
@@ -190,13 +191,43 @@ export async function propositionDePiece(
   pieceId: string,
   dateSaisie: string | null = null,
 ): Promise<PropositionDePiece> {
+  let resultat: PropositionDePiece;
   try {
-    const resultat = await proposerDepuisLeJugement(db, pieceId, dateSaisie);
-    return { ...resultat, champsAVerifier: await champsAVerifier(db, pieceId) };
+    const r = await proposerDepuisLeJugement(db, pieceId, dateSaisie);
+    resultat = { ...r, champsAVerifier: await champsAVerifier(db, pieceId) };
   } catch (e) {
-    if (e instanceof PackUnavailable) return propositionHorsDuReferentiel(db, pieceId, e);
-    throw e;
+    if (e instanceof PackUnavailable) resultat = await propositionHorsDuReferentiel(db, pieceId, e);
+    else throw e;
   }
+  return { ...resultat, sensOrigine: await origineDuSens(db, pieceId) };
+}
+
+/**
+ * D'où vient le sens (achat ou vente) que la proposition retient (recette du 14 novembre 2026,
+ * décision du dirigeant) :
+ *   - `declare` : la PME l'a déclaré à l'import, rien ne l'a confirmé ni lu ;
+ *   - `lu`      : la lecture a trouvé ce sens sur la pièce, rien ne l'a confirmé ;
+ *   - `confirme`: une personne l'a tranché (PME, ou comptabilité), par une précision.
+ * `null` : aucun sens n'est retenu. Une seule lecture, qui ne rend que l'origine.
+ */
+export async function origineDuSens(db: Requete, pieceId: string): Promise<OrigineDuSens | null> {
+  const { rows } = await db.query<{
+    document_kind: string | null;
+    statut: string | null;
+    lu: string | null;
+  }>(
+    `select p.document_kind, p.document_kind_statut as statut, x.payload ->> 'document_kind' as lu
+       from capture.pieces p
+       left join lateral (select payload from capture.extractions e
+                           where e.piece_id = p.id order by e.created_at desc limit 1) x on true
+      where p.id = $1`,
+    [pieceId],
+  );
+  const r = rows[0];
+  if (!r || r.document_kind === null) return null;
+  if (r.statut === "confirme") return "confirme";
+  if (r.statut === "a_confirmer") return r.lu === r.document_kind ? "lu" : "declare";
+  return null;
 }
 
 /**

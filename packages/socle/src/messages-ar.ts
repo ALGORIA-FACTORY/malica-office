@@ -2837,6 +2837,11 @@ export const ar: Dict = {
   "cab.ecriture.libelle.manque": "اكتب بيان القيد.",
   "cab.ecriture.type": "نوع الوثيقة",
   "cab.ecriture.type.choisir": "اختر النوع",
+  "cab.sens.origine.declare":
+    "الاتجاه كما صرّحت به الشركة: لم يقرأه أحد على الوثيقة ولم يؤكّده بعد.",
+  "cab.sens.origine.lu": "الاتجاه مقروء على الوثيقة، وهو مطابق لتصريح الشركة.",
+  "cab.sens.origine.confirme": "الاتجاه حسمه شخص (الشركة أو المحاسب).",
+  "cab.sens.origine.changer": "تغيير الاتجاه",
   "cab.sens.titre": "شراء أم بيع؟",
   "cab.sens.aide.pourquoi":
     "لا تُبيّن القراءة إن كانت هذه الوثيقة شراءً أو بيعًا، أو أنها متناقضة: اسم المُصدِر لا يوافق الاتّجاه المقروء. القرار لك؛ الحريف لا يؤكّد شيئًا.",
@@ -4713,8 +4718,7 @@ export const ar: Dict = {
   "pme.suite.compta.sans": "المتابعة بدون محاسب",
   "pme.suite.compta.sans.aide": "تعمل الشركة بدون تفويض: تلتقطون وتقرأون وتصدّرون.",
   "pme.bienvenue.matricule.saisir": "المعرّف الجبائي",
-  "pme.bienvenue.matricule.aide": "يُدخل مرة واحدة، ولا يُغيَّر بعد ذلك.",
-  "pme.bienvenue.matricule.enregistrer": "حفظ المعرّف الجبائي",
+  "pme.bienvenue.matricule.aide": "مُدخل يدويًا، مرة واحدة: لا يُغيَّر بعد ذلك.",
   "pme.bienvenue.corriger": "تصحيح · إدخال يدوي",
   "pme.bienvenue.pied":
     "بعد ذلك: اختاروا باقتكم، ثم ادعوا محاسبكم — أو لا. تعمل الشركة دون وكالة: أنتم تلتقطون وتقرؤون وتصدّرون.",
