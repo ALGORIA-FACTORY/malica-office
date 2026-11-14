@@ -818,6 +818,8 @@ function PmeLayout() {
                   name: o.name,
                   matricule: o.legalId ?? null,
                   role: o.role ?? null,
+                  jurisdiction: o.jurisdiction,
+                  currency: o.currency,
                 })),
                 choisirDossier: selectOrg,
                 societeAffichee,

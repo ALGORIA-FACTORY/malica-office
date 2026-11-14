@@ -56,12 +56,21 @@ export const Route = createFileRoute("/_authenticated/pme/tva")({
       ? { mois }
       : {};
   },
-  component: () => (
-    <UneSocieteALaFois>
+  component: TvaDesSocietes,
+});
+
+/**
+ * Sous « Toutes les sociétés » : une société par ligne, avec le solde que le moteur rend pour
+ * elle ce mois-là (planche B, 13 novembre 2026). Le mois est celui de l'écran.
+ */
+function TvaDesSocietes() {
+  const periode = Route.useSearch().mois ?? currentPeriod();
+  return (
+    <UneSocieteALaFois chiffre={{ nature: "tva", periode }}>
       <PmeTva />
     </UneSocieteALaFois>
-  ),
-});
+  );
+}
 
 /**
  * TVA du mois — le dessin validé (`livraison/ecrans/malica-manquants.html`,
@@ -215,7 +224,8 @@ function PmeTva() {
    * on ne compare aucun nom d'offre ici. Les noms viennent de `pme.dossiers`,
    * que la coque a déjà lus ; le SOLDE par société, lui, n'est pas servi —
    * `computeTva` tourne sur un dossier à la fois, et une requête par société
-   * contredirait « un écran, une fenêtre de données ».
+   * contredirait « un écran, une fenêtre de données ». (Sous « Toutes les sociétés », la liste
+   * par société le sert : `lib/chiffre-par-societe`, une lecture par société, même moteur.)
    */
   const parSociete = pme.forfait.ouvertures.societes;
 
