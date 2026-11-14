@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exporter sa bibliothèque — maquette</title>
+<style>
+:root{--ink:#0A0A0A;--paper:#FAFAFA;--g1:#1a1a1a;--g2:#2a2a2a;--g3:#8a8a8a;--g4:#d9d9d9;--ok:#3A8F54;--err:#BF4424;--warn:#B58614;--run:#2968A5}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;padding:24px 16px 64px;max-width:1280px;margin:auto}
+h1{font-size:26px;letter-spacing:-.02em}h2{font-size:18px;margin:40px 0 8px}p.l{color:#555;max-width:72ch;margin-top:8px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px}
+.row{display:flex;flex-wrap:wrap;gap:24px;margin-top:16px}
+.ph{width:300px;background:var(--ink);color:var(--paper);border-radius:22px;padding:14px;min-height:560px;border:1px solid #333}
+.ph[dir=rtl]{text-align:right}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.chip{flex:1;background:var(--g1);border-radius:20px;padding:7px 12px;font-weight:600;font-size:13px;display:flex;justify-content:space-between}
+.chip i{font-style:normal;color:var(--g3)}
+.av{width:30px;height:30px;border-radius:50%;background:#9be3b0;color:var(--ink);display:grid;place-items:center;font-weight:700;font-size:13px}
+.k{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 14px}
+.k b{display:block;font-size:22px}.k span{font:11px "IBM Plex Mono",monospace;color:var(--g3);text-transform:uppercase}
+.card{background:var(--g1);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px}
+.card small{display:block;color:var(--g3);font-size:11.5px}
+.tag{font:10.5px "IBM Plex Mono",monospace;background:var(--g2);border-radius:6px;padding:1px 6px;color:#ccc}
+.sec{font:11px "IBM Plex Mono",monospace;color:var(--g3);text-transform:uppercase;margin:14px 0 6px}
+.note{border:1px solid var(--run);border-radius:10px;padding:9px 11px;font-size:12.5px;margin:8px 0 12px;color:#cfe0f2}
+.note.err{border-color:var(--err);color:#f1c9bd}.note.ok{border-color:var(--ok);color:#cfe9d6}
+.warn{color:var(--warn)}.ok{color:var(--ok)}.err{color:var(--err)}.run{color:var(--run)}
+.btn{background:var(--paper);color:var(--ink);border-radius:10px;padding:9px;text-align:center;font-weight:600;font-size:13px;margin-top:10px}
+.btn.s{background:transparent;color:var(--paper);border:1px solid #444}
+.act{display:flex;gap:6px;margin:6px 0 12px}.act div{flex:1;border:1px solid #444;border-radius:10px;padding:8px 6px;text-align:center;font-size:12px}
+.act div.n{border-color:var(--paper);font-weight:600}
+.sheet{background:#111;border:1px solid #333;border-radius:16px;padding:12px;margin-top:10px}
+table{border-collapse:collapse;width:100%;margin-top:12px;font-size:13.5px}th,td{border-bottom:1px solid var(--g4);padding:8px 10px;text-align:start;vertical-align:top}th{background:#f0f0f0}
+.cap{font-size:12.5px;color:#555;margin-top:8px;max-width:300px}
+@media(max-width:640px){.ph{width:100%}}
+</style>
+</head>
+<body>
+<h1>Exporter sa bibliothèque — remettre ses pièces à un comptable extérieur</h1>
+<p class="l"><span class="mono">MAQUETTE — rien n'est codé.</span> Besoin de la recette du 13 novembre 2026 (G5) : une société sans comptabilité dans Malica doit pouvoir tout remettre à un comptable extérieur, <b>par mois et par dossier, pour toutes les offres</b>. Principe retenu : <b>aucun écran neuf</b>. L'export se pose à côté de « Imprimer », dans le même groupe ouvert (un mois, un siège, un dossier), avec le même fonctionnement (préparé en tâche de fond, puis prêt).</p>
+
+<h2>1 · Ce que fait l'export</h2>
+<table>
+<tr><th>Élément</th><th>Décision proposée</th><th>Pourquoi</th></tr>
+<tr><td>Où</td><td>Dans la bibliothèque, groupe ouvert : un bouton <b>« Exporter novembre 2026 »</b> à côté de « Imprimer novembre 2026 » et de « Sélectionner ». Mode « Sélectionner » : « Exporter la sélection ».</td><td>Réutilise le geste existant (<span class="mono">ImprimerDepuisLaPme</span>). Aucun écran en plus, aucun doublon.</td></tr>
+<tr><td>Contenu</td><td>Un <b>ZIP</b> : les pièces d'origine, rangées par dossier. Un <b>Excel</b> : une ligne par pièce (date, tiers, type, montants tels que lus, devise, dossier, nom du fichier dans le ZIP).</td><td>Le comptable extérieur reçoit les originaux et un tableau pour saisir ou rapprocher.</td></tr>
+<tr><td>Choix</td><td>Une feuille propose : <b>Pièces (ZIP)</b> et <b>Liste (Excel)</b>, les deux cochés par défaut. Le périmètre est rappelé en clair.</td><td>Un seul geste pour le cas courant ; deux cases pour le cas rare.</td></tr>
+<tr><td>Sous « Toutes les sociétés »</td><td>Un dossier par société dans le ZIP, une feuille par société dans l'Excel. Aucun total additionné.</td><td>Une pièce appartient à une société. R3 : aucun chiffre que le moteur ne rend pas.</td></tr>
+<tr><td>Pièces privées (« Pour moi »)</td><td>Jamais exportées depuis une société. Elles ne s'exportent que depuis « Mon espace », par leur propriétaire.</td><td>Cohérent avec la règle de confidentialité du lot G2.</td></tr>
+<tr><td>Qui</td><td>Les membres de la société, avec les droits de lecture qu'ils ont déjà. Même isolation que la bibliothèque (RLS).</td><td>R6 : l'isolation est portée par la base.</td></tr>
+<tr><td>Valeurs affichées</td><td>Les montants sont ceux de la lecture ; aucun verdict comptable ou réglementaire n'est ajouté.</td><td>R3 : Malica ne calcule pas.</td></tr>
+<tr><td>Après l'export</td><td>L'accueil d'une société sans comptabilité dit <b>« À exporter · N pièces »</b> tant que des pièces n'ont jamais été remises, puis <b>« Remis le {date} »</b>. Le statut de la pièce reste « Rangée ».</td><td>Répond à l'attendu « Rangée / À exporter » de la recette.</td></tr>
+<tr><td>Offres</td><td>Disponible partout, y compris Basic. L'export ne se vend pas.</td><td>Consigne du dirigeant : toutes les offres. L'Android ne vend rien.</td></tr>
+<tr><td>Limites</td><td>Taille maximale, durée de conservation du fichier et nombre d'exports simultanés : paramètres en base, versionnés.</td><td>R4 : aucune valeur dans le code.</td></tr>
+</table>
+
+<h2>2 · Planches</h2>
+<div class="row">
+
+<div><div class="ph"><div class="bar"><svg width="26" height="26" viewBox="0 0 26 26"><text x="0" y="20" fill="#FAFAFA" font-size="20" font-weight="700">rG</text></svg><div class="chip">SOTUMAG SARL <i>3</i></div><div class="av">D</div></div>
+<div class="sec">Novembre 2026</div>
+<div class="sub" style="font-size:12.5px;color:#8a8a8a">12 documents · 4 820,500 TND</div>
+<div class="act"><div>Imprimer novembre 2026</div><div class="n">Exporter novembre 2026</div></div>
+<div class="act"><div>Sélectionner</div></div>
+<div class="card"><div>STATION ENNOUR<small>Achats · 3 nov.</small></div><span class="mono">86,400</span></div>
+<div class="card"><div>Medina Textile<small>Ventes · 5 nov.</small></div><span class="mono">1 240,000</span></div></div>
+<p class="cap"><b>A · Bibliothèque, mois ouvert.</b> Un bouton de plus, à côté d'« Imprimer ». Même rangée, même style : aucun écran neuf.</p></div>
+
+<div><div class="ph"><div class="bar"><svg width="26" height="26" viewBox="0 0 26 26"><text x="0" y="20" fill="#FAFAFA" font-size="20" font-weight="700">rG</text></svg><div class="chip">SOTUMAG SARL <i>3</i></div><div class="av">D</div></div>
+<div class="sec">Novembre 2026</div>
+<div class="sheet">
+<div class="sec" style="margin-top:0">Exporter novembre 2026</div>
+<div class="card"><div>Pièces (ZIP)<small>Les originaux, rangés par dossier</small></div><span class="ok">●</span></div>
+<div class="card"><div>Liste (Excel)<small>Une ligne par pièce</small></div><span class="ok">●</span></div>
+<div class="note">12 pièces de SOTUMAG SARL. Les pièces privées ne sont pas incluses.</div>
+<div class="btn">Préparer l'export</div>
+<div class="btn s">Annuler</div></div></div>
+<p class="cap"><b>B · La feuille.</b> Deux cases cochées par défaut, le périmètre dit en clair, une seule action. Sous « Toutes les sociétés » : « 3 sociétés, un dossier par société ».</p></div>
+
+<div><div class="ph"><div class="bar"><svg width="26" height="26" viewBox="0 0 26 26"><text x="0" y="20" fill="#FAFAFA" font-size="20" font-weight="700">rG</text></svg><div class="chip">SOTUMAG SARL <i>3</i></div><div class="av">D</div></div>
+<div class="sec">États de l'export</div>
+<div class="card"><div>Préparation en cours<small>Novembre 2026 · vous pouvez quitter l'écran</small></div><span class="run">●</span></div>
+<div class="card"><div>Prêt<small>Novembre 2026 · 2 fichiers</small></div><span class="ok">●</span></div>
+<div class="btn">Télécharger (Android : Partager)</div>
+<div class="note err">L'export n'a pas pu être préparé. (réf. C55ABB0F)</div>
+<div class="btn s">Réessayer</div></div>
+<p class="cap"><b>C · Les trois états.</b> En cours (azur), prêt (vert), erreur (vermillon avec référence), comme l'impression. Sur Android, « Partager » ouvre la feuille de partage du téléphone ; rien ne se vend.</p></div>
+
+<div><div class="ph"><div class="bar"><svg width="26" height="26" viewBox="0 0 26 26"><text x="0" y="20" fill="#FAFAFA" font-size="20" font-weight="700">rG</text></svg><div class="chip">SOTUMAG SARL <i>3</i></div><div class="av">D</div></div>
+<div class="sec">Aujourd'hui</div>
+<div class="k"><div><b>0</b><span>à traiter</span></div><div><b>5</b><span>à lire</span></div><div><b class="warn">12</b><span>à exporter</span></div></div>
+<div class="note">12 pièces n'ont pas encore été remises à votre comptable. <u>Exporter</u></div>
+<div class="sec" style="margin-top:20px">Après l'export</div>
+<div class="card"><div>Remis le 3 décembre<small>12 pièces · novembre 2026</small></div><span class="ok">●</span></div></div>
+<p class="cap"><b>D · Accueil d'une société sans comptabilité.</b> « À exporter » compte les pièces jamais remises ; après l'export : « Remis le {date} ». Une société avec comptabilité ne voit pas cette ligne.</p></div>
+
+<div><div class="ph" dir="rtl"><div class="bar"><div class="av">D</div><div class="chip">SOTUMAG SARL <i>3</i></div></div>
+<div class="sec">نوفمبر 2026</div>
+<div class="act"><div class="n">تصدير نوفمبر 2026</div><div>طباعة نوفمبر 2026</div></div>
+<div class="sheet"><div class="sec" style="margin-top:0">تصدير نوفمبر 2026</div>
+<div class="card"><div>المستندات (ZIP)</div><span class="ok">●</span></div>
+<div class="card"><div>القائمة (Excel)</div><span class="ok">●</span></div>
+<div class="btn">تحضير التصدير</div></div>
+<div class="note">libellés ar provisoires, à valider par ref.labels</div></div>
+<p class="cap"><b>E · Arabe, en miroir (RTL).</b> Les boutons et la feuille se retournent. Les noms latins restent lisibles.</p></div>
+
+</div>
+
+<h2>3 · Clés de libellé à créer (ref.labels fr / en / ar)</h2>
+<p class="l mono">pme.export.bouton (« Exporter {mois} ») · pme.export.selection · pme.export.titre · pme.export.pieces · pme.export.liste · pme.export.perimetre (« {n} pièces de {société} ») · pme.export.sansPrivees · pme.export.parSociete · pme.export.prepare · pme.export.enCours · pme.export.pret · pme.export.erreur · pme.export.partager · pme.accueil.aExporter · pme.accueil.remisLe. Aucun libellé en dur ; « cabinet » n'apparaît nulle part.</p>
+
+<h2>4 · Ce qui existe déjà et se réutilise</h2>
+<p class="l">Le contrôle « Imprimer » du groupe ouvert (même emplacement, même mode « Sélectionner »), le mécanisme de préparation en tâche de fond de l'impression, le stockage des fichiers gardés et leur lecture sous les mêmes politiques RLS (<span class="mono">/exports/:id/contenu</span>), les noms de dossier (<span class="mono">dossierDeLaPiece</span>) et de mois. Aucun nouveau moteur de calcul.</p>
+
+<h2>5 · À valider avant tout code</h2>
+<p class="l">1. L'export se pose-t-il bien à côté d'« Imprimer » (aucun écran neuf), ou faut-il un point d'entrée dans Réglages › Données › Ma bibliothèque en plus ? 2. « À exporter · N » sur l'accueil : voulu, et pour les seules sociétés sans comptabilité ? 3. Un ZIP par mois et par société, ou un seul ZIP pour la période choisie ? 4. Le mode « Toutes les sociétés » produit-il un seul fichier (un dossier par société) ou un export par société ?</p>
+</body></html>
