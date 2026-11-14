@@ -26,6 +26,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { COMMERCE } from "@/capabilities/coque";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { estComptabiliteInterne } from "@/lib/comptabilite-interne";
 import {
   CHAMP,
   FicheClient,
@@ -118,7 +119,10 @@ function CabinetClients() {
   // du tout dans l'application installée, où elle disparaît donc.
   const notes = useNotesDHonoraires();
   const aUneFacturation = notes.ouvertes || FacturesMalica !== null;
-  const vue: Vue = recherche.vue === "facturation" && aUneFacturation ? "facturation" : "clients";
+  // La comptabilité interne ne tient pas les honoraires : la vue reste grisée.
+  const interne = estComptabiliteInterne(org);
+  const vue: Vue =
+    recherche.vue === "facturation" && aUneFacturation && !interne ? "facturation" : "clients";
 
   const acces = useMonAcces(org.id);
   const expert = acces.data?.role === "expert";
@@ -296,7 +300,10 @@ function CabinetClients() {
           {/* ---- les deux vues */}
           <div
             role="tablist"
-            className={cn("flex gap-1 border-b border-border", !aUneFacturation && "hidden")}
+            className={cn(
+              "flex gap-1 border-b border-border",
+              !(aUneFacturation || interne) && "hidden",
+            )}
           >
             {(["clients", "facturation"] as const).map((v) => (
               <button
@@ -304,7 +311,9 @@ function CabinetClients() {
                 type="button"
                 role="tab"
                 aria-selected={vue === v}
-                onClick={() => allerVue(v)}
+                onClick={() => (v === "facturation" && interne ? undefined : allerVue(v))}
+                disabled={v === "facturation" && interne}
+                title={v === "facturation" && interne ? t("cab.cli.grise.externe") : undefined}
                 className={cn(
                   "-mb-px h-10 border-b-2 px-3 text-[14px]",
                   vue === v
@@ -849,12 +858,16 @@ function BarreDeLot({
     onError: (e: unknown) => setErreur(texteDeLErreur(e, "cabinet.clients.lot", t("common.error"))),
   });
 
-  const GESTES: Array<{ id: GesteDeLot; cle: MessageKey }> = [
+  const GESTES_DU_CABINET: Array<{ id: GesteDeLot; cle: MessageKey }> = [
     { id: "collab", cle: "cab.cli.lot.collab" },
     { id: "mandat", cle: "cab.cli.lot.mandat" },
     ...(COMMERCE ? [{ id: "abo" as const, cle: "cab.cli.lot.abo" as MessageKey }] : []),
     { id: "relancer", cle: "cab.cli.lot.relancer" },
   ];
+  // La comptabilité interne ne tient ni le mandat ni l'abonnement : ces gestes sont retirés.
+  const GESTES = estComptabiliteInterne(org)
+    ? GESTES_DU_CABINET.filter((g) => g.id !== "mandat" && g.id !== "abo")
+    : GESTES_DU_CABINET;
   const pret = geste === "relancer" || valeur !== "";
 
   return (

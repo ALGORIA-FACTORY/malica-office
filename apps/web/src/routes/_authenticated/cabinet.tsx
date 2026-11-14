@@ -18,7 +18,14 @@
  * Rien ici ne décide de comptabilité : la coquille situe, elle ne juge pas.
  */
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  retainSearchParams,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   Bell,
   BookOpen,
@@ -46,6 +53,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CabinetProvider } from "@/components/malica/cabinet-context";
+import { estComptabiliteInterne } from "@/lib/comptabilite-interne";
 import { useDossierCourant } from "@/components/malica/dossier-courant";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import {
@@ -94,6 +102,13 @@ export const Route = createFileRoute("/_authenticated/cabinet")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  // La société ouverte est un paramètre d'adresse ; elle ne compte que si le serveur
+  // l'a listée parmi les sociétés affectées (voir `CabinetLayout`).
+  validateSearch: (s: Record<string, unknown>): { societe?: string } =>
+    typeof s["societe"] === "string" ? { societe: s["societe"] } : {},
+  // Chaque lien du cabinet garde la société choisie : sans cela, changer de page
+  // ramène silencieusement à la première société (revue Codex de #372).
+  search: { middlewares: [retainSearchParams(["societe"])] },
   component: CabinetLayout,
 });
 
@@ -141,6 +156,7 @@ function libelleDuRole(acces: MonAcces | null, t: (k: MessageKey) => string): st
     expert: "cab.rail.role.expert",
     dirigeant: "cab.rail.role.dirigeant",
     collaborateur: "cab.rail.role.collaborateur",
+    comptable: "cab.rail.role.comptable",
     assistant: "cab.rail.role.assistant",
   };
   const cle = acces.role ? CLES[acces.role] : undefined;
@@ -167,7 +183,16 @@ function CabinetLayout() {
     queryKey: ["my-cabinets"],
     queryFn: () => office().supervision.listMyCabinets(),
   });
-  const org = (cabinets.data ?? [])[0] ?? null;
+  // Les sociétés de la comptabilité interne, parmi celles que le serveur a listées.
+  const listees = cabinets.data ?? [];
+  const sociétésInternes = listees.filter(estComptabiliteInterne);
+  // La société demandée par l'adresse ne compte que si le serveur l'a listée.
+  const adresse = useRouterState({ select: (s) => s.location.search }) as unknown;
+  const demandee =
+    typeof adresse === "object" && adresse !== null && "societe" in adresse
+      ? String((adresse as { societe: unknown }).societe)
+      : null;
+  const org = listees.find((o) => o.id === demandee) ?? listees[0] ?? null;
 
   const orgsQuery = useQuery({
     queryKey: ["my-organizations"],
@@ -204,20 +229,41 @@ function CabinetLayout() {
   }
 
   return (
-    <CabinetProvider
-      org={org}
-      render={({ panel }) => (
-        <Coquille
-          org={org}
-          hasPme={hasPme}
-          path={path}
-          panneauOuvert={malica.ouvert}
-          ouvrirPanneau={malica.ouvrir}
-          fermerPanneau={malica.fermer}
-          panel={panel}
-        />
-      )}
-    />
+    <>
+      {sociétésInternes.length > 1 ? (
+        <div className="flex items-center gap-3 border-b border-border bg-card px-4 py-2 text-[13px]">
+          <label htmlFor="choix-de-la-societe" className="text-muted-foreground">
+            {t("cab.societes.choisir")}
+          </label>
+          <select
+            id="choix-de-la-societe"
+            value={org.id}
+            onChange={(e) => void navigate({ to: ".", search: { societe: e.target.value } })}
+            className="border border-border bg-background px-2 py-1"
+          >
+            {sociétésInternes.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+      <CabinetProvider
+        org={org}
+        render={({ panel }) => (
+          <Coquille
+            org={org}
+            hasPme={hasPme}
+            path={path}
+            panneauOuvert={malica.ouvert}
+            ouvrirPanneau={malica.ouvrir}
+            fermerPanneau={malica.fermer}
+            panel={panel}
+          />
+        )}
+      />
+    </>
   );
 }
 
@@ -572,7 +618,10 @@ function Rail({
               {org.name}
             </Link>
             <span className="num mt-0.5 block text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">
-              {org.jurisdiction} · {t("cab.rail.societes", { count: nbClients })}
+              {org.jurisdiction}
+              {estComptabiliteInterne(org)
+                ? null
+                : ` · ${t("cab.rail.societes", { count: nbClients })}`}
             </span>
           </span>
         ) : null}

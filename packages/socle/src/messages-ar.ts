@@ -312,6 +312,7 @@ export const ar: Dict = {
   "refus.piece.rappelEnAttente": "طُلب من المحاسبة استرجاع هذه الوثيقة: انتظر ردّها.",
   "refus.licence.transmission": "الإرسال موقوف: دفعة من اشتراككم متأخرة.",
   "refus.licence.export": "التصدير موقوف: اشتراك هذا الملف غير مسدَّد.",
+  "refus.journal.immuable": "لا يُعاد كتابة قيد اليومية ولا يُحذف: يُسجَّل بدلًا منه واقعة مؤرخة.",
   "refus.place.comptable_prise":
     "مقعد «المحاسب الداخلي» المشمول في الباقة مشغول ({places} في المجموع).",
   "refus.invitation.choisir_la_comptabilite":
@@ -1472,6 +1473,9 @@ export const ar: Dict = {
   "cab.today.charge.pieces#other": "{count} وثيقة في الانتظار",
   "cab.rail.role": "المحاسبة",
   "cab.rail.role.expert": "مسؤول المحاسبة",
+  "cab.rail.role.comptable": "محاسب داخلي",
+  "cab.societes.choisir": "الشركة",
+  "cab.cli.grise.externe": "محجوز لمكتب المحاسبة الخارجي: الأتعاب والاشتراك يُداران معه.",
   "cab.rail.role.dirigeant": "مسيّر",
   "cab.rail.role.collaborateur": "متعاون",
   "cab.rail.role.assistant": "مساعد",
