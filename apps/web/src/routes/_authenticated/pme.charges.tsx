@@ -48,7 +48,8 @@ export const Route = createFileRoute("/_authenticated/pme/charges")({
     ],
   }),
   component: () => (
-    <UneSocieteALaFois>
+    // Sous « Toutes » : le total du mois de chaque société, rendu par le moteur du Socle.
+    <UneSocieteALaFois chiffre={{ nature: "charges", periode: currentPeriod() }}>
       <ChargesScreen />
     </UneSocieteALaFois>
   ),

@@ -7,7 +7,9 @@
  *    « Toutes » (l'en-tête le dit) ;
  *  - `choisir` : la pièce va à UNE société ; la ligne prise est celle du dossier ouvert, et la
  *    vue reste « Toutes ».
- * Aucun chiffre : ce que le moteur ne rend pas pour une société ne s'additionne pas (R3).
+ * Un écran qui a un chiffre (TVA, Charges) le montre sur chaque ligne : celui que le moteur du Socle
+ * rend pour CETTE société, dans sa devise, ou l'état qui dit pourquoi il n'y en a pas. Jamais de
+ * total : ce que le moteur ne rend pas ne s'additionne pas (R3).
  */
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -15,18 +17,61 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 
+import { useChiffresParSociete, type NatureDuChiffre } from "@/hooks/use-chiffres-par-societe";
+import type { ChiffreDeLaLigne } from "@/hooks/use-chiffres-par-societe";
+import { montant } from "@/lib/lisible";
+
 import { usePme } from "./pme-context";
+
+/** Ce qu'un écran par société montre sur chaque ligne : sa nature de chiffre et son mois. */
+export interface ChiffreDeLEcran {
+  nature: NatureDuChiffre;
+  periode: string;
+}
+
+/** La légende d'une ligne : ce que le chiffre est, ou la raison de son absence. */
+function legendeDe(
+  t: ReturnType<typeof useI18n>["t"],
+  nature: NatureDuChiffre,
+  c: ChiffreDeLaLigne,
+) {
+  switch (c.etat) {
+    case "enCours":
+      return t("pme.toutes.chiffre.enCours");
+    case "illisible":
+      return t("pme.toutes.chiffre.indisponible");
+    case "calcule":
+      if (nature === "charges") return t("pme.toutes.chiffre.charges");
+      return c.sens === "du"
+        ? t("pme.tva.aPayer")
+        : c.sens === "credit"
+          ? t("pme.tva.credit")
+          : c.sens === "nul"
+            ? t("pme.tva.soldeNul")
+            : t("pme.tva.soldeInconnu");
+    default:
+      return t(`pme.toutes.etat.${c.etat}`);
+  }
+}
 
 export function SocietesALaLigne({
   note,
   mode,
+  chiffre,
 }: {
   /** La clé du libellé qui dit pourquoi l'écran est par société. */
   note: MessageKey;
   mode: "ouvrir" | "choisir";
+  /** Le chiffre de chaque société, quand l'écran en a un. */
+  chiffre?: ChiffreDeLEcran;
 }) {
   const { t, locale } = useI18n();
   const pme = usePme();
+  const chiffres = useChiffresParSociete(
+    chiffre?.nature ?? "tva",
+    chiffre?.periode ?? "",
+    chiffre !== undefined,
+  );
   const triees = [...pme.dossiers].sort((a, b) => a.name.localeCompare(b.name, locale));
 
   return (
@@ -35,6 +80,7 @@ export function SocietesALaLigne({
       <ul className="lignes" role={mode === "choisir" ? "radiogroup" : undefined}>
         {triees.map((d) => {
           const prise = mode === "choisir" && d.id === pme.tenantId;
+          const c = chiffre ? chiffres.get(d.id) : undefined;
           return (
             <li key={d.id}>
               <button
@@ -47,7 +93,14 @@ export function SocietesALaLigne({
                 <span className="bd">
                   <b>{d.name}</b>
                   {prise ? <span>{t("pme.toutes.derniereUtilisee")}</span> : null}
+                  {c ? <span data-chiffre={c.etat}>{legendeDe(t, chiffre!.nature, c)}</span> : null}
                 </span>
+                {c?.etat === "calcule" ? (
+                  <span className="mt" dir="ltr">
+                    {montant(c.sens === "credit" ? c.montant.replace(/^-/, "") : c.montant, locale)}{" "}
+                    <small>{c.devise}</small>
+                  </span>
+                ) : null}
                 {prise ? (
                   <svg viewBox="0 0 24 24" className="g" aria-hidden>
                     <path d="m5 12.5 4.5 4.5L19 7.5" />
@@ -72,10 +125,22 @@ export function SocietesALaLigne({
  * choisir la société, au lieu de montrer celle qui se trouve ouverte sous un en-tête qui dit
  * « Toutes ».
  */
-export function UneSocieteALaFois({ children }: { children: ReactNode }) {
+export function UneSocieteALaFois({
+  children,
+  chiffre,
+}: {
+  children: ReactNode;
+  chiffre?: ChiffreDeLEcran;
+}) {
   const pme = usePme();
   if (pme.societeAffichee !== null) return <>{children}</>;
-  return <SocietesALaLigne note="pme.toutes.parSociete" mode="ouvrir" />;
+  return (
+    <SocietesALaLigne
+      note="pme.toutes.parSociete"
+      mode="ouvrir"
+      {...(chiffre ? { chiffre } : {})}
+    />
+  );
 }
 
 /** Sur une pièce : elle est d'une société, le bandeau la nomme et mène à toutes les pièces. */

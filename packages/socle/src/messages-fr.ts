@@ -340,6 +340,8 @@ export const fr = {
   "refus.licence.transmission":
     "Transmission suspendue : un paiement de votre abonnement est en retard.",
   "refus.licence.export": "Export suspendu : l'abonnement de ce dossier n'est pas à jour.",
+  "refus.journal.immuable":
+    "Une écriture du journal ne se réécrit ni ne s'efface : on inscrit un fait daté.",
   "refus.place.comptable_prise":
     "La place « Comptable interne » comprise dans l'offre est déjà prise ({places} au total).",
   "refus.invitation.choisir_la_comptabilite":
@@ -1558,6 +1560,10 @@ export const fr = {
   "cab.today.charge.pieces#other": "{count} pièces en attente",
   "cab.rail.role": "Comptabilité",
   "cab.rail.role.expert": "Responsable de la comptabilité",
+  "cab.rail.role.comptable": "Comptable interne",
+  "cab.societes.choisir": "Société",
+  "cab.cli.grise.externe":
+    "Réservé à la comptabilité externe : les honoraires et l'abonnement se gèrent avec elle.",
   "cab.rail.role.dirigeant": "Dirigeant",
   "cab.rail.role.collaborateur": "Collaborateur",
   "cab.rail.role.assistant": "Assistant",
@@ -3305,6 +3311,14 @@ export const fr = {
     "Aucune société épinglée : l'épingle se pose dans le choix de l'en-tête.",
   "pme.mesSocietes.retard": "retard",
   "pme.mesSocietes.aJour": "À jour",
+  "pme.toutes.chiffre.enCours": "Calcul en cours…",
+  "pme.toutes.chiffre.indisponible": "Chiffre indisponible pour le moment",
+  "pme.toutes.chiffre.charges": "charges du mois",
+  "pme.toutes.etat.sansJuridiction": "Juridiction non renseignée",
+  "pme.toutes.etat.sansReferentiel": "Référentiel de la juridiction indisponible",
+  "pme.toutes.etat.regimeAbsent": "Régime de TVA non renseigné",
+  "pme.toutes.etat.nonAssujetti": "Non assujettie à la TVA",
+  "pme.toutes.etat.referentielIncomplet": "Référentiel incomplet",
   "pme.toutes.parSociete":
     "Cela se règle société par société. Touchez une société pour ouvrir la sienne.",
   "pme.toutes.pourQuelleSociete": "Pour quelle société ?",

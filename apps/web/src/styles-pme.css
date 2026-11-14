@@ -3289,3 +3289,10 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] .exp-home{margin:1rem 0;display:flex;flex-direction:column;gap:.25rem}
 [data-surface="pme"] .exp-home p{margin:0;font-size:.875rem;line-height:1.4}
 [data-surface="pme"] .exp-home .more{border:0;background:none;color:var(--acc);font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer;text-align:start}
+
+/* ======================================================== TOUTES LES SOCIÉTÉS · LE CHIFFRE
+ * Planche B (13 novembre 2026) : sur chaque ligne, le chiffre que le moteur rend pour la société.
+ * Chiffres tabulaires ; la légende dit le sens, ou la raison d'une absence (jamais un zéro). */
+[data-surface="pme"] [data-ecran="a-la-ligne"] .lignes .mt{flex:none;font-family:var(--mono);font-size:.875rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--tx);white-space:nowrap}
+[data-surface="pme"] [data-ecran="a-la-ligne"] .lignes .mt small{font-size:.6875rem;font-weight:500;color:var(--t3)}
+[data-surface="pme"] [data-ecran="a-la-ligne"] .lignes .bd span[data-chiffre]:not([data-chiffre="calcule"]){color:var(--t2)}

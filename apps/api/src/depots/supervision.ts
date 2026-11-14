@@ -53,7 +53,7 @@ const STATUTS_VIDES: Readonly<Record<StatutCabinet, number>> = {
  * file en montre deux.
  */
 const PIECES_DU_CABINET = `pieces_v p
-         join engagements_v g on g.pme_org_id = p.tenant_id and g.cabinet_org_id = $1
+         join app.mandats_du_cabinet($1) g on g.pme_org_id = p.tenant_id
           -- En vigueur : l'archive d'un mandat terminé se lit (1.6), elle
           -- n'est pas du travail en cours.
           and g.status = 'actif'
@@ -127,12 +127,17 @@ export const supervision = {
   async listMyCabinets(db: Requete) {
     // `auth.uid()` est déjà posé : l'appartenance se joint en base, là où
     // l'adaptateur faisait deux requêtes et croisait les identifiants.
+    // Et la société que la personne tient en interne : son espace est celui-ci.
     const { rows } = await db.query(
       `select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency, o.validation_mode
          from organizations_v o
          join mes_adhesions_v m on m.tenant_id = o.id
         where o.kind = 'cabinet'
-        order by o.name`,
+       union
+       select o.id, o.kind, o.name, o.legal_id, o.jurisdiction, o.currency, o.validation_mode
+         from organizations_v o
+        where o.id in (select app.dossiers_du_comptable_interne())
+        order by name`,
     );
     return (rows as Record<string, unknown>[]).map((o) => ({
       id: o["id"] as string,
@@ -159,7 +164,7 @@ export const supervision = {
                 not app.engagement_en_vigueur(e.status, e.starts_on, e.ends_on)
                   and e.pme_org_id in (select a.pme from app.mes_archives() a
                                         where a.cabinet = e.cabinet_org_id) as archive
-           from engagements_v e
+           from app.mandats_du_cabinet($1) e
            left join organizations_v o on o.id = e.pme_org_id
           where e.cabinet_org_id = $1
             -- Chacun voit ses mandats : tous pour l'expert, les siens pour le collaborateur.
@@ -420,7 +425,7 @@ export const supervision = {
                 count(distinct e.piece_id)::int as supervisees
            from prises_en_charge_v pc
            join ecritures_v e on e.id = pc.ecriture_id and e.nature = 'piece'
-           join engagements_v g on g.pme_org_id = pc.client_tenant_id and g.cabinet_org_id = $1
+           join app.mandats_du_cabinet($1) g on g.pme_org_id = pc.client_tenant_id
            left join cabinet_members_v m on m.user_id = pc.par and m.tenant_id = $1
           where pc.tenant_id = $1
             and pc.prise_le >= date_trunc('month', now()) - interval '11 months'
@@ -432,7 +437,7 @@ export const supervision = {
         `select coalesce(demandee.value, francais.value, mo.code) as label,
                 count(*)::int as retours
            from ecritures_v e
-           join engagements_v g on g.pme_org_id = e.tenant_id and g.cabinet_org_id = $1
+           join app.mandats_du_cabinet($1) g on g.pme_org_id = e.tenant_id
            join ref_rejet_motifs_v mo on mo.id = e.review_motif_id
            left join ref_labels_v demandee
              on demandee.ns = 'rejet_motif' and demandee.key = mo.code and demandee.locale = $2
@@ -446,7 +451,7 @@ export const supervision = {
       ),
       db.query(
         `with mandats as (
-           select g.pme_org_id as tenant_id from engagements_v g where g.cabinet_org_id = $1
+           select g.pme_org_id as tenant_id from app.mandats_du_cabinet($1) g
          ),
          lues as (
            select count(distinct x.piece_id)::int as n

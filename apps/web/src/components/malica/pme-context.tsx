@@ -91,6 +91,12 @@ export interface PmeContextValue {
     matricule?: string | null;
     /** Le rôle de la personne dans cette société. */
     role?: string | null;
+    /**
+     * La juridiction et la devise de CETTE société : chacune a les siennes, et le chiffre de
+     * chaque ligne de « Toutes les sociétés » se lit dans les siennes (R3, R4).
+     */
+    jurisdiction?: string;
+    currency?: string;
   }>;
   choisirDossier: (id: string) => void;
   /**

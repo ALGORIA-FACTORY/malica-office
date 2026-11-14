@@ -76,10 +76,12 @@ l'URL, puis `npm test -w apps/api`. Une migration est idempotente et se
 rejoue de zéro : `db/local/charger.ps1 -Base malica_rejeu` le prouve sur
 une base jetable.
 
-## Gel du pilote, du 12 nov. au soir au 15 nov.
+## Gel du pilote : levé le 14 novembre 2026 sur ordre de Wissem Barouni (CEO)
 
-- Entrent sur `main` seulement : la PR de la version candidate (0.2.111) et les correctifs bloquants trouvés pendant les vérifications.
-- #372 (espace comptable interne) reste ouverte et attend le lundi 16 novembre. Elle n'est pas fermée.
+Le gel du 12 au 15 novembre est levé. Les correctifs et les lots de la recette du 13 novembre entrent sur `main` comme d'habitude : une PR par lot, CI verte sur la tête, fusion sur l'ordre du dirigeant. Ce qui demeure :
+
+- Le 14 novembre 2026, Wissem Barouni (CEO) a aussi levé, par ordre : la date du 16 novembre de #372 (elle se fusionne comme un lot, sur son ordre), la règle des 48 h de staging vert avant l'étiquette pilote, et l'interdiction de déployer ou de tourner un secret du 25 au 28 novembre. Ces trois points figurent encore dans `docs/pilote/diagnostic-2026-11-12.md` ; l'ordre du dirigeant les remplace.
+- Ce qui demeure : une étiquette `v*` se pose sur un commit dont la CI est verte, et un déploiement sur le pilote ou la production passe par `deployer.yml`, avec l'approbation de l'environnement GitHub.
 - Le diagnostic de référence est `docs/pilote/diagnostic-2026-11-12.md` (PR #375).
 
 ## Journal

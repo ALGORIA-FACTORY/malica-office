@@ -958,7 +958,7 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
    * Le cas sans comptabilité externe, où il tient seul les livres, est
    * éprouvé de bout en bout par `le-comptable-interne-tient-les-livres`.
    */
-  it("12 · Le comptable interne — voit la société et ses écritures, jamais le Privé ; prépare, sans valider à côté d'une comptabilité externe", async () => {
+  it("12 · Le comptable interne — voit la société et ses écritures, jamais le Privé ; sous mandat externe, ne prépare ni ne valide", async () => {
     const u = await creerCompte(
       `matrice-comptable-${Date.now()}@essai.local`,
       "MotDePasseTresLong2026!",
@@ -988,33 +988,34 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     const transmise = await chezLeComptable("sami");
     assert.equal(await litIl("capture.pieces", transmise), true);
     const ecriture = await s.priseEnCharge(transmise);
-    assert.equal(await litIl("socle.ecritures", ecriture), true);
+    // Sous mandat externe, il ne lit plus les écritures de la société : ce qu'il
+    // lit en (B) est une décision ouverte (propriétaire non principal, place).
+    assert.equal(await litIl("socle.ecritures", ecriture), false);
 
-    // RECEVOIR : il prépare ; l'inscription, la validation et le retour sont à
-    // la comptabilité externe.
+    // RECEVOIR, sous mandat externe (B) : il ne prépare plus, ne propose plus,
+    // n'inscrit, ne valide, ne retourne plus. La comptabilité externe fait tout.
     const aPreparer = await chezLeComptable("sami");
-    await sousIdentiteDuServeur(u.id, (db) =>
-      db.query(`select public.piece_type_etabli_par_le_cabinet($1)`, [aPreparer]),
+    await assert.rejects(
+      sous("office.propose", {
+        pieceId: aPreparer,
+        journal: "ACH",
+        date: "2026-10-02",
+        libelle: "Facture essai",
+        packVersionId: s.pack,
+        devise: "TND",
+        lignes: [
+          { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
+          {
+            account_code: "401",
+            libelle: "Fournisseur",
+            debit: "0",
+            credit: "100.000",
+            tax_code: null,
+          },
+        ],
+      }),
+      /refus\./,
     );
-    const proposee = (await sous("office.propose", {
-      pieceId: aPreparer,
-      journal: "ACH",
-      date: "2026-10-02",
-      libelle: "Facture essai",
-      packVersionId: s.pack,
-      devise: "TND",
-      lignes: [
-        { account_code: "601", libelle: "Achat", debit: "100.000", credit: "0", tax_code: "EXO" },
-        {
-          account_code: "401",
-          libelle: "Fournisseur",
-          debit: "0",
-          credit: "100.000",
-          tax_code: null,
-        },
-      ],
-    })) as string;
-    await assert.rejects(sous("office.book", proposee), /refus\.inscription\.reservee_au_cabinet/);
     await assert.rejects(
       sous("supervision.retourner", {
         pieceId: aPreparer,
@@ -1023,7 +1024,6 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
       }),
       /refus\.supervision\.reservee/,
     );
-    await s.fait("expert", "office.book", proposee);
 
     // ENVOYER, l'abonnement, les places : rien.
     await assert.rejects(
