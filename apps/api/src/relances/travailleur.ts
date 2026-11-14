@@ -28,6 +28,7 @@ interface CourrielARemettre {
   corps: string;
   action_libelle: string | null;
   action_route: string | null;
+  ton: string;
 }
 
 /** Combien de courriels un tour remet au plus : un incident ne vide pas la file d'un coup. */
@@ -63,17 +64,20 @@ export async function tourDeRelances(d: Dependances) {
       );
       const c = rows[0];
       if (!c) return null;
-      const message = courrielDeNotification({
-        locale: c.locale,
-        titre: c.titre,
-        corps: c.corps,
-        action:
-          c.action_libelle && c.action_route
-            ? { libelle: c.action_libelle, url: `${config.urlPublique}${c.action_route}` }
-            : null,
-      });
+      // Le rendu et l'envoi relèvent du même échec : une ligne qu'on ne sait pas
+      // rendre s'inscrit « échoué » et ne bloque pas le reste de la file.
       let erreur: string | null = null;
       try {
+        const message = courrielDeNotification({
+          locale: c.locale,
+          titre: c.titre,
+          corps: c.corps,
+          action:
+            c.action_libelle && c.action_route
+              ? { libelle: c.action_libelle, url: `${config.urlPublique}${c.action_route}` }
+              : null,
+          ton: c.ton,
+        });
         await envoyerParBrevo(
           { cle: config.cle, expediteur: config.expediteur, destinataire: c.email, ...message },
           d.fetchImpl,

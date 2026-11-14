@@ -1715,6 +1715,11 @@ export const en: Dict = {
   "cab.notif.kind.acces.propose": "Covering the client's subscription has been offered.",
   "cab.notif.kind.acces.accepte": "The client accepted having their subscription covered.",
   "cab.notif.kind.acces.repris": "The client's subscription is back at their own charge.",
+  "cab.notif.kind.acces.refuse": "The client declined the take-over of its subscription.",
+  "cab.notif.kind.piece.recue_du_siege": "A document was received from head office.",
+  "cab.notif.kind.piece.retournee_par_le_proprietaire":
+    "The owner of the file returned a document.",
+  "cab.notif.kind.piece.supprimee_par_le_proprietaire": "The owner of the file removed a document.",
   "cab.notif.kind.facture.emise": "A platform invoice has been issued.",
   "cab.file.demande.rappel": "Recall requested",
   "cab.file.demande.suppression": "Deletion requested",

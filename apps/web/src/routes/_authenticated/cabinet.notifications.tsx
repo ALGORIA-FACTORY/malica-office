@@ -92,7 +92,12 @@ const PHRASE_DU_GENRE: Record<string, MessageKey> = {
   "acces.repris": "cab.notif.kind.acces.repris",
   "acces.descente_acceptee": "cab.notif.kind.acces.descente_acceptee",
   "acces.descente_refusee": "cab.notif.kind.acces.descente_refusee",
+  "acces.refuse": "cab.notif.kind.acces.refuse",
   "facture.emise": "cab.notif.kind.facture.emise",
+  // Le circuit siège → propriétaire : le cabinet est l'auteur ou le siège.
+  "piece.recue_du_siege": "cab.notif.kind.piece.recue_du_siege",
+  "piece.retournee_par_le_proprietaire": "cab.notif.kind.piece.retournee_par_le_proprietaire",
+  "piece.supprimee_par_le_proprietaire": "cab.notif.kind.piece.supprimee_par_le_proprietaire",
   // Retours du cabinet (25 octobre 2026) : la relance, et la réponse du client.
   "piece.confirmation_demandee": "cab.notif.kind.piece.confirmation_demandee",
   "piece.reponse_client": "cab.notif.kind.piece.reponse_client",

@@ -19,6 +19,7 @@ const COURRIEL = {
   corps: "Reste 12,000 TND.",
   action_libelle: "Payer",
   action_route: "/pme/reglages",
+  ton: "alerte",
 };
 
 function fausseBase() {
@@ -85,6 +86,7 @@ describe("le courriel d'une notification", () => {
   it("échappe le texte, se lit de droite à gauche en arabe, garde le lien", () => {
     const c = courrielDeNotification({
       locale: "ar",
+      ton: COURRIEL.ton,
       titre: COURRIEL.titre,
       corps: COURRIEL.corps,
       action: { libelle: "Payer", url: "https://app.essai.local/pme/reglages" },
@@ -97,11 +99,18 @@ describe("le courriel d'une notification", () => {
   });
 
   it("une langue inconnue retombe sur le français ; un lien non http est refusé", () => {
-    const c = courrielDeNotification({ locale: "xx", titre: "T", corps: "C", action: null });
+    const c = courrielDeNotification({
+      locale: "xx",
+      titre: "T",
+      corps: "C",
+      action: null,
+      ton: "neutre",
+    });
     assert.match(c.html, /<html lang="fr" dir="ltr">/);
     assert.throws(() =>
       courrielDeNotification({
         locale: "fr",
+        ton: "neutre",
         titre: "T",
         corps: "C",
         action: { libelle: "x", url: "javascript:alert(1)" },
