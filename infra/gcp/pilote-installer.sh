@@ -44,8 +44,12 @@ gcloud services enable iam.googleapis.com iamcredentials.googleapis.com sts.goog
 DEPLOYEUR="malica-deployeur@$PROJET.iam.gserviceaccount.com"
 gcloud iam service-accounts describe "$DEPLOYEUR" >/dev/null 2>&1 ||
   gcloud iam service-accounts create malica-deployeur --display-name="Malica - deploiement pilote (tunnel IAP seulement)"
+# Un compte de service tout juste créé n'est pas visible partout avant
+# quelques dizaines de secondes : la liaison réessaie au lieu d'échouer
+# (« Service account … does not exist », vu le 15 novembre 2026).
+reessaie() { for n in 1 2 3 4 5 6 7 8 9 10; do "$@" && return 0; echo "  …nouvel essai ($n)" >&2; sleep 10; done; return 1; }
 for role in roles/iap.tunnelResourceAccessor roles/compute.viewer; do
-  gcloud projects add-iam-policy-binding "$PROJET" --condition=None --quiet \
+  reessaie gcloud projects add-iam-policy-binding "$PROJET" --condition=None --quiet \
     --member="serviceAccount:$DEPLOYEUR" --role="$role" >/dev/null
 done
 gcloud iam workload-identity-pools describe github --location=global >/dev/null 2>&1 ||
@@ -55,7 +59,7 @@ gcloud iam workload-identity-pools providers describe malica-office --location=g
     --display-name="malica-office (pilote)" --issuer-uri=https://token.actions.githubusercontent.com \
     --attribute-mapping=google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.environment=assertion.environment \
     --attribute-condition="assertion.repository=='$DEPOT' && assertion.environment=='$ENVIRONNEMENT'"
-gcloud iam service-accounts add-iam-policy-binding "$DEPLOYEUR" --quiet --role=roles/iam.workloadIdentityUser \
+reessaie gcloud iam service-accounts add-iam-policy-binding "$DEPLOYEUR" --quiet --role=roles/iam.workloadIdentityUser \
   --member="principalSet://iam.googleapis.com/projects/$NUMERO/locations/global/workloadIdentityPools/github/attribute.environment/$ENVIRONNEMENT" >/dev/null
 FOURNISSEUR="projects/$NUMERO/locations/global/workloadIdentityPools/github/providers/malica-office"
 
