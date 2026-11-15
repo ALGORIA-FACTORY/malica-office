@@ -37,7 +37,7 @@ const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
 
 interface Devis {
   offre: string;
-  ecart_mensuel_ht: number;
+  ecart_mensuel_ht: number | null;
   jours_restants: number | null;
   jours_du_mois: number | null;
   a_regler_ht: number | null;
@@ -316,6 +316,7 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
       assert.ok(devis);
       assert.equal(devis.a_regler_ht, null);
       assert.equal(devis.a_regler_ttc, null);
+      assert.equal(devis.ecart_mensuel_ht, null, "pas d'écart mensuel sans total : il serait faux");
       assert.ok(devis.prix_plein_ttc, "le prix plein reste dit");
     });
   });

@@ -4525,7 +4525,8 @@ export interface OffreAuCatalogue {
 
 export interface DevisDeMontee {
   offre: string;
-  ecart_mensuel_ht: number;
+  /** `null` quand rien ne se chiffre (périmètre « PME » ouvert, sans facture d'avance qui couvre le jour). */
+  ecart_mensuel_ht: number | null;
   /** Les montants à régler sont `null` quand ils ne se devinent pas (périmètre « PME » ouvert, sans émetteur). */
   jours_restants: number | null;
   jours_du_mois: number | null;

@@ -34,7 +34,7 @@
 create or replace function public.montee_devis(
   p_offre  text,
   p_tenant uuid default null,
-  p_le     date default ((now() at time zone plateforme.fuseau_de_la_plateforme())::date))
+  p_le     date default null)
 returns jsonb
 language plpgsql
 stable
@@ -65,6 +65,10 @@ declare
   v_plein   numeric;
   v_chiffre boolean;
 begin
+  -- Le jour par défaut est celui de la PLATEFORME, l'horloge que la facturation immédiate compare ;
+  -- il se résout ici, dans le corps (security definer) : un défaut de paramètre s'évalue avec les
+  -- droits de l'appelant, qui n'exécute pas `fuseau_de_la_plateforme`.
+  p_le := coalesce(p_le, v_jour);
   if v_licence is null then
     return null;   -- seul le propriétaire principal paie : il est le seul à qui on chiffre.
   end if;
@@ -143,7 +147,8 @@ begin
   end if;
   return jsonb_build_object(
     'offre', p_offre,
-    'ecart_mensuel_ht', v_ecart,
+    -- Périmètre ouvert sans montant chiffré : l'écart des seuls prix de base n'est pas le tarif total.
+    'ecart_mensuel_ht', case when v_ouvert and v_ht is null then null else v_ecart end,
     'jours_restants', case when v_chiffre then v_restants end,
     'jours_du_mois', case when v_chiffre then v_jours end,
     'a_regler_ht', case when v_chiffre then v_ht end,
