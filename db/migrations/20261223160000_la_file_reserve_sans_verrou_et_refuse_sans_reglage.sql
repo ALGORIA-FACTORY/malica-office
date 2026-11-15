@@ -16,10 +16,10 @@
 -- Une réservation expirée sans résultat repart au tour suivant : un processus
 -- qui tombe ne bloque pas un courriel pour toujours.
 --
--- Le plafond d'essais ne se replie plus sur le seuil de la fabrique : sans le
--- réglage de relances, la file lève une erreur explicite (`refus.relances.reglage_absent`).
--- Conséquence assumée : tant que l'exploitant n'a pas pris le réglage, aucun
--- courriel ne part (relances comprises), et la tour le dit au journal.
+-- Le plafond d'essais ne se replie plus sur le seuil de la fabrique. Sans le
+-- réglage de relances, les RELANCES D'IMPAYÉ ne partent pas (et la file le dit au
+-- journal : `refus.relances.reglage_absent`) ; les autres courriels partent, sans
+-- plafond d'essais. Décision du dirigeant : pas de limite pour le reste.
 --
 -- R7 : 20261223130100 n'est pas réécrite ; cette migration la remplace par une
 -- nouvelle définition de la même fonction, et retire l'ancienne.
@@ -67,7 +67,7 @@ begin
   -- Le réglage de l'exploitant est la seule source du plafond. Absent : on le dit.
   select plateforme.relances_reglage() into v_reglage;
   if v_reglage ->> 'tentatives_max' is null then
-    raise exception 'refus.relances.reglage_absent' using errcode = 'no_data_found';
+    raise warning 'refus.relances.reglage_absent : relances d''impayé non remises';
   end if;
 
   return query
@@ -76,8 +76,12 @@ begin
       from notif.envois_v e
      where e.canal = 'email'
        and e.etat in ('a_remettre', 'a_reessayer')
-       and (e.code not like 'impaye.%' or (v_reglage ->> 'actives')::boolean)
-       and e.tentatives < (v_reglage ->> 'tentatives_max')::integer
+       -- Les relances d'impayé : seulement avec le réglage, actif, et dans son plafond.
+       -- Les autres courriels : sans plafond d'essais.
+       and (e.code not like 'impaye.%'
+            or (v_reglage ->> 'tentatives_max' is not null
+                and (v_reglage ->> 'actives')::boolean
+                and e.tentatives < (v_reglage ->> 'tentatives_max')::integer))
        -- une réservation encore vivante : le courriel part ailleurs, ou tout à l'heure
        and not exists (
          select 1 from notif.reservations r
