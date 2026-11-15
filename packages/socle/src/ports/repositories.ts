@@ -1618,6 +1618,11 @@ export interface PieceLue {
    */
   comptabilite?: boolean;
   /**
+   * Le jour du dernier export de la bibliothèque qui a remis cette pièce à un
+   * comptable extérieur (G5). `null` : jamais remise. Absent : on ne sait pas.
+   */
+  remiseLe?: string | null;
+  /**
    * Le type de document retenu par la base (`pieces.document_kind`), tous
    * types confondus — celui qui range la pièce dans son dossier. `kind`, lui,
    * ne dit que le sens lu (achat ou vente).
@@ -2207,7 +2212,15 @@ export type PropositionDePiece = (
    * dernière lecture. L'écran les dit « à vérifier » au lieu de « source ».
    */
   champsAVerifier?: string[];
+  /**
+   * D'où vient le sens que la proposition retient : une déclaration de la PME, une lecture de
+   * la pièce, ou une confirmation (PME ou comptabilité). `null` : aucun sens retenu.
+   */
+  sensOrigine?: OrigineDuSens | null;
 };
+
+/** L'origine d'un sens (achat ou vente), dite pour que la comptabilité sache qui l'a posé. */
+export type OrigineDuSens = "declare" | "lu" | "confirme";
 
 /** Une facture à laquelle un avoir peut se rattacher : lue, et déjà comptabilisée. */
 export interface FactureARattacher {

@@ -2681,6 +2681,12 @@ export const fr = {
   "refus.licence.deja_titulaire": "La licence est déjà à cette personne.",
   "refus.licence.a_un_proprietaire":
     "La licence ne se transmet qu’à un propriétaire de la société.",
+  "refus.export.trop_de_demandes":
+    "Un export de cette société est déjà en préparation. Réessayez dans un instant.",
+  "refus.export.originaux_absents":
+    "Aucun original de ces pièces n'est lisible : rien n'a été exporté.",
+  "refus.export.reglage_absent":
+    "Les limites d'un export ne sont pas encore réglées : l'export n'est pas disponible pour l'instant.",
   "refus.place.offre_pleine": "Toutes les places de cette offre sont prises ({places} au total).",
   "refus.abonnement.deja_propose":
     "Un abonnement est déjà proposé ou attribué à ce dossier par une comptabilité.",
@@ -3090,6 +3096,11 @@ export const fr = {
   "cab.ecriture.libelle.manque": "Écrivez le libellé de l’écriture.",
   "cab.ecriture.type": "Type de pièce",
   "cab.ecriture.type.choisir": "Choisir le type",
+  "cab.sens.origine.declare":
+    "Sens déclaré par la PME : personne ne l'a encore lu ni confirmé sur la pièce.",
+  "cab.sens.origine.lu": "Sens lu sur la pièce, conforme à la déclaration de la PME.",
+  "cab.sens.origine.confirme": "Sens tranché par une personne (PME ou comptabilité).",
+  "cab.sens.origine.changer": "Changer le sens",
   "cab.sens.titre": "Achat ou vente ?",
   "cab.sens.aide.pourquoi":
     "La lecture ne dit pas si cette pièce est un achat ou une vente, ou elle se contredit : le nom de l'émetteur ne correspond pas au sens lu. C'est à vous de trancher ; le client ne confirme rien.",
@@ -5101,6 +5112,9 @@ export const fr = {
   "pme.bienvenue.ditTitre": "Voici votre matricule fiscal.",
   "pme.bienvenue.ditSous":
     "Je l'inscris une seule fois. Dès que votre première pièce sera reçue, il ne changera plus — ni par vous, ni par moi, ni par votre comptabilité. Vérifiez-le maintenant.",
+  "pme.bienvenue.ditSansMatricule": "Votre matricule fiscal n'est pas encore enregistré.",
+  "pme.bienvenue.ditSousSansMatricule":
+    "Il figure sur votre carte d'identification fiscale. Sans lui, les reçus de paiement ne peuvent pas être produits.",
   "pme.bienvenue.secEtat": "à confirmer",
   "pme.bienvenue.champAdresse": "Adresse du siège",
   /**
@@ -5111,6 +5125,23 @@ export const fr = {
   "pme.bienvenue.regle":
     "La saisie au clavier reste possible, mais elle est signalée : un matricule tapé n'a pas la même valeur de preuve qu'un matricule lu sur la carte.",
   "pme.bienvenue.exact": "C'est exact — commencer",
+  "pme.suite.barre": "Votre abonnement et votre comptabilité",
+  "pme.suite.titre": "Choisissez votre forfait, puis votre comptabilité.",
+  "pme.suite.etape1": "1 · Votre forfait",
+  "pme.suite.etape1.sous": "Le forfait se change à tout moment dans les Réglages.",
+  "pme.suite.forfait.voir": "Voir les forfaits",
+  "pme.suite.forfait.aide": "Chaque forfait dit ce qu'il comprend et ce qu'il coûte.",
+  "pme.suite.continuer": "Continuer",
+  "pme.suite.etape2": "2 · Votre comptabilité",
+  "pme.suite.etape2.sous": "Elle tient vos écritures si vous le souhaitez.",
+  "pme.suite.compta.inviter": "Inviter ma comptabilité",
+  "pme.suite.compta.inviter.aide": "Votre expert-comptable reçoit une invitation par courriel.",
+  "pme.suite.compta.sans": "Continuer sans comptabilité",
+  "pme.suite.compta.sans.aide":
+    "Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
+  "pme.bienvenue.matricule.saisir": "Matricule fiscal",
+  "pme.bienvenue.matricule.aide":
+    "Saisi au clavier, une seule fois : il ne se change plus ensuite.",
   "pme.bienvenue.corriger": "Corriger · saisie au clavier",
   "pme.bienvenue.pied":
     "Ensuite : choisir votre forfait, puis inviter votre comptabilité — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
@@ -5682,6 +5713,7 @@ export const fr = {
   "cab.mer.abo.lede": "Facultatif — sur la même page, ligne par ligne ou en lot.",
   "cab.mer.fait": "fait",
   "cab.mer.a_faire": "à faire",
+  "refus.organisation.matricule_fige": "Le matricule fiscal ne se change plus une fois inscrit.",
   "refus.dossier.matricule_fige":
     "Le matricule ne se change plus : une pièce est déjà arrivée dans ce dossier.",
   "refus.dossier.dirigeant_attendu": "Les places s'ouvrent quand le dirigeant a rejoint.",

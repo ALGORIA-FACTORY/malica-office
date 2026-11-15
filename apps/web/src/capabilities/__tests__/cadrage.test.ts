@@ -36,6 +36,29 @@ function detecteur(
   };
 }
 
+describe("cadrage — un détecteur muet ne bloque pas la photo", () => {
+  // Recette du 14 novembre 2026, point 4 : l'import d'une image restait sur « Je prépare
+  // votre pièce… ». Le modèle de cadrage se télécharge au premier usage ; un téléchargement
+  // qui n'aboutit ni ne échoue ne rendait jamais la main.
+  it("un détecteur qui ne répond jamais passe la main dans le délai", async () => {
+    const appels: string[] = [];
+    const muet: Detecteur = {
+      nom: "modele",
+      trouver() {
+        appels.push("modele");
+        return new Promise(() => {});
+      },
+    };
+    const r = await cadrerAvec(
+      IMAGE,
+      [muet, detecteur("algorithme", { coins: COINS, certitude: null }, appels)],
+      { delaiMs: 20 },
+    );
+    expect(r.origine).toBe("algorithme");
+    expect(appels).toEqual(["modele", "algorithme"]);
+  });
+});
+
 describe("cadrage — la cascade des détecteurs", () => {
   it("s'arrête au premier qui trouve", async () => {
     const appels: string[] = [];

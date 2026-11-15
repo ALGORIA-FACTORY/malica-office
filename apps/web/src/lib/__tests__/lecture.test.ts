@@ -17,6 +17,8 @@ import {
   piecesCompteesDe,
   etatDeLAccueil,
   lectureEnSuspens,
+  derniereRemise,
+  piecesAExporter,
   piecesALire,
   piecesEnEchec,
   presentation,
@@ -213,5 +215,39 @@ describe("sans comptabilité, l'accueil n'attend aucune réponse (recette du 13 
     const aEnvoyer = piece("b", { status: "lue", vis: "entite", comptabilite: true });
     expect(statutDeLaPieceLue(aEnvoyer)).toBe("a_envoyer");
     expect(avancementDeLaListe([aEnvoyer]).enAttente).toBe(1);
+  });
+});
+
+describe("à exporter (G5)", () => {
+  const base = { accompagne: false, jointe: false, vis: "entite" as const, remiseLe: null };
+
+  it("compte les pièces que aucun export n'a remises", () => {
+    const liste = [
+      { id: "a", ...base },
+      { id: "b", ...base, remiseLe: "2026-11-14T09:00:00.000Z" },
+      { id: "c", ...base },
+    ];
+    expect(piecesAExporter(liste).map((p) => p.id)).toEqual(["a", "c"]);
+  });
+
+  it("ne compte ni l'espace privé, ni un document joint ou accompagnant", () => {
+    const liste = [
+      { id: "privee", ...base, vis: "personnel" as const },
+      { id: "jointe", ...base, jointe: true },
+      { id: "recu", ...base, accompagne: true },
+      { id: "piece", ...base },
+    ];
+    expect(piecesAExporter(liste).map((p) => p.id)).toEqual(["piece"]);
+  });
+
+  it("dit le jour du dernier export, ou rien", () => {
+    expect(derniereRemise([{ remiseLe: null }, {}])).toBeNull();
+    expect(
+      derniereRemise([
+        { remiseLe: "2026-11-14T09:00:00.000Z" },
+        { remiseLe: "2026-11-20T09:00:00.000Z" },
+        { remiseLe: null },
+      ]),
+    ).toBe("2026-11-20T09:00:00.000Z");
   });
 });

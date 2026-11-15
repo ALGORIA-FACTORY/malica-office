@@ -19,6 +19,10 @@ import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-gro
 import { RangeeDesSieges, type Siege } from "@/components/malica/rangee-des-sieges";
 import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { FileLocale } from "@/components/malica/file-locale";
+import {
+  ExporterDepuisLaPme,
+  type SocieteExportee,
+} from "@/components/malica/exporter-depuis-la-pme";
 import { ImprimerDepuisLaPme } from "@/components/malica/imprimer-les-pieces";
 import { EtatDeLecture } from "@/components/malica/lecture-refusee";
 import { usePme } from "@/components/malica/pme-context";
@@ -253,6 +257,17 @@ function Bibliotheque() {
   const aLire = useMemo(() => piecesALire(brutes), [brutes]);
   const { toutes, parSiege, parSociete, nomDeSociete, chargement, parSieges, ouvrirSaSociete } =
     usePiecesDesSocietes();
+  // Les sociétés d'un lot à exporter, avec le nombre de pièces de chacune : la feuille
+  // d'export dit son périmètre (une société, ou « un dossier par société »).
+  const societeDe = useMemo(() => new Map(toutes.map((x) => [x.piece.id, x.societe])), [toutes]);
+  const societesDuLot = (lot: readonly PieceLue[]): SocieteExportee[] => {
+    const nombres = new Map<string, number>();
+    for (const p of lot) {
+      const s = societeDe.get(p.id);
+      if (s) nombres.set(s, (nombres.get(s) ?? 0) + 1);
+    }
+    return [...nombres].map(([id, n]) => ({ id, nom: nomDeSociete(id), n }));
+  };
   /*
    * Les pièces montrées : celle de l'en-tête, ou toutes les sociétés quand
    * l'en-tête dit « Toutes » (`pme.societeAffichee`, 9 novembre 2026) —
@@ -477,6 +492,15 @@ function Bibliotheque() {
                   classe="more"
                   classeDuTexte="sub"
                 />
+                <ExporterDepuisLaPme
+                  key={`export:${ouvert?.cle}`}
+                  pieces={groupeOuvert.pieces.map((p) => p.id)}
+                  societes={societesDuLot(groupeOuvert.pieces)}
+                  titre={t("pme.export.titre", { mois: groupeOuvert.titre })}
+                  libelle={t("pme.export.bouton", { mois: groupeOuvert.titre })}
+                  classe="more"
+                  classeDuTexte="sub"
+                />
                 <button type="button" className="more" onClick={() => setChoix(new Set())}>
                   {t("cab.biblio.imprimer.selectionner")}
                 </button>
@@ -489,6 +513,15 @@ function Bibliotheque() {
                   portee="selection"
                   nom={groupeOuvert.titre}
                   libelle={t("cab.biblio.imprimer.selection", { n: choix.size })}
+                  classe="more"
+                  classeDuTexte="sub"
+                />
+                <ExporterDepuisLaPme
+                  key={`export-choix:${[...choix].join(",")}`}
+                  pieces={groupeOuvert.pieces.filter((p) => choix.has(p.id)).map((p) => p.id)}
+                  societes={societesDuLot(groupeOuvert.pieces.filter((p) => choix.has(p.id)))}
+                  titre={t("pme.export.selection", { n: choix.size })}
+                  libelle={t("pme.export.selection", { n: choix.size })}
                   classe="more"
                   classeDuTexte="sub"
                 />

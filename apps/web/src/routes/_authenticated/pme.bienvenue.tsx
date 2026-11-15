@@ -9,12 +9,16 @@
  * Un champ vide s'affiche « — », jamais une valeur inventée. Il porte son propre bandeau
  * du haut, qui efface celui de la mise en page.
  */
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { marquerBienvenueVue } from "@/components/malica/bienvenue";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { office } from "@/verticals/malica-office/composition";
 
 export const Route = createFileRoute("/_authenticated/pme/bienvenue")({
   head: () => ({
@@ -125,11 +129,21 @@ function Bienvenue() {
     void navigate({ to: "/pme" });
   };
 
-  /** « C'est exact » : on entre dans le produit, l'obturateur ouvert. */
-  const commencer = () => {
+  /**
+   * « C'est exact » : on entre dans le produit. Qui a promis la suite (forfait, puis
+   * comptabilité) la voit d'abord ; les autres entrent par « Ajouter des pièces » (C1).
+   */
+  const commencer = async () => {
+    // Le matricule saisi s'écrit AVANT d'entrer : il est enregistré, pas seulement affiché.
+    if (!pme.matricule && saisie.trim() !== "") {
+      try {
+        await enregistrer.mutateAsync();
+      } catch {
+        return; // le message est déjà à l'écran ; l'arrivée n'est pas marquée vue
+      }
+    }
     marquerBienvenueVue();
-    // Planche 9 : « Ajouter des pièces », le même écran que le « + ».
-    void navigate({ to: "/pme/capturer" });
+    void navigate({ to: promettreLaSuite ? "/pme/suite" : "/pme/capturer" });
   };
 
   /** « Corriger » : la fiche, seul écran qui écrit ces champs. */
@@ -137,6 +151,26 @@ function Bienvenue() {
     marquerBienvenueVue();
     void navigate({ to: "/pme/fiche" });
   };
+
+  // Le matricule se saisit ici quand il manque : une fois, il ne se change plus (recette du 14 novembre).
+  const [saisie, setSaisie] = useState("");
+  const [erreur, setErreur] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const enregistrer = useMutation({
+    mutationFn: () =>
+      office().identity.definirOrganisation({
+        tenantId: pme.tenantId,
+        name: pme.orgName,
+        legalId: saisie.trim(),
+        jurisdiction: pme.jurisdiction,
+      }),
+    onSuccess: async () => {
+      setErreur(null);
+      await qc.invalidateQueries({ queryKey: ["my-organizations"] });
+    },
+    onError: (e: unknown) =>
+      setErreur(texteDeLErreur(e, "routes/_authenticated/pme.bienvenue", t("common.error"))),
+  });
 
   const matricule = ouAbsent(pme.matricule);
   const raison = ouAbsent(pme.orgName);
@@ -192,9 +226,12 @@ function Bienvenue() {
           </span>
           <b>{t("malica.chat.her")}</b>
         </div>
+        {/* « Voici votre matricule » n'est dit que quand on le montre (recette du 14 novembre). */}
         <div className="dit">
-          {t("pme.bienvenue.ditTitre")}
-          <em>{t("pme.bienvenue.ditSous")}</em>
+          {pme.matricule ? t("pme.bienvenue.ditTitre") : t("pme.bienvenue.ditSansMatricule")}
+          <em>
+            {pme.matricule ? t("pme.bienvenue.ditSous") : t("pme.bienvenue.ditSousSansMatricule")}
+          </em>
         </div>
 
         {/* ── les trois champs lus, chacun corrigeable ────────────────── */}
@@ -203,15 +240,37 @@ function Bienvenue() {
           <span>{t("pme.bienvenue.secEtat")}</span>
         </div>
 
-        <button type="button" className="rw" onClick={corriger}>
-          <i aria-hidden>
-            <IconeCarte />
-          </i>
-          <span className="bd">
-            <b>{matricule}</b>
-            <span>{t("pme.recu.matricule")}</span>
-          </span>
-        </button>
+        {pme.matricule ? (
+          <button type="button" className="rw" onClick={corriger}>
+            <i aria-hidden>
+              <IconeCarte />
+            </i>
+            <span className="bd">
+              <b>{matricule}</b>
+              <span>{t("pme.recu.matricule")}</span>
+            </span>
+          </button>
+        ) : (
+          <div className="rw">
+            <i aria-hidden>
+              <IconeCarte />
+            </i>
+            <span className="bd">
+              <label htmlFor="matricule-saisie">
+                <b>{t("pme.bienvenue.matricule.saisir")}</b>
+                <span>{t("pme.bienvenue.matricule.aide")}</span>
+              </label>
+              <input
+                id="matricule-saisie"
+                className="num"
+                value={saisie}
+                onChange={(e) => setSaisie(e.target.value)}
+                autoComplete="off"
+              />
+              {erreur ? <span role="alert">{erreur}</span> : null}
+            </span>
+          </div>
+        )}
 
         <button type="button" className="rw" onClick={corriger}>
           <i aria-hidden>
@@ -241,7 +300,7 @@ function Bienvenue() {
 
         {/* ── les deux départs ───────────────────────────────────────── */}
         <div className="go">
-          <button type="button" className="pr" onClick={commencer}>
+          <button type="button" className="pr" onClick={() => void commencer()}>
             {t("pme.bienvenue.exact")}
           </button>
           <button type="button" className="sc2" onClick={corriger}>

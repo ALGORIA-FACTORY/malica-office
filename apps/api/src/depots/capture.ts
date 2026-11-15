@@ -442,6 +442,8 @@ async function piecesLuesDe(
               -- pièces sans lien ; la règle est celle de la base.
               ${EST_JOINTE} as jointe,
               d.comptabilite,
+              -- Le jour du dernier export qui remet cette pièce (G5) ; nul : jamais remise.
+              rm.remise_le,
               h.precision_kind,
               -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
               -- reste telle quelle), que la liste préfère au nom lu.
@@ -461,6 +463,12 @@ async function piecesLuesDe(
          join lignes p on p.id = h.piece_id
          left join droits d on d.tenant_id = p.tenant_id
          left join prenoms pr on pr.user_id = p.created_by
+         left join (
+           select ep.piece_id, max(ep.remis_le) as remise_le
+             from exports_pieces_v ep
+            where ep.tenant_id = any($1::uuid[])
+            group by ep.piece_id
+         ) rm on rm.piece_id = p.id
          -- Où en est la pièce chez le cabinet : seulement si elle y est partie.
          -- Sans histoire, elle y est partie à sa transmission, et rien d'autre.
          cross join lateral (
@@ -548,6 +556,7 @@ function versPieceLue(r: Record<string, unknown>) {
     accompagne: Boolean(r["accompagne"]),
     jointe: Boolean(r["jointe"]),
     comptabilite: Boolean(r["comptabilite"]),
+    remiseLe: r["remise_le"] ? new Date(r["remise_le"] as string).toISOString() : null,
     emetteur: (r["emetteur_dit"] as string | null) ?? lu?.issuer ?? null,
     dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
     kind:

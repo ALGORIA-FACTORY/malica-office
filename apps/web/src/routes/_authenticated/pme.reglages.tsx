@@ -37,6 +37,8 @@ import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
 import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres, quantite } from "@/lib/lisible";
 import { nombre as entier, ouverturesDuForfait, utilisateursInclus } from "@/lib/forfait";
+import { identitePourAffichage } from "@/lib/nom-de-la-personne";
+import { cibleDeRetourDesReglages } from "@/lib/suite-de-l-arrivee";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -53,8 +55,13 @@ type PageDesReglages = "abonnement" | "societes" | "utilisateurs";
 const PAGES: readonly PageDesReglages[] = ["abonnement", "societes", "utilisateurs"];
 
 export const Route = createFileRoute("/_authenticated/pme/reglages")({
-  validateSearch: (s: Record<string, unknown>): { page?: PageDesReglages } =>
-    PAGES.includes(s["page"] as PageDesReglages) ? { page: s["page"] as PageDesReglages } : {},
+  // `depuis` : la suite de l'arrivée (C1). La flèche de retour y ramène, à la même étape.
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { page?: PageDesReglages; depuis?: "forfait" | "comptabilite" } => ({
+    ...(PAGES.includes(s["page"] as PageDesReglages) ? { page: s["page"] as PageDesReglages } : {}),
+    ...(s["depuis"] === "forfait" || s["depuis"] === "comptabilite" ? { depuis: s["depuis"] } : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Réglages — Malica Office" },
@@ -130,7 +137,7 @@ function PmeReglages() {
   const { t, locale, setLocale } = useI18n();
   const { apparence, choisir } = useApparence();
   const { cote: coteDuPlus } = useCoteDuPlus();
-  const { page } = Route.useSearch();
+  const { page, depuis } = Route.useSearch();
   const navigate = useNavigate();
   const pme = usePme();
   const aLEchelle = usePrix();
@@ -160,6 +167,8 @@ function PmeReglages() {
     queryKey: ["mon-profil"],
     queryFn: () => office().identity.monProfil(),
   });
+  // Le nom que la personne a donné (inscription, puis Réglages), jamais l'adresse seule (C4).
+  const identite = identitePourAffichage(profil.data, compte.data?.email ?? null);
   const acces = useMonAcces(pme.tenantId);
   // Ma photo, quand j'en ai une : elle prend la place de l'initiale.
   const maPhoto = usePhotosDeProfil(compte.data ? [compte.data.id] : [])[compte.data?.id ?? ""];
@@ -186,7 +195,7 @@ function PmeReglages() {
             type="button"
             className="bk"
             aria-label={t("pme.regler.retour")}
-            onClick={() => void navigate({ to: "/pme/reglages", search: {} })}
+            onClick={() => void navigate(cibleDeRetourDesReglages(depuis))}
           >
             <svg viewBox="0 0 24 24" className="g" aria-hidden>
               <path d="M14.5 5.5L8 12l6.5 6.5" />
@@ -221,17 +230,10 @@ function PmeReglages() {
            */}
           <div className="card profil">
             <span className="av" aria-hidden>
-              {maPhoto ? (
-                <img src={maPhoto} alt="" />
-              ) : (
-                initiale(profil.data?.prenom || compte.data?.email || null)
-              )}
+              {maPhoto ? <img src={maPhoto} alt="" /> : identite.initiale}
             </span>
-            <b>
-              {[profil.data?.prenom, profil.data?.nom].filter(Boolean).join(" ") ||
-                (compte.data?.email ?? ABSENT)}
-            </b>
-            {profil.data?.prenom ? <span className="ml">{compte.data?.email}</span> : null}
+            <b>{identite.nom}</b>
+            {identite.courriel ? <span className="ml">{identite.courriel}</span> : null}
             <span className="pills">
               {acces.data?.role ? (
                 <span className="pill">{roleLisible(acces.data.role, t)}</span>
