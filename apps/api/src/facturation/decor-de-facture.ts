@@ -74,7 +74,12 @@ async function uneOrganisation(db: pg.PoolClient, kind: string, nom: string): Pr
 }
 
 /** Une PME dont la licence est née le premier du mois, à l'offre `offre`, et un émetteur. */
-export async function decor(db: pg.PoolClient, offre: string): Promise<Decor> {
+export async function decor(
+  db: pg.PoolClient,
+  offre: string,
+  /** Le jour où la licence naît sur cette offre ; le premier du mois en cours par défaut. */
+  depuis?: string,
+): Promise<Decor> {
   const [operateur, titulaire] = [randomUUID(), randomUUID()];
   await personnesDEssai(db, operateur, titulaire);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
@@ -93,6 +98,13 @@ export async function decor(db: pg.PoolClient, offre: string): Promise<Decor> {
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
     [tenant, titulaire],
   );
+  // Le jour de la plateforme, pas celui du serveur. La facturation immédiate et le robot datent leurs
+  // factures au jour de la plateforme (son fuseau, lu au référentiel de l'émetteur) ; le reste du
+  // moteur lit `current_date`, celui de la session. Entre 23 h et minuit UTC, les deux ne sont pas le
+  // même jour (CI de main, nuit du 14 au 15 novembre 2026, fuseau de Tunis). La transaction d'essai
+  // prend donc le fuseau de la plateforme — ce que fait le robot dans sa propre transaction — et
+  // `current_date` y est partout le jour de la plateforme.
+  await db.query("select set_config('TimeZone', plateforme.fuseau_de_la_plateforme(), true)");
   const { rows: d } = await db.query<{
     jour: string;
     mois: string;
@@ -114,7 +126,7 @@ export async function decor(db: pg.PoolClient, offre: string): Promise<Decor> {
   await db.query(
     `insert into facturation.licences (id, titulaire, offre_code, offre_depuis)
      values ($1, $2, $3, $4::date)`,
-    [licence, titulaire, offre, d[0]!.mois],
+    [licence, titulaire, offre, depuis ?? d[0]!.mois],
   );
   await db.query(
     "insert into facturation.licence_organisations (licence_id, tenant_id) values ($1, $2)",

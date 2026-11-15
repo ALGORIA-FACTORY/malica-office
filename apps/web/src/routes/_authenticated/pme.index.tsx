@@ -32,6 +32,7 @@ import { issueDeLecture } from "@malica/socle/issue-de-lecture";
 import { bienvenueDejaVue } from "@/components/malica/bienvenue";
 import { PastilleAEnvoyer } from "@/components/malica/file-locale";
 import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
+import { AccueilConsolide } from "@/components/malica/accueil-consolide";
 import { usePme } from "@/components/malica/pme-context";
 import { useAccueil } from "@/hooks/use-accueil";
 import { libelleDOffre, useCatalogueDesOffres } from "@/hooks/use-offres";
@@ -66,7 +67,7 @@ export const Route = createFileRoute("/_authenticated/pme/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: PmeHome,
+  component: Accueil,
 });
 
 /*
@@ -161,6 +162,15 @@ const RECENTES = 4;
  * licence absente — les trois rendent la même chose : « — », jamais « 0 ».
  * Zéro est un fait comptable ; l'absence n'en est pas un.
  */
+/**
+ * L'accueil d'UNE société, ou — quand l'en-tête dit « Toutes les sociétés » — l'accueil
+ * consolidé (13 novembre 2026). Deux composants : les lectures de l'un ne se mêlent pas à l'autre.
+ */
+function Accueil() {
+  const pme = usePme();
+  return pme.societeAffichee === null ? <AccueilConsolide /> : <PmeHome />;
+}
+
 function PmeHome() {
   const { t, locale } = useI18n();
   const pme = usePme();

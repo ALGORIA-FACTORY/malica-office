@@ -80,6 +80,9 @@ function MandatsProposes({
       await qc.invalidateQueries({ queryKey: ["mandats-proposes"] });
       await qc.invalidateQueries({ queryKey: cleMonCabinet(tenantId) });
       await qc.invalidateQueries({ queryKey: ["mon-mandat", tenantId] });
+      // Un mandat vient de naître ou de se refuser : les clients de la comptabilité se relisent.
+      await qc.invalidateQueries({ queryKey: ["cab-clients"] });
+      await qc.invalidateQueries({ queryKey: ["cab-queue"] });
     },
     onError: (e: unknown) =>
       setErreur(texteDeLErreur(e, "components/malica/MandatsProposes", t("pme.mandat.erreur"))),

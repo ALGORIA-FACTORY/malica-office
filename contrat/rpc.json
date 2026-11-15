@@ -89,6 +89,7 @@
     "pvReceptions",
     "repondreAInvitation",
     "repondreSurPiece",
+    "retirerComptableInterne",
     "setPieceVis",
     "stats",
     "transmettreLesPieces"
@@ -172,6 +173,7 @@
     "monAnnuel",
     "monForfait",
     "monReport",
+    "monteeDevis",
     "moyensDePaiementEnLigne",
     "offresDuCabinet",
     "organisations",

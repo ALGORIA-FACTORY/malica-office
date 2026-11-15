@@ -7,7 +7,12 @@
  * aux prochains jours.
  */
 import { describe, expect, it } from "vitest";
-import { idsDesMandatsActifs, trancheDEcheance } from "../portefeuille-actif";
+import {
+  compterLesMandatsActifs,
+  dossiersAOuvrir,
+  idsDesMandatsActifs,
+  trancheDEcheance,
+} from "../portefeuille-actif";
 
 describe("le périmètre opérationnel du cabinet", () => {
   it("écarte les dossiers terminés, suspendus et proposés même si une lecture privilégiée les rend", () => {
@@ -19,6 +24,24 @@ describe("le périmètre opérationnel du cabinet", () => {
     ]);
     expect([...actifs]).toEqual(["client-actif"]);
     expect([...idsDesMandatsActifs([])]).toEqual([]);
+  });
+});
+
+describe("le compte des mandats et les dossiers qu'on ouvre", () => {
+  const clients = [
+    { tenantId: "actif", engagementStatus: "actif", archive: false },
+    { tenantId: "propose", engagementStatus: "propose", archive: false },
+    { tenantId: "refuse", engagementStatus: "termine", archive: false },
+    { tenantId: "archive", engagementStatus: "termine", archive: true },
+  ];
+
+  it("ne compte que les mandats actifs : ni la proposition, ni le refus, ni l'archive", () => {
+    expect(compterLesMandatsActifs(clients)).toBe(1);
+    expect(compterLesMandatsActifs([])).toBe(0);
+  });
+
+  it("n'ouvre que les mandats actifs et l'archive : un refus n'est pas une archive", () => {
+    expect(dossiersAOuvrir(clients).map((c) => c.tenantId)).toEqual(["actif", "archive"]);
   });
 });
 

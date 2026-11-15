@@ -21,6 +21,7 @@ import { totalDesPaiements } from "@/lib/total-des-paiements";
 import { useDecimales } from "@/hooks/use-decimales";
 import { useSuperposition } from "@/hooks/use-superposition";
 
+import { BandeauSocieteDeLaPiece } from "@/components/malica/societes-a-la-ligne";
 import { useI18n, type MessageKey } from "@/i18n";
 import { AffichageSignale } from "@/components/malica/affichage-signale";
 import { CommentCEstPaye } from "@/components/malica/comment-c-est-paye";
@@ -146,7 +147,12 @@ function PieceScreenDeLaPiece() {
   const { pieceId } = Route.useParams();
   // Une adresse qui ne porte pas d'identifiant n'interroge pas la base.
   if (!estUnIdentifiant(pieceId)) return <PieceIntrouvable />;
-  return <PieceScreen key={pieceId} />;
+  return (
+    <>
+      <BandeauSocieteDeLaPiece />
+      <PieceScreen key={pieceId} />
+    </>
+  );
 }
 
 /**
@@ -432,6 +438,8 @@ function PieceScreen() {
         gardeeLe: dossier.data.piece.gardeeLe,
         suivi: dossier.data.suivi,
         circuit: dossier.data.circuit,
+        // Le même fait que la liste : sans comptabilité, la pièce est « Rangée ».
+        comptabilite: cabinet.isSuccess ? cabinet.data !== null : null,
       })
     : null;
   const retour = useQuery({

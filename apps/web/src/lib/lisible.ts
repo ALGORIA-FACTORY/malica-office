@@ -21,6 +21,14 @@ import { noterAuJournal } from "./journal-atelier";
  */
 export { montant };
 
+/**
+ * Un montant suivi de sa devise, séparés par une espace insécable : « 3 000,000 TND » ne se
+ * coupe jamais entre le chiffre et le code, et se lit pareil sur tous les écrans.
+ */
+export function montantEtDevise(rendu: string, devise: string | null | undefined): string {
+  return rendu === "" ? "" : devise ? `${rendu}\u00A0${devise}` : rendu;
+}
+
 /** Un montant signé — le « + » d'une progression se lit autant que le « − ». */
 export function montantSigne(valeur: string, locale: string): string {
   const rendu = montant(valeur, locale);
