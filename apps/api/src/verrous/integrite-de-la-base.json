@@ -75,7 +75,7 @@
     "public.cabinet_ouvrir_dossier": "Lève v_refus, que rend public.identifiant_verifier : la clé refus.identifiant.invalide et ses valeurs (migration 20261130110000), comme public.create_organization.",
     "public.cabinet_modifier_dossier": "Lève v_refus, que rend public.identifiant_verifier : la clé refus.identifiant.invalide et ses valeurs, comme public.cabinet_ouvrir_dossier (migration 20261208093000).",
     "public.create_organization": "Lève v_refus, que rend public.identifiant_verifier : la clé refus.identifiant.invalide et ses valeurs (migration 20261110090400).",
-    "public.organisation_definir": "Lève v_refus, que rend public.identifiant_verifier : la clé refus.identifiant.invalide et ses valeurs, comme public.create_organization (migration 20261223150000)."
+    "public.organisation_definir": "Lève v_refus, que rend public.identifiant_verifier : la clé refus.identifiant.invalide et ses valeurs, comme public.create_organization (migration 20261227100000)."
   },
   "portes_que_personne_n_appelle": {
     "app.enable_tenant_rls": "Outil de migration : chaque migration qui crée une table de tenant l'appelle (select app.enable_tenant_rls(...)), jamais l'exécution."
