@@ -72,20 +72,23 @@ describe("la file des courriels réserve, sans verrou pendant l'envoi", { skip: 
     await pool?.end();
   });
 
-  it("sans réglage de relances, la file refuse et dit pourquoi", async () => {
+  it("sans réglage de relances, les relances d'impayé ne partent pas, et les autres courriels partent", async () => {
     await aBlanc(async (db) => {
-      await unCourrielDecide(db, `absent-${randomUUID()}@essai.local`);
+      const mail = `absent-${randomUUID()}@essai.local`;
+      await unCourrielDecide(db, mail);
       // Désactive le déclencheur d'ajout seul et retire tout réglage, dans la transaction.
       await db.query(
         "alter table plateforme.reglages_relances disable trigger reglages_relances_ne_se_reecrivent_pas",
       );
       await db.query("delete from plateforme.reglages_relances");
-      await db.query("savepoint absent");
-      await assert.rejects(
-        db.query("select * from notif.reserver_courriels(10, interval '10 minutes')"),
-        /refus\.relances\.reglage_absent/,
+      // Décision de recette du 14 novembre : sans réglage, seule l'impayé est retenu (avis, pas refus).
+      const { rows } = await db.query<{ email: string }>(
+        "select email from notif.reserver_courriels(10, interval '10 minutes')",
       );
-      await db.query("rollback to savepoint absent");
+      assert.ok(
+        rows.some((r) => r.email === mail),
+        "le courriel d'un autre genre (piece.a_valider) part sans réglage",
+      );
     });
   });
 
