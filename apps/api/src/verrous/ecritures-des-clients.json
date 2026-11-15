@@ -289,22 +289,6 @@
       "chemins": ["public.export_journaliser", "public.journal_export_journaliser"]
     },
     {
-      "objet": "collab.notification_lectures",
-      "privilege": "INSERT",
-      "chemins": ["public.notification_marquer_lue"]
-    },
-    {
-      "objet": "collab.notifications",
-      "privilege": "INSERT",
-      "chemins": [
-        "app.annulation_contre_passe_le_reglement",
-        "public.comptabilite_invitation_accepter",
-        "public.piece_renvoyer",
-        "public.pv_envoyer",
-        "public.socle_ecriture_review"
-      ]
-    },
-    {
       "objet": "collab.obligations_cabinet",
       "privilege": "INSERT",
       "chemins": ["public.cabinet_obligation_definir"]
@@ -525,6 +509,11 @@
       "objet": "notif.preferences",
       "privilege": "INSERT",
       "chemins": ["public.mes_preferences_ouvrir"]
+    },
+    {
+      "objet": "notif.suites",
+      "privilege": "INSERT",
+      "chemins": ["public.notification_marquer_lue"]
     },
     {
       "objet": "parametrage.accounts",

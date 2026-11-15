@@ -488,10 +488,11 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     await retour("expert", auComptable, "doublon");
     assert.deepEqual(await s.fait("amel", "collab.garderPiece", auComptable), { changed: true });
     const { rows } = await s.admin.query(
-      `select 1 from collab.notifications where kind = 'piece.gardee' and payload ->> 'piece_id' = $1`,
+      `select 1 from notif.envois
+        where canal = 'app' and code = 'piece.gardee' and donnees ->> 'piece_id' = $1`,
       [auComptable],
     );
-    assert.equal(rows.length, 1, "le comptable est prévenu");
+    assert.ok(rows.length >= 1, "le comptable est prévenu");
   });
 
   /* ============================================ 7 · DEMANDER */

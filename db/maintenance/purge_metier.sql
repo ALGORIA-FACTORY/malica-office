@@ -150,10 +150,12 @@ insert into purge_preservees values
   ('agents.model_pricing'),      -- tarifs des modèles (R8), cible de legal.chunks.pricing_id
   ('storage.buckets'),           -- configuration du stockage
   ('app.migrations'),            -- historique des migrations : on ajoute, on ne réécrit pas
-  ('audit.journal_plateforme');  -- le journal où cette purge s'inscrit
+  ('audit.journal_plateforme'),  -- le journal où cette purge s'inscrit
+  ('notif.gabarits'),            -- textes des notifications, versionnés (seedés par migration)
+  ('notif.diffusions');          -- quel genre part par courriel, daté (seedé par migration)
 -- Et, par schéma entier : legal (le corpus) et ref (le référentiel).
 
--- ----------------------------------------------------- les 72 tables à vider
+-- ----------------------------------------------------- les 75 tables à vider
 
 create temp table purge_tables (nom text primary key) on commit drop;
 insert into purge_tables values
@@ -173,7 +175,7 @@ insert into purge_tables values
   ('coffre.objects'),
   ('collab.assignments'), ('collab.charge_questions'), ('collab.encaissements_honoraires'),
   ('collab.exports'), ('collab.factures_honoraires'), ('collab.factures_honoraires_lignes'),
-  ('collab.mandats_honoraires'), ('collab.notifications'), ('collab.obligations_cabinet'),
+  ('collab.mandats_honoraires'), ('collab.obligations_cabinet'),
   ('collab.obligations_propres'), ('collab.push_devices'), ('collab.pv_reunions'),
   ('collab.reglages_cabinet'),
   ('commissions.entries'), ('commissions.rules'),
@@ -182,6 +184,7 @@ insert into purge_tables values
   ('identity.fiches_fiscales'), ('identity.invitations'), ('identity.memberships'),
   ('identity.organizations'), ('identity.profiles'),
   ('immo.assets'), ('immo.cessions'), ('immo.depreciations'), ('immo.dotations'),
+  ('notif.envois'), ('notif.preferences'), ('notif.remises'), ('notif.suites'),
   ('parametrage.accounts'), ('parametrage.role_bindings'),
   ('payments.payments'),
   ('pricing.price_lists'), ('pricing.prices'),
@@ -201,8 +204,8 @@ declare
   oubliees     text;
 begin
   select count(*) into nombre from purge_tables;
-  if nombre <> 72 then
-    raise exception 'Refus : % tables nommées, 72 attendues (docs/audit-avant-remise-a-zero.md).', nombre;
+  if nombre <> 75 then
+    raise exception 'Refus : % tables nommées, 75 attendues (docs/audit-avant-remise-a-zero.md, addendum du 14 novembre 2026).', nombre;
   end if;
 
   -- La fermeture : toutes les tables qu'un TRUNCATE … CASCADE de la liste atteindrait.
@@ -291,7 +294,7 @@ end $$;
 
 -- Pendant : dans la transaction, après le TRUNCATE, avant COMMIT ou ROLLBACK.
 \unset QUIET
-\echo '=== Pendant : les 72 tables, recomptées après le TRUNCATE ==='
+\echo '=== Pendant : les 75 tables, recomptées après le TRUNCATE ==='
 select count(*) as tables, sum(n) as lignes_restantes
   from purge_tables t,
        lateral (select (xpath('/row/n/text()', query_to_xml(format('select count(*) as n from %s', t.nom::regclass), false, true, '')))[1]::text::bigint as n) c;
