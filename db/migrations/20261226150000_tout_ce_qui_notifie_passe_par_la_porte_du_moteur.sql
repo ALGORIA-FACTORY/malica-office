@@ -2211,6 +2211,9 @@ declare
   v_susp     numeric;
   v_tenant   uuid;
   v_n        integer;
+  v_cle      text;
+  v_donnees  jsonb;
+  d          record;
   v_postes   integer := 0;
   v_retenues integer := 0;
   v_suspendues integer := 0;
@@ -2235,13 +2238,16 @@ begin
       join facturation.factures f on f.id = a.facture_id
      where a.palier is not null
   loop
+    v_cle := r.facture_id::text || ':' || r.palier;
     -- Une fois par facture et par palier, pour toujours : ce qui est décidé
-    -- ne se redit pas, et un passage horaire n'inscrit rien de plus.
+    -- ne se redit pas, et un passage horaire n'inscrit rien de plus. Le
+    -- courriel est décidé quand une ligne `email` existe, quelle que soit la
+    -- décision des verrous (envoyé, retenu par le silence ou la préférence).
     if exists (select 1 from notif.envois e
                 where e.destinataire = r.titulaire
                   and e.code = 'impaye.' || r.palier
-                  and e.sujet_cle = r.facture_id::text || ':' || r.palier
-                  and e.decision = 'a_remettre') then
+                  and e.sujet_cle = v_cle
+                  and e.canal = 'email') then
       continue;
     end if;
 
@@ -2273,14 +2279,7 @@ begin
      where lo.licence_id = r.licence_id
      order by lo.tenant_id limit 1;
 
-    -- Par courriel si la personne le veut ; sinon, dans l'application seule.
-    begin
-      -- Une seule porte : la ligne de l'application, et le courriel que la
-      -- table des diffusions prévoit pour ce palier — avec les mêmes verrous.
-      v_n := notif.emettre(
-        v_tenant,
-        'impaye.' || r.palier,
-        jsonb_build_object(
+    v_donnees := jsonb_build_object(
           'numero', r.numero,
           'echeance', to_char(r.echeance_le, 'DD/MM/YYYY'),
           'reste', to_char(r.reste_du, 'FM999G999G990D000'),
@@ -2290,9 +2289,44 @@ begin
           'en_attente', (select count(*) from capture.pieces p
                            join facturation.licence_organisations lo on lo.tenant_id = p.tenant_id
                           where lo.licence_id = r.licence_id and p.status = 'capturee'
-                            and p.vis <> 'personnel'::app.vis_t)),
+                            and p.vis <> 'personnel'::app.vis_t));
+
+    -- Revue de #402 (Codex, P2) : la ligne de l'application déjà remise, seul le
+    -- courriel manque — un canal qui avait échoué (gabarit absent, par exemple)
+    -- et que `notif.emettre` a laissé au journal. Il se reposte seul, sans
+    -- seconde ligne dans l'application ; avant, la ligne de l'application
+    -- suffisait à taire le courriel pour toujours.
+    if exists (select 1 from notif.envois e
+                where e.destinataire = r.titulaire
+                  and e.code = 'impaye.' || r.palier
+                  and e.sujet_cle = v_cle
+                  and e.canal = 'app'
+                  and e.decision = 'a_remettre') then
+      for d in select x.canal, x.gabarit from notif.diffusions x
+                where x.code = 'impaye.' || r.palier
+                  and x.valid_from <= current_date
+                  and (x.valid_to is null or x.valid_to > current_date) loop
+        begin
+          perform notif.poster(r.titulaire, d.gabarit, v_cle, v_donnees, v_tenant, d.canal,
+                               interval '400 days');
+          v_postes := v_postes + 1;
+        exception when others then
+          v_erreurs := v_erreurs + 1;
+        end;
+      end loop;
+      continue;
+    end if;
+
+    -- Par courriel si la personne le veut ; sinon, dans l'application seule.
+    begin
+      -- Une seule porte : la ligne de l'application, et le courriel que la
+      -- table des diffusions prévoit pour ce palier — avec les mêmes verrous.
+      v_n := notif.emettre(
+        v_tenant,
+        'impaye.' || r.palier,
+        v_donnees,
         r.titulaire,
-        r.facture_id::text || ':' || r.palier,
+        v_cle,
         interval '400 days');
       if v_n > 0 then
         v_postes := v_postes + 1;
