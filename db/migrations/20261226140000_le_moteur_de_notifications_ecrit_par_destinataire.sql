@@ -216,7 +216,8 @@ $$;
 -- l'ancien dépôt. Puis, pour chaque diffusion en vigueur du genre,
 -- `notif.poster` — les quatre verrous — avec le gabarit que la table nomme.
 -- `p_sujet_cle` nomme ce dont on parle, pour le doublon : à défaut, la pièce, à
--- défaut la société. Rend le nombre de destinataires de l'application.
+-- défaut l'événement (sa société et l'empreinte de ses données). Rend le nombre de
+-- destinataires de l'application.
 
 create or replace function notif.emettre(
   p_tenant    uuid,
@@ -231,7 +232,14 @@ as $$
 declare
   v_dest   uuid;
   v_envoi  uuid;
-  v_cle    text := coalesce(p_sujet_cle, p_donnees ->> 'piece_id', p_tenant::text);
+  -- Ce dont on parle, pour le doublon : la clé donnée, à défaut la pièce, à défaut
+  -- l'événement lui-même (sa société et l'empreinte de ses données). Revue de #402
+  -- (Codex, P2) : « la société » seule confondait deux événements distincts du même
+  -- cabinet dans la fenêtre — deux clients qui acceptent une reprise le même jour —
+  -- et le second courriel était abandonné comme doublon. Le même événement rejoué,
+  -- lui, garde la même empreinte : le doublon se tait toujours.
+  v_cle    text := coalesce(p_sujet_cle, p_donnees ->> 'piece_id',
+                            coalesce(p_tenant::text, '') || ':' || md5(p_donnees::text));
   v_gab    record;
   v_texte  jsonb;
   k        text;
