@@ -106,6 +106,9 @@ if (!pme) {
       legalId: PME.legalId,
       jurisdiction: cabinet.jurisdiction,
       currency: pack.currency,
+      // Le compte de développement a déjà ses deux sociétés comprises (Premium) :
+      // celle-ci se paie en plus, et l'épreuve l'accepte comme le ferait la case.
+      supplementAccepte: true,
     },
   ]);
   mesPme = (await e.rpc("identite", "listMyOrganizations")).filter((o) => o.kind === "pme");
