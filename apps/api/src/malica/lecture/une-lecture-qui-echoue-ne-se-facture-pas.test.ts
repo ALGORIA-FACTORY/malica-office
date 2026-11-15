@@ -238,8 +238,8 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     });
   }
 
-  async function nouvelleOrganisation(nom: string): Promise<string> {
-    return sousIdentiteDuServeur(u.id, async (db) => {
+  async function nouvelleOrganisation(nom: string, proprietaire = u.id): Promise<string> {
+    return sousIdentiteDuServeur(proprietaire, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', $1, 'autonome',
                                            '${matriculeDEssai("A", "M")}', 'TN', 'TND') as id`,
@@ -278,7 +278,17 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     // Une organisation au plafond : 65 lectures déjà comptées sur 65. Le droit
     // n'est pas écrit ici — la base le connaît ; on remplit jusqu'à ce qu'elle
     // dise non, puis on le vérifie dans l'épreuve.
-    orgPleine = await nouvelleOrganisation(`Compteur plein ${marque}`);
+    // Deux sociétés, deux licences : depuis le 15 novembre 2026, une offre à une
+    // société n'en accueille pas une seconde (20261228110000). La société au plafond
+    // naît donc chez un second propriétaire, avec SA licence Basic, et le compte de
+    // l'épreuve y entre comme dirigeant : les deux compteurs restent séparés.
+    const second = await creerCompte(`${marque}-plein@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(second);
+    orgPleine = await nouvelleOrganisation(`Compteur plein ${marque}`, second.id);
+    await admin.query(
+      "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
+      [orgPleine, u.id],
+    );
     const licencePleine = await licencier(orgPleine);
     await admin.query(
       `with neuves as (
