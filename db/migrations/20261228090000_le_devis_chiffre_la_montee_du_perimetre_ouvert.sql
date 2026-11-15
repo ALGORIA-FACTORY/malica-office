@@ -34,7 +34,7 @@
 create or replace function public.montee_devis(
   p_offre  text,
   p_tenant uuid default null,
-  p_le     date default current_date)
+  p_le     date default ((now() at time zone plateforme.fuseau_de_la_plateforme())::date))
 returns jsonb
 language plpgsql
 stable
@@ -124,6 +124,10 @@ begin
         v_jours := v_ech.fin - v_ech.debut;
         v_ht := round(v_ecart * v_restants / v_jours, 3);
       end if;
+    else
+      -- Aucune facture d'avance ne couvre le jour : pas de complément chiffré. L'écart des
+      -- seuls prix de base ne se montre pas comme un montant (il n'est pas le tarif total).
+      v_ecart := null;
     end if;
   end if;
 
