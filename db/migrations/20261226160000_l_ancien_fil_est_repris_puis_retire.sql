@@ -38,10 +38,25 @@ declare
   v_lue    timestamptz;
   v_membre boolean;
   v_donnees jsonb;
+  v_rendu  text := coalesce(current_setting('request.jwt.claim.sub', true), '');
+  v_du_cabinet boolean;
 begin
   for n in select * from collab.notifications order by created_at, id loop
     v_donnees := n.payload - 'tranchee';
     for v_dest in select a from notif.audience(n.tenant_id, v_donnees, n.user_id) a loop
+      -- Revue de #402 (Codex, P1) : l'ancien lecteur n'ouvrait une ligne à un expert que si elle
+      -- était adressée à SA comptabilité (ou à personne) et écrite depuis le début de son mandat
+      -- (`app.notification_du_cabinet`, 20261222130000). `notif.audience` ne reçoit ni l'adresse
+      -- ni la date : la reprise les rejoue ici, sous l'identité de la personne, sans quoi le
+      -- cabinet d'aujourd'hui recevrait ce qui était adressé à son prédécesseur.
+      perform set_config('request.jwt.claim.sub', v_dest::text, true);
+      v_membre := n.tenant_id in (select app.member_orgs());
+      v_du_cabinet := v_membre or app.notification_du_cabinet(n.tenant_id, n.cabinet_id, n.created_at);
+      perform set_config('request.jwt.claim.sub', v_rendu, true);
+      if not v_du_cabinet then
+        continue;
+      end if;
+
       insert into notif.envois (tenant_id, destinataire, code, canal, sujet_cle, decision, donnees, cree_le)
       values (n.tenant_id, v_dest, n.kind, 'app',
               coalesce(n.payload ->> 'piece_id', n.tenant_id::text),
@@ -49,8 +64,6 @@ begin
       returning id into v_envoi;
       insert into notif.remises (envoi_id, resultat, tente_le) values (v_envoi, 'remis', n.created_at);
 
-      v_membre := exists (select 1 from identity.memberships m
-                           where m.tenant_id = n.tenant_id and m.user_id = v_dest);
       select coalesce(
                (select l.lu_le from collab.notification_lectures l
                  where l.notification_id = n.id and l.user_id = v_dest),
