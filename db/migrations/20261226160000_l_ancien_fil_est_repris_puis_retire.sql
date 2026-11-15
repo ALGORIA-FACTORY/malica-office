@@ -1,6 +1,6 @@
 -- L'ancien fil est repris dans le moteur, puis retiré.
 --
--- Suite de 20261223090000 et 20261223100000 : plus rien n'y écrit. Cette
+-- Suite de 20261226140000 et 20261226150000 : plus rien n'y écrit. Cette
 -- migration reprend ce qu'il contenait, ligne par ligne et personne par
 -- personne, puis retire ce qui ne sert plus.
 --

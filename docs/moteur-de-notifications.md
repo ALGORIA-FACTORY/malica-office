@@ -56,7 +56,7 @@ tenus par la plateforme.
 `collab.notifications`, `collab.notification_lectures`, `public.notifications_v`,
 `app.notifications_des_societes`, `app.notification_lisible`, la copie que
 `notif.poster` y déposait, et les droits d'insertion du portier sur l'ancienne table.
-La reprise (`20261223110000`) a rejoué chaque ligne pour la personne qui la lirait
+La reprise (`20261226160000`) a rejoué chaque ligne pour la personne qui la lirait
 aujourd'hui, avec sa lecture et sa décision.
 
 ## Éprouvé

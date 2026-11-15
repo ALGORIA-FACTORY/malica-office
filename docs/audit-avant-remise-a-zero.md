@@ -546,7 +546,7 @@ Rien ne bloque dans vos règles : préserver `legal` et `app.migrations` est com
 ## Addendum du 14 novembre 2026 — le moteur de notifications
 
 Le moteur (`notif.*`, commit `cb24883a`, branche `chantier/moteur-notifications`) remplace
-`collab.notifications` et ses vues, retirés par la migration `20261223110000`. `purge_metier.sql`
+`collab.notifications` et ses vues, retirés par la migration `20261226160000`. `purge_metier.sql`
 est mis à jour en conséquence :
 
 - retiré : `collab.notifications` (table supprimée) ;

@@ -1,6 +1,6 @@
 -- Tout ce qui notifie passe par la porte du moteur.
 --
--- Suite de 20261223090000. Vingt-cinq fonctions écrivaient chacune dans
+-- Suite de 20261226140000. Vingt-cinq fonctions écrivaient chacune dans
 -- `collab.notifications`, sans retenue ni destinataire : elles appellent
 -- désormais `notif.emettre`, qui décide UNE fois qui reçoit (la règle de lecture
 -- de l'ancien fil, rejouée par personne), écrit une ligne par destinataire, et
