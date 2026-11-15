@@ -8,7 +8,7 @@
  */
 
 import { envoyerParBrevo, type ConfigurationCourriel } from "./brevo.ts";
-import { ENCRE, FILET, GRIS, PAPIER, POLICE, SOUCI, SOUCI_SUR_ENCRE, echapper } from "./charte.ts";
+import { ENCRE, FILET, GRIS, PAPIER, POLICE, AMBRE, echapper } from "./charte.ts";
 
 export function courrielReinitialisation(lienBrut: string): {
   sujet: string;
@@ -48,13 +48,13 @@ export function courrielReinitialisation(lienBrut: string): {
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${FILET};">
 <tr><td style="background:${ENCRE};padding:28px 40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="width:10px;height:10px;background:${SOUCI_SUR_ENCRE};font-size:0;line-height:0;">&nbsp;</td>
+<td style="width:10px;height:10px;background:${AMBRE};font-size:0;line-height:0;">&nbsp;</td>
 <td style="padding-left:12px;font-family:${POLICE};font-size:12px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:${PAPIER};">Malica Office</td>
 </tr></table>
 </td></tr>
-<tr><td style="height:3px;background:${SOUCI};font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="height:3px;background:${AMBRE};font-size:0;line-height:0;">&nbsp;</td></tr>
 <tr><td style="padding:44px 40px 8px 40px;font-family:${POLICE};">
-<p style="margin:0 0 14px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:${SOUCI};">Mot de passe</p>
+<p style="margin:0 0 14px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:${AMBRE};">Mot de passe</p>
 <h1 style="margin:0;font-size:28px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;color:${ENCRE};">Choisissez un nouveau mot de passe.</h1>
 <p style="margin:20px 0 0 0;font-size:16px;line-height:1.6;color:${ENCRE};">Une demande a été faite pour votre accès Malica Office.</p>
 </td></tr>

@@ -51,6 +51,17 @@ export function configurationCourriel(
   };
 }
 
+/** Le corps de la requête Brevo, tel qu'il part : pur, sans réseau. */
+export function corpsBrevo(e: Expedition): string {
+  return JSON.stringify({
+    sender: { email: e.expediteur.email, name: e.expediteur.nom },
+    to: [{ email: e.destinataire }],
+    subject: e.sujet,
+    htmlContent: e.html,
+    textContent: e.texte,
+  });
+}
+
 export async function envoyerParBrevo(
   e: Expedition,
   fetchImpl: typeof fetch = fetch,
@@ -58,13 +69,7 @@ export async function envoyerParBrevo(
   const reponse = await fetchImpl(API_BREVO, {
     method: "POST",
     headers: { "api-key": e.cle, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({
-      sender: { email: e.expediteur.email, name: e.expediteur.nom },
-      to: [{ email: e.destinataire }],
-      subject: e.sujet,
-      htmlContent: e.html,
-      textContent: e.texte,
-    }),
+    body: corpsBrevo(e),
     signal: AbortSignal.timeout(10_000),
   });
   if (!reponse.ok) {
