@@ -2994,6 +2994,11 @@ export const en: Dict = {
   "cab.ecriture.libelle.manque": "Write the entry label.",
   "cab.ecriture.type": "Document type",
   "cab.ecriture.type.choisir": "Choose the type",
+  "cab.sens.origine.declare":
+    "Sense declared by the company: nobody has read or confirmed it on the document yet.",
+  "cab.sens.origine.lu": "Sense read on the document, matching the company's declaration.",
+  "cab.sens.origine.confirme": "Sense decided by a person (company or accountant).",
+  "cab.sens.origine.changer": "Change the sense",
   "cab.sens.titre": "Purchase or sale?",
   "cab.sens.aide.pourquoi":
     "The reading does not say whether this document is a purchase or a sale, or it contradicts itself: the issuer's name does not match the direction read. You decide; the client confirms nothing.",
@@ -4938,11 +4943,30 @@ export const en: Dict = {
   "pme.bienvenue.ditTitre": "Here is your tax ID.",
   "pme.bienvenue.ditSous":
     "I record it only once. As soon as your first document is received, it will no longer change — not by you, not by me, not by your accountant. Check it now.",
+  "pme.bienvenue.ditSansMatricule": "Your tax ID is not recorded yet.",
+  "pme.bienvenue.ditSousSansMatricule":
+    "It is on your tax identification card. Without it, payment receipts cannot be produced.",
   "pme.bienvenue.secEtat": "to confirm",
   "pme.bienvenue.champAdresse": "Registered address",
   "pme.bienvenue.regle":
     "Typing it in remains possible, but it is flagged: a typed tax ID does not carry the same proof as one read from the card.",
   "pme.bienvenue.exact": "That's right — get started",
+  "pme.suite.barre": "Your plan and your accountant",
+  "pme.suite.titre": "Choose your plan, then your accountant.",
+  "pme.suite.etape1": "1 · Your plan",
+  "pme.suite.etape1.sous": "You can change plan at any time in Settings.",
+  "pme.suite.forfait.voir": "See the plans",
+  "pme.suite.forfait.aide": "Each plan says what it includes and what it costs.",
+  "pme.suite.continuer": "Continue",
+  "pme.suite.etape2": "2 · Your accountant",
+  "pme.suite.etape2.sous": "They keep your books, if you wish.",
+  "pme.suite.compta.inviter": "Invite my accountant",
+  "pme.suite.compta.inviter.aide": "Your chartered accountant receives an invitation by e-mail.",
+  "pme.suite.compta.sans": "Continue without an accountant",
+  "pme.suite.compta.sans.aide":
+    "A company without a mandate works: you capture, you read, you export.",
+  "pme.bienvenue.matricule.saisir": "Tax ID",
+  "pme.bienvenue.matricule.aide": "Typed by hand, once: it cannot be changed afterwards.",
   "pme.bienvenue.corriger": "Edit · type it in",
   "pme.bienvenue.pied":
     "Next: choose your plan, then invite your accountant — or not. A company without an engagement works: you capture, you read, you export.",
@@ -5459,6 +5483,7 @@ export const en: Dict = {
   "cab.mer.abo.lede": "Optional — on the same page, row by row or in bulk.",
   "cab.mer.fait": "done",
   "cab.mer.a_faire": "to do",
+  "refus.organisation.matricule_fige": "The tax ID cannot be changed once it is recorded.",
   "refus.dossier.matricule_fige":
     "The tax ID can no longer change: a document has already arrived in this file.",
   "refus.dossier.dirigeant_attendu": "Seats open once the owner has joined.",

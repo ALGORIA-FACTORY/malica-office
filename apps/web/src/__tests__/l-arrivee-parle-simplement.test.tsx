@@ -20,6 +20,7 @@ const monde = vi.hoisted(() => ({
   operateur: false,
   orgs: [] as unknown[],
   forfait: null as null | { titulaire: boolean; pris_en_charge_par: string | null },
+  matricule: "1234567A/A/M/000" as string | null,
 }));
 const appels = vi.hoisted(() => ({
   creer: vi.fn(async (..._a: unknown[]) => "org-1"),
@@ -40,7 +41,8 @@ vi.mock("@/i18n", () => ({
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options, useSearch: () => ({}) }),
   Link: ({ children, to }: { children?: ReactNode; to?: string }) => <a href={to}>{children}</a>,
-  useNavigate: () => vi.fn(),
+  useNavigate: () => nav.aller,
+  useSearch: () => ({ etape: etapeDeLaSuite.valeur }),
 }));
 vi.mock("@/components/malica/InvitationsPourMoi", () => ({ InvitationsPourMoi: () => null }));
 vi.mock("@/components/malica/LanguageSwitcher", () => ({ LanguageSwitcher: () => null }));
@@ -48,12 +50,18 @@ vi.mock("@/components/malica/mon-espace-parti", () => ({ LienMonEspaceParti: () 
 vi.mock("@/components/malica/se-deconnecter", () => ({ SeDeconnecter: () => null }));
 vi.mock("@/components/malica/pme-context", () => ({
   usePme: () => ({
-    matricule: "1234567A/A/M/000",
+    matricule: monde.matricule,
     orgName: "Atelier Samia",
     adresse: null,
+    tenantId: "org-1",
+    jurisdiction: "TN",
     forfait: { ligne: monde.forfait },
   }),
 }));
+
+const nav = vi.hoisted(() => ({ aller: vi.fn() }));
+const saisie = vi.hoisted(() => ({ definir: vi.fn(async (..._a: unknown[]) => ({})) }));
+const etapeDeLaSuite = vi.hoisted(() => ({ valeur: "forfait" as "forfait" | "comptabilite" }));
 
 const vide = async () => [];
 const depot = (m: Record<string, unknown>) => new Proxy(m, { get: (c, n: string) => c[n] ?? vide });
@@ -64,6 +72,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
         identity: depot({
           listMyOrganizations: async () => monde.orgs,
           createOrganization: appels.creer,
+          definirOrganisation: saisie.definir,
         }),
         tour: depot({ suisJePlateforme: async () => monde.operateur }),
         referential: depot({
@@ -78,6 +87,8 @@ vi.mock("@/verticals/malica-office/composition", () => ({
 import { Route as RouteBienvenue } from "@/routes/_authenticated/pme.bienvenue";
 import { Route as RouteOffice } from "@/routes/_authenticated/office";
 import { Route as RouteOnboarding } from "@/routes/_authenticated/onboarding";
+import { Route as RouteSuite } from "@/routes/_authenticated/pme.suite";
+import { cibleDeRetourDesReglages } from "@/lib/suite-de-l-arrivee";
 
 const composant = (route: unknown) =>
   (route as { options: { component: () => ReactNode } }).options.component;
@@ -105,7 +116,12 @@ const SOCIETE = {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
-  Object.assign(monde, { operateur: false, orgs: [], forfait: null });
+  Object.assign(monde, {
+    operateur: false,
+    orgs: [],
+    forfait: null,
+    matricule: "1234567A/A/M/000",
+  });
 });
 
 describe("4.1 — choisissez votre espace", () => {
@@ -176,5 +192,87 @@ describe("4.3 — la bienvenue ne promet que ce qu'on peut faire", () => {
     monde.forfait = { titulaire: false, pris_en_charge_par: null };
     rendre(composant(RouteBienvenue));
     expect(screen.queryByText("pme.bienvenue.pied")).toBeNull();
+  });
+});
+
+describe("le matricule fiscal : l'écran ne dit « voici » que ce qu'il montre", () => {
+  // Recette du 14 novembre 2026, point 3 : « Voici votre matricule fiscal » au-dessus d'un « — ».
+  it("un matricule lu s'annonce comme tel", () => {
+    rendre(composant(RouteBienvenue));
+    expect(screen.getByText("pme.bienvenue.ditTitre")).toBeTruthy();
+    expect(screen.queryByText("pme.bienvenue.ditSansMatricule")).toBeNull();
+  });
+
+  it("sans matricule, l'écran ne prétend pas en montrer un", () => {
+    monde.matricule = null;
+    rendre(composant(RouteBienvenue));
+    expect(screen.queryByText("pme.bienvenue.ditTitre")).toBeNull();
+    expect(screen.getByText("pme.bienvenue.ditSansMatricule")).toBeTruthy();
+  });
+});
+
+describe("C1 — « C'est exact » mène au forfait, puis à la comptabilité", () => {
+  // Recette du 14 novembre 2026 : « C'est exact — commencer » ouvrait « Ajouter des pièces ».
+  it("qui promet la suite va d'abord au forfait et à la comptabilité", () => {
+    monde.forfait = { titulaire: true, pris_en_charge_par: null };
+    rendre(composant(RouteBienvenue));
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.exact" }));
+    expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/suite" });
+  });
+
+  it("les autres entrent directement par « Ajouter des pièces »", () => {
+    monde.forfait = { titulaire: false, pris_en_charge_par: null };
+    rendre(composant(RouteBienvenue));
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.exact" }));
+    expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/capturer" });
+  });
+
+  it("la suite montre le forfait, puis la comptabilité ou « sans comptabilité »", () => {
+    etapeDeLaSuite.valeur = "forfait";
+    rendre(composant(RouteSuite));
+    expect(screen.getByText("pme.suite.forfait.voir")).toBeTruthy();
+    expect(screen.queryByText("pme.suite.compta.sans")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "pme.suite.continuer" }));
+    expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/suite", search: { etape: "comptabilite" } });
+  });
+
+  it("à l'étape comptabilité : inviter, ou continuer sans comptabilité", () => {
+    etapeDeLaSuite.valeur = "comptabilite";
+    rendre(composant(RouteSuite));
+    expect(screen.getByText("pme.suite.compta.inviter")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^pme\.suite\.compta\.sans/ }));
+    expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/capturer" });
+    etapeDeLaSuite.valeur = "forfait";
+  });
+});
+
+describe("le matricule se saisit une fois, et se confirme avec « C'est exact »", () => {
+  it("sans matricule, « C'est exact » l'enregistre dans la société, puis entre", async () => {
+    monde.matricule = null;
+    monde.forfait = { titulaire: false, pris_en_charge_par: null };
+    rendre(composant(RouteBienvenue));
+    fireEvent.change(screen.getByLabelText(/pme\.bienvenue\.matricule\.saisir/), {
+      target: { value: "1234567A/A/M/000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.exact" }));
+    await waitFor(() => expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/capturer" }));
+    expect(saisie.definir.mock.calls[0]![0]).toMatchObject({
+      tenantId: "org-1",
+      name: "Atelier Samia",
+      legalId: "1234567A/A/M/000",
+      jurisdiction: "TN",
+    });
+  });
+
+  it("si l'enregistrement échoue, l'écran reste et le dit : rien n'est marqué vu", async () => {
+    monde.matricule = null;
+    saisie.definir.mockRejectedValueOnce(new Error("refus.identifiant.invalide"));
+    rendre(composant(RouteBienvenue));
+    fireEvent.change(screen.getByLabelText(/pme\.bienvenue\.matricule\.saisir/), {
+      target: { value: "PAS-VALIDE" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "pme.bienvenue.exact" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expect(nav.aller).not.toHaveBeenCalled();
   });
 });
