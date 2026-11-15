@@ -531,6 +531,27 @@ describe("la bibliothèque s'exporte", { skip: !CONFIGUREE }, () => {
       assert.equal((await relire(intrus, zip.id)).status, 404);
     });
 
+    it("ne se relit plus dès que son auteur n'est plus membre de l'une des sociétés du fichier", async () => {
+      const zip = combine.find((f) => f.format === "bibliotheque_zip")!;
+      assert.equal((await relire(dirigeant, zip.id)).status, 200);
+      const { rows } = await admin.query<{ id: string; role: string }>(
+        `select id, role from identity.memberships where tenant_id = $1 and user_id = $2`,
+        [societeB, dirigeant.id],
+      );
+      assert.equal(rows.length, 1);
+      // Le membre part de la société B : le fichier porte des originaux de B, il n'est plus à lui.
+      await admin.query(`delete from identity.memberships where id = $1`, [rows[0]!.id]);
+      try {
+        assert.equal((await relire(dirigeant, zip.id)).status, 404);
+      } finally {
+        await admin.query(
+          `insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, $3)`,
+          [societeB, dirigeant.id, rows[0]!.role],
+        );
+      }
+      assert.equal((await relire(dirigeant, zip.id)).status, 200);
+    });
+
     it("remet les pièces de chaque société, chacune sous sa société", async () => {
       const zip = combine.find((f) => f.format === "bibliotheque_zip")!;
       const { rows } = await admin.query<{ tenant_id: string; piece_id: string }>(

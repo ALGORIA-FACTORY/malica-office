@@ -138,23 +138,6 @@ select id, tenant_id, client_tenant_id, format, du, au, lignes, taille_octets, e
 revoke all on public.exports_v from public, anon, service_role;
 grant select on public.exports_v to authenticated;
 
-drop policy collab_exports_sel on collab.exports;
-create policy collab_exports_sel on collab.exports
-  for select to authenticated
-  using (
-    ((tenant_id in (select app.member_orgs()))
-      or (tenant_id in (select app.engaged_orgs()))
-      or (select app.is_platform()))
-    -- Un export de bibliothèque ne se relit que par son auteur : un membre qui ne voit pas
-    -- une pièce n'a pas le droit de lire son original dans le fichier d'un autre.
-    and (format not like 'bibliotheque\_%' or created_by = (select auth.uid()))
-    -- Et seulement tant que l'auteur est membre de CHAQUE société dont une pièce est dans le fichier :
-    -- le fichier est rangé sous une seule société, mais il porte les originaux de toutes.
-    and (format not like 'bibliotheque\_%' or not exists (
-           select 1 from collab.exports_pieces p
-            where p.export_id = collab.exports.id
-              and p.tenant_id not in (select app.member_orgs())));
-
 -- ------------------------------------------------- 3. Les pièces remises
 
 create table collab.exports_pieces (
@@ -184,6 +167,39 @@ grant select on public.exports_pieces_v to authenticated;
 comment on table collab.exports_pieces is
   'Les pièces qu''un export a remises : « à exporter » est ce qui n''y figure pas, « remis le » '
   'le jour du dernier export qui les contient. Écrite par la porte export_bibliotheque_inscrire.';
+
+-- Une pièce d'une société que l'appelant ne voit plus lui est invisible par RLS : la
+-- question « le fichier porte-t-il une pièce d'une société dont je ne suis plus membre ? »
+-- se pose donc à une fonction qui lit sans RLS, et ne rend que le oui ou le non.
+create or replace function app.export_hors_de_mes_societes(p_export uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from collab.exports_pieces p
+                  where p.export_id = p_export
+                    and p.tenant_id not in (select app.member_orgs()))
+$$;
+revoke all on function app.export_hors_de_mes_societes(uuid) from public, anon;
+grant execute on function app.export_hors_de_mes_societes(uuid) to authenticated;
+
+-- La lecture d'un export de bibliothèque : après `collab.exports_pieces`, que la politique relit.
+drop policy collab_exports_sel on collab.exports;
+create policy collab_exports_sel on collab.exports
+  for select to authenticated
+  using (
+    ((tenant_id in (select app.member_orgs()))
+      or (tenant_id in (select app.engaged_orgs()))
+      or (select app.is_platform()))
+    -- Un export de bibliothèque ne se relit que par son auteur : un membre qui ne voit pas
+    -- une pièce n'a pas le droit de lire son original dans le fichier d'un autre.
+    and (format not like 'bibliotheque\_%' or created_by = (select auth.uid()))
+    -- Et seulement tant que l'auteur est membre de CHAQUE société dont une pièce est dans le fichier :
+    -- le fichier est rangé sous une seule société, mais il porte les originaux de toutes.
+    and (format not like 'bibliotheque\_%' or not app.export_hors_de_mes_societes(id))
+  );
 
 -- ------------------------------------------------- 4. La porte d'inscription
 
