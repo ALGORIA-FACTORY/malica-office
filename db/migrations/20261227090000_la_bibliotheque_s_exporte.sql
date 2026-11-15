@@ -148,7 +148,12 @@ create policy collab_exports_sel on collab.exports
     -- Un export de bibliothèque ne se relit que par son auteur : un membre qui ne voit pas
     -- une pièce n'a pas le droit de lire son original dans le fichier d'un autre.
     and (format not like 'bibliotheque\_%' or created_by = (select auth.uid()))
-  );
+    -- Et seulement tant que l'auteur est membre de CHAQUE société dont une pièce est dans le fichier :
+    -- le fichier est rangé sous une seule société, mais il porte les originaux de toutes.
+    and (format not like 'bibliotheque\_%' or not exists (
+           select 1 from collab.exports_pieces p
+            where p.export_id = collab.exports.id
+              and p.tenant_id not in (select app.member_orgs())));
 
 -- ------------------------------------------------- 3. Les pièces remises
 
