@@ -181,12 +181,15 @@ principal() {
     # sans accès au serveur — la clé Brevo d'abord. Ils viennent des secrets
     # GitHub de l'environnement, voyagent sur l'entrée standard comme le jeton,
     # et seuls les noms de la liste passent. Une valeur vide ne touche à rien.
+    # 15 novembre 2026 : les clés des modèles rejoignent la liste — le pilote
+    # sur Google Cloud n'a jamais eu de .env rempli à la main, et ces clés ne
+    # passent ni par un poste ni par une conversation.
     local ligne nom valeur
     while IFS= read -r ligne || [ -n "$ligne" ]; do
       nom="${ligne%%=*}"
       valeur="${ligne#*=}"
       case "$nom" in
-      BREVO_API_KEY) ;;
+      BREVO_API_KEY | ANTHROPIC_API_KEY | DEEPSEEK_API_KEY | QWEN_API_KEY) ;;
       *) continue ;;
       esac
       [ -n "$valeur" ] || continue
