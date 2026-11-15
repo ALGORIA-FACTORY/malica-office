@@ -3,18 +3,22 @@
  *
  * Un tour : l'ordonnanceur de la base pose les relances dues
  * (`notif.relancer_les_impayes`, une par facture et par palier, quatre
- * verrous), puis le travailleur remet les courriels décidés
- * (`notif.courriels_a_remettre`) par Brevo et inscrit chaque tentative
- * (`notif.remettre`). Il ne décide de rien : ni qui, ni quand, ni quoi dire.
+ * verrous), puis le travailleur RÉSERVE des courriels (`notif.reserver_courriels`),
+ * les envoie par Brevo, et inscrit chaque résultat (`notif.remettre`). Il ne
+ * décide de rien : ni qui, ni quand, ni quoi dire.
  *
- * Rien ne part tant que la tour n'a pas ouvert les relances (la base rend
- * `actives: false` et aucune ligne), ni sans la clé Brevo du serveur : sans
- * elle, les courriels restent « à remettre », et on le dit au journal.
+ * Trois temps, trois transactions : la réservation pose une échéance et rend
+ * les lignes ; l'envoi se fait HORS de toute transaction, donc aucun verrou ne
+ * tient pendant un appel Brevo lent ; l'inscription relâche la réservation par
+ * son résultat. Une réservation sans résultat à son échéance repart au tour
+ * suivant.
  *
- * Le travailleur se connecte avec le rôle de l'API, sans endosser personne :
- * ces trois fonctions ne sont ouvertes qu'à ce rôle.
+ * Rien ne part sans la clé Brevo du serveur : sans elle, rien n'est réservé, et
+ * on le dit au journal.
+ *
+ * Le travailleur se connecte avec le rôle de l'API, sans endosser personne.
  */
-import { configurationCourriel, envoyerParBrevo } from "../courriel/brevo.ts";
+import { configurationCourriel, envoyerParBrevo, type Expedition } from "../courriel/brevo.ts";
 import type { Requete } from "../db.ts";
 import { consigner } from "../observabilite/journal.ts";
 
@@ -28,15 +32,22 @@ interface CourrielARemettre {
   corps: string;
   action_libelle: string | null;
   action_route: string | null;
+  ton: string;
 }
 
 /** Combien de courriels un tour remet au plus : un incident ne vide pas la file d'un coup. */
 const PAR_TOUR = 50;
+/** Combien de courriels une réservation pose d'un coup. */
+const PAR_RESERVATION = 10;
+/** Au-delà, une réservation sans résultat repart au tour suivant. */
+const DUREE_RESERVATION = "10 minutes";
 
 export interface Dependances {
   executer: <T>(travail: (db: Requete) => Promise<T>) => Promise<T>;
   env: Record<string, string | undefined>;
   fetchImpl?: typeof fetch;
+  /** Le transport : par défaut, l'appel Brevo réel. Une épreuve peut le surveiller. */
+  envoyer?: (e: Expedition) => Promise<unknown>;
 }
 
 export async function tourDeRelances(d: Dependances) {
@@ -50,53 +61,61 @@ export async function tourDeRelances(d: Dependances) {
   const config = configurationCourriel(d.env);
   if (!config) return { decision, remis: 0, echecs: 0, sansCle: true };
 
+  const envoyer = d.envoyer ?? ((e: Expedition) => envoyerParBrevo(e, d.fetchImpl));
   let remis = 0;
   let echecs = 0;
-  // Un courriel par transaction : la base le verrouille en le rendant, le
-  // travailleur l'envoie et inscrit la tentative avant de le relâcher. Deux
-  // API qui tournent ne remettent donc jamais le même, et un incident sur
-  // l'un n'efface pas ce qui est déjà inscrit pour les autres.
-  for (let i = 0; i < PAR_TOUR; i += 1) {
-    const traite = await d.executer(async (db) => {
+  while (remis + echecs < PAR_TOUR) {
+    const reserve = Math.min(PAR_RESERVATION, PAR_TOUR - remis - echecs);
+    // Temps 1 : la réservation, dans sa propre transaction, committée à son retour.
+    const lot = await d.executer(async (db) => {
       const { rows } = await db.query<CourrielARemettre>(
-        "select * from notif.courriels_a_remettre(1)",
+        "select * from notif.reserver_courriels($1, $2::interval)",
+        [reserve, DUREE_RESERVATION],
       );
-      const c = rows[0];
-      if (!c) return null;
-      const message = courrielDeNotification({
-        locale: c.locale,
-        titre: c.titre,
-        corps: c.corps,
-        action:
-          c.action_libelle && c.action_route
-            ? { libelle: c.action_libelle, url: `${config.urlPublique}${c.action_route}` }
-            : null,
-      });
+      return rows;
+    });
+    if (lot.length === 0) break;
+
+    for (const c of lot) {
+      // Temps 2 : l'envoi, HORS transaction. Le rendu et l'appel relèvent du même
+      // échec : une ligne qu'on ne sait pas rendre s'inscrit « échoué ».
       let erreur: string | null = null;
       try {
-        await envoyerParBrevo(
-          { cle: config.cle, expediteur: config.expediteur, destinataire: c.email, ...message },
-          d.fetchImpl,
-        );
+        const message = courrielDeNotification({
+          locale: c.locale,
+          titre: c.titre,
+          corps: c.corps,
+          action:
+            c.action_libelle && c.action_route
+              ? { libelle: c.action_libelle, url: `${config.urlPublique}${c.action_route}` }
+              : null,
+          ton: c.ton,
+        });
+        await envoyer({
+          cle: config.cle,
+          expediteur: config.expediteur,
+          destinataire: c.email,
+          ...message,
+        });
       } catch (e) {
         erreur = e instanceof Error ? e.message.slice(0, 500) : "échec";
       }
-      await db.query("select notif.remettre($1, $2, $3)", [
-        c.envoi_id,
-        erreur === null ? "remis" : "echoue",
-        erreur,
-      ]);
-      // L'étape `envoi`, sous la trace du tour : ni l'adresse, ni le message —
-      // l'envoi se retrouve par son identifiant, dans `notif`.
+      // Temps 3 : l'inscription du résultat, dans sa propre transaction.
+      await d.executer(async (db) => {
+        await db.query("select notif.remettre($1, $2, $3)", [
+          c.envoi_id,
+          erreur === null ? "remis" : "echoue",
+          erreur,
+        ]);
+      });
+      // L'étape `envoi`, sous la trace du tour : ni l'adresse, ni le message.
       consigner("envoi", erreur === null ? "ok" : "erreur", {
         cle: c.envoi_id,
         detail: { canal: "courriel", resultat: erreur === null ? "remis" : "echoue" },
       });
-      return erreur === null ? "remis" : "echoue";
-    });
-    if (traite === null) break;
-    if (traite === "remis") remis += 1;
-    else echecs += 1;
+      if (erreur === null) remis += 1;
+      else echecs += 1;
+    }
   }
   return { decision, remis, echecs, sansCle: false };
 }

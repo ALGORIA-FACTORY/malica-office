@@ -20,6 +20,7 @@ import { critiquerLibelle } from "@malica/socle/engines/libelle";
 import type {
   CompteDuPlan,
   Ecriture,
+  OrigineDuSens,
   PropositionDePiece,
   RejetMotif,
 } from "@malica/socle/ports/repositories";
@@ -37,7 +38,7 @@ import { CoursDeLaPiece } from "@/components/malica/cours-de-change";
 import type { RetourEnvoye } from "@/components/malica/envoye";
 import { RetournerAuClient } from "@/components/malica/retourner-au-client";
 import { ListeDesComptes, SaisieDeCompte } from "@/components/malica/saisie-compte";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
 import {
   ecritureDeDepart,
   originesDeDepart,
@@ -58,6 +59,13 @@ const OU = "components/malica/ecriture-du-cabinet";
 const LISTE_DES_COMPTES = "plan-de-l-ecriture";
 /** Ce qui retient le bouton d'inscrire, que le bouton cite. */
 const RAISON_DU_BOUTON = "raison-de-l-inscription";
+
+/** Ce que dit l'origine du sens, en mots (recette du 14 novembre 2026). */
+const CLE_DE_L_ORIGINE = {
+  declare: "cab.sens.origine.declare",
+  lu: "cab.sens.origine.lu",
+  confirme: "cab.sens.origine.confirme",
+} as const satisfies Record<OrigineDuSens, MessageKey>;
 
 /** Le libellé que le plan donne à ce compte — celui du cabinet d'abord. */
 function libelleDuPlan(plan: readonly CompteDuPlan[], code: string): string | null {
@@ -182,7 +190,7 @@ export function EcritureDuCabinet({
   const types = useQuery({
     queryKey: ["types-document", locale],
     queryFn: () => office().referential.typesDeDocument(locale),
-    enabled: typeAEtablir || sens !== null,
+    enabled: typeAEtablir || sens !== null || proposition?.sensOrigine != null,
     staleTime: 60 * 60 * 1000,
   });
   /*
@@ -331,6 +339,36 @@ export function EcritureDuCabinet({
 
   return (
     <section className="space-y-3" aria-labelledby="ecriture-du-cabinet">
+      {/*
+       * D'où vient le sens que la proposition retient (recette du 14 novembre 2026) : une
+       * déclaration de la PME, une lecture, ou une confirmation. La comptabilité le change ici,
+       * tant que rien n'est inscrit : le même geste que le sens à trancher.
+       */}
+      {proposition?.sensOrigine && vivante === null ? (
+        <div className="space-y-2 border border-border bg-card px-3.5 py-3">
+          <p className="text-[13px] text-foreground">
+            {t(CLE_DE_L_ORIGINE[proposition.sensOrigine])}
+          </p>
+          <div
+            className="grid grid-cols-2 gap-2.5"
+            role="group"
+            aria-label={t("cab.sens.origine.changer")}
+          >
+            {sensPossibles.map((d) => (
+              <button
+                key={d.code}
+                type="button"
+                disabled={trancher.isPending || inscrire.isPending}
+                onClick={() => trancher.mutate(d.code)}
+                className="min-h-[44px] border border-border bg-card px-4 text-[14px] font-semibold hover:bg-accent disabled:opacity-50"
+              >
+                {d.libelle}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {sens && proposition && !proposition.ok ? (
         <div className="space-y-2.5 border border-signal-warn bg-card px-3.5 py-3">
           <p id="sens-a-trancher" className="flex items-center text-[14px] font-semibold">
@@ -406,18 +444,22 @@ export function EcritureDuCabinet({
             />
           </p>
         ) : (
-          <p className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
-            {t("cab.ecriture.rien")}
-            <Aide
-              titre={t("cab.ecriture.rien.pourquoi")}
-              /*
-               * La raison vient du serveur, en français, et porte les motifs des
-               * contrôles : une seule phrase, construite là où le jugement est
-               * posé. Elle va dans le i : l'écran dit un mot et un geste.
-               */
-              paragraphes={[{ texte: proposition.raison }]}
-            />
-          </p>
+          <div className="border border-signal-stop bg-card px-3.5 py-2.5 text-[13.5px] text-signal-stop">
+            <p>
+              {t("cab.ecriture.rien")}
+              <Aide
+                titre={t("cab.ecriture.rien.pourquoi")}
+                /*
+                 * La raison vient du serveur, en français, et porte les motifs des
+                 * contrôles : une seule phrase, construite là où le jugement est
+                 * posé. Elle va dans le i, et s'affiche aussi à côté : un formulaire
+                 * vide sans sa cause fait croire à une panne (recette du 14 novembre).
+                 */
+                paragraphes={[{ texte: proposition.raison }]}
+              />
+            </p>
+            <p className="mt-1 text-[12.5px] text-foreground">{proposition.raison}</p>
+          </div>
         )
       ) : null}
 
