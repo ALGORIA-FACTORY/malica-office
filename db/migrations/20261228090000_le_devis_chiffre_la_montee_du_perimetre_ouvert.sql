@@ -34,7 +34,7 @@
 create or replace function public.montee_devis(
   p_offre  text,
   p_tenant uuid default null,
-  p_le     date default ((now() at time zone plateforme.fuseau_de_la_plateforme())::date))
+  p_le     date default null)
 returns jsonb
 language plpgsql
 stable
@@ -65,6 +65,9 @@ declare
   v_plein   numeric;
   v_chiffre boolean;
 begin
+  -- Le jour par défaut est celui de la plateforme, lu ici (le défaut d'un paramètre s'évalue
+  -- chez l'appelant, qui n'a pas le droit d'appeler la fonction de fuseau).
+  p_le := coalesce(p_le, v_jour);
   if v_licence is null then
     return null;   -- seul le propriétaire principal paie : il est le seul à qui on chiffre.
   end if;
