@@ -64,6 +64,13 @@ as $$
 declare
   v_reglage jsonb;
 begin
+  -- Une réservation à la fois (revue de #403, Codex P2). `skip locked` n'écarte que les
+  -- verrous encore tenus : deux travailleurs partis sur le même instantané pouvaient,
+  -- l'un ayant validé, prendre la même ligne — et le courriel partait deux fois. Le
+  -- verrou consultatif tient jusqu'à la validation ; la requête qui suit prend son
+  -- instantané APRÈS lui, et voit donc les réservations du précédent.
+  perform pg_advisory_xact_lock(hashtext('notif.reserver_courriels'));
+
   -- Le réglage de l'exploitant est la seule source du plafond. Absent : on le dit.
   select plateforme.relances_reglage() into v_reglage;
   if v_reglage ->> 'tentatives_max' is null then
