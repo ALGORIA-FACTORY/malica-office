@@ -118,8 +118,8 @@ describe("la comptabilité prend en charge l'offre du client", { skip: !ADMIN },
       }
 
       const n = await db.query<{ payload: { offre: string; offre_couverte: string } }>(
-        "select donnees as payload from notif.envois where tenant_id = $1 and code = 'acces.arrete' and canal = 'app'",
-        [d.tenant],
+        "select donnees as payload from notif.envois where tenant_id = $1 and code = 'acces.arrete' and canal = 'app' and destinataire = $2",
+        [d.tenant, d.titulaire],
       );
       assert.equal(n.rows.length, 1);
       assert.equal(n.rows[0]!.payload.offre, "premium", "l'alerte dit l'offre que le client garde");
@@ -138,8 +138,8 @@ describe("la comptabilité prend en charge l'offre du client", { skip: !ADMIN },
       const acces = await couvreDepuisLeDebutDuMois(db, d, c, "team");
       await enPersonne(db, c.expert, () => db.query("select public.acces_arreter($1)", [acces]));
       const n = await db.query<{ payload: { offre: string } }>(
-        "select donnees as payload from notif.envois where tenant_id = $1 and code = 'acces.arrete' and canal = 'app'",
-        [d.tenant],
+        "select donnees as payload from notif.envois where tenant_id = $1 and code = 'acces.arrete' and canal = 'app' and destinataire = $2",
+        [d.tenant, d.titulaire],
       );
       assert.equal(n.rows[0]!.payload.offre, "team");
     });
