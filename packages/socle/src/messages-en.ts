@@ -1733,6 +1733,11 @@ export const en: Dict = {
   "cab.notif.kind.acces.propose": "Covering the client's subscription has been offered.",
   "cab.notif.kind.acces.accepte": "The client accepted having their subscription covered.",
   "cab.notif.kind.acces.repris": "The client's subscription is back at their own charge.",
+  "cab.notif.kind.acces.refuse": "The client declined the take-over of its subscription.",
+  "cab.notif.kind.piece.recue_du_siege": "A document was received from head office.",
+  "cab.notif.kind.piece.retournee_par_le_proprietaire":
+    "The owner of the file returned a document.",
+  "cab.notif.kind.piece.supprimee_par_le_proprietaire": "The owner of the file removed a document.",
   "cab.notif.kind.facture.emise": "A platform invoice has been issued.",
   "cab.file.demande.rappel": "Recall requested",
   "cab.file.demande.suppression": "Deletion requested",
@@ -2478,6 +2483,8 @@ export const en: Dict = {
   "refus.referentiel.famille_absente":
     "No family of the pack matches “{designation}”: the reference data is incomplete.",
   "refus.referentiel.gabarit_absent": "No message template {code} for channel {canal}.",
+  "refus.relances.reglage_absent":
+    "The relance setting is not decided: no email leaves until the operator sets it.",
   "refus.referentiel.parametre_fiscal_absent":
     "Tax parameter not found: {code} ({juridiction}) on {date}. No default value is applied.",
   "refus.referentiel.parametre_fiscal_non_etabli":

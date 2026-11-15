@@ -184,7 +184,7 @@ insert into purge_tables values
   ('identity.fiches_fiscales'), ('identity.invitations'), ('identity.memberships'),
   ('identity.organizations'), ('identity.profiles'),
   ('immo.assets'), ('immo.cessions'), ('immo.depreciations'), ('immo.dotations'),
-  ('notif.envois'), ('notif.preferences'), ('notif.remises'), ('notif.suites'),
+  ('notif.envois'), ('notif.preferences'), ('notif.remises'), ('notif.reservations'), ('notif.suites'),
   ('parametrage.accounts'), ('parametrage.role_bindings'),
   ('payments.payments'),
   ('pricing.price_lists'), ('pricing.prices'),

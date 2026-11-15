@@ -250,6 +250,15 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       const d = await unImpaye(db, "rappel");
       await regler(db, d.operateur, true, false);
       await relancer(db);
+      // La base d'essai est partagée : les courriels que d'autres épreuves ont validés
+      // attendent aussi, et les plus anciens passent d'abord. La réservation les prend
+      // tous (annulés avec la transaction), sans quoi le nôtre resterait au-delà.
+      const dus = (
+        await db.query<{ n: number }>(
+          `select count(*)::int as n from notif.envois_v
+            where canal = 'email' and etat in ('a_remettre', 'a_reessayer')`,
+        )
+      ).rows[0]!.n;
       const lire = () =>
         sous(db, "malica_api", null, async () => {
           const { rows } = await db.query<{
@@ -258,11 +267,25 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
             titre: string;
             corps: string;
             action_route: string | null;
-          }>("select * from notif.courriels_a_remettre(500)");
+          }>("select * from notif.reserver_courriels($1, interval '10 minutes')", [dus + 1]);
           return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
         });
       const avant = await lire();
-      assert.equal(avant.length, 1);
+      // Le message dit l'état de la file : un échec se lit sans rejouer l'épreuve.
+      const etat = async () =>
+        JSON.stringify({
+          envois: (
+            await db.query(
+              `select n.code, n.canal, n.decision, v.etat, v.tentatives,
+                      n.gabarit_id is not null as gabarit
+                 from notif.envois n join notif.envois_v v on v.id = n.id
+                where n.destinataire = $1`,
+              [d.titulaire],
+            )
+          ).rows,
+          reglage: (await db.query("select plateforme.relances_reglage() as r")).rows[0]?.r,
+        });
+      assert.equal(avant.length, 1, avant.length === 1 ? "" : await etat());
       assert.ok(avant[0]!.titre.length > 0 && !avant[0]!.corps.includes("{{"), "jetons rendus");
       await sous(db, "malica_api", null, () =>
         db.query("select notif.remettre($1, 'remis')", [avant[0]!.envoi_id]),
@@ -279,7 +302,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       await regler(db, d.operateur, false, false);
       const file = await sous(db, "malica_api", null, async () => {
         const { rows } = await db.query<{ email: string }>(
-          "select email from notif.courriels_a_remettre(500)",
+          "select email from notif.reserver_courriels(500, interval '10 minutes')",
         );
         return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
       });
@@ -298,7 +321,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       );
       await assert.rejects(
         sous(db, "authenticated", d.titulaire, () =>
-          db.query("select * from notif.courriels_a_remettre(1)"),
+          db.query("select * from notif.reserver_courriels(1, interval '10 minutes')"),
         ),
         /permission denied/,
       );

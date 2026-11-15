@@ -1697,6 +1697,10 @@ export const ar: Dict = {
   "cab.notif.kind.acces.propose": "اقتُرح على الحريف تحمّل اشتراكه.",
   "cab.notif.kind.acces.accepte": "قبل الحريف تحمّل اشتراكه.",
   "cab.notif.kind.acces.repris": "عاد اشتراك الحريف على عاتقه.",
+  "cab.notif.kind.acces.refuse": "رفض العميل التكفّل باشتراكه.",
+  "cab.notif.kind.piece.recue_du_siege": "وصل مستند من المقر.",
+  "cab.notif.kind.piece.retournee_par_le_proprietaire": "أعاد مالك الملف مستنداً.",
+  "cab.notif.kind.piece.supprimee_par_le_proprietaire": "أزال مالك الملف مستنداً.",
   "cab.notif.kind.facture.emise": "صدرت فاتورة من المنصة.",
   "cab.file.demande.rappel": "طُلب الاسترجاع",
   "cab.file.demande.suppression": "طُلب الحذف",
@@ -2405,6 +2409,8 @@ export const ar: Dict = {
   "refus.referentiel.famille_absente":
     "لا توجد عائلة في الحزمة تطابق «{designation}»: المرجع غير مكتمل.",
   "refus.referentiel.gabarit_absent": "لا يوجد قالب رسالة {code} للقناة {canal}.",
+  "refus.relances.reglage_absent":
+    "لم يُحدَّد إعداد التذكيرات بعد: لا يُرسل أي بريد إلكتروني حتى يضبطه المشغّل.",
   "refus.referentiel.parametre_fiscal_absent":
     "المعيار الجبائي غير موجود: {code} ({juridiction}) بتاريخ {date}. لا تُطبَّق أي قيمة افتراضية.",
   "refus.referentiel.parametre_fiscal_non_etabli":

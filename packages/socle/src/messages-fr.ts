@@ -1803,6 +1803,12 @@ export const fr = {
   "cab.notif.kind.acces.propose": "Une prise en charge d'abonnement a été proposée au client.",
   "cab.notif.kind.acces.accepte": "Le client a accepté la prise en charge de son abonnement.",
   "cab.notif.kind.acces.repris": "L'abonnement du client repasse à sa charge.",
+  "cab.notif.kind.acces.refuse": "Le client a refusé la prise en charge de son abonnement.",
+  "cab.notif.kind.piece.recue_du_siege": "Une pièce a été reçue du siège.",
+  "cab.notif.kind.piece.retournee_par_le_proprietaire":
+    "Le propriétaire du dossier a retourné une pièce.",
+  "cab.notif.kind.piece.supprimee_par_le_proprietaire":
+    "Le propriétaire du dossier a retiré une pièce.",
   "cab.notif.kind.facture.emise": "Une facture de la plateforme a été émise.",
   "cab.file.demande.rappel": "Rappel demandé",
   "cab.file.demande.suppression": "Suppression demandée",
@@ -2558,6 +2564,8 @@ export const fr = {
   "refus.referentiel.famille_absente":
     "Aucune famille du pack ne correspond à « {designation} » : le référentiel est incomplet.",
   "refus.referentiel.gabarit_absent": "Aucun modèle de message {code} pour le canal {canal}.",
+  "refus.relances.reglage_absent":
+    "Le réglage des relances n'est pas pris : aucun courriel ne part tant que l'exploitant ne l'a pas fixé.",
   "refus.referentiel.parametre_fiscal_absent":
     "Paramètre fiscal introuvable : {code} ({juridiction}) au {date}. Aucune valeur par défaut n’est appliquée.",
   "refus.referentiel.parametre_fiscal_non_etabli":
