@@ -1618,6 +1618,11 @@ export interface PieceLue {
    */
   comptabilite?: boolean;
   /**
+   * Le jour du dernier export de la bibliothèque qui a remis cette pièce à un
+   * comptable extérieur (G5). `null` : jamais remise. Absent : on ne sait pas.
+   */
+  remiseLe?: string | null;
+  /**
    * Le type de document retenu par la base (`pieces.document_kind`), tous
    * types confondus — celui qui range la pièce dans son dossier. `kind`, lui,
    * ne dit que le sens lu (achat ou vente).

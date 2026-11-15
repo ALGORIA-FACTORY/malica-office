@@ -52,6 +52,25 @@ export function piecesCompteesDe<T extends Pick<PieceLue, "accompagne" | "jointe
   return liste.filter(estUnePiece);
 }
 
+/**
+ * Les pièces qu'une société sans comptabilité n'a jamais remises : les siennes
+ * (jamais l'espace privé), les pièces et non leurs documents joints, que
+ * aucun export n'a encore remises (G5, « À exporter »).
+ */
+export function piecesAExporter<
+  T extends Pick<PieceLue, "accompagne" | "jointe" | "vis" | "remiseLe">,
+>(liste: readonly T[]): T[] {
+  return piecesCompteesDe(liste.filter((p) => p.vis !== "personnel" && !p.remiseLe));
+}
+
+/** Le jour du dernier export qui a remis une de ces pièces (« Remis le … ») ; `null` : aucun. */
+export function derniereRemise(liste: ReadonlyArray<Pick<PieceLue, "remiseLe">>): string | null {
+  let dernier: string | null = null;
+  for (const p of liste)
+    if (p.remiseLe && (dernier === null || p.remiseLe > dernier)) dernier = p.remiseLe;
+  return dernier;
+}
+
 /** Le statut d'une pièce de la liste, côté PME (« Malica sans blocage », §2). */
 export function statutDeLaPieceLue(p: LigneDeLaListe): StatutPme {
   return statutPme({
