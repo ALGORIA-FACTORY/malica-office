@@ -210,7 +210,7 @@ export async function propositionDePiece(
  *   - `confirme`: une personne l'a tranché (PME, ou comptabilité), par une précision.
  * `null` : aucun sens n'est retenu. Une seule lecture, qui ne rend que l'origine.
  */
-export async function origineDuSens(db: Requete, pieceId: string): Promise<OrigineDuSens | null> {
+async function origineDuSens(db: Requete, pieceId: string): Promise<OrigineDuSens | null> {
   const { rows } = await db.query<{
     document_kind: string | null;
     statut: string | null;
