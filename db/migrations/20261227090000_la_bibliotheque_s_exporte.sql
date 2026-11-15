@@ -154,6 +154,7 @@ create policy collab_exports_sel on collab.exports
            select 1 from collab.exports_pieces p
             where p.export_id = collab.exports.id
               and p.tenant_id not in (select app.member_orgs())));
+  );
 
 -- ------------------------------------------------- 3. Les pièces remises
 
