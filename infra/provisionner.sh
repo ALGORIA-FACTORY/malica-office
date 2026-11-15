@@ -48,6 +48,21 @@ install -d -o "$UTILISATEUR" -g "$UTILISATEUR" -m 0750 \
   "$RACINE" "$RACINE/pieces" "$RACINE/postgres" "$RACINE/sauvegarde" "$RACINE/restauration"
 install -d -o "$UTILISATEUR" -g "$UTILISATEUR" -m 0700 "/home/$UTILISATEUR/.ssh"
 
+# ======================================= POURQUOI LES PIÈCES SONT À L'UID 1000
+#
+# 15 novembre 2026, premier déploiement du pilote sur Google Cloud : la sonde
+# profonde répondait « stockage : hs ». L'API tourne sous l'utilisateur `node`
+# de son image (node:22, uid 1000, infra/api.Dockerfile) et écrit dans
+# /pieces, monté depuis $RACINE/pieces. Sur Hetzner, `malica` avait reçu
+# l'uid 1000 par hasard — premier compte créé — et tout marchait. Sur Google
+# Cloud, OS Login et l'agent invité créent d'autres comptes avant lui :
+# `malica` n'est plus 1000, et l'API ne peut plus écrire une seule pièce.
+# Le dossier appartient donc à l'uid de l'API, dit ici une fois, et `malica`
+# garde l'accès par son groupe.
+UID_API=1000
+chown "$UID_API:$UTILISATEUR" "$RACINE/pieces"
+chmod 2770 "$RACINE/pieces"
+
 # Le dépôt : les fichiers d'infra viennent de git, jamais copiés à la main.
 if [ -n "$DEPOT_URL" ] && [ ! -d "$RACINE/depot/.git" ]; then
   sudo -u "$UTILISATEUR" git clone --quiet "$DEPOT_URL" "$RACINE/depot"
