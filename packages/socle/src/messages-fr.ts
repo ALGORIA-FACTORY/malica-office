@@ -2617,6 +2617,8 @@ export const fr = {
   "refus.invitation.expiree": "Cette invitation n’est plus valable.",
   "refus.organisation.type_inconnu": "Ce type d’organisation n’existe pas.",
   "refus.organisation.offre_multisociete_requise": "Votre offre ne comprend qu’une société.",
+  "refus.organisation.supplement_a_accepter":
+    "Cette société n’est pas comprise dans votre offre : son prix en plus doit être accepté.",
   "refus.organisation.juridiction_requise": "Choisissez la juridiction de l’organisation.",
   "refus.mandat.statut_inconnu": "Ce statut de mandat n’existe pas.",
   "refus.etablissement.dernier":

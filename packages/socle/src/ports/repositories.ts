@@ -56,6 +56,11 @@ export interface NewOrganization {
   jurisdiction: string;
   currency: string;
   validationMode?: ValidationMode;
+  /**
+   * Au-delà des sociétés que l'offre comprend, la société se paie en plus : la porte ne
+   * l'accepte qu'avec cet accord (« Ajouter une société », la case du prix — 20261228110000).
+   */
+  supplementAccepte?: boolean;
   defaultEntityName?: string;
   /** L'adresse du siège, quand on la donne à la création. */
   adresse?: string | null;

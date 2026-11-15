@@ -2537,6 +2537,8 @@ export const en: Dict = {
   "refus.invitation.expiree": "This invitation is no longer valid.",
   "refus.organisation.type_inconnu": "This type of organisation does not exist.",
   "refus.organisation.offre_multisociete_requise": "Your plan covers a single company.",
+  "refus.organisation.supplement_a_accepter":
+    "This company is not included in your plan: its extra price must be accepted.",
   "refus.organisation.juridiction_requise": "Choose the organisation’s jurisdiction.",
   "refus.mandat.statut_inconnu": "This engagement status does not exist.",
   "refus.etablissement.dernier":

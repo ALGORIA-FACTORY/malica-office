@@ -94,8 +94,13 @@ function SocieteEnPlus() {
     }
   })();
 
+  // Sur le web, rien ne part avant que la base ait dit le prix (revue de #405) : un devis en
+  // cours ou en échec ne vaut pas « rien à payer ». La porte l'exige aussi (supplementAccepte).
+  const devisPret = !COMMERCE || accueil.isSuccess;
+
   async function ajouter(event: React.FormEvent) {
     event.preventDefault();
+    if (!devisPret || bloquee || (supplement !== null && !supplementAccepte)) return;
     setPending(true);
     setErreur(null);
     try {
@@ -107,6 +112,7 @@ function SocieteEnPlus() {
         jurisdiction: pme.jurisdiction,
         currency: pme.currency,
         adresse: adresse.trim() || null,
+        supplementAccepte: supplement !== null && supplementAccepte,
       });
       await queryClient.invalidateQueries();
       await navigate({ to: "/office" });
@@ -199,7 +205,12 @@ function SocieteEnPlus() {
           <button
             type="submit"
             className="btn mt-2"
-            disabled={pending || nom.trim() === "" || (supplement !== null && !supplementAccepte)}
+            disabled={
+              pending ||
+              !devisPret ||
+              nom.trim() === "" ||
+              (supplement !== null && !supplementAccepte)
+            }
           >
             {t("pme.societe.ajouter")}
           </button>

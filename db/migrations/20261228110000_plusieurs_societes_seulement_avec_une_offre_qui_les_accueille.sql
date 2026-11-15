@@ -14,6 +14,11 @@
 --  c'est `ref.offres.organisations_max` (R4), lu par `licence_d_accueil`.
 --  La première société d'une personne, elle, naît toujours avec sa licence.
 --
+--  Au-delà de ce que l'offre comprend (Premium, au-delà de ses sociétés
+--  incluses), la société se paie en plus : la porte exige désormais l'accord
+--  (`p_supplement_accepte`), refusé sinon (`refus.organisation.supplement_a_accepter`).
+--  L'écran le demande par une case ; aucun autre chemin ne facture sans lui.
+--
 --  `societe_en_plus_devis` le dit à l'écran : `{"offre_multisociete_requise":
 --  true}` quand l'appelant est titulaire et qu'aucune licence ne l'accueille.
 --
@@ -21,7 +26,10 @@
 --  seule cette branche change. REJEU (R11) : aucune donnée de référence écrite.
 -- ======================================================================
 
-create or replace function public.create_organization(p_kind text, p_name text, p_validation_mode app.validation_mode_t DEFAULT 'mandate'::app.validation_mode_t, p_legal_id text DEFAULT NULL::text, p_jurisdiction text DEFAULT NULL::text, p_currency text DEFAULT NULL::text)
+-- Un paramètre de plus : la signature change, l'ancienne s'en va (sinon deux portes).
+drop function public.create_organization(text, text, app.validation_mode_t, text, text, text);
+
+create function public.create_organization(p_kind text, p_name text, p_validation_mode app.validation_mode_t DEFAULT 'mandate'::app.validation_mode_t, p_legal_id text DEFAULT NULL::text, p_jurisdiction text DEFAULT NULL::text, p_currency text DEFAULT NULL::text, p_supplement_accepte boolean DEFAULT false)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -107,14 +115,22 @@ begin
   -- Une PME de plus du même propriétaire rejoint SA licence (et la paie au prix de la société en
   -- plus au-delà de ce que l'offre comprend) ; sans licence qui l'accueille, une licence naît.
   -- Un cabinet n'en a pas (rend vide, sans lever).
-  if p_kind = 'pme' then
-    -- Plus d'une société, seulement avec une offre qui en accueille plusieurs : un titulaire dont
-    -- aucune licence n'a de place (son offre plafonne à une société) ne reçoit PAS une seconde
-    -- licence à côté — il monte d'offre d'abord (20261228110000).
-    if facturation.societe_rejoint_la_licence_du_dirigeant(v_org, true, 'societe_en_plus') is null
-       and exists (select 1 from facturation.droits_v dv where dv.titulaire = v_uid) then
+  if p_kind = 'pme'
+     -- Dans ce que l'offre comprend : la société rejoint la licence, sans rien de plus à payer.
+     and facturation.societe_rejoint_la_licence_du_dirigeant(v_org, false, 'societe_en_plus') is null
+     and exists (select 1 from facturation.droits_v dv where dv.titulaire = v_uid) then
+    -- Plus d'une société, seulement avec une offre qui en accueille plusieurs : un titulaire
+    -- dont aucune licence n'a de place ne reçoit PAS une seconde licence à côté.
+    if facturation.licence_d_accueil(true) is null then
       raise exception 'refus.organisation.offre_multisociete_requise' using errcode = '22023';
     end if;
+    -- Au-delà de ce que l'offre comprend, la société se paie en plus : seulement acceptée.
+    -- L'écran le demande par une case ; la porte l'exige, pour qu'aucun chemin (un devis pas
+    -- encore chargé, la coque qui ne montre aucun prix) ne facture sans accord.
+    if not coalesce(p_supplement_accepte, false) then
+      raise exception 'refus.organisation.supplement_a_accepter' using errcode = '22023';
+    end if;
+    perform facturation.societe_rejoint_la_licence_du_dirigeant(v_org, true, 'societe_en_plus');
   end if;
   perform facturation.licence_naitre(v_org, v_uid, null, current_date);
 
@@ -126,6 +142,9 @@ begin
   return v_org;
 end
 $function$;
+
+revoke execute on function public.create_organization(text, text, app.validation_mode_t, text, text, text, boolean) from public, anon, service_role;
+grant execute on function public.create_organization(text, text, app.validation_mode_t, text, text, text, boolean) to authenticated;
 
 create or replace function public.societe_en_plus_devis()
 returns jsonb

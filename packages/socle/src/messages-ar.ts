@@ -2459,6 +2459,8 @@ export const ar: Dict = {
   "refus.invitation.expiree": "هذه الدعوة لم تعد صالحة.",
   "refus.organisation.type_inconnu": "نوع المؤسسة هذا غير موجود.",
   "refus.organisation.offre_multisociete_requise": "عرضك لا يشمل إلا شركة واحدة.",
+  "refus.organisation.supplement_a_accepter":
+    "هذه الشركة غير مشمولة في عرضك: يجب قبول سعرها الإضافي.",
   "refus.organisation.juridiction_requise": "اختر ولاية المؤسسة.",
   "refus.mandat.statut_inconnu": "حالة التكليف هذه غير موجودة.",
   "refus.etablissement.dernier": "هذه آخر منشأة مفتوحة لهذه الشركة: لا تُغلق.",

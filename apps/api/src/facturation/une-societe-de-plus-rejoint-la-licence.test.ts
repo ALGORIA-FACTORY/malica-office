@@ -37,14 +37,17 @@ async function aBlanc(corps: (db: pg.PoolClient) => Promise<void>) {
   }
 }
 
-/** Le propriétaire crée une société par la porte qu'ouvre l'écran, et rend son identifiant. */
-const creerSociete = (db: pg.PoolClient, qui: string, nom: string) =>
+/**
+ * Le propriétaire crée une société par la porte qu'ouvre l'écran, et rend son identifiant.
+ * `accepte` : la case du prix d'une société en plus (20261228110000).
+ */
+const creerSociete = (db: pg.PoolClient, qui: string, nom: string, accepte = false) =>
   enPersonne(db, qui, async () => {
     const { rows } = await db.query<{ id: string }>(
-      `select public.create_organization('pme', $1, 'autonome', $2, j.jurisdiction, j.currency) as id
+      `select public.create_organization('pme', $1, 'autonome', $2, j.jurisdiction, j.currency, $3) as id
          from (select distinct on (jurisdiction) jurisdiction, currency
                  from ref.jurisdiction_packs order by jurisdiction, effective_from desc limit 1) j`,
-      [nom, matriculeDEssai("A", "M")],
+      [nom, matriculeDEssai("A", "M"), accepte],
     );
     return rows[0]!.id;
   });
@@ -110,7 +113,17 @@ describe("une société de plus rejoint la licence de son propriétaire", { skip
       await enPremium(db, qui, premiere);
       const g = await grille(db, "premium");
       assert.ok(g.max === null || g.max > g.incluses, "la grille laisse une société de plus");
-      for (let i = 2; i <= g.incluses + 1; i++) await creerSociete(db, qui, `Société ${i}`);
+      for (let i = 2; i <= g.incluses; i++) await creerSociete(db, qui, `Société ${i}`);
+      // Au-delà de l'inclus : sans l'accord, la porte refuse, et rien n'est créé.
+      await db.query("savepoint sans_accord");
+      await assert.rejects(
+        creerSociete(db, qui, "Société en plus"),
+        /refus\.organisation\.supplement_a_accepter/,
+      );
+      await db.query("rollback to savepoint sans_accord");
+      assert.equal((await licencesDe(db, qui))[0]!.organisations, g.incluses, "rien de plus");
+      // Avec l'accord, elle rejoint la licence, au prix de la société en plus.
+      await creerSociete(db, qui, "Société en plus", true);
       const l = await licencesDe(db, qui);
       assert.equal(l.length, 1, "toujours une seule licence");
       assert.equal(l[0]!.organisations, g.incluses + 1);
