@@ -10,6 +10,9 @@
 # (install-ssh-key). Il est tapé ici, masqué, voyage sur l'entrée standard —
 # jamais sur une ligne de commande ni sur le disque — et n'est plus utile
 # ensuite.
+#
+# Le bloc DISTANT voyage entre apostrophes droites : il n’en contient aucune
+# (les commentaires prennent l’apostrophe typographique).
 set -euo pipefail
 
 SOUS_COMPTE="${1:?usage : pilote-sauvegarde.sh <sous-compte, ex. u664122-sub1>}"
@@ -25,13 +28,18 @@ printf '%s\n' "$MOT" | gcloud compute ssh "$MACHINE" --zone="$ZONE" --tunnel-thr
     cat <<'DISTANT'
 set -euo pipefail
 IFS= read -r SSHPASS; export SSHPASS
-HOTE="$SOUS_COMPTE.your-storagebox.de"
+# Le nom propre au sous-compte (u…-sub1.your-storagebox.de) met du temps à
+# exister dans le DNS après sa création ; celui de la box répond tout de suite
+# et accepte l’utilisateur du sous-compte (vu le 15 novembre 2026).
+HOTE="${SOUS_COMPTE%-sub*}.your-storagebox.de"
 CLE=/srv/malica/sauvegarde/cle_ssh
-command -v sshpass >/dev/null || { apt-get install -y -q sshpass >/dev/null; RETIRER=1; }
+# sshpass ne sert qu’ici : installé, puis retiré quoi qu’il arrive.
+export DEBIAN_FRONTEND=noninteractive
+trap "apt-get purge -y -q sshpass >/dev/null 2>&1 || true" EXIT
+apt-get install -y -q sshpass >/dev/null 2>&1
 sshpass -e ssh -p 23 -o StrictHostKeyChecking=accept-new -o PubkeyAuthentication=no \
   "$SOUS_COMPTE@$HOTE" install-ssh-key <"$CLE.pub"
 unset SSHPASS
-[ -n "${RETIRER:-}" ] && apt-get purge -y -q sshpass >/dev/null
 # La preuve : la clé seule ouvre le sous-compte, sans mot de passe.
 ssh -i "$CLE" -p 23 -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$SOUS_COMPTE@$HOTE" ls >/dev/null
 sed -i -E "s|^RESTIC_REPOSITORY=.*|RESTIC_REPOSITORY=sftp:$SOUS_COMPTE@$HOTE:restic|" /srv/malica/.env
