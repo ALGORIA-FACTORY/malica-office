@@ -238,14 +238,15 @@ end
 $function$;
 
 -- public.acces_arreter
-CREATE OR REPLACE FUNCTION public.acces_arreter(p_acces uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+create or replace function public.acces_arreter(p_acces uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
 declare
   v facturation.acces;
+  v_courante text;
 begin
   select * into v from facturation.acces where id = p_acces for update;
   if v.id is null or v.canal <> 'cabinet'
@@ -268,17 +269,23 @@ begin
   update facturation.acces
      set statut = 'termine', effet_au = current_date, motif_fin = 'retrait_cabinet'
    where id = v.id;
+  -- L'alerte dit l'offre que le client garde, pas celle que la comptabilité couvrait : monté en
+  -- Premium à sa charge, il continue en Premium (recette du 13 novembre, B6).
+  select f.offre_code into v_courante
+    from facturation.forfait_courant_v f where f.licence_id = v.licence_id;
   insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
   values (v.tenant_id, auth.uid(), 'acces.arrete', 'facturation', 'acces', v.id,
-          jsonb_build_object('cabinet', v.cabinet_tenant_id, 'offre', v.offre_code));
-  perform notif.emettre(v.tenant_id, 'acces.arrete', jsonb_build_object('acces_id', v.id, 'offre', v.offre_code,
+          jsonb_build_object('cabinet', v.cabinet_tenant_id, 'offre', coalesce(v_courante, v.offre_code),
+                             'offre_couverte', v.offre_code));
+  perform notif.emettre(v.tenant_id, 'acces.arrete', jsonb_build_object('acces_id', v.id, 'offre', coalesce(v_courante, v.offre_code),
+                             'offre_couverte', v.offre_code,
                              'cabinet', (select name from identity.organizations where id = v.cabinet_tenant_id)));
   return jsonb_build_object('acces_id', v.id, 'effet', 'rendu_au_dirigeant');
 end
-$function$;
+$$;
 
 -- public.acces_changer_offre
-CREATE OR REPLACE FUNCTION public.acces_changer_offre(p_acces uuid, p_offre text)
+create or replace function public.acces_changer_offre(p_acces uuid, p_offre text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -338,14 +345,10 @@ begin
   v_rang_a := (ref.offre_a(v.offre_code, current_date)).rang;
   v_rang_o := v_grille.rang;
 
-  -- Le client est monté à sa charge au-dessus de ce que la comptabilité paie :
-  -- elle ne « monte » pas vers l'offre qu'il a déjà (recette du 11 novembre, 1.2).
-  select f.offre_code into v_forfait
-    from facturation.forfait_courant_v f where f.licence_id = v.licence_id;
-  if v_grille.code = v_forfait and v_rang_o > v_rang_a then
-    raise exception 'refus.abonnement.deja_l_offre_du_client' using errcode = 'check_violation';
-  end if;
-
+  -- Le client est monté à sa charge au-dessus de ce que la comptabilité paie : elle peut
+  -- prendre en charge l'offre qu'il a déjà (recette du 13 novembre, B7). Le même chemin que
+  -- toute montée : ce que le client a réglé d'avance court jusqu'à son terme (la garde), puis
+  -- la comptabilité paie l'offre entière ; aucun jour ne se paie deux fois.
   if v_rang_o > v_rang_a then
     -- Montée : sur-le-champ, le dirigeant est prévenu.
     update facturation.acces_descentes
