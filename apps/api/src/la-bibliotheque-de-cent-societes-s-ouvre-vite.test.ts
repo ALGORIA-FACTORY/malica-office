@@ -178,12 +178,14 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     await s.fait("expert", "supervision.voir", vecue);
     await s.priseEnCharge(vecue);
     await recopierLaPieceVecue(s, vecue, societes.slice(0, 60));
+    // Le centre de la personne : une ligne par notification, à son nom.
     await s.admin.query(
-      `insert into collab.notifications (tenant_id, kind, payload)
-       select ($1::uuid[])[1 + (g % array_length($1::uuid[], 1))], 'piece.retournee',
+      `insert into notif.envois (tenant_id, destinataire, code, canal, sujet_cle, decision, donnees)
+       select ($1::uuid[])[1 + (g % array_length($1::uuid[], 1))], $4::uuid, 'piece.retournee', 'app',
+              'banc-' || g, 'a_remettre',
               jsonb_build_object('piece_id', md5('banc-histoire-' || (1 + g % $2::int))::uuid)
          from generate_series(1, $3::int) g`,
-      [societes.slice(0, 60), AVEC_HISTOIRE, NOTIFICATIONS],
+      [societes.slice(0, 60), AVEC_HISTOIRE, NOTIFICATIONS, s.gens.amel.id],
     );
 
     /*

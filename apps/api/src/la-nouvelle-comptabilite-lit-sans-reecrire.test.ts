@@ -112,8 +112,8 @@ describe("la nouvelle comptabilité lit sans réécrire", { skip: !BASE_CONFIGUR
     const lues = (qui: string, cabinet: string, kind: string) =>
       sousIdentite(qui, async (db) => {
         const { rows } = await db.query<{ nouvelle: string }>(
-          `select payload ->> 'nouvelle' as nouvelle from collab.notifications
-            where tenant_id = $1 and kind = $2`,
+          `select donnees ->> 'nouvelle' as nouvelle from notif.envois
+            where tenant_id = $1 and canal = 'app' and code = $2`,
           [cabinet, kind],
         );
         return rows.map((r) => r.nouvelle);

@@ -542,3 +542,22 @@ Tous sont recréables par les scripts de la section 5 ; aucun n'est un compte r�
 7. **La vérification du référentiel** (§2) : on compare `ref` à une base vierge avant de s'y fier, ou on l'accepte tel quel ?
 
 Rien ne bloque dans vos règles : préserver `legal` et `app.migrations` est compatible avec tout ce qui précède. Le seul point où la règle devra être tenue activement, c'est `agents.model_pricing` — la tentation d'un `TRUNCATE … CASCADE` large.
+
+## Addendum du 14 novembre 2026 — le moteur de notifications
+
+Le moteur (`notif.*`, commit `cb24883a`, branche `chantier/moteur-notifications`) remplace
+`collab.notifications` et ses vues, retirés par la migration `20261226160000`. `purge_metier.sql`
+est mis à jour en conséquence :
+
+- retiré : `collab.notifications` (table supprimée) ;
+- ajoutés à vider : `notif.envois`, `notif.remises`, `notif.suites`, `notif.preferences`
+  (données par personne) ;
+- ajoutés comme préservés : `notif.gabarits` (textes versionnés) et `notif.diffusions`
+  (quel genre part par courriel, daté) — tous deux seedés par migration ;
+- le compte passe de 72 à 75 tables nommées (verrous 2 à 4 et compteurs « pendant »).
+
+Aucune clé étrangère entrante ne vient d'une table préservée : la fermeture reste dans la liste.
+Ce changement n'a pas été exécuté : la purge refuse toute base hors `malica_local` et `malica`.
+Sur `malica_test`, le verrou 2 échoue déjà, pour des tables antérieures au moteur
+(`facturation.*`, `fabrique.*`, `plateforme.*`, …) absentes de la liste ; ces tables ne sont
+pas liées au moteur et restent à traiter avant toute purge.

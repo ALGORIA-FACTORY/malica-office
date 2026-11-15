@@ -110,7 +110,8 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
     assert.equal(await forfait(), "basic");
     const notes = await sous<{ kind: string }>(
       expert,
-      `select kind from collab.notifications where tenant_id = $1 and kind like 'acces.%'`,
+      `select code as kind from notif.envois
+        where tenant_id = $1 and canal = 'app' and code like 'acces.%'`,
       [cabinet],
     );
     assert.ok(notes.some((n) => n.kind === "acces.refuse"));
@@ -208,7 +209,8 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
 
     // La notification reçue par la PME ne portait pas de prix.
     const notifs = await admin.query<{ payload: Record<string, unknown> }>(
-      `select payload from collab.notifications where tenant_id = $1 and kind = 'acces.propose'`,
+      `select donnees as payload from notif.envois
+        where tenant_id = $1 and canal = 'app' and code = 'acces.propose'`,
       [pme],
     );
     assert.ok(notifs.rowCount! > 0);
@@ -285,7 +287,8 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
     assert.equal(await forfait(), "team", "la PME garde son offre, à sa charge");
     const avertie = await sous<{ kind: string }>(
       dirigeant,
-      `select kind from collab.notifications where tenant_id = $1 and kind = 'acces.repris'`,
+      `select code as kind from notif.envois
+        where tenant_id = $1 and canal = 'app' and code = 'acces.repris'`,
       [pme],
     );
     assert.equal(avertie.length, 1);

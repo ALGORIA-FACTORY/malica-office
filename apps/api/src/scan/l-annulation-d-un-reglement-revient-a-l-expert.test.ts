@@ -146,12 +146,12 @@ describe("l'annulation d'un règlement revient à l'expert", { skip: !BASE_CONFI
 
     // La file du cabinet l'apprend, et l'écran de la pièce montre le geste.
     const { rows: notes } = await admin.query<{ n: number }>(
-      `select count(*)::int as n from collab.notifications
-        where tenant_id = $1 and kind = 'ecriture.proposed'
-          and payload ->> 'ecriture_id' = $2`,
+      `select count(*)::int as n from notif.envois
+        where tenant_id = $1 and canal = 'app' and code = 'ecriture.proposed'
+          and donnees ->> 'ecriture_id' = $2`,
       [pme, contre[0]!.id],
     );
-    assert.equal(notes[0]!.n, 1, "le cabinet est averti");
+    assert.ok(notes[0]!.n >= 1, "le cabinet est averti");
     const paiements = (await rpc(expert, "capture", "paiementsDUnePiece", piece)) as Array<{
       id: string;
       annulationAInscrire: string | null;

@@ -1006,6 +1006,26 @@ a tranchés à la revue de #388 :
    société d'une personne naît toujours avec sa licence ; une société qu'une comptabilité crée pour son
    client suit son propre chemin (`dirigeant_arrive`), inchangé.
 
+### C-5 — Le moteur de notifications écrit une ligne par destinataire (13 novembre 2026)
+
+Tranché par le dirigeant : **remplacement total** de l'ancien fil (`collab.notifications`) par le
+moteur (`docs/moteur-de-notifications.md`). Ce que cela change pour le produit, à confirmer par Wissem
+avant toute mise en production :
+
+- **Qui lit quoi est décidé une fois, à l'écriture.** Une personne qui obtient plus tard l'accès à une
+  pièce ou à une société ne retrouve pas les notifications passées. L'accès perdu, lui, cache le centre
+  aussitôt.
+- **Les opérateurs de la plateforme ne reçoivent plus de copie par société.** L'ancien lecteur leur
+  montrait tout ; le nouveau ne leur adresse rien et leur laisse la lecture de la table.
+- **`facture.emise` ne part pas par courriel**, malgré son modèle : seuls les quatre paliers de relance
+  d'impayé sont diffusés (`notif.diffusions`). Un genre de plus est une ligne datée.
+- **Coût d'une émission** : `notif.audience` rejoue la règle de lecture par candidat. Mesuré : 19 ms pour
+  six candidats ; 495 ms pour un client engagé avec un cabinet de cinquante membres, ramenés à 26 ms en
+  ne retenant des cabinets que leurs experts et les collaborateurs affectés. À remesurer sur un volume réel
+  avant les opérations en masse.
+- **Non éprouvé sur le poste** : l'envoi réel par Brevo (clé et expéditeur absents). Les épreuves des
+  relances passent avec le changement de rôle neutralisé ; elles demandent `set role malica_api`.
+
 ### Deux jours dans le moteur : celui du serveur et celui de la plateforme (nuit du 14 au 15 novembre 2026)
 
 La CI de `main` est tombée rouge entre 23 h et minuit UTC (`une-descente-n-efface-pas-une-montee`, « la facture part

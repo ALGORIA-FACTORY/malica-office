@@ -14,13 +14,15 @@ import { InvitationsPourMoi } from "@/components/malica/InvitationsPourMoi";
 import { sensDuSolde } from "@/lib/sens-du-solde";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import {
   attendLaPersonne,
+  derniereRemise,
   etatDeLAccueil,
+  piecesAExporter,
   piecesALire,
   piecesEnEchec,
   raisonCourte,
@@ -46,6 +48,7 @@ import { nomPourSaluer } from "@/lib/nom-de-la-personne";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
 import { useDossiers } from "@/hooks/use-dossiers";
+import { ExporterDepuisLaPme } from "@/components/malica/exporter-depuis-la-pme";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { dossierDeLaPiece } from "@/lib/dossiers";
 import type { PieceLue } from "@malica/socle/ports/repositories";
@@ -440,6 +443,20 @@ function PmeHome() {
    */
   const aLire = piecesALire(lues.data ?? []);
   /*
+   * À EXPORTER (G5, maquette pme-export-bibliotheque) — pour la seule société
+   * SANS comptabilité : ses pièces n'ont personne à qui partir, elle les remet
+   * à un comptable extérieur. « À exporter » compte celles qu'aucun export n'a
+   * remises ; ensuite, « Remis le … ». Une société avec comptabilité n'a pas
+   * cette ligne.
+   */
+  const sansComptabilite = cabinet.isSuccess && cabinet.data === null;
+  const aExporter = sansComptabilite ? piecesAExporter(lues.data ?? []) : [];
+  const remisLe = sansComptabilite ? derniereRemise(lues.data ?? []) : null;
+  // Une fois l'export lancé, les pièces sortent de « à exporter » : la feuille reste ouverte
+  // jusqu'à ce que la personne la referme, et ne disparaît pas avec son compteur.
+  const [exportMonte, setExportMonte] = useState(false);
+  if (!exportMonte && aExporter.length > 0) setExportMonte(true);
+  /*
    * 24 octobre 2026, Wissem : « rien ne dit que la lecture casse ». Une pièce
    * dont la lecture a échoué se voit ici, en rouge, avec sa raison ; la carte
    * mène à la plus récente, dont la fiche porte les gestes.
@@ -700,6 +717,34 @@ function PmeHome() {
             </svg>
           </span>
         </div>
+
+        {/* ── 3 bis. à exporter : une société sans comptabilité remet ses pièces ─── */}
+        {exportMonte || remisLe ? (
+          <div className="exp-home" data-testid="a-exporter">
+            {exportMonte ? (
+              <>
+                {aExporter.length > 0 ? (
+                  <p>
+                    <b>{t("pme.accueil.aExporter", { count: aExporter.length })}</b>{" "}
+                    {t("pme.accueil.aExporterTexte")}
+                  </p>
+                ) : null}
+                <ExporterDepuisLaPme
+                  quandFerme={() => setExportMonte(false)}
+                  pieces={aExporter.map((p) => p.id)}
+                  societes={[{ id: pme.tenantId, nom: pme.orgName, n: aExporter.length }]}
+                  titre={t("pme.accueil.exporter")}
+                  libelle={t("pme.accueil.exporter")}
+                  classe="more"
+                  classeDuTexte="sub"
+                />
+              </>
+            ) : null}
+            {remisLe ? (
+              <p className="sub">{t("pme.accueil.remisLe", { date: jour(remisLe) })}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* ── 4. vos dossiers : les sept, toujours (`ref.dossiers`) ──────── */}
         {sept.dossiers.length > 0 ? (

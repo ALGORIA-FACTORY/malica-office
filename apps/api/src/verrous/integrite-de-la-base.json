@@ -46,6 +46,7 @@
     "licence_statut": "select (regexp_matches(pg_get_constraintdef(oid), '''([^'']+)''::text', 'g'))[1] from pg_constraint where conrelid = 'facturation.licences'::regclass and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \\(\\(statut = ANY'",
     "mention": "select code from ref.mentions",
     "mention_d_impression": "select code from ref.mentions_d_impression",
+    "export_bibliotheque": "select code from ref.mentions_d_export",
     "moyen_en_ligne": "select code from facturation.moyens_paiement",
     "moyen_paiement": "select code from ref.payment_means",
     "moyen_paiement_par": "select code from ref.payment_means where role_achat is not null",
@@ -84,6 +85,7 @@
     "facturation.a_facturer": "DETTE : la lecture gardée (plateforme, titulaire, cabinet payeur) de ce qu'un mois facturerait n'a pas d'écran ; depuis 20261127090000 l'émission lit son corps, facturation.lignes_a_facturer, sans garde.",
     "facturation.a_facturer_cabinet": "DETTE : la lecture gardée (plateforme, membres du cabinet) de la facture mensuelle à venir n'a pas d'écran ; depuis 20261127090000 l'émission lit son corps, facturation.lignes_a_facturer_cabinet, sans garde.",
     "facturation.emettre_cabinet": "DETTE : l'émission MANUELLE de la facture mensuelle du cabinet n'a pas d'écran ; l'automatique passe par fabrique.facturation_du_jour (20261127090000), qui appelle son corps, facturation.emission_du_cabinet.",
+    "plateforme.export_regler": "DETTE : la tour règle les limites d'un export de bibliothèque (taille, conservation, simultanés ; 20261227090000) en ajout seul, daté et motivé, sans migration — mais sans écran de la tour à ce jour, comme impression_regler.",
     "plateforme.impression_regler": "DETTE : la tour règle le volume d'impression (seuil, plafond ; 20261217090000) en ajout seul, daté et motivé, sans migration — mais sans écran de la tour à ce jour.",
     "plateforme.servir_requisition": "DETTE : porte d'opérateur de la tour (réquisition d'une autorité), sans écran à ce jour.",
     "public.etablissement_archiver": "DETTE : l'archivage d'un établissement (20261018130000) n'a pas d'écran.",
@@ -94,8 +96,6 @@
     "banque.lettrage_etat.lettrage_etat_tenant_id_fkey": "DETTE (lot D, hors périmètre) : le seul index menant par tenant_id est partiel (where active). Cascade depuis identity.organizations, qu'aucun chemin ne supprime (R7 : une organisation s'archive). À indexer avant toute purge d'organisation.",
     "collab.assignments.assignments_cabinet_tenant_id_fkey": "DETTE (lot D, hors périmètre) : l'index menant par cabinet_tenant_id est partiel (where active). Cascade depuis identity.organizations, qu'aucun chemin ne supprime (R7). À indexer avant toute purge d'organisation.",
     "collab.assignments.assignments_collaborator_id_fkey": "DETTE (lot D, hors périmètre) : l'index menant par collaborator_id est partiel (where active). Cascade depuis auth.users, qu'aucun chemin de production ne supprime (seul un test le fait). À indexer avant tout effacement de compte.",
-    "collab.notification_lectures.notification_lectures_notification_id_fkey": "DETTE (lot D, hors périmètre) : la clé primaire (tenant_id, notification_id, user_id) ne mène pas par notification_id. Cascade depuis collab.notifications, qu'aucun chemin ne supprime à ce jour. À indexer avant toute purge des notifications.",
-    "collab.notification_lectures.notification_lectures_user_id_fkey": "DETTE (lot D, hors périmètre) : l'index (tenant_id, user_id) ne mène pas par user_id. Cascade depuis auth.users, qu'aucun chemin de production ne supprime (seul un test le fait). À indexer avant tout effacement de compte.",
     "collab.push_devices.push_devices_user_id_fkey": "DETTE (lot D, hors périmètre) : l'index (tenant_id, user_id) ne mène pas par user_id. Cascade depuis auth.users, qu'aucun chemin de production ne supprime (seul un test le fait). À indexer avant tout effacement de compte."
   },
   "lecteurs_du_parametrage": {

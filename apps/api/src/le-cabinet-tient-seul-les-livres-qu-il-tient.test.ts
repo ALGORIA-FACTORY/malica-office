@@ -150,8 +150,8 @@ describe("le cabinet tient seul les livres qu'il tient", { skip: !BASE_CONFIGURE
     Number(
       (
         await admin.query<{ n: string }>(
-          `select count(*)::text as n from collab.notifications
-            where kind = $1 and payload ->> 'piece_id' = $2`,
+          `select count(*)::text as n from notif.envois
+            where canal = 'app' and code = $1 and donnees ->> 'piece_id' = $2`,
           [kind, id],
         )
       ).rows[0]!.n,

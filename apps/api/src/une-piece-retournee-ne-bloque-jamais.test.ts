@@ -167,8 +167,8 @@ describe("une pièce retournée ne bloque jamais", { skip: !BASE_CONFIGUREE }, (
   const notifie = async (id: string, kind: string) =>
     (
       await admin.query(
-        `select 1 from collab.notifications
-          where tenant_id = $1 and kind = $2 and payload ->> 'piece_id' = $3`,
+        `select 1 from notif.envois
+          where tenant_id = $1 and canal = 'app' and code = $2 and donnees ->> 'piece_id' = $3`,
         [pme, kind, id],
       )
     ).rows.length > 0;

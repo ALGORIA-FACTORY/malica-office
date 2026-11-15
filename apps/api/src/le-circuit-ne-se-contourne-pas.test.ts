@@ -95,7 +95,7 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
       /permission denied/,
     );
     const { rows } = await s.admin.query(
-      `select count(*)::int as n from collab.notifications where payload ->> 'note' = 'FORGEE'`,
+      `select count(*)::int as n from notif.envois where donnees ->> 'note' = 'FORGEE'`,
     );
     assert.equal(rows[0]?.n, 0);
   });
@@ -104,8 +104,8 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
     const id = await s.deposer("sami", "personnel");
     await s.fait("sami", "collab.setPieceVis", id, "entite");
     const { rows } = await s.admin.query<{ user_id: string | null }>(
-      `select user_id from collab.notifications
-        where kind = 'piece.a_valider' and payload ->> 'piece_id' = $1`,
+      `select destinataire as user_id from notif.envois
+        where canal = 'app' and code = 'piece.a_valider' and donnees ->> 'piece_id' = $1`,
       [id],
     );
     assert.deepEqual(
@@ -115,8 +115,7 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
     );
     // Même une notification de société sur cette pièce reste dans la société.
     await s.admin.query(
-      `insert into collab.notifications (tenant_id, kind, payload)
-       values ($1, 'piece.a_valider', jsonb_build_object('piece_id', $2::text))`,
+      `select notif.emettre($1, 'piece.a_valider', jsonb_build_object('piece_id', $2::text))`,
       [s.pme, id],
     );
     const duCabinet = (await s.fait("expert", "collab.notifications", [s.pme])) as unknown[];
@@ -194,7 +193,7 @@ describe("le circuit ne se contourne pas", { skip: !BASE_CONFIGUREE }, () => {
       /refus\.piece\.non_partagee$/,
     );
     const { rows } = await s.admin.query(
-      `select count(*)::int as n from collab.notifications where payload ->> 'piece_id' = $1`,
+      `select count(*)::int as n from notif.envois where donnees ->> 'piece_id' = $1`,
       [id],
     );
     assert.equal(rows[0]?.n, 0);

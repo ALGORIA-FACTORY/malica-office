@@ -163,8 +163,15 @@ function stylesXml(): string {
   );
 }
 
-/** Le classeur. `date` date les entrées de l'archive (le même contenu, les mêmes octets). */
-export function classeurXlsx(f: Feuille, date: Date): Uint8Array {
+/**
+ * Le classeur. `date` date les entrées de l'archive (le même contenu, les
+ * mêmes octets). Une feuille, ou plusieurs — une par société dans l'export
+ * de la bibliothèque : leurs noms sont distincts, de 31 caractères au plus.
+ */
+export function classeurXlsx(feuilles: Feuille | readonly Feuille[], date: Date): Uint8Array {
+  const f: readonly Feuille[] = "nom" in feuilles ? [feuilles] : feuilles;
+  if (f.length === 0) throw new Error("xlsx.sans_feuille");
+  const numeros = f.map((_, i) => i + 1);
   const fichiers: Record<string, string> = {
     "[Content_Types].xml":
       EN_TETE_XML +
@@ -172,7 +179,12 @@ export function classeurXlsx(f: Feuille, date: Date): Uint8Array {
       `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
       `<Default Extension="xml" ContentType="application/xml"/>` +
       `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
-      `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
+      numeros
+        .map(
+          (n) =>
+            `<Override PartName="/xl/worksheets/sheet${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`,
+        )
+        .join("") +
       `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>` +
       `</Types>`,
     "_rels/.rels":
@@ -183,15 +195,27 @@ export function classeurXlsx(f: Feuille, date: Date): Uint8Array {
     "xl/workbook.xml":
       EN_TETE_XML +
       `<workbook xmlns="${NS_TABLEUR}" xmlns:r="${NS_RELATIONS_DOC}">` +
-      `<sheets><sheet name="${xml(f.nom.slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets>` +
+      `<sheets>${f
+        .map(
+          (feuille, i) =>
+            `<sheet name="${xml(feuille.nom.slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`,
+        )
+        .join("")}</sheets>` +
       `</workbook>`,
     "xl/_rels/workbook.xml.rels":
       EN_TETE_XML +
       `<Relationships xmlns="${NS_RELATIONS_PAQUET}">` +
-      `<Relationship Id="rId1" Type="${NS_RELATIONS_DOC}/worksheet" Target="worksheets/sheet1.xml"/>` +
-      `<Relationship Id="rId2" Type="${NS_RELATIONS_DOC}/styles" Target="styles.xml"/>` +
+      numeros
+        .map(
+          (n) =>
+            `<Relationship Id="rId${n}" Type="${NS_RELATIONS_DOC}/worksheet" Target="worksheets/sheet${n}.xml"/>`,
+        )
+        .join("") +
+      `<Relationship Id="rId${f.length + 1}" Type="${NS_RELATIONS_DOC}/styles" Target="styles.xml"/>` +
       `</Relationships>`,
-    "xl/worksheets/sheet1.xml": feuilleXml(f),
+    ...Object.fromEntries(
+      f.map((feuille, i) => [`xl/worksheets/sheet${i + 1}.xml`, feuilleXml(feuille)]),
+    ),
     "xl/styles.xml": stylesXml(),
   };
   const entrees = Object.fromEntries(
