@@ -2304,6 +2304,7 @@ begin
                   and e.decision = 'a_remettre') then
       for d in select x.canal, x.gabarit from notif.diffusions x
                 where x.code = 'impaye.' || r.palier
+                  and x.canal = 'email'
                   and x.valid_from <= current_date
                   and (x.valid_to is null or x.valid_to > current_date) loop
         begin
