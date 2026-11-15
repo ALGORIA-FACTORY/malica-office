@@ -262,7 +262,21 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
           return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
         });
       const avant = await lire();
-      assert.equal(avant.length, 1);
+      // Le message dit l'état de la file : un échec se lit sans rejouer l'épreuve.
+      const etat = async () =>
+        JSON.stringify({
+          envois: (
+            await db.query(
+              `select n.code, n.canal, n.decision, v.etat, v.tentatives,
+                      n.gabarit_id is not null as gabarit
+                 from notif.envois n join notif.envois_v v on v.id = n.id
+                where n.destinataire = $1`,
+              [d.titulaire],
+            )
+          ).rows,
+          reglage: (await db.query("select plateforme.relances_reglage() as r")).rows[0]?.r,
+        });
+      assert.equal(avant.length, 1, avant.length === 1 ? "" : await etat());
       assert.ok(avant[0]!.titre.length > 0 && !avant[0]!.corps.includes("{{"), "jetons rendus");
       await sous(db, "malica_api", null, () =>
         db.query("select notif.remettre($1, 'remis')", [avant[0]!.envoi_id]),
