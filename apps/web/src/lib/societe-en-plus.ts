@@ -5,17 +5,25 @@
  * même règle que la porte qui la rattache), son offre, ses sociétés, son inclus, et le prix d'une
  * société en plus. Ce module choisit la phrase — jamais le chiffre.
  */
-import type { SocieteEnPlusDevis } from "@malica/socle/ports/repositories";
+import type { SocieteEnPlusAccueil } from "@malica/socle/ports/repositories";
 
 export type LigneDeLaSocieteEnPlus =
   | { cle: "pme.societe.propreAbonnement" }
+  | { cle: "pme.societe.offreMultisocieteRequise" }
   | { cle: "pme.societe.rejoint"; offre: string }
   | { cle: "pme.societe.rejointInclus"; offre: string; n: number; total: number }
   | { cle: "pme.societe.rejointEnPlus"; offre: string; prix: string };
 
-/** `accueil` : la licence qui l'accueillerait, ou `null` — la société aura sa propre licence. */
-export function ligneDeLaSocieteEnPlus(accueil: SocieteEnPlusDevis | null): LigneDeLaSocieteEnPlus {
+/**
+ * `accueil` : la licence qui l'accueillerait ; le refus que la porte opposerait (une offre à une
+ * société) ; ou `null` — la société aura sa propre licence.
+ */
+export function ligneDeLaSocieteEnPlus(
+  accueil: SocieteEnPlusAccueil | null,
+): LigneDeLaSocieteEnPlus {
   if (accueil === null) return { cle: "pme.societe.propreAbonnement" };
+  if ("offre_multisociete_requise" in accueil)
+    return { cle: "pme.societe.offreMultisocieteRequise" };
   const {
     offre,
     organisations,

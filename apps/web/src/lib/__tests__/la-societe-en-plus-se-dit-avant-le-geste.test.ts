@@ -34,6 +34,12 @@ describe("la société en plus se dit avant le geste", () => {
     });
   });
 
+  it("titulaire d'une offre à une société : la porte refuserait, l'écran le dit avant le geste", () => {
+    expect(ligneDeLaSocieteEnPlus({ offre_multisociete_requise: true })).toEqual({
+      cle: "pme.societe.offreMultisocieteRequise",
+    });
+  });
+
   it("aucune licence ne l'accueille : la société aura sa propre licence", () => {
     expect(ligneDeLaSocieteEnPlus(null)).toEqual({ cle: "pme.societe.propreAbonnement" });
   });

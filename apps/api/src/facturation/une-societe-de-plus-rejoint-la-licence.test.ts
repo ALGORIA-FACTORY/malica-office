@@ -135,9 +135,10 @@ describe("une société de plus rejoint la licence de son propriétaire", { skip
     await aBlanc(async (db) => {
       const qui = randomUUID();
       await personnesDEssai(db, qui);
-      await creerSociete(db, qui, "Première société"); // Basic, pleine (une société)
-      const seconde = await creerSociete(db, qui, "Seconde société"); // sa propre licence Basic
-      await enPremium(db, qui, seconde);
+      const premiere = await creerSociete(db, qui, "Première société"); // Basic, pleine
+      // Une offre à une société n'en accueille pas une seconde (20261228110000) : le
+      // propriétaire monte d'offre d'abord.
+      await enPremium(db, qui, premiere);
       const g = await grille(db, "premium");
 
       const devis = await enPersonne(db, qui, async () => {
@@ -152,11 +153,7 @@ describe("une société de plus rejoint la licence de son propriétaire", { skip
         return rows[0]!.r;
       });
       assert.ok(devis, "une licence accueille");
-      assert.equal(
-        devis.offre,
-        "premium",
-        "le Premium, pas la licence Basic de la première société",
-      );
+      assert.equal(devis.offre, "premium", "la licence montée en Premium");
       assert.equal(devis.organisations, 1);
       assert.equal(devis.organisations_incluses, g.incluses);
       assert.equal(Number(devis.prix_organisation_sup), Number(g.sup));
@@ -177,7 +174,10 @@ describe("une société de plus rejoint la licence de son propriétaire", { skip
     });
   });
 
-  it("aucune licence n'accueille : le devis est vide, la société aura sa propre licence", async () => {
+  // Décision du dirigeant (15 novembre 2026, revue de #388) : plus d'une société, seulement avec
+  // une offre qui en accueille plusieurs. Le titulaire d'une offre à une société ne reçoit plus
+  // d'abonnement à côté : la porte refuse, et le devis le dit avant le geste.
+  it("titulaire d'une offre à une société : le devis dit que la porte refuserait", async () => {
     await aBlanc(async (db) => {
       const qui = randomUUID();
       await personnesDEssai(db, qui);
@@ -188,20 +188,47 @@ describe("une société de plus rejoint la licence de son propriétaire", { skip
         );
         return rows[0]!.r;
       });
+      assert.deepEqual(devis, { offre_multisociete_requise: true });
+    });
+  });
+
+  it("sans licence à son nom : le devis est vide, la société aura sa propre licence", async () => {
+    await aBlanc(async (db) => {
+      const qui = randomUUID();
+      await personnesDEssai(db, qui);
+      const devis = await enPersonne(db, qui, async () => {
+        const { rows } = await db.query<{ r: unknown }>(
+          "select public.societe_en_plus_devis() as r",
+        );
+        return rows[0]!.r;
+      });
       assert.equal(devis, null);
     });
   });
 
-  it("une offre à une société (Basic) : la seconde naît sur sa propre licence, comme avant", async () => {
+  it("une offre à une société (Basic) : la seconde est refusée, ni société ni licence de plus", async () => {
     await aBlanc(async (db) => {
       const qui = randomUUID();
       await personnesDEssai(db, qui);
       await creerSociete(db, qui, "Première société");
       const g = await grille(db, (await licencesDe(db, qui))[0]!.offre);
       assert.equal(g.max, 1, "la grille de départ ne porte qu'une société");
-      await creerSociete(db, qui, "Seconde société");
-      const l = await licencesDe(db, qui);
-      assert.equal(l.length, 2, "deux licences : l'offre ne porte pas une société de plus");
+      const avant = await db.query<{ n: number }>(
+        "select count(*)::int as n from identity.organizations where created_by = $1",
+        [qui],
+      );
+      await db.query("savepoint seconde");
+      await assert.rejects(
+        creerSociete(db, qui, "Seconde société"),
+        /refus\.organisation\.offre_multisociete_requise/,
+      );
+      await db.query("rollback to savepoint seconde");
+      const apres = await db.query<{ n: number }>(
+        "select count(*)::int as n from identity.organizations where created_by = $1",
+        [qui],
+      );
+      assert.equal(apres.rows[0]!.n, avant.rows[0]!.n, "aucune société de plus");
+      assert.equal((await licencesDe(db, qui)).length, 1, "aucune licence de plus");
     });
   });
 

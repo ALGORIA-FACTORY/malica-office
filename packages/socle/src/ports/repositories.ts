@@ -4229,6 +4229,12 @@ export interface SocieteEnPlusDevis {
   prix_organisation_sup: string;
 }
 
+/**
+ * La réponse de la base avant le geste : la licence d'accueil, ou le refus que la porte
+ * opposerait — un titulaire dont aucune offre n'accueille une société de plus (20261228110000).
+ */
+export type SocieteEnPlusAccueil = SocieteEnPlusDevis | { offre_multisociete_requise: true };
+
 export interface MonForfait {
   /** `basic` · `solo` · `team` · `premium` — un CODE, jamais traduit. */
   offre: string | null;
@@ -4315,8 +4321,11 @@ export interface FacturationRepository {
   monForfait(tenantId?: string): Promise<MonForfait | null>;
   /** Le prix d'une place et d'une société en plus ; `null` à qui n'est pas titulaire. */
   mesPrixEnPlus(tenantId: string): Promise<PrixEnPlus | null>;
-  /** La licence qui accueillerait une société de plus ; `null` : elle aura sa propre licence. */
-  societeEnPlusDevis(): Promise<SocieteEnPlusDevis | null>;
+  /**
+   * La licence qui accueillerait une société de plus ; `{ offre_multisociete_requise }` : la porte
+   * refuserait (titulaire d'une offre à une société) ; `null` : elle aura sa propre licence.
+   */
+  societeEnPlusDevis(): Promise<SocieteEnPlusAccueil | null>;
   /** Les sièges vus depuis la société ouverte (`tenantId`) ; sans elle, ceux de mes licences. */
   sieges(tenantId?: string): Promise<SiegeDeLaLicence[]>;
   /** Les sociétés de la licence qui couvre la société ouverte, elle en tête. */

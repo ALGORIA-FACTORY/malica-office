@@ -991,18 +991,20 @@ trancher avant toute mise en production** : une société qui n'a qu'un comptabl
 inscrire ses propres écritures (`refus.inscription.reservee_au_cabinet`, règle C-1), et son comptable ne
 peut pas encore les revoir. Deux voies : construire l'espace, ou ne pas livrer la règle C-1 avant lui.
 
-### A3 — Ajouter une société : deux arbitrages commerciaux, tranchés par défaut (recette du 13 novembre 2026)
+### A3 — Ajouter une société : deux arbitrages commerciaux, **tranchés par le dirigeant le 15 novembre 2026**
 
-L'écran « Ajouter une société » (`/pme/societe-en-plus`) est livré avec ces deux défauts, **à confirmer ou
-changer par le dirigeant** (Wissem Barouni) :
+L'écran « Ajouter une société » (`/pme/societe-en-plus`) était livré avec deux défauts ; Wissem Barouni les
+a tranchés à la revue de #388 :
 
-1. **Au-delà des sociétés incluses**, la société est rattachée **sans second écran de confirmation** ; la ligne
-   d'état dit le prix avant le geste (« Société en plus : 29 TND HT par mois », lu dans `ref.offres`).
-   Alternative : une case ou un second geste explicite.
-2. **Une offre à une société** (Basic, Solo, Team) : la nouvelle société garde **sa propre licence Basic**,
-   comme avant, et la ligne d'état le dit. Alternative : proposer d'abord la montée en Premium.
-
-Ni l'un ni l'autre ne change la base : c'est la phrase et le geste de l'écran.
+1. **Au-delà des sociétés incluses : un second geste.** La ligne d'état dit le prix (« Société en plus :
+   29 TND HT par mois », lu dans `ref.offres`) et une case l'accepte ; sans elle, « Ajouter » ne part pas.
+2. **Plus d'une société, seulement avec une offre qui en accueille plusieurs.** Le titulaire d'une offre à
+   une société (Basic, Solo, Team : `organisations_max = 1`) ne reçoit plus de licence Basic à côté : la
+   porte `create_organization` refuse (`refus.organisation.offre_multisociete_requise`, migration
+   `20261228110000`) et l'écran le dit avant le geste, avec « Voir les offres ». Quelles offres
+   accueillent plusieurs sociétés reste une donnée (`ref.offres.organisations_max`, R4). La première
+   société d'une personne naît toujours avec sa licence ; une société qu'une comptabilité crée pour son
+   client suit son propre chemin (`dirigeant_arrive`), inchangé.
 
 ### Deux jours dans le moteur : celui du serveur et celui de la plateforme (nuit du 14 au 15 novembre 2026)
 

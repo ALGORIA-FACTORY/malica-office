@@ -148,7 +148,9 @@ export const facturation = {
   /**
    * La licence qui accueillerait une société de plus (`public.societe_en_plus_devis`, la même
    * règle que la porte `create_organization`) : son offre, ses sociétés, son inclus, le prix
-   * d'une société en plus. `null` : la société aura sa propre licence.
+   * d'une société en plus. `{ offre_multisociete_requise: true }` : la porte refuserait — le
+   * titulaire d'une offre à une société monte d'offre d'abord (20261228110000). `null` : la
+   * société aura sa propre licence.
    */
   async societeEnPlusDevis(db: Requete) {
     const { rows } = await db.query<{
@@ -157,9 +159,12 @@ export const facturation = {
         organisations: number;
         organisations_incluses: number;
         prix_organisation_sup: string;
+        offre_multisociete_requise?: boolean;
       } | null;
     }>(`select public.societe_en_plus_devis() as r`);
     const r = rows[0]?.r ?? null;
+    if (r?.offre_multisociete_requise === true)
+      return { offre_multisociete_requise: true as const };
     return r
       ? {
           offre: r.offre,

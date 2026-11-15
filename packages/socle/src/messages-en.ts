@@ -2536,6 +2536,7 @@ export const en: Dict = {
   "refus.invitation.revocation": "Only a pending invitation can be revoked.",
   "refus.invitation.expiree": "This invitation is no longer valid.",
   "refus.organisation.type_inconnu": "This type of organisation does not exist.",
+  "refus.organisation.offre_multisociete_requise": "Your plan covers a single company.",
   "refus.organisation.juridiction_requise": "Choose the organisation’s jurisdiction.",
   "refus.mandat.statut_inconnu": "This engagement status does not exist.",
   "refus.etablissement.dernier":
@@ -3923,8 +3924,12 @@ export const en: Dict = {
   "pme.societe.rejointInclus": "It joins your {offre} subscription ({n} of {total} companies).",
   "pme.societe.rejointEnPlus":
     "It joins your {offre} subscription. Extra company: {prix} {devise} excl. VAT per month.",
-  "pme.societe.propreAbonnement":
-    "Your plan covers a single company: the new one will have its own subscription.",
+  "pme.societe.propreAbonnement": "The new company will have its own subscription.",
+  "pme.societe.offreMultisocieteRequise":
+    "Your plan covers a single company. To manage several, move to a plan that covers several.",
+  "pme.societe.voirLesOffres": "See the plans",
+  "pme.societe.accepterSupplement":
+    "I accept {prix} {devise} excl. VAT per month more for this company.",
   "pme.societe.ajouter": "Add the company",
   "pme.societe.annuler": "Cancel",
   "tour.quitter": "Leave the tower",

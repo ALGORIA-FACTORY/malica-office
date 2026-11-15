@@ -2616,6 +2616,7 @@ export const fr = {
   "refus.invitation.revocation": "Seule une invitation en attente se révoque.",
   "refus.invitation.expiree": "Cette invitation n’est plus valable.",
   "refus.organisation.type_inconnu": "Ce type d’organisation n’existe pas.",
+  "refus.organisation.offre_multisociete_requise": "Votre offre ne comprend qu’une société.",
   "refus.organisation.juridiction_requise": "Choisissez la juridiction de l’organisation.",
   "refus.mandat.statut_inconnu": "Ce statut de mandat n’existe pas.",
   "refus.etablissement.dernier":
@@ -4039,8 +4040,12 @@ export const fr = {
   "pme.societe.rejointInclus": "Elle rejoint votre abonnement {offre} ({n} sociétés sur {total}).",
   "pme.societe.rejointEnPlus":
     "Elle rejoint votre abonnement {offre}. Société en plus : {prix} {devise} HT par mois.",
-  "pme.societe.propreAbonnement":
-    "Votre offre ne comprend qu’une société : la nouvelle aura son propre abonnement.",
+  "pme.societe.propreAbonnement": "La nouvelle société aura son propre abonnement.",
+  "pme.societe.offreMultisocieteRequise":
+    "Votre offre ne comprend qu’une société. Pour en gérer plusieurs, passez à une offre qui en accueille plusieurs.",
+  "pme.societe.voirLesOffres": "Voir les offres",
+  "pme.societe.accepterSupplement":
+    "J’accepte {prix} {devise} HT par mois en plus pour cette société.",
   "pme.societe.ajouter": "Ajouter la société",
   "pme.societe.annuler": "Annuler",
   "tour.quitter": "Quitter la tour",
