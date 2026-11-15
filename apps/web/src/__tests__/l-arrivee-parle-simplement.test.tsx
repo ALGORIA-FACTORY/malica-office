@@ -38,7 +38,7 @@ vi.mock("@/i18n", () => ({
   }),
 }));
 vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => (options: unknown) => ({ options }),
+  createFileRoute: () => (options: unknown) => ({ options, useSearch: () => ({}) }),
   Link: ({ children, to }: { children?: ReactNode; to?: string }) => <a href={to}>{children}</a>,
   useNavigate: () => vi.fn(),
 }));

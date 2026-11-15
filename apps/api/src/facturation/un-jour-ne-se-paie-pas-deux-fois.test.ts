@@ -74,14 +74,8 @@ describe("un jour ne se paie pas deux fois", { skip: !ADMIN }, () => {
       assert.equal(Number(acompte.montant_ht), ecartDuMois, "l'écart × jours restants / jours");
       await regler(db, d, acompte.paiement_id);
 
-      // 3. Le même jour, la comptabilité monte : Premium est l'offre du client,
-      // elle ne s'y « monte » pas (1.2) ; Team, oui.
-      await assert.rejects(
-        enPersonne(db, c.expert, () =>
-          db.query("select public.acces_changer_offre($1, 'premium')", [acces]),
-        ),
-        /refus\.abonnement\.deja_l_offre_du_client$/,
-      );
+      // 3. Le même jour, la comptabilité monte en Team (la prise en charge de Premium a son
+      // épreuve : la-comptabilite-prend-en-charge-l-offre-du-client.test.ts).
       const effet = await enPersonne(db, c.expert, async () => {
         const { rows } = await db.query<{ r: { effet: string } }>(
           "select public.acces_changer_offre($1, 'team') as r",

@@ -6,6 +6,7 @@
  * siège (maquettes validées par Wissem le 1er novembre 2026). La lecture et les
  * règles vivent ici, une fois.
  */
+import { piecesCompteesDe } from "@/lib/lecture";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
 import { usePme } from "@/components/malica/pme-context";
@@ -38,9 +39,14 @@ export function usePiecesDesSocietes() {
     : [];
   const autres = usePiecesLuesDesSocietes(autresIds);
 
-  // Une pièce privée n'est ni dans la bibliothèque ni dans un dossier.
+  // Une pièce privée n'est ni dans la bibliothèque ni dans un dossier, et un
+  // document joint ou un reçu n'est pas une pièce de plus : « 2 pièces »
+  // comptait une facture et son bon de livraison (G8, 13 novembre 2026).
   const deLaSociete = (lot: readonly PieceLue[] | undefined, societe: string) =>
-    (lot ?? []).filter((p) => p.vis !== "personnel").map((piece) => ({ piece, societe }));
+    piecesCompteesDe((lot ?? []).filter((p) => p.vis !== "personnel")).map((piece) => ({
+      piece,
+      societe,
+    }));
   const toutes: PieceDeSociete[] = [
     ...deLaSociete(lues.data, pme.tenantId),
     ...autres.flatMap((q, i) => deLaSociete(q.data, autresIds[i]!)),

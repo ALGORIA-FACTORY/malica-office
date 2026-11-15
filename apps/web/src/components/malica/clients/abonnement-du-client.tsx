@@ -16,6 +16,7 @@ import { useCabinet } from "@/components/malica/cabinet-context";
 import { Retour } from "@/components/malica/clients/fiche-client";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
+import { montant, montantEtDevise } from "@/lib/lisible";
 import { effetDuChoix, offreActuelle, type EffetDuChoix } from "@/lib/etat-des-clients";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
@@ -35,6 +36,7 @@ const EFFET: Record<EffetDuChoix, MessageKey> = {
   montee: "cab.cli.abo.effet.montee",
   descente: "cab.cli.abo.effet.descente",
   actuelle: "cab.cli.abo.effet.actuelle",
+  prise_en_charge: "cab.cli.abo.effet.prise_en_charge",
   couvrir: "cab.cli.abo.effet.couvrir",
 };
 
@@ -120,13 +122,9 @@ export function OngletAbonnement({
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
 
-  const prix = (v: string) =>
-    new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: org.currency,
-      minimumFractionDigits: 3,
-      maximumFractionDigits: 3,
-    }).format(Number(v));
+  // Les décimales sont celles que la base sert (la colonne porte l'échelle de la devise) :
+  // aucun « 3 » écrit ici, un seul formateur (`montant`, le Socle).
+  const prix = (v: string) => montantEtDevise(montant(v, locale), org.currency);
   const libelle = (code: string | null) =>
     (offres.find((o) => o.code === code) ?? catalogue.find((o) => o.code === code))?.libelle ??
     code ??
@@ -227,7 +225,7 @@ export function OngletAbonnement({
             <p
               className={cn(
                 "rounded-xl p-3",
-                effet === "montee" && "bg-[#f4f8f5]",
+                (effet === "montee" || effet === "prise_en_charge") && "bg-[#f4f8f5]",
                 (effet === "descente" || effet === "couvrir") && "bg-[#eef2fb] text-[#2b3f6b]",
                 (effet === "attente_dirigeant" ||
                   effet === "attente_reponse" ||
@@ -254,7 +252,9 @@ export function OngletAbonnement({
                 ? t("cab.cli.abo.proposer")
                 : effet === "descente"
                   ? t("cab.cli.abo.demander")
-                  : t("cab.cli.abo.appliquer")}
+                  : effet === "prise_en_charge"
+                    ? t("cab.cli.abo.prendre", { offre: libelle(choix) })
+                    : t("cab.cli.abo.appliquer")}
             </button>
             {etat?.accesId ? (
               <button

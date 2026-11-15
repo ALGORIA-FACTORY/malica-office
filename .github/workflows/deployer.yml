@@ -27,6 +27,10 @@ concurrency:
 jobs:
   deployer:
     runs-on: ubuntu-latest
+    # Le jeton du job lit le code et les images de l'organisation, rien d'autre.
+    permissions:
+      contents: read
+      packages: read
     environment:
       name: ${{ github.event.inputs.environnement }}
       url: https://${{ vars.DOMAINE }}
@@ -36,15 +40,40 @@ jobs:
           [[ "${{ github.event.inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]] \
             || { echo "une étiquette v<majeure>.<mineure>.<correctif> est attendue" >&2; exit 1; }
 
-      - name: Déployer ${{ github.event.inputs.version }} sur ${{ github.event.inputs.environnement }}
+      # Le serveur ne détient rien (infra/deployer.sh) : il n'a ni le code ni
+      # l'accès au registre. Ce job DÉPOSE le commit de l'étiquette, puis PRÊTE
+      # un jeton le temps du « pull », exactement comme images.yml le fait pour
+      # le staging. Sans le dépôt, `deployer <version>` s'arrête sur
+      # « refs/depose/<version> introuvable » ; sans le jeton, le « pull » des
+      # images privées répond « unauthorized ».
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.version }}
+          fetch-depth: 0
+
+      - name: Déposer ${{ github.event.inputs.version }}, puis déployer sur ${{ github.event.inputs.environnement }}
         env:
           CLE: ${{ secrets.DEPLOI_CLE_SSH }}
           HOTE: ${{ vars.DEPLOI_HOTE }}
           EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
           VERSION: ${{ github.event.inputs.version }}
+          JETON: ${{ secrets.GITHUB_TOKEN }}
+          # Les secrets d'application, posés dans l'environnement GitHub visé
+          # (pilote ou production), jamais recopiés du staging. Absents, ils
+          # partent vides et le serveur n'y touche pas.
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploi
           chmod 600 ~/.ssh/deploi
           printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $VERSION"
+
+          git bundle create /tmp/depot.bundle HEAD
+          ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" \
+            "deposer $VERSION" < /tmp/depot.bundle
+
+          # Le nom, le jeton, puis les secrets d'application, sur l'entrée
+          # standard et jamais sur la ligne de commande. Le nom doit être celui
+          # du porteur du jeton (voir images.yml).
+          printf '%s\n%s\nBREVO_API_KEY=%s\n' "$GITHUB_ACTOR" "$JETON" "$BREVO_API_KEY" |
+            ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $VERSION"

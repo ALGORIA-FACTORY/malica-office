@@ -47,9 +47,9 @@ describe("la montée du client se voit côté comptabilité", () => {
     expect(offreActuelle(etat("team", "team"), OFFRES)).toBe("team");
   });
 
-  it("choisir Premium n'est pas une montée : c'est son offre actuelle", () => {
+  it("choisir Premium, monté à sa charge, c'est le prendre en charge (B7) ; Team reste l'offre payée", () => {
     const e = etat("team", "premium");
-    expect(effetDuChoix(e, "premium", OFFRES)).toBe("actuelle");
+    expect(effetDuChoix(e, "premium", OFFRES)).toBe("prise_en_charge");
     expect(effetDuChoix(e, "team", OFFRES)).toBe("actuelle");
     expect(effetDuChoix(e, "solo", OFFRES)).toBe("descente");
   });

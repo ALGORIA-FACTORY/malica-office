@@ -13,6 +13,7 @@ import { test } from "node:test";
 const RACINE = new URL("../../", import.meta.url);
 const relais = readFileSync(new URL("apps/web/relais-api.ts", RACINE), "utf8");
 const caddyfile = readFileSync(new URL("infra/caddy/Caddyfile", RACINE), "utf8");
+const appApi = readFileSync(new URL("apps/api/src/app.ts", RACINE), "utf8");
 
 /** Les entrées `{ base, exact }` du relais, lues telles qu'écrites. */
 function cheminsDuRelais() {
@@ -83,4 +84,50 @@ test("l'écran de connexion /auth reste au site, ses sous-chemins vont à l'API"
   const caddySet = cheminsDuCaddyfile();
   assert.ok(caddySet.has("/auth/*"));
   assert.ok(!caddySet.has("/auth"));
+});
+
+/**
+ * Les chemins que `apps/api/src/app.ts` enregistre : `app.get/post/put/delete/
+ * patch/all("/chemin", …)` et `app.use("/prefixe", …)`. Un `app.use(fonction)`
+ * sans chemin n'est pas une route.
+ */
+function routesDeLApi() {
+  const routes = [
+    ...appApi.matchAll(/\bapp\.(get|post|put|delete|patch|all|use)\(\s*(["'`])(\/[^"'`]*)\2/g),
+  ].map(([, methode, , chemin]) => ({ methode, chemin }));
+  assert.ok(routes.length >= 15, `trop peu de routes lues dans app.ts (${routes.length})`);
+  return routes;
+}
+
+/** Un chemin Express est-il atteint par un des motifs `path` de Caddy ? */
+function couvert({ methode, chemin }, motifs) {
+  const racine = chemin.replace(/\/$/, "");
+  if (methode !== "use" && motifs.has(racine)) return true;
+  return [...motifs].some((m) => {
+    if (!m.endsWith("/*")) return false;
+    const prefixe = m.slice(0, -2);
+    return racine.startsWith(`${prefixe}/`) || (methode === "use" && racine === prefixe);
+  });
+}
+
+/*
+ * 13 novembre 2026, constat A1 : `POST /impressions` répondait 404 en
+ * production, le matcher `@api` ne le listait pas. Le test précédent ne
+ * comparait le Caddyfile qu'au relais de développement : une route ajoutée à
+ * l'API et oubliée des deux listes passait. Ici la source est l'API elle-même.
+ */
+test("toute route de l'API est routée par le matcher @api du Caddyfile", () => {
+  const motifs = cheminsDuCaddyfile();
+  const orphelines = routesDeLApi()
+    .filter((r) => !couvert(r, motifs))
+    .map((r) => `${r.methode.toUpperCase()} ${r.chemin}`);
+  assert.deepEqual(orphelines, [], "routes de app.ts que Caddy enverrait au serveur web (404)");
+});
+
+test("le relais de développement couvre toute route de l'API", () => {
+  const motifs = attendus();
+  const orphelines = routesDeLApi()
+    .filter((r) => !couvert(r, motifs))
+    .map((r) => `${r.methode.toUpperCase()} ${r.chemin}`);
+  assert.deepEqual(orphelines, [], "routes de app.ts absentes de relais-api.ts");
 });

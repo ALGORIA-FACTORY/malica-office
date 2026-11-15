@@ -130,6 +130,9 @@ jobs:
         run: echo "::warning::SENTRY_AUTH_TOKEN n'est pas posé — ce bundle part sans cartes de sources, ses plantages arriveront minifiés chez Sentry."
 
       # Règles de Google Play : le paquet publié ne vend rien (même garde que ci.yml).
+      - name: Les écrans du bundle sont ceux du dépôt
+        run: node outils/ecrans-embarques.mjs apps/web/.output/public
+
       - name: La coque ne vend rien
         run: node --experimental-strip-types outils/coque-sans-commerce.mjs
 

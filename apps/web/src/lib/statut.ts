@@ -21,6 +21,7 @@ export const MOT_PME: Readonly<Record<StatutPme, MessageKey>> = {
   mon_espace: "statut.pme.mon_espace",
   a_envoyer: "statut.pme.a_envoyer",
   gardee: "statut.pme.gardee",
+  rangee: "statut.pme.rangee",
   envoyee: "statut.pme.envoyee",
   vue: "statut.pme.vue",
   retour: "statut.pme.retour",

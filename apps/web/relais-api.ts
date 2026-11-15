@@ -62,6 +62,8 @@ const CHEMINS: ReadonlyArray<{ base: string; exact: boolean }> = [
   { base: "/auth", exact: false },
   // Les exports gardés du journal du jour (`/exports/:id/contenu`).
   { base: "/exports", exact: false },
+  // Le PDF d'impression, composé à la demande (`POST /impressions`).
+  { base: "/impressions", exact: true },
 ];
 
 export function estPourLApi(url: string): boolean {
