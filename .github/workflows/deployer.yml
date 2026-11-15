@@ -31,6 +31,9 @@ jobs:
     permissions:
       contents: read
       packages: read
+      # Le pilote sur Google Cloud : un jeton OIDC échangé contre une identité
+      # Google de quelques minutes (Workload Identity) — aucune clé Google ici.
+      id-token: write
     environment:
       name: ${{ github.event.inputs.environnement }}
       url: https://${{ vars.DOMAINE }}
@@ -51,10 +54,59 @@ jobs:
           ref: ${{ github.event.inputs.version }}
           fetch-depth: 0
 
+      # ================================== POURQUOI UN TUNNEL SUR GOOGLE CLOUD
+      #
+      # 15 novembre 2026. Le pilote vit sur Google Cloud, et son port SSH n'est
+      # PAS ouvert à Internet : seul le proxy IAP de Google y entre, au nom
+      # d'une identité qui en a le droit. Le job prend cette identité par
+      # Workload Identity (le jeton OIDC de CE dépôt, de CET environnement),
+      # ouvre un tunnel IAP vers le port 22, et parle à la même porte SSH
+      # qu'ailleurs, par localhost. Les environnements sans
+      # GCP_FOURNISSEUR_IDENTITE passent tout droit, comme avant.
+      - name: Google Cloud — identité du déploiement
+        if: vars.GCP_FOURNISSEUR_IDENTITE != ''
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_FOURNISSEUR_IDENTITE }}
+          service_account: ${{ vars.GCP_COMPTE_DEPLOI }}
+
+      - name: Google Cloud — outils
+        if: vars.GCP_FOURNISSEUR_IDENTITE != ''
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Google Cloud — tunnel IAP vers le port 22
+        if: vars.GCP_FOURNISSEUR_IDENTITE != ''
+        env:
+          PROJET: ${{ vars.GCP_PROJET }}
+          ZONE: ${{ vars.GCP_ZONE }}
+          MACHINE: ${{ vars.GCP_MACHINE }}
+          PORT: ${{ vars.DEPLOI_PORT }}
+        run: |
+          # Le premier lancement de gcloud et l'essai de connexion d'IAP
+          # prennent plus de 30 s sur un runner neuf (15 novembre 2026 : 30 s
+          # n'ont pas suffi, journal vide). On attend 120 s, et l'on s'arrête
+          # tout de suite si le tunnel meurt, avec son journal.
+          gcloud compute start-iap-tunnel "$MACHINE" 22 --project="$PROJET" --zone="$ZONE" \
+            --local-host-port="localhost:$PORT" >/tmp/tunnel.log 2>&1 &
+          tunnel=$!
+          for _ in $(seq 120); do
+            if (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; then
+              cat /tmp/tunnel.log
+              exit 0
+            fi
+            kill -0 "$tunnel" 2>/dev/null || break
+            sleep 1
+          done
+          echo "le tunnel IAP ne s'ouvre pas (machine éteinte ? elle dort de 0 h à 10 h) :" >&2
+          cat /tmp/tunnel.log >&2
+          gcloud compute instances describe "$MACHINE" --project="$PROJET" --zone="$ZONE" --format='value(status)' >&2 || true
+          exit 1
+
       - name: Déposer ${{ github.event.inputs.version }}, puis déployer sur ${{ github.event.inputs.environnement }}
         env:
           CLE: ${{ secrets.DEPLOI_CLE_SSH }}
           HOTE: ${{ vars.DEPLOI_HOTE }}
+          PORT: ${{ vars.DEPLOI_PORT || '22' }}
           EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
           VERSION: ${{ github.event.inputs.version }}
           JETON: ${{ secrets.GITHUB_TOKEN }}
@@ -62,6 +114,9 @@ jobs:
           # (pilote ou production), jamais recopiés du staging. Absents, ils
           # partent vides et le serveur n'y touche pas.
           BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploi
@@ -69,11 +124,12 @@ jobs:
           printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
 
           git bundle create /tmp/depot.bundle HEAD
-          ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" \
+          ssh -i ~/.ssh/deploi -p "$PORT" -o BatchMode=yes "malica@$HOTE" \
             "deposer $VERSION" < /tmp/depot.bundle
 
           # Le nom, le jeton, puis les secrets d'application, sur l'entrée
           # standard et jamais sur la ligne de commande. Le nom doit être celui
           # du porteur du jeton (voir images.yml).
-          printf '%s\n%s\nBREVO_API_KEY=%s\n' "$GITHUB_ACTOR" "$JETON" "$BREVO_API_KEY" |
-            ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $VERSION"
+          printf '%s\n%s\nBREVO_API_KEY=%s\nANTHROPIC_API_KEY=%s\nDEEPSEEK_API_KEY=%s\nQWEN_API_KEY=%s\n' \
+            "$GITHUB_ACTOR" "$JETON" "$BREVO_API_KEY" "$ANTHROPIC_API_KEY" "$DEEPSEEK_API_KEY" "$QWEN_API_KEY" |
+            ssh -i ~/.ssh/deploi -p "$PORT" -o BatchMode=yes "malica@$HOTE" "deployer $VERSION"
