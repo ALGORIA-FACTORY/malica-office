@@ -932,9 +932,16 @@ Le prompt laissait la règle à la maquette. **Tranché par défaut, la plus sim
 
 - **sans comptabilité externe**, le comptable interne tient les livres : il inscrit, valide, force et
   retourne. Le propriétaire n'inscrit plus lui-même : la société n'est plus « autonome » ;
-- **quand une comptabilité externe a un mandat actif**, c'est elle qui inscrit, valide, force et retourne.
-  Le comptable interne **prépare** seulement : il voit les pièces, établit leur type et propose
-  l'écriture, que la comptabilité externe inscrit.
+- **quand une comptabilité externe a un mandat actif**, c'est elle qui fait TOUT : inscrit, valide,
+  force et retourne. Le comptable interne **ne prépare plus, ne propose plus, ne valide plus, ne force plus**.
+  Il reçoit le rôle de propriétaire non principal de la société, pour **transmettre** les pièces à la
+  comptabilité externe (décision du dirigeant, 12 novembre 2026, **tranché** : elle remplace la règle
+  « prépare seulement » ci-dessus). Sous mandat externe, il n'a pas d'espace de comptabilité : il reste
+  dans l'espace PME. Mise en œuvre : migration `20261222110000` (`app.dossiers_du_comptable_interne`
+  exclut les sociétés à mandat externe actif). **Ouvert** : le siège PME pris par le comptable interne
+  compte-t-il dans les places de l'offre, ou est-il gratuit ? Le rôle de propriétaire non principal
+  occupe une place payée dans le modèle du 19 octobre (`20261022110000`) ; la transmission n'est pas
+  encore livrée (aucun droit élargi).
 
 Deux prédicats en base portent la règle : `app.prepare_le_dossier` (préparer) et
 `app.supervise_le_dossier` (trancher). Changer la règle, c'est changer ce second prédicat, pas les
@@ -1003,3 +1010,17 @@ avant toute mise en production :
   avant les opérations en masse.
 - **Non éprouvé sur le poste** : l'envoi réel par Brevo (clé et expéditeur absents). Les épreuves des
   relances passent avec le changement de rôle neutralisé ; elles demandent `set role malica_api`.
+
+### Deux jours dans le moteur : celui du serveur et celui de la plateforme (nuit du 14 au 15 novembre 2026)
+
+La CI de `main` est tombée rouge entre 23 h et minuit UTC (`une-descente-n-efface-pas-une-montee`, « la facture part
+chaque jour ») : le moteur lit **deux jours**. 69 fonctions lisent `current_date` (le jour de la SESSION, UTC pour
+l'API) ; la facturation immédiate (`facturer_sur_le_champ`) et le robot du jour datent leurs factures au jour de la
+PLATEFORME (`plateforme.fuseau_de_la_plateforme()`, Tunis = UTC+1). De 23 h à 24 h UTC, un changement d'offre prend
+effet le 14 et son complément se facture à partir du 15 : un jour de l'offre haute n'est facturé nulle part. Dakar
+(UTC+0) n'est pas concerné.
+
+Corrigé ici, **côté épreuves seulement** : la transaction d'essai prend le fuseau de la plateforme (ce que le robot fait
+déjà dans sa propre transaction), `current_date` y est partout le jour de la plateforme. **Reste ouvert, à trancher** :
+faire de même pour les sessions de l'API (`sousClaims`, `apps/api/src/db.ts` : `set_config('TimeZone', fuseau de la
+plateforme, true)` au début de chaque transaction) — un changement transverse que ce correctif ne prend pas.

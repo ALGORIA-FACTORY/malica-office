@@ -24,7 +24,7 @@ import { useSuperposition } from "@/hooks/use-superposition";
 import { useI18n, type MessageKey } from "@/i18n";
 import { auQuota, etatDeLaPme } from "@/lib/clients-de-la-tour";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { montant } from "@/lib/lisible";
+import { montant, quantite } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 import { office } from "@/verticals/malica-office/composition";
 
@@ -62,7 +62,7 @@ export function FicheDeLaPme({ pme, fermer }: { pme: PmeDeLaTour; fermer: () => 
   const panneau = useRef<HTMLElement | null>(null);
   useSuperposition(true, fermer, panneau);
 
-  const n = new Intl.NumberFormat(locale);
+  const n = { format: (v: number) => quantite(String(v), locale) };
   const lignes: Array<[MessageKey, React.ReactNode]> = [
     ["tour.col.cabinet", pme.cabinet_nom ?? t("tour.direct")],
     [

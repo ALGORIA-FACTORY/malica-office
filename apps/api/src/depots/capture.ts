@@ -396,7 +396,14 @@ async function piecesLuesDe(
        select t.id as tenant_id,
               t.id in (select app.member_orgs()) as membre,
               -- app.a_le_droit, dont l'ensemble se lit une seule fois.
-              coalesce(t.id in (select app.orgs_avec_droit('circuit.recevoir')), false) as recoit
+              coalesce(t.id in (select app.orgs_avec_droit('circuit.recevoir')), false) as recoit,
+              -- La société a une comptabilité : le même fait que \`monCabinet\`
+              -- (un mandat en vigueur). Sans elle, « À envoyer » n'a pas de
+              -- destinataire, et le statut le sait (13 novembre 2026, G5).
+              exists (select 1 from engagements_v e
+                       where e.pme_org_id = t.id
+                         and app.engagement_en_vigueur(e.status, e.starts_on, e.ends_on))
+                as comptabilite
          from unnest($1::uuid[]) t(id)
      ),
      vecues as materialized (
@@ -434,6 +441,7 @@ async function piecesLuesDe(
               -- (planche 3). L'index des rattachements écarte d'abord les
               -- pièces sans lien ; la règle est celle de la base.
               ${EST_JOINTE} as jointe,
+              d.comptabilite,
               h.precision_kind,
               -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
               -- reste telle quelle), que la liste préfère au nom lu.
@@ -515,6 +523,11 @@ async function piecesLuesDe(
   }));
 }
 
+/** Le sens (achat ou vente) que porte un type déclaré, ou `null`. */
+function sensDeclare(type: unknown): "facture_achat" | "facture_vente" | null {
+  return type === "facture_achat" || type === "facture_vente" ? type : null;
+}
+
 function versPieceLue(r: Record<string, unknown>) {
   const lu = (r["payload"] ?? null) as {
     issuer?: string;
@@ -534,13 +547,17 @@ function versPieceLue(r: Record<string, unknown>) {
     transmiseLe: r["transmise_le"] ? new Date(r["transmise_le"] as string).toISOString() : null,
     accompagne: Boolean(r["accompagne"]),
     jointe: Boolean(r["jointe"]),
+    comptabilite: Boolean(r["comptabilite"]),
     emetteur: (r["emetteur_dit"] as string | null) ?? lu?.issuer ?? null,
     dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
     kind:
       cab?.documentKind ??
       (lu?.document_kind as string | undefined) ??
       (r["precision_kind"] as string | null) ??
-      null,
+      // Le type DÉCLARÉ à l'import vient en dernier : une déclaration est une
+      // intention, la lecture la contredit quand elle sait — mais quand elle
+      // ne dit rien, « Vérifier » rend ce que la personne a choisi (G6c).
+      sensDeclare(r["document_kind"]),
     total: cab?.ttc ?? lu?.totals?.ttc ?? null,
     devise: cab?.devise ?? lu?.currency ?? null,
     typeDeDocument: (r["document_kind"] as string | null) ?? null,

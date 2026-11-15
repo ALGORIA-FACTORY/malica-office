@@ -1,6 +1,6 @@
 /**
- * La comptabilité ne « monte » pas vers l'offre que le client a déjà prise à
- * sa charge (recette du 11 novembre 2026, point 1.2 ; migration
+ * La comptabilité voit que le client est monté à sa charge, et peut prendre en charge
+ * l'offre qu'il a prise (recette du 11 novembre 2026, point 1.2 ; migration
  * 20261218120000). Sous l'identité de l'expert, par la vraie porte.
  *
  *   node --experimental-strip-types --import ./src/garde-base-de-test.ts \
@@ -27,7 +27,7 @@ describe("la comptabilité voit la montée du client", { skip: !ADMIN }, () => {
     await pool?.end();
   });
 
-  it("couvert en Team, monté en Premium : l'état le dit, et monter en Premium est refusé", async () => {
+  it("couvert en Team, monté en Premium : l'état le dit, et la comptabilité peut la prendre en charge", async () => {
     const db = await pool!.connect();
     try {
       await db.query("begin");
@@ -46,12 +46,14 @@ describe("la comptabilité voit la montée du client", { skip: !ADMIN }, () => {
       });
       assert.deepEqual(vu, { acces_offre: "team", forfait_offre: "premium" });
 
-      await assert.rejects(
-        enPersonne(db, c.expert, () =>
-          db.query("select public.acces_changer_offre($1, 'premium')", [acces]),
-        ),
-        /refus\.abonnement\.deja_l_offre_du_client$/,
-      );
+      const r = await enPersonne(db, c.expert, async () => {
+        const { rows } = await db.query<{ r: { effet: string } }>(
+          "select public.acces_changer_offre($1, 'premium') as r",
+          [acces],
+        );
+        return rows[0]!.r;
+      });
+      assert.equal(r.effet, "immediat", "la prise en charge est acceptée par la porte (B7)");
     } finally {
       await db.query("rollback");
       db.release();

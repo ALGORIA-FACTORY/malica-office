@@ -184,6 +184,16 @@ jobs:
           ./gradlew --stop || true
           pkill -f KotlinCompileDaemon || true
 
+      # `-PversionName=0.0.0` est la version NATIVE de l'APK d'essai ; les
+      # écrans embarqués, eux, portent la version du dépôt, et c'est celle-ci
+      # que l'on compare (outils/ecrans-embarques.mjs ne lit jamais versionName).
+      - name: Les écrans de l'APK sont ceux du dépôt
+        run: |
+          apk="$(ls android/app/build/outputs/apk/emulateur/debug/*.apk | head -n 1)"
+          dossier="$(mktemp -d)"
+          unzip -q "$apk" 'assets/public/ecrans.json' -d "$dossier"
+          node outils/ecrans-embarques.mjs "$dossier/assets/public"
+
       # Le script d'installation télécharge une archive qui peut répondre 504
       # (8 novembre 2026, deux fois de suite) : il ne s'arrête pas pour autant,
       # et chaque flux tombait ensuite en « code 127 », Maestro absent, sans
@@ -293,4 +303,5 @@ jobs:
             processus.log
             ~/.maestro/tests
             panneau-*.png
+            bibliotheque-*.png
           retention-days: 7

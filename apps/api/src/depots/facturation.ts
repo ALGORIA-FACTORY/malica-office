@@ -36,8 +36,11 @@ interface PaiementLu {
   montant_tva: string;
   montant_ttc: string;
   devise: string;
-  /** `remplace` : un acompte de montée que le forfait suivant a remplacé ; il ne se paie plus. */
-  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace";
+  /**
+   * `remplace` : un acompte de montée que le forfait suivant a remplacé ; il ne se paie plus.
+   * `non_abouti` : un lien ouvert que personne n'a conclu dans la durée arrêtée en base ; on le rouvre.
+   */
+  etat: "a_payer" | "lien_cree" | "paye" | "refuse" | "remplace" | "non_abouti";
   prestataire: string | null;
   reference: string | null;
   lien: string | null;
@@ -454,6 +457,18 @@ export const facturation = {
     return [...rows].sort((a, b) => Number(a["rang"]) - Number(b["rang"]));
   },
 
+  /**
+   * Ce que la montée vers `offre` fait régler aujourd'hui et le prix plein des mois suivants.
+   * Lecture seule ; la base appelle la même formule que la préparation du paiement.
+   */
+  async monteeDevis(db: Requete, offre: string, tenantId?: string) {
+    const { rows } = await db.query<{ r: Record<string, unknown> | null }>(
+      `select public.montee_devis($1, $2) as r`,
+      [offre, tenantId ?? null],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   async mesOffres(db: Requete, tenantId?: string) {
     const { rows } = await db.query(
       `select code, libelle, rang, prix_mensuel_ht, lectures_par_organisation, lectures_incluses,
@@ -587,20 +602,33 @@ export const facturation = {
     // seconde commande pour le même paiement (revenir en arrière et choisir
     // Mastercard après Visa mène à la même page de carte). On demande d'abord
     // au prestataire s'il n'est pas déjà payé.
-    if (p.etat === "lien_cree" && p.prestataire === env.prestataire.code && p.lien) {
+    // Un lien « non abouti » n'est qu'un lien ancien : le temps écoulé ne prouve pas que la commande
+    // n'a pas été payée chez le prestataire (fenêtre fermée avant le retour). On l'interroge aussi.
+    if (
+      (p.etat === "lien_cree" || p.etat === "non_abouti") &&
+      p.prestataire === env.prestataire.code &&
+      p.lien
+    ) {
       const r =
         env.prestataire.simule || !p.reference ? null : await env.prestataire.etat(p.reference);
-      if (!r || r.etat === "en_attente") return { ouvert: true, lien: p.lien, paiement: p };
-      const constate = await inscrire(
-        db,
-        paiementId,
-        r.etat,
-        env.prestataire,
-        p.reference,
-        null,
-        r.detail,
-      );
-      if (constate.etat === "paye") return { ouvert: true, lien: null, paiement: constate };
+      // Encore en attente chez le prestataire : un lien en cours sert encore ; un lien dit « non
+      // abouti » se rouvre par une commande neuve (plus bas).
+      if (!r && p.etat === "lien_cree") return { ouvert: true, lien: p.lien, paiement: p };
+      if (r && r.etat === "en_attente" && p.etat === "lien_cree") {
+        return { ouvert: true, lien: p.lien, paiement: p };
+      }
+      if (r && r.etat !== "en_attente") {
+        const constate = await inscrire(
+          db,
+          paiementId,
+          r.etat,
+          env.prestataire,
+          p.reference,
+          null,
+          r.detail,
+        );
+        if (constate.etat === "paye") return { ouvert: true, lien: null, paiement: constate };
+      }
     }
 
     // Le moyen choisi doit être actif et accepté par ce prestataire : la base le

@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 
 import { useI18n, type MessageKey } from "@/i18n";
 import type { EtatDuClient } from "@/lib/clients-de-la-tour";
+import { quantite } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
 
 /** Le focus du clavier, visible partout dans la tour. */
@@ -220,7 +221,7 @@ export function EnTeteDeLaTour({
 export function Consommation({ lues, droit }: { lues: number | null; droit: number | null }) {
   const { locale } = useI18n();
   if (lues === null || droit === null) return <span className="num text-muted-foreground">—</span>;
-  const n = new Intl.NumberFormat(locale);
+  const n = { format: (v: number) => quantite(String(v), locale) };
   const part = droit > 0 ? Math.min(1, lues / droit) : 0;
   return (
     <span className="inline-flex min-w-[7rem] flex-col gap-1">

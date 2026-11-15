@@ -22,6 +22,8 @@
  * JETÉ, pas corrigé — et un lot vide se comporte comme un lot absent, c'est-
  * à-dire comme « montre-moi ce qui traîne ».
  */
+import type { PieceLue } from "@malica/socle/ports/repositories";
+
 import { PLAFOND_ELEMENTS } from "@/lib/hors-ligne/file";
 import { estUnIdentifiant } from "@/lib/identifiant";
 
@@ -52,6 +54,14 @@ export interface LotDeCapture {
   dossier?: string;
   pour?: "moi";
   depuis?: "echeance";
+  /**
+   * L'étape où l'on en est (G6b, 13 novembre 2026) : la progression survit au
+   * rechargement. Dans l'URL, avec le lot (`pieces`), et non dans un stockage :
+   * l'URL se rejoue au rechargement, au retour et à la reprise, et ne peut pas
+   * manquer (navigation privée, stockage vidé). Seul un lot l'accompagne, et
+   * seules les étapes 1 à 7 se reprennent : la fin (8) est un aboutissement.
+   */
+  etape?: number;
 }
 
 /** Un code de dossier du référentiel : des minuscules et des soulignés. */
@@ -69,6 +79,16 @@ export function lireLotDeCapture(search: Record<string, unknown>): LotDeCapture 
   }
   const dossier = search["dossier"];
   if (typeof dossier === "string" && CODE_DE_DOSSIER.test(dossier)) lot.dossier = dossier;
+  if (lot.pieces) {
+    const brut = search["etape"];
+    const n =
+      typeof brut === "number"
+        ? brut
+        : typeof brut === "string" && /^[1-7]$/.test(brut)
+          ? Number(brut)
+          : NaN;
+    if (Number.isInteger(n) && n >= 1 && n <= 7) lot.etape = n;
+  }
   if (search["pour"] === "moi") lot.pour = "moi";
   if (search["depuis"] === "echeance") lot.depuis = "echeance";
   return lot;
@@ -100,4 +120,34 @@ export function identifiantsDuLot(brut: string | undefined): string[] {
     if (vus.size >= PLAFOND_ELEMENTS) break;
   }
   return [...vus];
+}
+
+/**
+ * Le lot que l'écran de capture propose : les pièces capturées dont rien n'a
+ * été décidé. Une pièce gardée pour soi (« Pour moi ») a répondu : elle n'est
+ * plus à destiner, ni à lire — sans quoi un papier privé abandonné au rayon
+ * revenait « à lire », et la lecture le rangeait dans la société (G2). Ni une
+ * pièce lue, ni un document joint, ni un reçu. Un passage ne retient que ce
+ * qu'il nomme.
+ */
+export function piecesDuLot(pieces: readonly PieceLue[], passage: readonly string[]): PieceLue[] {
+  const nonLues = pieces.filter(
+    (p) => p.status === "capturee" && !p.gardeeLe && !p.accompagne && !p.jointe,
+  );
+  return passage.length === 0 ? nonLues : nonLues.filter((p) => passage.includes(p.id));
+}
+
+/**
+ * L'URL de la reprise : le lot et l'étape où l'on en est, avec le contexte
+ * d'où l'on vient. Sans lot ou à l'étape 0, rien n'est à reprendre.
+ */
+export function urlDeLaReprise(
+  etape: number,
+  identifiants: readonly string[],
+  contexte: LotDeCapture | null,
+): LotDeCapture {
+  return {
+    ...suiteDuPassage(identifiants, contexte),
+    ...(identifiants.length > 0 && etape >= 1 && etape <= 7 ? { etape } : {}),
+  };
 }

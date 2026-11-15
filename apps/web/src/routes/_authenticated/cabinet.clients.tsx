@@ -26,6 +26,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import { COMMERCE } from "@/capabilities/coque";
 import { useCabinet, useMalicaPanel } from "@/components/malica/cabinet-context";
+import { estComptabiliteInterne } from "@/lib/comptabilite-interne";
 import {
   CHAMP,
   FicheClient,
@@ -35,6 +36,7 @@ import {
 import { ImportClients } from "@/components/malica/clients/import-clients";
 import { HonorairesDeLaComptabilite } from "@/components/malica/honoraires-de-la-comptabilite";
 import { MalicaNote } from "@/components/malica/office-ui";
+import { DemandesDeMandat } from "@/components/malica/DemandesDeMandat";
 import { useMonAcces } from "@/hooks/use-mon-acces";
 import { useI18n, type MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -107,9 +109,6 @@ const FILTRE_CLE: Record<FiltreClients, MessageKey> = {
   sansabo: "cab.cli.filtre.sansabo",
 };
 
-/** Les états d'un mandat qui ne donnent plus accès au dossier. */
-const MANDAT_CLOS = new Set(["termine", "refuse"]);
-
 function CabinetClients() {
   const { t, locale } = useI18n();
   const { org } = useCabinet();
@@ -120,7 +119,10 @@ function CabinetClients() {
   // du tout dans l'application installée, où elle disparaît donc.
   const notes = useNotesDHonoraires();
   const aUneFacturation = notes.ouvertes || FacturesMalica !== null;
-  const vue: Vue = recherche.vue === "facturation" && aUneFacturation ? "facturation" : "clients";
+  // La comptabilité interne ne tient pas les honoraires : la vue reste grisée.
+  const interne = estComptabiliteInterne(org);
+  const vue: Vue =
+    recherche.vue === "facturation" && aUneFacturation && !interne ? "facturation" : "clients";
 
   const acces = useMonAcces(org.id);
   const expert = acces.data?.role === "expert";
@@ -158,11 +160,12 @@ function CabinetClients() {
   useMalicaPanel(<MalicaNote>{t("cab.cli.panel")}</MalicaNote>, [locale]);
 
   const actifs = useMemo(
-    () => (clients.data ?? []).filter((c) => !MANDAT_CLOS.has(c.engagementStatus)),
+    () => (clients.data ?? []).filter((c) => c.engagementStatus !== "termine"),
     [clients.data],
   );
   const termines = useMemo(
-    () => (clients.data ?? []).filter((c) => MANDAT_CLOS.has(c.engagementStatus)),
+    // L'archive seule : un refus n'est pas une archive (13 novembre 2026, A6).
+    () => (clients.data ?? []).filter((c) => c.engagementStatus === "termine" && c.archive),
     [clients.data],
   );
   const fiches = useQueries({
@@ -243,6 +246,8 @@ function CabinetClients() {
 
   return (
     <div className="cab-library space-y-5">
+      {/* ---- les sociétés qui demandent un mandat : visibles dès l'arrivée */}
+      <DemandesDeMandat cabinetId={org.id} />
       {/* ---- l'en-tête */}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -295,7 +300,10 @@ function CabinetClients() {
           {/* ---- les deux vues */}
           <div
             role="tablist"
-            className={cn("flex gap-1 border-b border-border", !aUneFacturation && "hidden")}
+            className={cn(
+              "flex gap-1 border-b border-border",
+              !(aUneFacturation || interne) && "hidden",
+            )}
           >
             {(["clients", "facturation"] as const).map((v) => (
               <button
@@ -303,7 +311,9 @@ function CabinetClients() {
                 type="button"
                 role="tab"
                 aria-selected={vue === v}
-                onClick={() => allerVue(v)}
+                onClick={() => (v === "facturation" && interne ? undefined : allerVue(v))}
+                disabled={v === "facturation" && interne}
+                title={v === "facturation" && interne ? t("cab.cli.grise.externe") : undefined}
                 className={cn(
                   "-mb-px h-10 border-b-2 px-3 text-[14px]",
                   vue === v
@@ -755,12 +765,10 @@ function Termines({ termines }: { termines: readonly ClientSummary[] }) {
           >
             <span className="text-[13px] font-medium">{c.name}</span>
             <span className="num text-[11px] text-muted-foreground">
-              {c.engagementStatus === "refuse"
-                ? t("cab.clients.termines.refuse")
-                : t("cab.clients.termines.periode", {
-                    debut: date(c.mandatDepuis),
-                    fin: date(c.mandatJusquau),
-                  })}
+              {t("cab.clients.termines.periode", {
+                debut: date(c.mandatDepuis),
+                fin: date(c.mandatJusquau),
+              })}
             </span>
           </li>
         ))}
@@ -850,12 +858,16 @@ function BarreDeLot({
     onError: (e: unknown) => setErreur(texteDeLErreur(e, "cabinet.clients.lot", t("common.error"))),
   });
 
-  const GESTES: Array<{ id: GesteDeLot; cle: MessageKey }> = [
+  const GESTES_DU_CABINET: Array<{ id: GesteDeLot; cle: MessageKey }> = [
     { id: "collab", cle: "cab.cli.lot.collab" },
     { id: "mandat", cle: "cab.cli.lot.mandat" },
     ...(COMMERCE ? [{ id: "abo" as const, cle: "cab.cli.lot.abo" as MessageKey }] : []),
     { id: "relancer", cle: "cab.cli.lot.relancer" },
   ];
+  // La comptabilité interne ne tient ni le mandat ni l'abonnement : ces gestes sont retirés.
+  const GESTES = estComptabiliteInterne(org)
+    ? GESTES_DU_CABINET.filter((g) => g.id !== "mandat" && g.id !== "abo")
+    : GESTES_DU_CABINET;
   const pret = geste === "relancer" || valeur !== "";
 
   return (

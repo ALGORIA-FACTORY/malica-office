@@ -132,7 +132,7 @@ describe("la montée pendant l'année", { skip: !ADMIN }, () => {
           millimes((solo * joursAvant + premium * d.joursRestants) / d.joursDuMois) + deLAnnee,
         ),
       );
-      assert.ok(ce.lignes.some((l) => l.startsWith("Abonnement annuel : passage Solo -> Premium")));
+      assert.ok(ce.lignes.some((l) => l.startsWith("Abonnement annuel : passage Solo → Premium")));
       // Le premier mois de l'année : la ligne de l'année Solo, et rien d'autre.
       const debut = await emettre(db, d, d.moisSuivant);
       assert.equal(debut.ht, solo * (12 - offerts));

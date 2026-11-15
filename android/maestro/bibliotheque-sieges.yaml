@@ -1,0 +1,40 @@
+# Bibliothèque › Sièges : l'écran est celui du bundle embarqué, mis en page.
+#
+# Symptôme d'origine : sur l'APK, la rangée des sièges (pastille ou photo de
+# profil) s'affichait sans sa mise en page — la règle `.sieges` de
+# `styles-pme.css` ne s'appliquait pas, le bundle embarqué étant plus ancien
+# que le site. `outils/ecrans-embarques.mjs` prouve désormais, avant Play et
+# avant l'émulateur, que les écrans embarqués sont ceux du dépôt.
+#
+# CE QUE CE FLUX PROUVE, ET CE QU'IL NE PROUVE PAS
+#   - Il prouve que la Bibliothèque s'ouvre sur la coque et que son contenu se
+#     lit (« Mois »), sur les écrans du bundle de cette construction.
+#   - La rangée « Sièges » n'existe que si le forfait ouvre les sièges
+#     (`ouverturesDuForfait`, apps/web/src/lib/forfait.ts) et si les pièces
+#     ont plusieurs auteurs. Le jeu de données (`outils/jeu-de-donnees.mjs`)
+#     ne pose ni forfait à sièges ni photo de profil : la rangée est donc
+#     absente du compte de parcours, et le flux ne la FAIT PAS échouer — une
+#     assertion dessus casserait chaque nuit pour une donnée que le jeu n'a pas.
+#     Quand elle est là, le flux l'ouvre et la capture.
+#   - Maestro lit l'arbre d'accessibilité, pas le style calculé, et la photo
+#     est une image décorative (`aria-hidden`) : la mise en page se juge sur
+#     les captures `bibliotheque-*.png` (artefact « maestro »), pas sur une
+#     assertion. Ce flux ne prouve donc PAS que `.sieges` est stylée.
+#
+# Le compte est celui des comptes de parcours (voir connexion.yaml).
+appId: com.algoriafactory.malica.emulateur
+androidWebViewHierarchy: devtools
+---
+- launchApp
+- runFlow: connexion.yaml
+- tapOn: "Bibliothèque"
+- extendedWaitUntil:
+    visible: "Mois"
+    timeout: 20000
+- takeScreenshot: bibliotheque-1-ouverte
+- runFlow:
+    when:
+      visible: "Sièges"
+    commands:
+      - takeScreenshot: bibliotheque-2-sieges
+      - assertVisible: "Mois"
