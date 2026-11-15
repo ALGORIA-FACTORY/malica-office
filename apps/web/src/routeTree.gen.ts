@@ -472,6 +472,7 @@ export interface FileRoutesByFullPath {
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/pme/societes': typeof AuthenticatedPmeSocietesRoute
+
   '/pme/suite': typeof AuthenticatedPmeSuiteRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/tour/$section': typeof AuthenticatedTourSectionRoute
@@ -533,6 +534,7 @@ export interface FileRoutesByTo {
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/pme/societes': typeof AuthenticatedPmeSocietesRoute
+
   '/pme/suite': typeof AuthenticatedPmeSuiteRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/tour/$section': typeof AuthenticatedTourSectionRoute
@@ -1434,3 +1436,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
