@@ -2,7 +2,7 @@
 --
 -- ================================================================== POURQUOI
 --
--- 20261223130100 rendait les courriels à remettre sous `for update skip locked`,
+-- 20261227110100 rendait les courriels à remettre sous `for update skip locked`,
 -- et le travailleur envoyait le courriel DANS la transaction qui tenait ce
 -- verrou : un appel Brevo lent gardait la ligne bloquée pendant toute sa durée.
 -- Ce fichier découpe la remise en trois temps, chacun dans sa transaction :
@@ -21,7 +21,7 @@
 -- journal : `refus.relances.reglage_absent`) ; les autres courriels partent, sans
 -- plafond d'essais. Décision du dirigeant : pas de limite pour le reste.
 --
--- R7 : 20261223130100 n'est pas réécrite ; cette migration la remplace par une
+-- R7 : 20261227110100 n'est pas réécrite ; cette migration la remplace par une
 -- nouvelle définition de la même fonction, et retire l'ancienne.
 
 begin;
