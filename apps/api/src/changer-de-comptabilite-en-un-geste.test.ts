@@ -143,8 +143,8 @@ describe("changer de comptabilité en un seul geste", { skip: !BASE_CONFIGUREE }
 
     const motifs = await sousIdentite(s.gens.expert.id, async (db) => {
       const { rows } = await db.query<{ motif: string }>(
-        `select payload ->> 'motif' as motif from collab.notifications
-          where tenant_id = $1 and kind = 'mandat.revoque'`,
+        `select donnees ->> 'motif' as motif from notif.envois
+          where tenant_id = $1 and canal = 'app' and code = 'mandat.revoque'`,
         [s.cabinet],
       );
       return rows.map((r) => r.motif);

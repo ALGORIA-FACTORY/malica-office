@@ -151,8 +151,8 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
     Number(
       (
         await admin.query<{ n: string }>(
-          `select count(*)::text as n from collab.notifications
-            where tenant_id = $1 and kind = $2 and payload ->> 'piece_id' = $3`,
+          `select count(*)::text as n from notif.envois
+            where tenant_id = $1 and canal = 'app' and code = $2 and donnees ->> 'piece_id' = $3`,
           [pme, kind, id],
         )
       ).rows[0]!.n,

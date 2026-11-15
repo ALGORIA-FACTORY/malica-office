@@ -233,20 +233,15 @@ describe("le relecteur de nuit est borné par la base", { skip: !BASE_CONFIGUREE
 
   it("il ne lit pas la cloche du dossier, ni par la lecture d'un trait", async () => {
     await a.admin.query(
-      `insert into collab.notifications (tenant_id, kind, payload)
-       values ($1, 'piece.retournee', '{"note":"sans pièce"}'::jsonb)`,
+      `select notif.emettre($1, 'piece.retournee', '{"note":"sans pièce"}'::jsonb)`,
       [a.pme],
     );
-    const parLaVue = await sous(a.pme, `select id from notifications_v where tenant_id = $1`, [
+    const parLaTable = await sous(a.pme, `select id from notif.envois where tenant_id = $1`, [
       a.pme,
     ]);
-    const dUnTrait = await sous(
-      a.pme,
-      `select id from app.notifications_des_societes($1::uuid[])`,
-      [[a.pme]],
-    );
-    assert.deepEqual(parLaVue, []);
-    assert.deepEqual(dUnTrait, []);
+    const parLeCentre = await sous(a.pme, `select id from notif.centre($1::uuid[])`, [[a.pme]]);
+    assert.deepEqual(parLaTable, []);
+    assert.deepEqual(parLeCentre, []);
   });
 
   it("sans relecture due, il ne voit rien du dossier", async () => {
