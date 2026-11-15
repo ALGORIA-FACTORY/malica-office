@@ -77,6 +77,22 @@ export const CERTITUDE_MIN = 0.5;
 const RIEN: Cadrage = { coins: null, certitude: null, origine: "aucune" };
 
 /**
+ * Le temps qu'un détecteur a pour répondre. Le modèle se télécharge au premier
+ * usage : sur un réseau lent, il peut ne jamais rendre la main. Passé ce délai,
+ * il est traité comme indisponible, et la photo continue sans lui.
+ */
+const DELAI_DU_DETECTEUR = 8_000;
+
+/** La promesse, ou une erreur si elle ne tient pas dans `ms`. */
+function bornerDans<T>(promesse: Promise<T>, ms: number): Promise<T> {
+  let minuteur: ReturnType<typeof setTimeout> | undefined;
+  const delai = new Promise<never>((_, rejeter) => {
+    minuteur = setTimeout(() => rejeter(new Error("détecteur muet")), ms);
+  });
+  return Promise.race([promesse, delai]).finally(() => clearTimeout(minuteur));
+}
+
+/**
  * Le premier détecteur qui trouve gagne.
  *
  * Un détecteur qui échoue ne doit jamais faire échouer la cascade : le modèle
@@ -86,10 +102,12 @@ const RIEN: Cadrage = { coins: null, certitude: null, origine: "aucune" };
 export async function cadrerAvec(
   image: ImageData,
   detecteurs: readonly Detecteur[],
+  options: { delaiMs?: number } = {},
 ): Promise<Cadrage> {
+  const delai = options.delaiMs ?? DELAI_DU_DETECTEUR;
   for (const d of detecteurs) {
     try {
-      const trouve = await d.trouver(image);
+      const trouve = await bornerDans(d.trouver(image), delai);
       if (!trouve) continue;
       if (trouve.certitude !== null && trouve.certitude < CERTITUDE_MIN) continue;
       return { coins: trouve.coins, certitude: trouve.certitude, origine: d.nom };

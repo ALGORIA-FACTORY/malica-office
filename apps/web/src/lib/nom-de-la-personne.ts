@@ -22,6 +22,20 @@ export function nomDeLaPersonne(p: NomsDuProfil | null | undefined): string | nu
   return detail || p.display_name?.trim() || null;
 }
 
+/**
+ * Ce que la carte du Compte montre : le nom (ou l'e-mail, faute de nom), son initiale, et
+ * l'e-mail en second seulement quand le nom le remplace. Un nom absent n'est jamais deviné.
+ */
+export function identitePourAffichage(
+  p: NomsDuProfil | null | undefined,
+  courriel: string | null,
+): { nom: string; initiale: string; courriel: string | null } {
+  const nom = nomDeLaPersonne(p);
+  const affiche = nom ?? courriel ?? "—";
+  const initiale = (nom ?? courriel ?? "").trim().charAt(0).toLocaleUpperCase() || "·";
+  return { nom: affiche, initiale, courriel: nom ? courriel : null };
+}
+
 /** Pour saluer : le prénom écrit, sinon le nom donné à l'inscription. */
 export function nomPourSaluer(p: NomsDuProfil | null | undefined): string | null {
   return p?.prenom?.trim() || p?.display_name?.trim() || null;

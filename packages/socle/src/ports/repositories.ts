@@ -2207,7 +2207,15 @@ export type PropositionDePiece = (
    * dernière lecture. L'écran les dit « à vérifier » au lieu de « source ».
    */
   champsAVerifier?: string[];
+  /**
+   * D'où vient le sens que la proposition retient : une déclaration de la PME, une lecture de
+   * la pièce, ou une confirmation (PME ou comptabilité). `null` : aucun sens retenu.
+   */
+  sensOrigine?: OrigineDuSens | null;
 };
+
+/** L'origine d'un sens (achat ou vente), dite pour que la comptabilité sache qui l'a posé. */
+export type OrigineDuSens = "declare" | "lu" | "confirme";
 
 /** Une facture à laquelle un avoir peut se rattacher : lue, et déjà comptabilisée. */
 export interface FactureARattacher {
