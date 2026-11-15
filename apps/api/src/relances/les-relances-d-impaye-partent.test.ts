@@ -250,6 +250,15 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       const d = await unImpaye(db, "rappel");
       await regler(db, d.operateur, true, false);
       await relancer(db);
+      // La base d'essai est partagée : les courriels que d'autres épreuves ont validés
+      // attendent aussi, et les plus anciens passent d'abord. La réservation les prend
+      // tous (annulés avec la transaction), sans quoi le nôtre resterait au-delà.
+      const dus = (
+        await db.query<{ n: number }>(
+          `select count(*)::int as n from notif.envois_v
+            where canal = 'email' and etat in ('a_remettre', 'a_reessayer')`,
+        )
+      ).rows[0]!.n;
       const lire = () =>
         sous(db, "malica_api", null, async () => {
           const { rows } = await db.query<{
@@ -258,7 +267,7 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
             titre: string;
             corps: string;
             action_route: string | null;
-          }>("select * from notif.reserver_courriels(500, interval '10 minutes')");
+          }>("select * from notif.reserver_courriels($1, interval '10 minutes')", [dus + 1]);
           return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
         });
       const avant = await lire();
