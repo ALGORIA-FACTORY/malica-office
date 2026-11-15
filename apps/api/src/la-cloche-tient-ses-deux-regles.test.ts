@@ -46,10 +46,10 @@ describe("la cloche du moteur de notifications", { skip: !BASE_CONFIGUREE }, () 
       return rows[0]!.id;
     });
     for (let i = 0; i < EMISES; i += 1) {
-      await admin.query(`select notif.emettre($1, 'piece.retournee', jsonb_build_object('n', $2::int))`, [
-        pme,
-        i,
-      ]);
+      await admin.query(
+        `select notif.emettre($1, 'piece.retournee', jsonb_build_object('n', $2::int))`,
+        [pme, i],
+      );
     }
   });
 
@@ -115,6 +115,7 @@ describe("la cloche du moteur de notifications", { skip: !BASE_CONFIGUREE }, () 
     );
     assert.equal(rendues.filter((r) => r.read_at === null).length, PLAFOND - 1);
     assert.ok(rendues.find((r) => r.id === centieme)?.read_at, "la lue des cent reste lue");
-    for (const id of anciennes) assert.ok(!rendues.some((r) => r.id === id), "une lue ancienne ne sort pas");
+    for (const id of anciennes)
+      assert.ok(!rendues.some((r) => r.id === id), "une lue ancienne ne sort pas");
   });
 });
