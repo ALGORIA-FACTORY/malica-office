@@ -65,12 +65,13 @@ const TON_ATTENDU: Record<string, string> = {
   "conseil.decide": "succes",
 };
 
+// Le point de l'étiquette, dans le clair écrit en ligne (charte du 13 novembre 2026).
 const COULEUR: Record<string, string> = {
-  succes: "#3A8F54",
-  erreur: "#BF4424",
-  alerte: "#B58614",
-  en_cours: "#2968A5",
-  neutre: "#555555",
+  succes: "#235340",
+  erreur: "#B23A1C",
+  alerte: "#8A5B00",
+  en_cours: "#1F6FB2",
+  neutre: "#5F6673",
 };
 
 /** Les jetons que les producteurs fournissent : aucun `{{…}}` ne doit survivre. */
@@ -212,7 +213,7 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
         assert.ok(c.titre.trim().length > 0, `${code} : titre vide`);
         assert.ok(!/\{\{/.test(message.html + message.texte), `${code} : jeton non remplacé`);
         assert.ok(
-          message.html.includes(`background:${COULEUR[c.ton]};font-size:0`),
+          message.html.includes(`border-radius:999px;background:${COULEUR[c.ton]};"></span>`),
           `${code} : couleur du ton absente`,
         );
         const requete = JSON.parse(
@@ -224,7 +225,12 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
           }),
         ) as { to: Array<{ email: string }>; subject: string };
         assert.equal(requete.to[0]!.email, email);
-        assert.equal(requete.subject, c.titre);
+        // L'objet est celui du gabarit, jetons remplis ; à défaut, le titre.
+        assert.equal(requete.subject, message.sujet);
+        assert.ok(
+          message.sujet.trim().length > 0 && !/\{\{/.test(message.sujet),
+          `${code} : objet`,
+        );
       }
     });
   });
