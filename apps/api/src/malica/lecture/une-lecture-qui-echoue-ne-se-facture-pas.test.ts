@@ -275,16 +275,20 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
     orgLibre = await nouvelleOrganisation(`Compteur libre ${marque}`);
     await licencier(orgLibre);
 
-    // Une organisation au plafond : 65 lectures déjà comptées sur 65. Le droit
-    // n'est pas écrit ici — la base le connaît ; on remplit jusqu'à ce qu'elle
-    // dise non, puis on le vérifie dans l'épreuve.
+    // Une organisation au plafond : toutes ses lectures déjà comptées. Le droit
+    // n'est pas écrit ici — la base le connaît (`droits_v`) ; on remplit jusqu'à
+    // ce qu'elle dise non, puis on le vérifie dans l'épreuve.
     // Deux sociétés, deux licences : depuis le 15 novembre 2026, une offre à une
     // société n'en accueille pas une seconde (20261228110000). La société au plafond
-    // naît donc chez un second propriétaire, avec SA licence Basic, et le compte de
-    // l'épreuve y entre comme dirigeant : les deux compteurs restent séparés.
+    // naît donc chez un second propriétaire, avec SA licence ; il passe à l'offre
+    // qui ouvre des places (la vraie porte), et le compte de l'épreuve y entre comme
+    // dirigeant : les deux compteurs restent séparés.
     const second = await creerCompte(`${marque}-plein@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(second);
     orgPleine = await nouvelleOrganisation(`Compteur plein ${marque}`, second.id);
+    await sousIdentiteDuServeur(second.id, (db) =>
+      db.query("select public.forfait_changer('team', $1, current_date)", [orgPleine]),
+    );
     await admin.query(
       "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
       [orgPleine, u.id],
@@ -295,7 +299,8 @@ describe("une lecture qui échoue ne se facture pas", { skip: !BASE_CONFIGUREE }
          insert into capture.pieces
            (tenant_id, vis, source, storage_path, status, idempotency_key, created_by)
          select $1, 'partage', 'photo', 'q/' || i, 'lue', $3 || '-deja-' || i, $2
-           from generate_series(1, 65) as i
+           from generate_series(1, (select lectures_droit from facturation.droits_v
+                                   where licence_id = $4)) as i
          returning id
        )
        insert into facturation.lectures (tenant_id, licence_id, piece_id, periode, consommee_par)

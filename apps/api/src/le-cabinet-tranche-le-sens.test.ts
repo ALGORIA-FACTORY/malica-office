@@ -28,6 +28,7 @@ import { identite } from "./depots/identite.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { contratRpc, executerRpc } from "./rpc.ts";
 import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -135,10 +136,12 @@ describe("le cabinet tranche le sens d'une pièce", { skip: !BASE_CONFIGUREE }, 
     assert.ok(dirigeant && expert && collaborateur);
     const creer = (u: Utilisateur, kind: string, nom: string, mode: string, mf: string | null) =>
       sousIdentite(u.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization($1, $2, $3, $4, 'TN', 'TND') as id`,
-          [kind, nom, mode, mf],
-        );
+        const { rows } = await organisationDEssai(db, `$1, $2, $3, $4, 'TN', 'TND'`, [
+          kind,
+          nom,
+          mode,
+          mf,
+        ]);
         return rows[0]!.id;
       });
     cabinet = await creer(expert, "cabinet", `CABINET D'ESSAI ${marque}`, "mandate", null);
