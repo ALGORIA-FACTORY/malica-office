@@ -32,7 +32,7 @@ import {
 } from "./charte.ts";
 
 /** Le signal de l'étiquette : la couleur fonctionnelle du message. */
-export const SIGNAUX = ["fait", "attend", "retard", "info", "neutre"] as const;
+const SIGNAUX = ["fait", "attend", "retard", "info", "neutre"] as const;
 export type Signal = (typeof SIGNAUX)[number];
 
 /** Une ligne du bloc de données : un libellé à gauche, une valeur à droite. */
