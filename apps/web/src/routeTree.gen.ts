@@ -56,6 +56,7 @@ import { Route as AuthenticatedPmeMalicaRouteImport } from './routes/_authentica
 import { Route as AuthenticatedPmeNotificationsRouteImport } from './routes/_authenticated/pme.notifications'
 import { Route as AuthenticatedPmeReglagesRouteImport } from './routes/_authenticated/pme.reglages'
 import { Route as AuthenticatedPmeReglerRouteImport } from './routes/_authenticated/pme.regler'
+import { Route as AuthenticatedPmeSocieteEnPlusRouteImport } from './routes/_authenticated/pme.societe-en-plus'
 import { Route as AuthenticatedPmeSocietesRouteImport } from './routes/_authenticated/pme.societes'
 import { Route as AuthenticatedPmeSuiteRouteImport } from './routes/_authenticated/pme.suite'
 import { Route as AuthenticatedPmeTvaRouteImport } from './routes/_authenticated/pme.tva'
@@ -333,6 +334,12 @@ const AuthenticatedPmeReglerRoute = AuthenticatedPmeReglerRouteImport.update({
   path: '/regler',
   getParentRoute: () => AuthenticatedPmeRoute,
 } as any)
+const AuthenticatedPmeSocieteEnPlusRoute =
+  AuthenticatedPmeSocieteEnPlusRouteImport.update({
+    id: '/societe-en-plus',
+    path: '/societe-en-plus',
+    getParentRoute: () => AuthenticatedPmeRoute,
+  } as any)
 const AuthenticatedPmeSocietesRoute =
   AuthenticatedPmeSocietesRouteImport.update({
     id: '/societes',
@@ -471,6 +478,7 @@ export interface FileRoutesByFullPath {
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
+  '/pme/societe-en-plus': typeof AuthenticatedPmeSocieteEnPlusRoute
   '/pme/societes': typeof AuthenticatedPmeSocietesRoute
 
   '/pme/suite': typeof AuthenticatedPmeSuiteRoute
@@ -533,6 +541,7 @@ export interface FileRoutesByTo {
   '/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
+  '/pme/societe-en-plus': typeof AuthenticatedPmeSocieteEnPlusRoute
   '/pme/societes': typeof AuthenticatedPmeSocietesRoute
 
   '/pme/suite': typeof AuthenticatedPmeSuiteRoute
@@ -600,6 +609,7 @@ export interface FileRoutesById {
   '/_authenticated/pme/notifications': typeof AuthenticatedPmeNotificationsRoute
   '/_authenticated/pme/reglages': typeof AuthenticatedPmeReglagesRoute
   '/_authenticated/pme/regler': typeof AuthenticatedPmeReglerRoute
+  '/_authenticated/pme/societe-en-plus': typeof AuthenticatedPmeSocieteEnPlusRoute
   '/_authenticated/pme/societes': typeof AuthenticatedPmeSocietesRoute
   '/_authenticated/pme/suite': typeof AuthenticatedPmeSuiteRoute
   '/_authenticated/pme/tva': typeof AuthenticatedPmeTvaRoute
@@ -666,6 +676,7 @@ export interface FileRouteTypes {
     | '/pme/notifications'
     | '/pme/reglages'
     | '/pme/regler'
+    | '/pme/societe-en-plus'
     | '/pme/societes'
     | '/pme/suite'
     | '/pme/tva'
@@ -727,6 +738,7 @@ export interface FileRouteTypes {
     | '/pme/notifications'
     | '/pme/reglages'
     | '/pme/regler'
+    | '/pme/societe-en-plus'
     | '/pme/societes'
     | '/pme/suite'
     | '/pme/tva'
@@ -792,6 +804,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pme/notifications'
     | '/_authenticated/pme/reglages'
     | '/_authenticated/pme/regler'
+    | '/_authenticated/pme/societe-en-plus'
     | '/_authenticated/pme/societes'
     | '/_authenticated/pme/suite'
     | '/_authenticated/pme/tva'
@@ -1152,6 +1165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPmeReglerRouteImport
       parentRoute: typeof AuthenticatedPmeRoute
     }
+    '/_authenticated/pme/societe-en-plus': {
+      id: '/_authenticated/pme/societe-en-plus'
+      path: '/societe-en-plus'
+      fullPath: '/pme/societe-en-plus'
+      preLoaderRoute: typeof AuthenticatedPmeSocieteEnPlusRouteImport
+      parentRoute: typeof AuthenticatedPmeRoute
+    }
     '/_authenticated/pme/societes': {
       id: '/_authenticated/pme/societes'
       path: '/societes'
@@ -1346,6 +1366,7 @@ interface AuthenticatedPmeRouteChildren {
   AuthenticatedPmeNotificationsRoute: typeof AuthenticatedPmeNotificationsRoute
   AuthenticatedPmeReglagesRoute: typeof AuthenticatedPmeReglagesRoute
   AuthenticatedPmeReglerRoute: typeof AuthenticatedPmeReglerRoute
+  AuthenticatedPmeSocieteEnPlusRoute: typeof AuthenticatedPmeSocieteEnPlusRoute
   AuthenticatedPmeSocietesRoute: typeof AuthenticatedPmeSocietesRoute
   AuthenticatedPmeSuiteRoute: typeof AuthenticatedPmeSuiteRoute
   AuthenticatedPmeTvaRoute: typeof AuthenticatedPmeTvaRoute
@@ -1370,6 +1391,7 @@ const AuthenticatedPmeRouteChildren: AuthenticatedPmeRouteChildren = {
   AuthenticatedPmeNotificationsRoute: AuthenticatedPmeNotificationsRoute,
   AuthenticatedPmeReglagesRoute: AuthenticatedPmeReglagesRoute,
   AuthenticatedPmeReglerRoute: AuthenticatedPmeReglerRoute,
+  AuthenticatedPmeSocieteEnPlusRoute: AuthenticatedPmeSocieteEnPlusRoute,
   AuthenticatedPmeSocietesRoute: AuthenticatedPmeSocietesRoute,
   AuthenticatedPmeSuiteRoute: AuthenticatedPmeSuiteRoute,
   AuthenticatedPmeTvaRoute: AuthenticatedPmeTvaRoute,

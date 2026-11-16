@@ -26,6 +26,7 @@ import { lireLaPieceDEssai } from "../lecture-d-essai.ts";
 import { executerRpc } from "../rpc.ts";
 
 import { matriculeDEssai } from "../matricule-d-essai.ts";
+import { organisationDEssai } from "../organisation-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
 );
@@ -49,10 +50,9 @@ describe("sans mandat actif, la pièce est au client", { skip: !BASE_CONFIGUREE 
   async function dossier(): Promise<string> {
     n += 1;
     const id = await sousIdentite(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization('pme', $1, 'autonome', null, 'TN', 'TND') as id`,
-        [`DOSSIER ${n} ${marque}`],
-      );
+      const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', null, 'TN', 'TND'`, [
+        `DOSSIER ${n} ${marque}`,
+      ]);
       return rows[0]!.id;
     });
     dossiers.push(id);
@@ -105,8 +105,9 @@ describe("sans mandat actif, la pièce est au client", { skip: !BASE_CONFIGUREE 
     expertB = b;
     const cabinet = (qui: Utilisateur, nom: string, mf: string) =>
       sousIdentite(qui.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization('cabinet', $1, 'autonome', $2, 'TN', 'TND') as id`,
+        const { rows } = await organisationDEssai(
+          db,
+          `'cabinet', $1, 'autonome', $2, 'TN', 'TND'`,
           [`${nom} ${marque}`, mf],
         );
         return rows[0]!.id;

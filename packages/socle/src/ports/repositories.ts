@@ -56,6 +56,11 @@ export interface NewOrganization {
   jurisdiction: string;
   currency: string;
   validationMode?: ValidationMode;
+  /**
+   * Au-delà des sociétés que l'offre comprend, la société se paie en plus : la porte ne
+   * l'accepte qu'avec cet accord (« Ajouter une société », la case du prix — 20261228110000).
+   */
+  supplementAccepte?: boolean;
   defaultEntityName?: string;
   /** L'adresse du siège, quand on la donne à la création. */
   adresse?: string | null;
@@ -4234,6 +4239,20 @@ export interface PrixEnPlus {
   organisations_incluses: number;
 }
 
+/** Ce que dit « Ajouter une société » avant le geste : la licence qui l'accueillerait. */
+export interface SocieteEnPlusDevis {
+  offre: string;
+  organisations: number;
+  organisations_incluses: number;
+  prix_organisation_sup: string;
+}
+
+/**
+ * La réponse de la base avant le geste : la licence d'accueil, ou le refus que la porte
+ * opposerait — un titulaire dont aucune offre n'accueille une société de plus (20261228110000).
+ */
+export type SocieteEnPlusAccueil = SocieteEnPlusDevis | { offre_multisociete_requise: true };
+
 export interface MonForfait {
   /** `basic` · `solo` · `team` · `premium` — un CODE, jamais traduit. */
   offre: string | null;
@@ -4320,6 +4339,11 @@ export interface FacturationRepository {
   monForfait(tenantId?: string): Promise<MonForfait | null>;
   /** Le prix d'une place et d'une société en plus ; `null` à qui n'est pas titulaire. */
   mesPrixEnPlus(tenantId: string): Promise<PrixEnPlus | null>;
+  /**
+   * La licence qui accueillerait une société de plus ; `{ offre_multisociete_requise }` : la porte
+   * refuserait (titulaire d'une offre à une société) ; `null` : elle aura sa propre licence.
+   */
+  societeEnPlusDevis(): Promise<SocieteEnPlusAccueil | null>;
   /** Les sièges vus depuis la société ouverte (`tenantId`) ; sans elle, ceux de mes licences. */
   sieges(tenantId?: string): Promise<SiegeDeLaLicence[]>;
   /** Les sociétés de la licence qui couvre la société ouverte, elle en tête. */
@@ -4528,7 +4552,8 @@ export interface OffreAuCatalogue {
 
 export interface DevisDeMontee {
   offre: string;
-  ecart_mensuel_ht: number;
+  /** `null` quand rien ne se chiffre (périmètre « PME » ouvert, sans facture d'avance qui couvre le jour). */
+  ecart_mensuel_ht: number | null;
   /** Les montants à régler sont `null` quand ils ne se devinent pas (périmètre « PME » ouvert, sans émetteur). */
   jours_restants: number | null;
   jours_du_mois: number | null;

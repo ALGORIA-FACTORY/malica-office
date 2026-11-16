@@ -37,14 +37,17 @@ async function aBlanc(corps: (db: pg.PoolClient) => Promise<void>) {
   }
 }
 
-/** Le propriétaire crée une société par la porte qu'ouvre l'écran, et rend son identifiant. */
-const creerSociete = (db: pg.PoolClient, qui: string, nom: string) =>
+/**
+ * Le propriétaire crée une société par la porte qu'ouvre l'écran, et rend son identifiant.
+ * `accepte` : la case du prix d'une société en plus (20261228110000).
+ */
+const creerSociete = (db: pg.PoolClient, qui: string, nom: string, accepte = false) =>
   enPersonne(db, qui, async () => {
     const { rows } = await db.query<{ id: string }>(
-      `select public.create_organization('pme', $1, 'autonome', $2, j.jurisdiction, j.currency) as id
+      `select public.create_organization('pme', $1, 'autonome', $2, j.jurisdiction, j.currency, $3) as id
          from (select distinct on (jurisdiction) jurisdiction, currency
                  from ref.jurisdiction_packs order by jurisdiction, effective_from desc limit 1) j`,
-      [nom, matriculeDEssai("A", "M")],
+      [nom, matriculeDEssai("A", "M"), accepte],
     );
     return rows[0]!.id;
   });
@@ -110,7 +113,17 @@ describe("une société de plus rejoint la licence de son propriétaire", { skip
       await enPremium(db, qui, premiere);
       const g = await grille(db, "premium");
       assert.ok(g.max === null || g.max > g.incluses, "la grille laisse une société de plus");
-      for (let i = 2; i <= g.incluses + 1; i++) await creerSociete(db, qui, `Société ${i}`);
+      for (let i = 2; i <= g.incluses; i++) await creerSociete(db, qui, `Société ${i}`);
+      // Au-delà de l'inclus : sans l'accord, la porte refuse, et rien n'est créé.
+      await db.query("savepoint sans_accord");
+      await assert.rejects(
+        creerSociete(db, qui, "Société en plus"),
+        /refus\.organisation\.supplement_a_accepter/,
+      );
+      await db.query("rollback to savepoint sans_accord");
+      assert.equal((await licencesDe(db, qui))[0]!.organisations, g.incluses, "rien de plus");
+      // Avec l'accord, elle rejoint la licence, au prix de la société en plus.
+      await creerSociete(db, qui, "Société en plus", true);
       const l = await licencesDe(db, qui);
       assert.equal(l.length, 1, "toujours une seule licence");
       assert.equal(l[0]!.organisations, g.incluses + 1);
@@ -129,16 +142,106 @@ describe("une société de plus rejoint la licence de son propriétaire", { skip
     });
   });
 
-  it("une offre à une société (Basic) : la seconde naît sur sa propre licence, comme avant", async () => {
+  // Revue de #388 : la licence qui accueille n'est pas forcément celle de la société ouverte. Le devis
+  // de l'écran lit la MÊME règle que la porte qui rattache.
+  it("le devis dit la licence qui accueille vraiment la société, celle que la porte choisit", async () => {
+    await aBlanc(async (db) => {
+      const qui = randomUUID();
+      await personnesDEssai(db, qui);
+      const premiere = await creerSociete(db, qui, "Première société"); // Basic, pleine
+      // Une offre à une société n'en accueille pas une seconde (20261228110000) : le
+      // propriétaire monte d'offre d'abord.
+      await enPremium(db, qui, premiere);
+      const g = await grille(db, "premium");
+
+      const devis = await enPersonne(db, qui, async () => {
+        const { rows } = await db.query<{
+          r: {
+            offre: string;
+            organisations: number;
+            organisations_incluses: number;
+            prix_organisation_sup: string;
+          } | null;
+        }>("select public.societe_en_plus_devis() as r");
+        return rows[0]!.r;
+      });
+      assert.ok(devis, "une licence accueille");
+      assert.equal(devis.offre, "premium", "la licence montée en Premium");
+      assert.equal(devis.organisations, 1);
+      assert.equal(devis.organisations_incluses, g.incluses);
+      assert.equal(Number(devis.prix_organisation_sup), Number(g.sup));
+
+      const troisieme = await creerSociete(db, qui, "Troisième société");
+      const { rows } = await db.query<{ offre: string }>(
+        `select d.offre_code as offre
+           from facturation.licence_organisations lo
+           join facturation.droits_v d on d.licence_id = lo.licence_id
+          where lo.tenant_id = $1`,
+        [troisieme],
+      );
+      assert.equal(
+        rows[0]!.offre,
+        devis.offre,
+        "la porte rattache à la licence que le devis a dite",
+      );
+    });
+  });
+
+  // Décision du dirigeant (15 novembre 2026, revue de #388) : plus d'une société, seulement avec
+  // une offre qui en accueille plusieurs. Le titulaire d'une offre à une société ne reçoit plus
+  // d'abonnement à côté : la porte refuse, et le devis le dit avant le geste.
+  it("titulaire d'une offre à une société : le devis dit que la porte refuserait", async () => {
+    await aBlanc(async (db) => {
+      const qui = randomUUID();
+      await personnesDEssai(db, qui);
+      await creerSociete(db, qui, "Première société"); // Basic : une société, plafond atteint
+      const devis = await enPersonne(db, qui, async () => {
+        const { rows } = await db.query<{ r: unknown }>(
+          "select public.societe_en_plus_devis() as r",
+        );
+        return rows[0]!.r;
+      });
+      assert.deepEqual(devis, { offre_multisociete_requise: true });
+    });
+  });
+
+  it("sans licence à son nom : le devis est vide, la société aura sa propre licence", async () => {
+    await aBlanc(async (db) => {
+      const qui = randomUUID();
+      await personnesDEssai(db, qui);
+      const devis = await enPersonne(db, qui, async () => {
+        const { rows } = await db.query<{ r: unknown }>(
+          "select public.societe_en_plus_devis() as r",
+        );
+        return rows[0]!.r;
+      });
+      assert.equal(devis, null);
+    });
+  });
+
+  it("une offre à une société (Basic) : la seconde est refusée, ni société ni licence de plus", async () => {
     await aBlanc(async (db) => {
       const qui = randomUUID();
       await personnesDEssai(db, qui);
       await creerSociete(db, qui, "Première société");
       const g = await grille(db, (await licencesDe(db, qui))[0]!.offre);
       assert.equal(g.max, 1, "la grille de départ ne porte qu'une société");
-      await creerSociete(db, qui, "Seconde société");
-      const l = await licencesDe(db, qui);
-      assert.equal(l.length, 2, "deux licences : l'offre ne porte pas une société de plus");
+      const avant = await db.query<{ n: number }>(
+        "select count(*)::int as n from identity.organizations where created_by = $1",
+        [qui],
+      );
+      await db.query("savepoint seconde");
+      await assert.rejects(
+        creerSociete(db, qui, "Seconde société"),
+        /refus\.organisation\.offre_multisociete_requise/,
+      );
+      await db.query("rollback to savepoint seconde");
+      const apres = await db.query<{ n: number }>(
+        "select count(*)::int as n from identity.organizations where created_by = $1",
+        [qui],
+      );
+      assert.equal(apres.rows[0]!.n, avant.rows[0]!.n, "aucune société de plus");
+      assert.equal((await licencesDe(db, qui)).length, 1, "aucune licence de plus");
     });
   });
 

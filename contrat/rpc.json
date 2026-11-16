@@ -190,6 +190,7 @@
     "sieges",
     "siegesDesSocietes",
     "simulerPaiement",
+    "societeEnPlusDevis",
     "souscrireAnnuel",
     "transmettreLicence",
     "verifierPaiement"

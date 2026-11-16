@@ -21,6 +21,7 @@ import { office } from "./depots/office.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
 import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -112,10 +113,11 @@ describe("la TVA par société ne lit que ses sociétés", { skip: !BASE_CONFIGU
     ];
     const creer = (u: Utilisateur, kind: string, nom: string, mf: string | null) =>
       sousIdentite(u.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization($1, $2, 'mandate', $3, 'TN', 'TND') as id`,
-          [kind, nom, mf],
-        );
+        const { rows } = await organisationDEssai(db, `$1, $2, 'mandate', $3, 'TN', 'TND'`, [
+          kind,
+          nom,
+          mf,
+        ]);
         organisations.push(rows[0]!.id);
         return rows[0]!.id;
       });

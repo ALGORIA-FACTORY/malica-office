@@ -34,6 +34,7 @@ import { contratRpc, executerRpc } from "./rpc.ts";
 import { REGLES_DU_JUGEMENT, versionDuJugement } from "./scan/analyse.ts";
 import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
 import { rejugerALOuverture, type BilanDuRejeu } from "./scan/rejeu.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -187,10 +188,12 @@ describe("une pièce se rejuge aux règles du jour", { skip: !BASE_CONFIGUREE },
     assert.ok(dirigeant && expert && autreExpert && collaborateur);
     const creer = (u: Utilisateur, kind: string, nom: string, mode: string, mf: string | null) =>
       sousIdentite(u.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization($1, $2, $3, $4, 'TN', 'TND') as id`,
-          [kind, nom, mode, mf],
-        );
+        const { rows } = await organisationDEssai(db, `$1, $2, $3, $4, 'TN', 'TND'`, [
+          kind,
+          nom,
+          mode,
+          mf,
+        ]);
         return rows[0]!.id;
       });
     cabinet = await creer(expert, "cabinet", `CABINET REJEU ${marque}`, "mandate", null);

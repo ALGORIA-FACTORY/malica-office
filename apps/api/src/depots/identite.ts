@@ -797,10 +797,11 @@ export const identite = {
       currency: string;
       defaultEntityName?: string;
       adresse?: string | null;
+      supplementAccepte?: boolean;
     },
   ): Promise<string> {
     const { rows } = await db.query<{ id: string }>(
-      `select public.create_organization($1, $2, $3::app.validation_mode_t, $4, $5, $6) as id`,
+      `select public.create_organization($1, $2, $3::app.validation_mode_t, $4, $5, $6, $7) as id`,
       [
         input.kind,
         input.name,
@@ -810,6 +811,8 @@ export const identite = {
         // Un `?? "TN"` ici décidait de la fiscalité d'un client par omission.
         input.jurisdiction,
         input.currency,
+        // L'accord explicite au prix d'une société en plus ; sans lui, la porte refuse.
+        input.supplementAccepte === true,
       ],
     );
     const orgId = rows[0]!.id;

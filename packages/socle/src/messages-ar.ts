@@ -2464,6 +2464,9 @@ export const ar: Dict = {
   "refus.invitation.revocation": "لا تُلغى إلا الدعوة المعلّقة.",
   "refus.invitation.expiree": "هذه الدعوة لم تعد صالحة.",
   "refus.organisation.type_inconnu": "نوع المؤسسة هذا غير موجود.",
+  "refus.organisation.offre_multisociete_requise": "عرضك لا يشمل إلا شركة واحدة.",
+  "refus.organisation.supplement_a_accepter":
+    "هذه الشركة غير مشمولة في عرضك: يجب قبول سعرها الإضافي.",
   "refus.organisation.juridiction_requise": "اختر ولاية المؤسسة.",
   "refus.mandat.statut_inconnu": "حالة التكليف هذه غير موجودة.",
   "refus.etablissement.dernier": "هذه آخر منشأة مفتوحة لهذه الشركة: لا تُغلق.",
@@ -3775,6 +3778,19 @@ export const ar: Dict = {
   "pme.reglages.societes.verrou": "عدّة شركات، لكلّ واحدة تكليفها، ونظرة موحّدة لا تملكها غيرك.",
   "pme.reglages.verrou.nonLu": "مقفل لأنّ الاشتراك لم يُقرأ، لا لأنّه مرفوض.",
   "pme.reglages.surTotal": "{n} من {total}",
+  "pme.societe.titre": "إضافة شركة",
+  "pme.societe.rejoint": "تنضمّ إلى اشتراكك {offre}.",
+  "pme.societe.rejointInclus": "تنضمّ إلى اشتراكك {offre} ({n} من {total} شركات).",
+  "pme.societe.rejointEnPlus":
+    "تنضمّ إلى اشتراكك {offre}. شركة إضافية: {prix} {devise} دون احتساب الأداء على القيمة المضافة شهرياً.",
+  "pme.societe.propreAbonnement": "سيكون للشركة الجديدة اشتراكها الخاص.",
+  "pme.societe.offreMultisocieteRequise":
+    "عرضك لا يشمل إلا شركة واحدة. لإدارة عدة شركات، انتقل إلى عرض يشمل عدة شركات.",
+  "pme.societe.voirLesOffres": "عرض العروض",
+  "pme.societe.accepterSupplement":
+    "أوافق على {prix} {devise} إضافية دون احتساب الأداء على القيمة المضافة شهرياً لهذه الشركة.",
+  "pme.societe.ajouter": "إضافة الشركة",
+  "pme.societe.annuler": "إلغاء",
   "tour.quitter": "مغادرة البرج",
   "tour.menu.clients": "العملاء",
   "tour.menu.cabinets": "المحاسبات",

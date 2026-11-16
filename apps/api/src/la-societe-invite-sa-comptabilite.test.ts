@@ -23,6 +23,7 @@ import { courrielInvitation } from "./courriel/invitation.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 async function refus(promesse: Promise<unknown>): Promise<string> {
   try {
@@ -67,10 +68,11 @@ describe("la société invite sa comptabilité", { skip: !BASE_CONFIGUREE }, () 
   };
   const creer = (u: Utilisateur, kind: string, nom: string, mf: string | null) =>
     sousIdentiteDuServeur(u.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization($1, $2, 'mandate', $3, 'TN', 'TND') as id`,
-        [kind, nom, mf],
-      );
+      const { rows } = await organisationDEssai(db, `$1, $2, 'mandate', $3, 'TN', 'TND'`, [
+        kind,
+        nom,
+        mf,
+      ]);
       return rows[0]!.id;
     });
 

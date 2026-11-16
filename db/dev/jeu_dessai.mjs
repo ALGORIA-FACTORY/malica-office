@@ -218,6 +218,28 @@ async function organisation(kind, name, validationMode, legalId) {
   ]);
 }
 
+/**
+ * Le compte de développement dirige deux sociétés. Depuis le 15 novembre 2026,
+ * une seconde société n'est acceptée que si une licence du titulaire peut
+ * l'accueillir : sans cela, la porte refuse
+ * (`refus.organisation.offre_multisociete_requise`).
+ *
+ * Le jeu d'essai passe donc, comme un client le ferait, à l'offre la moins chère
+ * qui comprend au moins deux sociétés. L'offre n'est pas écrite ici : elle se lit
+ * dans `mesOffres` (R4). Rejouable : rien ne change si l'offre en cours suffit.
+ */
+async function offreQuiAccueilleDeuxSocietes(pme) {
+  const offres = await rpc("facturation", "mesOffres", [pme]);
+  const courante = offres.find((o) => o.courant);
+  if (courante && Number(courante.organisations_incluses) >= 2) return;
+  const cible = offres
+    .filter((o) => !o.empechement && Number(o.organisations_incluses) >= 2)
+    .sort((a, b) => Number(a.rang) - Number(b.rang))[0];
+  if (!cible) throw new Error("aucune offre n'accueille deux sociétés sans supplément");
+  await rpc("facturation", "changerForfait", [cible.code, pme]);
+  console.log(`  offre            ${cible.libelle} (deux sociétés)`);
+}
+
 async function tiers(dossier, nature, code, raisonSociale, compteCollectif, matricule) {
   const existants = await rpc("tiers", "lister", [dossier, nature]);
   if (existants.some((t) => t.code === code)) return;
@@ -431,6 +453,9 @@ async function main() {
   // l'intégration continue sème déjà un cabinet en 1234567A — celui-ci a le sien.
   const cabinet = await organisation("cabinet", "CABINET MALICA", "mandate", "1234561A/A/M/000");
   const optic = await organisation("pme", "DREAM OPTIC", "mandate", "1128882F/P/C/000");
+  // Deux sociétés, seulement avec une offre qui en accueille plusieurs (décision
+  // du 15 novembre 2026) : le compte monte d'offre avant la seconde.
+  await offreQuiAccueilleDeuxSocietes(optic);
   const atlas = await organisation("pme", "ATLAS DISTRIBUTION", "autonome", "9876543B/B/N/000");
   console.log(`  cabinet          CABINET MALICA`);
   console.log(`  dossiers         DREAM OPTIC · ATLAS DISTRIBUTION`);

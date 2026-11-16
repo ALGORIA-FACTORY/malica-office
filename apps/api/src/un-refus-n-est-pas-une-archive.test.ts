@@ -19,6 +19,7 @@ import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { supervision } from "./depots/supervision.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 describe("un refus n'est pas une archive", { skip: !BASE_CONFIGUREE }, () => {
   let s: SocieteDEssai;
@@ -37,10 +38,10 @@ describe("un refus n'est pas une archive", { skip: !BASE_CONFIGUREE }, () => {
     proprietaire = c;
     const creer = (nom: string) =>
       sousIdentiteDuServeur(proprietaire.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization('pme', $1, 'autonome', $2, 'TN', 'TND') as id`,
-          [nom, matriculeDEssai()],
-        );
+        const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', $2, 'TN', 'TND'`, [
+          nom,
+          matriculeDEssai(),
+        ]);
         return rows[0]!.id;
       });
     refusante = await creer(`REFUSANTE ${marque}`);

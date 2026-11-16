@@ -25,6 +25,7 @@ import { MESSAGES } from "@malica/socle/messages";
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -38,10 +39,10 @@ describe("un matricule, une société", { skip: !BASE_CONFIGUREE }, () => {
 
   async function creer(u: Utilisateur, legalId: string, nom?: string): Promise<string> {
     const id = await sousIdentite(u.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization('pme', $1, 'autonome', $2, 'TN', 'TND') as id`,
-        [nom ?? `${marque} ${u.email}`, legalId],
-      );
+      const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', $2, 'TN', 'TND'`, [
+        nom ?? `${marque} ${u.email}`,
+        legalId,
+      ]);
       return rows[0]!.id;
     });
     creees.push(id);

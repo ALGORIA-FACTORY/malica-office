@@ -18,6 +18,7 @@ import { fermerLePool, sousIdentite } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -48,17 +49,15 @@ describe("le matricule se saisit après l'inscription, une fois", { skip: !BASE_
     expert = (await creerCompte(`expert-${marque}@essai.local`, mdp))!;
     assert.ok(dirigeant && expert);
     cabinet = await sousIdentite(expert.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization('cabinet', $1, 'mandate', null, 'TN', 'TND') as id`,
-        [`CABINET MATRICULE ${marque}`],
-      );
+      const { rows } = await organisationDEssai(db, `'cabinet', $1, 'mandate', null, 'TN', 'TND'`, [
+        `CABINET MATRICULE ${marque}`,
+      ]);
       return rows[0]!.id;
     });
     pme = await sousIdentite(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization('pme', $1, 'autonome', null, 'TN', 'TND') as id`,
-        [`PME ${marque}`],
-      );
+      const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', null, 'TN', 'TND'`, [
+        `PME ${marque}`,
+      ]);
       return rows[0]!.id;
     });
   });
@@ -99,10 +98,9 @@ describe("le matricule se saisit après l'inscription, une fois", { skip: !BASE_
 
   it("un matricule au mauvais format est refusé par le pack", async () => {
     const ailleurs = await sousIdentite(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization('pme', $1, 'autonome', null, 'TN', 'TND') as id`,
-        [`PME FORMAT ${marque}`],
-      );
+      const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', null, 'TN', 'TND'`, [
+        `PME FORMAT ${marque}`,
+      ]);
       return rows[0]!.id;
     });
     try {

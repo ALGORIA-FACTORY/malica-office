@@ -991,6 +991,21 @@ trancher avant toute mise en production** : une société qui n'a qu'un comptabl
 inscrire ses propres écritures (`refus.inscription.reservee_au_cabinet`, règle C-1), et son comptable ne
 peut pas encore les revoir. Deux voies : construire l'espace, ou ne pas livrer la règle C-1 avant lui.
 
+### A3 — Ajouter une société : deux arbitrages commerciaux, **tranchés par le dirigeant le 15 novembre 2026**
+
+L'écran « Ajouter une société » (`/pme/societe-en-plus`) était livré avec deux défauts ; Wissem Barouni les
+a tranchés à la revue de #388 :
+
+1. **Au-delà des sociétés incluses : un second geste.** La ligne d'état dit le prix (« Société en plus :
+   29 TND HT par mois », lu dans `ref.offres`) et une case l'accepte ; sans elle, « Ajouter » ne part pas.
+2. **Plus d'une société, seulement avec une offre qui en accueille plusieurs.** Le titulaire d'une offre à
+   une société (Basic, Solo, Team : `organisations_max = 1`) ne reçoit plus de licence Basic à côté : la
+   porte `create_organization` refuse (`refus.organisation.offre_multisociete_requise`, migration
+   `20261228110000`) et l'écran le dit avant le geste, avec « Voir les offres ». Quelles offres
+   accueillent plusieurs sociétés reste une donnée (`ref.offres.organisations_max`, R4). La première
+   société d'une personne naît toujours avec sa licence ; une société qu'une comptabilité crée pour son
+   client suit son propre chemin (`dirigeant_arrive`), inchangé.
+
 ### C-5 — Le moteur de notifications écrit une ligne par destinataire (13 novembre 2026)
 
 Tranché par le dirigeant : **remplacement total** de l'ancien fil (`collab.notifications`) par le

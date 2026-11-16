@@ -22,6 +22,7 @@ import { BASE_CONFIGUREE, monterUneSociete, type SocieteDEssai } from "./circuit
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { lireLaPieceDEssai } from "./lecture-d-essai.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 interface LignePiece {
   id: string;
@@ -55,10 +56,10 @@ describe("la capture garde ce que la personne a dit", { skip: !BASE_CONFIGUREE }
     s = await monterUneSociete(marque);
     // Une seconde société de la même personne, sans mandat : Basic, sans comptabilité.
     seule = await sousIdentiteDuServeur(s.gens.amel.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization('pme', $1, 'autonome', $2, 'TN', 'TND') as id`,
-        [`SANS COMPTA ${marque}`, matriculeDEssai()],
-      );
+      const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', $2, 'TN', 'TND'`, [
+        `SANS COMPTA ${marque}`,
+        matriculeDEssai(),
+      ]);
       return rows[0]!.id;
     });
   });

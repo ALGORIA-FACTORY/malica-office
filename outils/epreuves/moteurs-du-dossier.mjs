@@ -69,6 +69,9 @@ async function pmeDEpreuve(identite) {
         legalId: identite.legalId,
         jurisdiction: cabinet.jurisdiction,
         currency: pack.currency,
+        // Le compte de développement a déjà ses deux sociétés comprises (Premium) :
+        // celle-ci se paie en plus, et l'épreuve l'accepte comme le ferait la case.
+        supplementAccepte: true,
       },
     ]);
     pme = (await e.rpc("identite", "listMyOrganizations")).find((o) => o.id === id);

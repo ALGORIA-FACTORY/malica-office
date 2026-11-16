@@ -35,6 +35,7 @@ import { supervision } from "./depots/supervision.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { contratRpc, executerRpc } from "./rpc.ts";
 import { lecture as lectureDEssai } from "./scan/lecture-d-essai.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -192,10 +193,11 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
     nomDuCabinet = `CABINET D'ESSAI ${marque}`;
     const creer = (u: Utilisateur, kind: string, nom: string, mf: string | null) =>
       sousIdentite(u.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization($1, $2, 'mandate', $3, 'TN', 'TND') as id`,
-          [kind, nom, mf],
-        );
+        const { rows } = await organisationDEssai(db, `$1, $2, 'mandate', $3, 'TN', 'TND'`, [
+          kind,
+          nom,
+          mf,
+        ]);
         return rows[0]!.id;
       });
     pme = await creer(dirigeant, "pme", `PME D'ESSAI ${marque}`, mfDossier);
@@ -599,10 +601,10 @@ describe("le cabinet prend en charge sans le client", { skip: !BASE_CONFIGUREE }
     // Un dossier autonome tient ses livres : rien ne change pour lui.
     const mfAutonome = matriculeDEssai("B", "M");
     const autonome = await sousIdentite(dirigeant.id, async (db) => {
-      const { rows } = await db.query<{ id: string }>(
-        `select public.create_organization('pme', $1, 'autonome', $2, 'TN', 'TND') as id`,
-        [`PME AUTONOME ${marque}`, mfAutonome],
-      );
+      const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', $2, 'TN', 'TND'`, [
+        `PME AUTONOME ${marque}`,
+        mfAutonome,
+      ]);
       return rows[0]!.id;
     });
     try {

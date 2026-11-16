@@ -21,6 +21,7 @@ import type { PieceLue } from "@malica/socle/ports/repositories";
 
 import { BASE_CONFIGUREE, monterUneSociete, type SocieteDEssai } from "./circuit-d-essai.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 const SOCIETES = 150;
 const PIECES = 10_000;
@@ -131,10 +132,9 @@ describe("la bibliothèque de cent sociétés s'ouvre vite", { skip: !BASE_CONFI
     societes.push(s.pme);
     for (let i = 1; i < SOCIETES; i++) {
       const id = await sousIdentiteDuServeur(s.gens.amel.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization('pme', $1, 'autonome', null, 'TN', 'TND') as id`,
-          [`SOCIETE ${marque} ${i}`],
-        );
+        const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', null, 'TN', 'TND'`, [
+          `SOCIETE ${marque} ${i}`,
+        ]);
         return rows[0]!.id;
       });
       societes.push(id);

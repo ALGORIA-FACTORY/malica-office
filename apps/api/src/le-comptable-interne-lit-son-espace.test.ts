@@ -27,6 +27,7 @@ import { identite } from "./depots/identite.ts";
 import { lireLaPieceDEssai } from "./lecture-d-essai.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
+import { organisationDEssai } from "./organisation-d-essai.ts";
 
 const MOT_DE_PASSE = "MotDePasseTresLong2026!";
 
@@ -73,10 +74,10 @@ describe("le comptable interne ouvre l'espace de sa société", { skip: !BASE_CO
 
     const creer = (u: Utilisateur, nom: string) =>
       sousIdentiteDuServeur(u.id, async (db) => {
-        const { rows } = await db.query<{ id: string }>(
-          `select public.create_organization('pme', $1, 'autonome', $2, 'TN', 'TND') as id`,
-          [nom, matriculeDEssai()],
-        );
+        const { rows } = await organisationDEssai(db, `'pme', $1, 'autonome', $2, 'TN', 'TND'`, [
+          nom,
+          matriculeDEssai(),
+        ]);
         return rows[0]!.id;
       });
     pme = await creer(dirigeant, `SOCIETE ${marque}`);
