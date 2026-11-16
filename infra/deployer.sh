@@ -188,8 +188,18 @@ principal() {
     while IFS= read -r ligne || [ -n "$ligne" ]; do
       nom="${ligne%%=*}"
       valeur="${ligne#*=}"
+      # 16 novembre 2026 : l'adresse publique rejoint la liste. Le pilote
+      # servait sous son adresse technique (sslip.io), et les liens de ses
+      # courriels y menaient ; elle se règle désormais depuis les variables
+      # de l'environnement GitHub, sans connexion au serveur.
       case "$nom" in
       BREVO_API_KEY | ANTHROPIC_API_KEY | DEEPSEEK_API_KEY | QWEN_API_KEY) ;;
+      DOMAINE | DOMAINE_ALIAS)
+        [ -z "$valeur" ] || [[ "$valeur" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || {
+          echo "KO : $nom n'est pas un nom d'hôte, ignoré" >&2
+          continue
+        }
+        ;;
       *) continue ;;
       esac
       [ -n "$valeur" ] || continue

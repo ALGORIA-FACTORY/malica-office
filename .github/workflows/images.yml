@@ -123,9 +123,9 @@ jobs:
           JETON: ${{ secrets.GITHUB_TOKEN }}
           # Les secrets d'application, posés dans l'environnement « staging »
           # de GitHub. Absents, ils partent vides et le serveur n'y touche pas.
-          # Le secret prime ; à défaut, la variable du même nom (posée ainsi
-          # le 20 octobre 2026 — à convertir en secret, puis retirer ce repli).
-          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY || vars.BREVO_API_KEY }}
+          # Un secret, jamais une variable : une variable s'imprime en clair
+          # dans le journal d'Actions, public sur ce dépôt (16 novembre 2026).
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploi
