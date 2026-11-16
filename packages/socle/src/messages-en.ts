@@ -4349,9 +4349,6 @@ export const en: Dict = {
   "pme.payer.securise": "Secure payment by {prestataire}",
   "pme.payer.rienARegler": "This payment is no longer due.",
   "paiement.moyen_indisponible": "This payment method is not available.",
-  "courriel.notif.pied":
-    "You receive this message because you hold this Malica Office subscription. You can adjust your notifications in your settings.",
-  "courriel.notif.lienSecours": "The button does not open? Copy this link into your browser:",
   "pme.reglages.paiement.facture": "Invoice {numero}",
   "pme.reglages.factures.titre": "Your invoices",
   "pme.reglages.factures.reste": "Left to pay: {montant} {devise} incl. VAT",

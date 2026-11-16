@@ -22,7 +22,7 @@ import pg from "pg";
 import { corpsBrevo } from "../courriel/brevo.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
 
-import { courrielDeNotification } from "./courriel-de-notification.ts";
+import { courrielDeNotification, type Palier } from "./courriel-de-notification.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -65,12 +65,13 @@ const TON_ATTENDU: Record<string, string> = {
   "conseil.decide": "succes",
 };
 
+// Le point de l'étiquette, dans le clair écrit en ligne (charte du 13 novembre 2026).
 const COULEUR: Record<string, string> = {
-  succes: "#3A8F54",
-  erreur: "#BF4424",
-  alerte: "#B58614",
-  en_cours: "#2968A5",
-  neutre: "#555555",
+  succes: "#235340",
+  erreur: "#B23A1C",
+  alerte: "#8A5B00",
+  en_cours: "#1F6FB2",
+  neutre: "#5F6673",
 };
 
 /** Les jetons que les producteurs fournissent : aucun `{{…}}` ne doit survivre. */
@@ -165,6 +166,10 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
           action_route: string | null;
           ton: string;
           envoi_id: string;
+          libelles: Record<string, string>;
+          frise: Palier[] | null;
+          donnees: Record<string, unknown> | null;
+          sujet: string | null;
         }>("select * from notif.reserver_courriels(1000000, interval '10 minutes')");
         return rows.filter((r) => r.email === email);
       })();
@@ -189,6 +194,9 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
         assert.equal(c.ton, TON_ATTENDU[code], `${code} : ton`);
         const message = courrielDeNotification({
           locale: c.locale,
+          code,
+          organisation: null,
+          urlPublique: "https://app.essai.local",
           titre: c.titre,
           corps: c.corps,
           action:
@@ -196,11 +204,16 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
               ? { libelle: c.action_libelle, url: `https://app.essai.local${c.action_route}` }
               : null,
           ton: c.ton,
+          // Les textes du cadre viennent de la base, comme en production.
+          libelles: c.libelles,
+          frise: c.frise,
+          donnees: c.donnees,
+          sujet: c.sujet,
         });
         assert.ok(c.titre.trim().length > 0, `${code} : titre vide`);
         assert.ok(!/\{\{/.test(message.html + message.texte), `${code} : jeton non remplacé`);
         assert.ok(
-          message.html.includes(`background:${COULEUR[c.ton]};font-size:0`),
+          message.html.includes(`border-radius:999px;background:${COULEUR[c.ton]};"></span>`),
           `${code} : couleur du ton absente`,
         );
         const requete = JSON.parse(
@@ -212,7 +225,12 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
           }),
         ) as { to: Array<{ email: string }>; subject: string };
         assert.equal(requete.to[0]!.email, email);
-        assert.equal(requete.subject, c.titre);
+        // L'objet est celui du gabarit, jetons remplis ; à défaut, le titre.
+        assert.equal(requete.subject, message.sujet);
+        assert.ok(
+          message.sujet.trim().length > 0 && !/\{\{/.test(message.sujet),
+          `${code} : objet`,
+        );
       }
     });
   });

@@ -1,0 +1,79 @@
+-- ======================================================================
+--  Les relances d'impayé parlent comme leurs maquettes (E33 à E36,
+--  13 novembre 2026, adoptées le 16 novembre).
+--
+--  Le titre dit ce qui s'est passé en une phrase ; le montant et la frise des
+--  paliers vivent dans la carte que dessine le courriel (`frise`), plus dans le
+--  texte. L'objet garde la référence de la facture. La devise reste un jeton
+--  (R4), jamais un code écrit.
+--
+--  R7 : rien n'est réécrit — une nouvelle version de chaque gabarit, datée.
+--  Nettoyage : les versions remplacées qu'aucun envoi n'a utilisées sont
+--  retirées ; celles qui ont servi restent, car elles prouvent ce qui est parti.
+--  La colonne `corps_html`, que plus rien ne lit, est retirée.
+--  R11 : la date de validité est un littéral ; le ton est écrit, jamais omis.
+-- ======================================================================
+
+begin;
+
+insert into notif.gabarits
+  (code, canal, locale, sujet, titre, corps, action_libelle, action_route, ton, effective_from)
+values
+  -- E33 · impaye.rappel
+  ('impaye.rappel', 'email', 'fr', 'Facture {{numero}} — échéance passée', 'Votre facture est échue.',
+   'Elle arrivait à échéance le {{echeance_longue}}. Rien ne change pour l''instant : je continue à lire.',
+   'Régler maintenant', '/pme/reglages', 'alerte', date '2026-11-16'),
+  ('impaye.rappel', 'email', 'en', 'Invoice {{numero}} — past due', 'Your invoice is past due.',
+   'It was due on {{echeance_longue}}. Nothing changes for now: I keep reading.',
+   'Pay now', '/pme/reglages', 'alerte', date '2026-11-16'),
+  ('impaye.rappel', 'email', 'ar', 'الفاتورة {{numero}} — حلّ أجلها', 'حلّ أجل فاتورتكم.',
+   'كان أجلها {{echeance_longue}}. لا شيء يتغير الآن: أواصل القراءة.',
+   'الدفع الآن', '/pme/reglages', 'alerte', date '2026-11-16'),
+
+  -- E34 · impaye.relance
+  ('impaye.relance', 'email', 'fr', 'Relance — facture {{numero}}', '{{jours}} jours — {{reste}} {{devise}} restent dus.',
+   'Si quelque chose bloque de votre côté, répondez à ce message : on trouve une solution, c''est plus simple que de laisser courir.',
+   'Régler maintenant', '/pme/reglages', 'alerte', date '2026-11-16'),
+  ('impaye.relance', 'email', 'en', 'Reminder — invoice {{numero}}', '{{jours}} days — {{reste}} {{devise}} outstanding.',
+   'If something is holding you up, reply to this message: we will find a solution, it is simpler than letting it run.',
+   'Pay now', '/pme/reglages', 'alerte', date '2026-11-16'),
+  ('impaye.relance', 'email', 'ar', 'تذكير — الفاتورة {{numero}}', '{{jours}} يومًا — يبقى {{reste}} {{devise}} مستحقًا.',
+   'إن كان شيء يعيقكم، ردّوا على هذه الرسالة: سنجد حلًا، فهذا أبسط من ترك الأمر يطول.',
+   'الدفع الآن', '/pme/reglages', 'alerte', date '2026-11-16'),
+
+  -- E35 · impaye.avis_de_suspension
+  ('impaye.avis_de_suspension', 'email', 'fr', 'Suspension le {{date_suspension_longue}} — facture {{numero}}',
+   'Je suspendrai le service le {{date_suspension_longue}}.',
+   'Au {{date_suspension_longue}}, j''arrête les lectures, l''envoi à la comptabilité et l''export. La caméra reste ouverte et vos pièces vous attendent : rien ne sera perdu.',
+   'Régler maintenant', '/pme/reglages', 'erreur', date '2026-11-16'),
+  ('impaye.avis_de_suspension', 'email', 'en', 'Suspension on {{date_suspension_longue}} — invoice {{numero}}',
+   'I will suspend the service on {{date_suspension_longue}}.',
+   'On {{date_suspension_longue}}, I stop reading, sending to your accountant and exporting. The camera stays open and your documents wait for you: nothing will be lost.',
+   'Pay now', '/pme/reglages', 'erreur', date '2026-11-16'),
+  ('impaye.avis_de_suspension', 'email', 'ar', 'إيقاف في {{date_suspension_longue}} — الفاتورة {{numero}}',
+   'سأوقف الخدمة في {{date_suspension_longue}}.',
+   'في {{date_suspension_longue}} أوقف القراءة والإرسال إلى المحاسب والتصدير. تبقى الكاميرا مفتوحة ووثائقكم في انتظاركم: لن يضيع شيء.',
+   'الدفع الآن', '/pme/reglages', 'erreur', date '2026-11-16'),
+
+  -- E36 · impaye.suspension
+  ('impaye.suspension', 'email', 'fr', 'Lectures, envoi et export suspendus', 'Le service est suspendu.',
+   'Continuez à photographier : {{en_attente}} pièces vous attendent déjà. Dès que les factures en retard sont réglées, tout reprend de soi-même.',
+   'Régler et reprendre', '/pme/reglages', 'erreur', date '2026-11-16'),
+  ('impaye.suspension', 'email', 'en', 'Reading, sending and export suspended', 'The service is suspended.',
+   'Keep photographing: {{en_attente}} documents are already waiting. As soon as the overdue invoices are paid, everything resumes on its own.',
+   'Pay and resume', '/pme/reglages', 'erreur', date '2026-11-16'),
+  ('impaye.suspension', 'email', 'ar', 'القراءة والإرسال والتصدير موقوفة', 'الخدمة موقوفة.',
+   'واصلوا التصوير: {{en_attente}} وثيقة في الانتظار. فور تسديد الفواتير المتأخرة يعود كل شيء من تلقاء نفسه.',
+   'الدفع والاستئناف', '/pme/reglages', 'erreur', date '2026-11-16');
+
+-- Le HTML d'un gabarit ne sert plus depuis 20261227110000 (le cadre commun le
+-- compose) : la colonne s'en va, plutôt que de garder un texte que rien ne lit.
+alter table notif.gabarits drop column corps_html;
+
+delete from notif.gabarits g
+ where g.code in ('impaye.rappel', 'impaye.relance', 'impaye.avis_de_suspension', 'impaye.suspension')
+   and g.canal = 'email'
+   and g.effective_from < date '2026-11-16'
+   and not exists (select 1 from notif.envois e where e.gabarit_id = g.id);
+
+commit;

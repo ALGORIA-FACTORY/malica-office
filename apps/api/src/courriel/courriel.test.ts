@@ -9,12 +9,14 @@ import { describe, it } from "node:test";
 
 import { configurationCourriel, envoyerParBrevo, type Expedition } from "./brevo.ts";
 import { courrielInvitation, envoyerInvitation } from "./invitation.ts";
+import { libellesDEssai } from "./libelles-d-essai.ts";
 
 const INVITATION = {
   cabinet: "Cabinet d'Expertises CADG",
   pme: "ALGORIA FACTORY SARL",
   lien: "https://app.malica.tn/invitation/" + "a".repeat(64),
   expireLe: new Date("2026-10-18T10:00:00Z"),
+  libelles: libellesDEssai("fr"),
 };
 
 describe("le courriel d'invitation", () => {
@@ -45,11 +47,53 @@ describe("le courriel d'invitation", () => {
     assert.throws(() => courrielInvitation({ ...INVITATION, lien: "javascript:alert(1)" }));
   });
 
-  it("tient sans feuille de style externe ni image distante", () => {
+  it("tient sans feuille externe ; sa seule image est le repère, servi par l'appli elle-même", () => {
     const c = courrielInvitation(INVITATION);
+    const origine = new URL(INVITATION.lien).origin;
     assert.ok(!/<link\b/i.test(c.html), "aucune feuille externe");
-    assert.ok(!/<img\b/i.test(c.html), "aucune image à télécharger");
+    const images = [...c.html.matchAll(/<img\b[^>]*src="([^"]+)"/gi)].map((m) => m[1]!);
+    assert.ok(images.length > 0, "le repère rG");
+    for (const src of images) assert.ok(src.startsWith(`${origine}/courriel/rg-`), src);
+    assert.match(c.html, /alt="Malica Office"/, "bloquée, l'image laisse son nom");
     assert.match(c.html, /^<!doctype html>/i);
+  });
+});
+
+describe("la carte de l'invitation (maquettes E06, E07)", () => {
+  const CARTE = {
+    matricule: "1234567A/A/M/000",
+    offre: "Team",
+    payeur: "comptabilite" as const,
+    invitant: null,
+    comptabiliteInvitee: null,
+  };
+
+  it("au dirigeant : la société, son matricule, sa comptabilité et son offre", () => {
+    const c = courrielInvitation({ ...INVITATION, carte: CARTE });
+    assert.match(c.html, />AF</, "les initiales de la société");
+    assert.match(c.html, /1234567A\/A\/M\/000/);
+    assert.match(c.html, /Team · prise en charge par la comptabilité/);
+    assert.match(c.texte, /Lien personnel, valable jusqu'au 18 octobre 2026/);
+  });
+
+  it("à la comptabilité : qui invite, l'offre à la charge de la société, le mandat", () => {
+    const c = courrielInvitation({
+      ...INVITATION,
+      cabinet: "",
+      pour: "comptabilite",
+      carte: {
+        ...CARTE,
+        payeur: "societe",
+        invitant: "Personne Essai",
+        comptabiliteInvitee: "Cabinet Essai",
+      },
+    });
+    assert.match(c.html, /Personne Essai<\/strong> vous invite à tenir la comptabilité de/);
+    assert.match(c.html, /Son abonnement reste à sa charge\./);
+    assert.match(c.html, /Team · à sa charge/);
+    assert.match(c.html, /actif dès votre accord/);
+    assert.match(c.html, /Demande de mandat/);
+    assert.match(c.html, /Cabinet Essai/, "la pastille : sa comptabilité");
   });
 });
 
@@ -129,6 +173,7 @@ describe("l'envoi d'une invitation", () => {
     email: "contact@algoria-factory.com",
     jeton: "b".repeat(64),
     expireLe: new Date("2026-10-18T10:00:00Z"),
+    libelles: libellesDEssai("fr"),
   };
   const config = {
     cle: "cle",

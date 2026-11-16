@@ -4178,9 +4178,6 @@ export const ar: Dict = {
   "pme.payer.securise": "دفع آمن عبر {prestataire}",
   "pme.payer.rienARegler": "لم يعد هذا الدفع مستحقًا.",
   "paiement.moyen_indisponible": "وسيلة الدفع هذه غير متاحة.",
-  "courriel.notif.pied":
-    "تتلقون هذه الرسالة لأنكم أصحاب اشتراك Malica Office هذا. يمكنكم ضبط إشعاراتكم من إعداداتكم.",
-  "courriel.notif.lienSecours": "الزر لا يفتح؟ انسخوا هذا الرابط في متصفحكم:",
   "pme.reglages.paiement.facture": "الفاتورة {numero}",
   "pme.reglages.factures.titre": "فواتيركم",
   "pme.reglages.factures.reste": "المتبقي للدفع: {montant} {devise} شامل الأداء",

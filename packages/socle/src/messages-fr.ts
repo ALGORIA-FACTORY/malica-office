@@ -4478,9 +4478,6 @@ export const fr = {
   "pme.payer.securise": "Paiement sécurisé par {prestataire}",
   "pme.payer.rienARegler": "Ce paiement n'est plus à régler.",
   "paiement.moyen_indisponible": "Ce moyen de paiement n'est pas disponible.",
-  "courriel.notif.pied":
-    "Vous recevez ce message parce que vous tenez cet abonnement Malica Office. Vous pouvez régler vos notifications dans vos réglages.",
-  "courriel.notif.lienSecours": "Le bouton ne s'ouvre pas ? Copiez ce lien dans votre navigateur :",
   "pme.reglages.paiement.facture": "Facture {numero}",
   "pme.reglages.factures.titre": "Vos factures",
   "pme.reglages.factures.reste": "Reste à payer : {montant} {devise} TTC",

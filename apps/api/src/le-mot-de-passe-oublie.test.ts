@@ -20,6 +20,7 @@ import {
   verifierCompte,
 } from "./auth.ts";
 import { courrielReinitialisation } from "./courriel/reinitialisation.ts";
+import { libellesDEssai } from "./courriel/libelles-d-essai.ts";
 import { fermerLePool } from "./db.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -71,9 +72,15 @@ describe("le mot de passe oublié", { skip: !BASE_CONFIGUREE }, () => {
 
 describe("le courriel du mot de passe oublié", () => {
   it("porte le lien, échappé, et le dit en texte", () => {
-    const c = courrielReinitialisation("https://exemple.test/reinitialiser#abc&def");
+    const c = courrielReinitialisation(
+      "https://exemple.test/reinitialiser#abc&def",
+      libellesDEssai("fr"),
+      "fr",
+    );
     assert.ok(c.html.includes("https://exemple.test/reinitialiser#abc&amp;def"));
     assert.ok(c.texte.includes("https://exemple.test/reinitialiser#abc&def"));
-    assert.throws(() => courrielReinitialisation("javascript:alert(1)"));
+    assert.throws(() =>
+      courrielReinitialisation("javascript:alert(1)", libellesDEssai("fr"), "fr"),
+    );
   });
 });

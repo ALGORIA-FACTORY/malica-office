@@ -2,25 +2,38 @@
  * Le courriel qui invite le contact d'une PME à rejoindre son espace.
  *
  * Fonction pure : des noms, un lien, une date — un sujet, un HTML, un texte.
- * Le HTML suit les contraintes des messageries, pas celles d'un navigateur :
- * tableaux, styles en ligne, aucune feuille ni image distante (bloquées par
- * défaut chez beaucoup), 600 px de large, lisible sans ses couleurs. La
- * version texte dit la même chose, pour les messageries qui n'affichent pas le
- * HTML et pour les filtres qui s'en méfient.
- *
- * L'identité est celle de l'application : l'encre et le papier, le souci en
- * accent, Inter quand la messagerie la connaît. Tout ce que le cabinet a
- * saisi est échappé.
+ * Le HTML est celui du cadre commun (`cadre.ts`, maquettes E06 et E07 du
+ * 13 novembre 2026). La seule image est le repère rG, servi par l'appli
+ * elle-même ; bloquée, son nom la remplace. La version texte dit la même
+ * chose, pour les messageries qui n'affichent pas le HTML et pour les filtres
+ * qui s'en méfient. Tout ce que le cabinet a saisi est échappé.
  */
 
 import { envoyerParBrevo, type ConfigurationCourriel } from "./brevo.ts";
-import { ENCRE, FILET, GRIS, PAPIER, POLICE, AMBRE, echapper } from "./charte.ts";
+import { cadreDeCourriel } from "./cadre.ts";
+import { echapper } from "./charte.ts";
+import { libelle, remplir, type Libelles } from "./libelles.ts";
+
+/** Ce que la base sait de la société invitée et de qui invite (`notif.carte_d_invitation`). */
+export interface CarteDInvitation {
+  matricule: string | null;
+  offre: string | null;
+  /** Qui paie l'abonnement aujourd'hui, s'il est connu. */
+  payeur: "comptabilite" | "societe" | null;
+  /** Le nom de la personne qui invite. */
+  invitant: string | null;
+  /** La comptabilité que l'adresse invitée tient déjà sur Malica, s'il y en a une. */
+  comptabiliteInvitee: string | null;
+}
 
 export interface InvitationCourriel {
   cabinet: string;
   pme: string;
   lien: string;
   expireLe: Date;
+  /** Les textes du courriel (`notif.libelles_courriel`), en français : la langue de l'invité n'est pas connue. */
+  libelles: Libelles;
+  carte?: CarteDInvitation | null;
   /**
    * À qui l'invitation s'adresse : le dirigeant que sa comptabilité invite
    * (par défaut), ou la comptabilité que la société invite (7.1). Le texte
@@ -29,41 +42,19 @@ export interface InvitationCourriel {
   pour?: "dirigeant" | "comptabilite";
 }
 
-/** Les phrases qui changent selon le destinataire ; le reste du courriel est commun. */
-function phrases(i: InvitationCourriel, cabinet: string, pme: string) {
-  if (i.pour === "comptabilite")
-    return {
-      sujet: `${i.pme} vous invite à tenir sa comptabilité sur Malica`,
-      apercu: `${pme} vous invite à tenir sa comptabilité.`,
-      titre: "Une société vous confie sa comptabilité.",
-      corpsTexte: `${i.pme} vous invite à tenir sa comptabilité sur Malica Office.`,
-      corpsHtml: `<strong style="font-weight:600;">${pme}</strong> vous invite à tenir sa comptabilité sur Malica Office.`,
-      suite:
-        "Créez votre accès ou connectez-vous, choisissez votre comptabilité ou créez-la : le mandat devient actif dès que vous acceptez.",
-      bouton: "Voir l'invitation",
-      demandeur: pme,
-    };
-  return {
-    sujet: `${i.cabinet} vous ouvre votre espace Malica`,
-    apercu: `${cabinet} a ouvert le dossier de ${pme}. Votre espace vous attend.`,
-    titre: "Votre espace est prêt.",
-    corpsTexte: `${i.cabinet} a ouvert le dossier de ${i.pme} sur Malica Office, et vous invite à le rejoindre.`,
-    corpsHtml: `<strong style="font-weight:600;">${cabinet}</strong> a ouvert le dossier de <strong style="font-weight:600;">${pme}</strong> sur Malica Office, et vous invite à le rejoindre.`,
-    suite:
-      "Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.",
-    bouton: "Rejoindre mon espace",
-    demandeur: cabinet,
-  };
-}
+/** La langue des invitations : celle de l'invité n'est pas encore connue. */
+export const LANGUE_DES_INVITATIONS = "fr";
 
-function dateLisible(d: Date): string {
-  return new Intl.DateTimeFormat("fr-FR", {
+function dateLisible(d: Date, avecAnnee: boolean): string {
+  return new Intl.DateTimeFormat(LANGUE_DES_INVITATIONS, {
     day: "numeric",
     month: "long",
-    year: "numeric",
+    ...(avecAnnee ? { year: "numeric" } : {}),
     timeZone: "Africa/Tunis",
   }).format(d);
 }
+
+const gras = (v: string) => `<strong style="font-weight:600;">${echapper(v)}</strong>`;
 
 export function courrielInvitation(i: InvitationCourriel): {
   sujet: string;
@@ -72,93 +63,92 @@ export function courrielInvitation(i: InvitationCourriel): {
 } {
   if (!/^https?:\/\//i.test(i.lien)) throw new Error("lien d'invitation invalide");
 
-  const cabinet = echapper(i.cabinet);
-  const pme = echapper(i.pme);
-  const lien = echapper(i.lien);
-  const jusquau = dateLisible(i.expireLe);
-  const p = phrases(i, cabinet, pme);
+  const l = i.libelles;
+  const carte = i.carte ?? null;
+  const pourLaComptabilite = i.pour === "comptabilite";
+  const t = (cle: string) =>
+    libelle(l, `invitation.${pourLaComptabilite ? "comptabilite" : "dirigeant"}.${cle}`);
+  const invitant = carte?.invitant ?? null;
+  const jetons = {
+    cabinet: i.cabinet,
+    pme: i.pme,
+    date: dateLisible(i.expireLe, true),
+    ...(invitant ? { invitant } : {}),
+  };
+  const corpsCle = pourLaComptabilite && !invitant ? "corpsSansInvitant" : "corps";
+  // La société paie : on le dit à la comptabilité, qui n'aura rien à régler.
+  const societePaie = carte?.payeur === "societe";
+  const complement = pourLaComptabilite && societePaie ? t("chargeSociete") : null;
 
-  const sujet = p.sujet;
+  const offre = carte?.offre
+    ? carte.payeur
+      ? `${carte.offre} · ${libelle(
+          l,
+          carte.payeur === "comptabilite"
+            ? "offre.chargeComptabilite"
+            : `offre.chargeSociete.${pourLaComptabilite ? "comptabilite" : "dirigeant"}`,
+        )}`
+      : carte.offre
+    : null;
+  const donnees = pourLaComptabilite
+    ? [
+        ...(invitant ? [{ libelle: libelle(l, "donnee.dirigeant"), valeur: invitant }] : []),
+        ...(offre ? [{ libelle: libelle(l, "donnee.offre"), valeur: offre }] : []),
+        { libelle: libelle(l, "donnee.mandat"), valeur: libelle(l, "mandat.actifDesAccord") },
+      ]
+    : [
+        { libelle: libelle(l, "donnee.comptabilite"), valeur: i.cabinet },
+        ...(offre ? [{ libelle: libelle(l, "donnee.offre"), valeur: offre }] : []),
+      ];
+
+  const corps = remplir(t(corpsCle), jetons);
+  const note = remplir(t("note"), jetons);
+  const demandeur = pourLaComptabilite ? i.pme : i.cabinet;
+  const raison = remplir(libelle(l, "invitation.raison"), { demandeur });
+  const apercu = pourLaComptabilite
+    ? t(societePaie ? "apercuSansFrais" : "apercu")
+    : remplir(t("apercu"), { ...jetons, date: dateLisible(i.expireLe, false) });
 
   const texte = [
-    `Bonjour,`,
-    ``,
-    p.corpsTexte,
-    ``,
-    p.suite,
-    ``,
-    `${p.bouton} :`,
+    libelle(l, "cadre.bonjour"),
+    "",
+    [corps, complement].filter(Boolean).join(" "),
+    "",
+    ...donnees.map((d) => `${d.libelle} : ${d.valeur}`),
+    "",
+    t("bouton"),
     i.lien,
-    ``,
-    `Ce lien est personnel. Il vaut jusqu'au ${jusquau}, une seule fois, avec l'adresse à laquelle ce courriel vous parvient.`,
-    ``,
-    `Si vous n'attendiez pas cette invitation, ignorez ce message : rien ne se passera.`,
-    ``,
-    `— Malica Office`,
+    "",
+    note,
+    "",
+    libelle(l, "cadre.signatureTexte"),
   ].join("\n");
 
-  const html = `<!doctype html>
-<html lang="fr" dir="ltr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light only">
-<meta name="supported-color-schemes" content="light">
-<title>${echapper(sujet)}</title>
-</head>
-<body style="margin:0;padding:0;background:${PAPIER};-webkit-text-size-adjust:100%;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${PAPIER};">${p.apercu}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAPIER};">
-<tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${FILET};">
+  const html = cadreDeCourriel({
+    locale: LANGUE_DES_INVITATIONS,
+    libelles: l,
+    // Le repère et le lien des réglages partent de l'adresse publique, celle du lien.
+    urlPublique: new URL(i.lien).origin,
+    apercu,
+    // La pastille : la société du dirigeant ; pour la comptabilité, la sienne si elle en tient une.
+    organisation: pourLaComptabilite ? (carte?.comptabiliteInvitee ?? null) : i.pme,
+    etiquette: {
+      texte: libelle(l, pourLaComptabilite ? "etiquette.demandeMandat" : "etiquette.invitation"),
+      // E06 en vert (l'espace est prêt), E07 en ambre (le mandat attend un accord).
+      signal: pourLaComptabilite ? "attend" : "fait",
+    },
+    titre: t("titre"),
+    paragraphesHtml: [
+      remplir(echapper(t(corpsCle)), jetons, gras) + (complement ? ` ${echapper(complement)}` : ""),
+    ],
+    entite: { nom: i.pme, matricule: carte?.matricule ?? null },
+    donnees,
+    action: { libelle: t("bouton"), url: i.lien },
+    noteHtml: remplir(echapper(t("note")), jetons, gras),
+    raison,
+  });
 
-<tr><td style="background:${ENCRE};padding:28px 40px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="width:10px;height:10px;background:${AMBRE};font-size:0;line-height:0;">&nbsp;</td>
-<td style="padding-left:12px;font-family:${POLICE};font-size:12px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:${PAPIER};">Malica Office</td>
-</tr></table>
-</td></tr>
-
-<tr><td style="height:3px;background:${AMBRE};font-size:0;line-height:0;">&nbsp;</td></tr>
-
-<tr><td style="padding:44px 40px 8px 40px;font-family:${POLICE};">
-<p style="margin:0 0 14px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:${AMBRE};">Invitation</p>
-<h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;color:${ENCRE};">${p.titre}</h1>
-<p style="margin:20px 0 0 0;font-size:17px;line-height:1.6;color:${ENCRE};">${p.corpsHtml}</p>
-<p style="margin:14px 0 0 0;font-size:16px;line-height:1.6;color:${GRIS};">${p.suite}</p>
-</td></tr>
-
-<tr><td style="padding:32px 40px 8px 40px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="background:${ENCRE};">
-<a href="${lien}" style="display:inline-block;padding:16px 30px;font-family:${POLICE};font-size:15px;font-weight:600;letter-spacing:0.02em;color:${PAPIER};text-decoration:none;">${p.bouton}&nbsp;&nbsp;&rarr;</a>
-</td>
-</tr></table>
-</td></tr>
-
-<tr><td style="padding:24px 40px 0 40px;font-family:${POLICE};">
-<p style="margin:0;font-size:13px;line-height:1.6;color:${GRIS};">Le bouton ne s'ouvre pas&nbsp;? Copiez ce lien dans votre navigateur&nbsp;:</p>
-<p style="margin:6px 0 0 0;font-size:13px;line-height:1.5;word-break:break-all;"><a href="${lien}" style="color:${ENCRE};text-decoration:underline;">${lien}</a></p>
-</td></tr>
-
-<tr><td style="padding:32px 40px 40px 40px;font-family:${POLICE};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="border-top:1px solid ${FILET};padding-top:20px;font-size:13px;line-height:1.6;color:${GRIS};">
-Ce lien est personnel. Il vaut jusqu'au <strong style="color:${ENCRE};font-weight:600;">${jusquau}</strong>, une seule fois, avec l'adresse à laquelle ce courriel vous parvient.<br>
-Si vous n'attendiez pas cette invitation, ignorez ce message&nbsp;: rien ne se passera.
-</td>
-</tr></table>
-</td></tr>
-
-</table>
-<p style="margin:20px 0 0 0;font-family:${POLICE};font-size:11px;letter-spacing:0.08em;color:${GRIS};">MALICA OFFICE &middot; envoyé à la demande de ${p.demandeur}</p>
-</td></tr>
-</table>
-</body>
-</html>
-`;
-
-  return { sujet, html, texte };
+  return { sujet: remplir(t("sujet"), jetons), html, texte };
 }
 
 export type StatutCourriel = "envoye" | "non_configure" | "echec";
@@ -182,6 +172,8 @@ export async function envoyerInvitation(
     jeton: string;
     expireLe: Date;
     pour?: "dirigeant" | "comptabilite";
+    libelles: Libelles;
+    carte?: CarteDInvitation | null;
   },
   config: ConfigurationCourriel | null,
   fetchImpl: typeof fetch = fetch,
@@ -195,6 +187,8 @@ export async function envoyerInvitation(
       lien,
       expireLe: i.expireLe,
       pour: i.pour ?? "dirigeant",
+      libelles: i.libelles,
+      carte: i.carte ?? null,
     });
     await envoyerParBrevo(
       {

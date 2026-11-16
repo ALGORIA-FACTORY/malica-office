@@ -384,20 +384,35 @@ export async function rafraichir(
 const DUREE_REINITIALISATION_MS = 60 * 60 * 1000;
 
 /** `null` si l'adresse est inconnue — l'appelant n'en dira rien. */
-export async function demanderReinitialisation(
-  email: string,
-): Promise<{ email: string; secret: string; expireLe: Date } | null> {
+export async function demanderReinitialisation(email: string): Promise<{
+  email: string;
+  secret: string;
+  expireLe: Date;
+  locale: string;
+  libelles: Record<string, string>;
+} | null> {
   const secret = nouveauSecret();
   const expireLe = new Date(Date.now() + DUREE_REINITIALISATION_MS);
   return horsRlsAuthentificationSeule(async (db) => {
-    const { rows } = await db.query<{ email: string }>(
-      `insert into auth.reinitialisations (user_id, empreinte, expire_le)
-       select u.id, $2, $3 from auth.users u where u.email = $1
-       returning $1::text as email`,
+    // La langue de la personne, et les textes du courriel dans cette langue.
+    const { rows } = await db.query<{
+      email: string;
+      locale: string;
+      libelles: Record<string, string>;
+    }>(
+      `with posee as (
+         insert into auth.reinitialisations (user_id, empreinte, expire_le)
+         select u.id, $2, $3 from auth.users u where u.email = $1
+         returning user_id)
+       select $1::text as email, x.locale, notif.libelles_du_courriel(x.locale) as libelles
+         from posee p
+        cross join lateral (select notif.langue_de_la_personne(p.user_id) as locale) x`,
       [email.toLowerCase(), empreinteDe(secret), expireLe],
     );
     const ligne = rows[0];
-    return ligne ? { email: ligne.email, secret, expireLe } : null;
+    return ligne
+      ? { email: ligne.email, secret, expireLe, locale: ligne.locale, libelles: ligne.libelles }
+      : null;
   });
 }
 

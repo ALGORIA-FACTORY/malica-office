@@ -22,7 +22,7 @@ import { configurationCourriel, envoyerParBrevo, type Expedition } from "../cour
 import type { Requete } from "../db.ts";
 import { consigner } from "../observabilite/journal.ts";
 
-import { courrielDeNotification } from "./courriel-de-notification.ts";
+import { courrielDeNotification, type Palier } from "./courriel-de-notification.ts";
 
 interface CourrielARemettre {
   envoi_id: string;
@@ -33,6 +33,12 @@ interface CourrielARemettre {
   action_libelle: string | null;
   action_route: string | null;
   ton: string;
+  code: string;
+  organisation: string | null;
+  donnees: Record<string, unknown> | null;
+  frise: Palier[] | null;
+  sujet: string | null;
+  libelles: Record<string, string>;
 }
 
 /** Combien de courriels un tour remet au plus : un incident ne vide pas la file d'un coup. */
@@ -83,6 +89,15 @@ export async function tourDeRelances(d: Dependances) {
       try {
         const message = courrielDeNotification({
           locale: c.locale,
+          code: c.code,
+          organisation: c.organisation,
+          urlPublique: config.urlPublique,
+          donnees: c.donnees,
+          frise: c.frise,
+          libelles: c.libelles,
+          sujet: c.sujet,
+          // Répondre à une adresse qui ne lit pas ne sert à rien : pas de lien alors.
+          repondreA: /^no-?reply@/i.test(config.expediteur.email) ? null : config.expediteur.email,
           titre: c.titre,
           corps: c.corps,
           action:

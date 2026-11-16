@@ -7,6 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { libellesDEssai } from "../courriel/libelles-d-essai.ts";
 import type { Requete } from "../db.ts";
 
 import { tourDeRelances } from "./travailleur.ts";
@@ -20,6 +21,13 @@ const COURRIEL = {
   action_libelle: "Payer",
   action_route: "/pme/reglages",
   ton: "alerte",
+  // Ce que la file rend depuis 20261229090000 : le genre (l'étiquette) et la société (la pastille).
+  code: "impaye.rappel",
+  organisation: "SOCIETE ESSAI",
+  donnees: null,
+  frise: null,
+  sujet: null,
+  libelles: libellesDEssai("fr"),
 };
 
 /**

@@ -1,94 +1,101 @@
 /**
  * Le courriel qui rend l'accès à un compte dont le mot de passe est perdu.
  *
- * Mêmes contraintes que l'invitation : tableaux, styles en ligne, aucune image
- * distante, une version texte qui dit la même chose. Le lien porte le secret
+ * Le cadre commun (`cadre.ts`, maquette E03 du 13 novembre 2026), une version
+ * texte qui dit la même chose. Le lien porte le secret
  * dans le FRAGMENT (`/reinitialiser#<secret>`) : il n'est jamais envoyé à un
  * serveur, ni dans un journal d'accès, ni dans un en-tête Referer.
  */
 
-import { envoyerParBrevo, type ConfigurationCourriel } from "./brevo.ts";
-import { ENCRE, FILET, GRIS, PAPIER, POLICE, AMBRE, echapper } from "./charte.ts";
+import { LOCALES, type Locale } from "@malica/socle/messages";
 
-export function courrielReinitialisation(lienBrut: string): {
+import { envoyerParBrevo, type ConfigurationCourriel } from "./brevo.ts";
+import { cadreDeCourriel } from "./cadre.ts";
+import { echapper } from "./charte.ts";
+import { libelle, type Libelles } from "./libelles.ts";
+
+/** L'heure de Tunis, lisible dans la langue : « 16 nov. 2026 · 11:42 » ou « 12:42 ». */
+function heure(d: Date, avecJour: boolean, locale: Locale): string {
+  const f = new Intl.DateTimeFormat(locale, {
+    ...(avecJour ? { day: "numeric", month: "short", year: "numeric" } : {}),
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    numberingSystem: "latn",
+    timeZone: "Africa/Tunis",
+  }).formatToParts(d);
+  const v = (t: string) => f.find((p) => p.type === t)?.value ?? "";
+  const hm = `${v("hour")}:${v("minute")}`;
+  return avecJour ? `${v("day")} ${v("month")} ${v("year")} · ${hm}` : hm;
+}
+
+/**
+ * `quand` : quand la demande a été faite et jusqu'à quand le lien vaut
+ * (maquette E03, « Demandé le » et « Valable jusqu'à »). Absent, le bloc ne s'affiche pas.
+ * `libelles` : les textes du courriel dans la langue de la personne.
+ */
+export function courrielReinitialisation(
+  lienBrut: string,
+  libelles: Libelles,
+  locale: string,
+  quand?: { demandeLe: Date; expireLe: Date },
+): {
   sujet: string;
   html: string;
   texte: string;
 } {
   if (!/^https?:\/\//i.test(lienBrut)) throw new Error("lien de réinitialisation invalide");
-  const lien = echapper(lienBrut);
-  const sujet = "Choisir un nouveau mot de passe — Malica Office";
+  const loc: Locale = (LOCALES as readonly string[]).includes(locale) ? (locale as Locale) : "fr";
+  const l = libelles;
+  const t = (cle: string) => libelle(l, `reinitialisation.${cle}`);
 
   const texte = [
-    `Bonjour,`,
-    ``,
-    `Une demande de nouveau mot de passe a été faite pour votre accès Malica Office.`,
-    ``,
-    `Choisir un nouveau mot de passe :`,
+    libelle(l, "cadre.bonjour"),
+    "",
+    t("corps"),
+    "",
+    t("bouton"),
     lienBrut,
-    ``,
-    `Ce lien vaut une heure, une seule fois. Vos sessions ouvertes sur d'autres appareils seront fermées.`,
-    ``,
-    `Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.`,
-    ``,
-    `— Malica Office`,
+    "",
+    t("note"),
+    "",
+    libelle(l, "cadre.signatureTexte"),
   ].join("\n");
 
-  const html = `<!doctype html>
-<html lang="fr" dir="ltr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light only">
-<title>${echapper(sujet)}</title>
-</head>
-<body style="margin:0;padding:0;background:${PAPIER};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAPIER};">
-<tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${FILET};">
-<tr><td style="background:${ENCRE};padding:28px 40px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="width:10px;height:10px;background:${AMBRE};font-size:0;line-height:0;">&nbsp;</td>
-<td style="padding-left:12px;font-family:${POLICE};font-size:12px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:${PAPIER};">Malica Office</td>
-</tr></table>
-</td></tr>
-<tr><td style="height:3px;background:${AMBRE};font-size:0;line-height:0;">&nbsp;</td></tr>
-<tr><td style="padding:44px 40px 8px 40px;font-family:${POLICE};">
-<p style="margin:0 0 14px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:${AMBRE};">Mot de passe</p>
-<h1 style="margin:0;font-size:28px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;color:${ENCRE};">Choisissez un nouveau mot de passe.</h1>
-<p style="margin:20px 0 0 0;font-size:16px;line-height:1.6;color:${ENCRE};">Une demande a été faite pour votre accès Malica Office.</p>
-</td></tr>
-<tr><td style="padding:32px 40px 8px 40px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="background:${ENCRE};">
-<a href="${lien}" style="display:inline-block;padding:16px 30px;font-family:${POLICE};font-size:15px;font-weight:600;color:${PAPIER};text-decoration:none;">Choisir mon mot de passe&nbsp;&nbsp;&rarr;</a>
-</td>
-</tr></table>
-</td></tr>
-<tr><td style="padding:24px 40px 0 40px;font-family:${POLICE};">
-<p style="margin:0;font-size:13px;line-height:1.6;color:${GRIS};">Le bouton ne s'ouvre pas&nbsp;? Copiez ce lien dans votre navigateur&nbsp;:</p>
-<p style="margin:6px 0 0 0;font-size:13px;line-height:1.5;word-break:break-all;"><a href="${lien}" style="color:${ENCRE};text-decoration:underline;">${lien}</a></p>
-</td></tr>
-<tr><td style="padding:32px 40px 40px 40px;font-family:${POLICE};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="border-top:1px solid ${FILET};padding-top:20px;font-size:13px;line-height:1.6;color:${GRIS};">
-Ce lien vaut <strong style="color:${ENCRE};font-weight:600;">une heure</strong>, une seule fois. Vos sessions ouvertes sur d'autres appareils seront fermées.<br>
-Si vous n'êtes pas à l'origine de cette demande, ignorez ce message&nbsp;: votre mot de passe actuel reste valable.
-</td>
-</tr></table>
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>
-`;
-  return { sujet, html, texte };
+  const html = cadreDeCourriel({
+    locale: loc,
+    libelles: l,
+    // Le repère et le lien des réglages partent de l'adresse publique, celle du lien.
+    urlPublique: new URL(lienBrut).origin,
+    apercu: t("apercu"),
+    etiquette: { texte: libelle(l, "etiquette.securite"), signal: "info" },
+    titre: t("titre"),
+    paragraphesHtml: [echapper(t("corps"))],
+    donnees: quand
+      ? [
+          {
+            libelle: libelle(l, "donnee.demandeLe"),
+            valeur: heure(quand.demandeLe, true, loc),
+            mono: true,
+          },
+          {
+            libelle: libelle(l, "donnee.valableJusqua"),
+            valeur: heure(quand.expireLe, false, loc),
+            mono: true,
+          },
+        ]
+      : [],
+    action: { libelle: t("bouton"), url: lienBrut },
+    noteHtml: echapper(t("note")),
+    raison: t("raison"),
+  });
+
+  return { sujet: t("sujet"), html, texte };
 }
 
 /** Envoie le lien si Brevo est configuré. Ne lève jamais : la réponse de l'API ne doit rien trahir. */
 export async function envoyerReinitialisation(
-  i: { email: string; secret: string },
+  i: { email: string; secret: string; expireLe?: Date; locale: string; libelles: Libelles },
   config: ConfigurationCourriel | null,
   fetchImpl: typeof fetch = fetch,
 ): Promise<"envoye" | "non_configure" | "echec"> {
@@ -97,7 +104,12 @@ export async function envoyerReinitialisation(
     return "non_configure";
   }
   try {
-    const c = courrielReinitialisation(`${config.urlPublique}/reinitialiser#${i.secret}`);
+    const c = courrielReinitialisation(
+      `${config.urlPublique}/reinitialiser#${i.secret}`,
+      i.libelles,
+      i.locale,
+      i.expireLe ? { demandeLe: new Date(), expireLe: i.expireLe } : undefined,
+    );
     await envoyerParBrevo(
       {
         cle: config.cle,
