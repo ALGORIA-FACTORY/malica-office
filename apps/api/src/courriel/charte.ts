@@ -32,6 +32,8 @@ export interface Palette {
   attendFond: string;
   retard: string;
   retardFond: string;
+  /** Le texte sur un bouton vermillon (avis, suspension). */
+  surRetard: string;
   info: string;
   infoFond: string;
 }
@@ -53,6 +55,7 @@ export const CLAIR: Palette = {
   attendFond: "#F6EAC8",
   retard: "#B23A1C",
   retardFond: "#F8DED6",
+  surRetard: "#FFFFFF",
   info: "#1F6FB2",
   infoFond: "#D6E7F6",
 };
@@ -74,6 +77,7 @@ export const SOMBRE: Palette = {
   attendFond: "#33290F",
   retard: "#F08D72",
   retardFond: "#3A1C14",
+  surRetard: "#2A0D06",
   info: "#8CBCE8",
   infoFond: "#132638",
 };

@@ -67,15 +67,27 @@ function objet(n: Notification): string {
 
 /** Les paliers de l'impayé, dans l'ordre, et le jour de chacun dans le calendrier. */
 const PALIERS = [
-  { code: "impaye.rappel", libelle: "courriel.frise.echue", jour: "recouvrement.rappel_jours" },
-  { code: "impaye.relance", libelle: "courriel.frise.relance", jour: "recouvrement.relance_jours" },
+  {
+    code: "impaye.rappel",
+    signal: "attend",
+    libelle: "courriel.frise.echue",
+    jour: "recouvrement.rappel_jours",
+  },
+  {
+    code: "impaye.relance",
+    signal: "attend",
+    libelle: "courriel.frise.relance",
+    jour: "recouvrement.relance_jours",
+  },
   {
     code: "impaye.avis_de_suspension",
+    signal: "retard",
     libelle: "courriel.frise.avis",
     jour: "recouvrement.avis_suspension_jours",
   },
   {
     code: "impaye.suspension",
+    signal: "retard",
     libelle: "courriel.frise.suspension",
     jour: "recouvrement.suspension_jours",
   },
@@ -105,6 +117,7 @@ function friseDImpaye(n: Notification, m: (typeof MESSAGES)[Locale]): Frise | nu
         libelle: m[p.libelle],
         jour: typeof jours === "number" ? `J+${jours}` : null,
         atteinte: k <= i,
+        signal: p.signal,
         courante: k === i,
       };
     }),

@@ -48,8 +48,10 @@ interface EtapeDeFrise {
   libelle: string;
   /** « J+15 » : le jour, tel que le calendrier de recouvrement le fixe. */
   jour: string | null;
-  /** L'étape est passée ou en cours : sa barre prend la couleur du signal. */
+  /** L'étape est passée ou en cours : sa barre prend la couleur de l'étape. */
   atteinte: boolean;
+  /** La couleur de l'étape : l'échéance et la relance attendent, l'avis et la suspension sont en retard. */
+  signal: Signal;
   /** L'étape où l'on est : son nom en gras. */
   courante: boolean;
 }
@@ -133,8 +135,9 @@ body { margin: 0; padding: 0; }
   .m-signal { color: ${couleurDuSignal(s, signal)} !important; }
   .m-point { background: ${couleurDuSignal(s, signal)} !important; }
   .m-piste { background: ${s.piste} !important; }
-  .m-bouton { background: ${s.accent} !important; }
-  .m-bouton a { color: ${s.surAccent} !important; }
+  .m-bouton { background: ${signal === "retard" ? s.retard : s.accent} !important; }
+  .m-bouton a { color: ${signal === "retard" ? s.surRetard : s.surAccent} !important; }
+${SIGNAUX.map((x) => `  .m-s-${x} { background: ${couleurDuSignal(s, x)} !important; }`).join("\n")}
   .m-pastille { border-color: ${s.filet} !important; }
   .m-initiale { background: ${s.faitFond} !important; color: ${s.fait} !important; }
   .logo-clair { display: none !important; }
@@ -175,6 +178,8 @@ export function cadreDeCourriel(c: Cadre): string {
   const fin = dir === "rtl" ? "left" : "right";
   const police = dir === "rtl" ? POLICE_ARABE : POLICE;
   const signal = couleurDuSignal(p, c.etiquette.signal);
+  // Un avis ou une suspension : le bouton prend le vermillon, comme la maquette (E35, E36).
+  const retard = c.etiquette.signal === "retard";
   const base = c.urlPublique.replace(/\/+$/, "");
   const reglages = `${base}/pme/reglages`;
 
@@ -220,7 +225,7 @@ ${c.frise.etapes
       e,
       i,
     ) => `<td width="${Math.floor(100 / c.frise!.etapes.length)}%" style="vertical-align:top;${i > 0 ? (dir === "rtl" ? "padding-right:8px;" : "padding-left:8px;") : ""}">
-<div class="${e.atteinte ? "m-point" : "m-piste"}" style="height:6px;border-radius:999px;background:${e.atteinte ? signal : p.piste};font-size:0;line-height:0;">&nbsp;</div>
+<div class="${e.atteinte ? `m-s-${e.signal}` : "m-piste"}" style="height:6px;border-radius:999px;background:${e.atteinte ? couleurDuSignal(p, e.signal) : p.piste};font-size:0;line-height:0;">&nbsp;</div>
 <div class="${e.courante ? "m-tx" : "m-t3"}" style="margin-top:8px;font-family:${police};font-size:12px;font-weight:${e.courante ? 600 : 500};color:${e.courante ? p.texte : p.texte3};">${echapper(e.libelle)}</div>
 ${e.jour ? `<div class="m-t3" style="margin-top:2px;font-family:${POLICE_MONO};font-size:11px;color:${p.texte3};" dir="ltr">${echapper(e.jour)}</div>` : ""}
 </td>`,
@@ -234,8 +239,8 @@ ${e.jour ? `<div class="m-t3" style="margin-top:2px;font-family:${POLICE_MONO};f
   const bouton = c.action
     ? `<tr><td class="m-pad" style="padding:28px 36px 0 36px;" align="${debut}">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="m-bouton-plein"><tr>
-<td class="m-bouton" style="background:${p.accent};border-radius:999px;">
-<a href="${echapper(c.action.url)}" style="display:inline-block;padding:15px 28px;font-family:${police};font-size:16px;line-height:22px;font-weight:600;color:${p.surAccent};text-decoration:none;border-radius:999px;">${echapper(c.action.libelle)}&nbsp;&nbsp;${dir === "rtl" ? "&larr;" : "&rarr;"}</a>
+<td class="m-bouton" style="background:${retard ? p.retard : p.accent};border-radius:999px;">
+<a href="${echapper(c.action.url)}" style="display:inline-block;padding:15px 28px;font-family:${police};font-size:16px;line-height:22px;font-weight:600;color:${retard ? p.surRetard : p.surAccent};text-decoration:none;border-radius:999px;">${echapper(c.action.libelle)}&nbsp;&nbsp;${dir === "rtl" ? "&larr;" : "&rarr;"}</a>
 </td>${
         c.actionSecondaire
           ? `<td style="padding:0 22px;font-family:${police};font-size:15px;font-weight:600;"><a class="m-tx" href="${echapper(c.actionSecondaire.url)}" style="color:${p.texte};text-decoration:underline;">${echapper(c.actionSecondaire.libelle)}</a></td>`
