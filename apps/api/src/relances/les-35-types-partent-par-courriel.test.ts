@@ -189,6 +189,9 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
         assert.equal(c.ton, TON_ATTENDU[code], `${code} : ton`);
         const message = courrielDeNotification({
           locale: c.locale,
+          code,
+          organisation: null,
+          urlPublique: "https://app.essai.local",
           titre: c.titre,
           corps: c.corps,
           action:

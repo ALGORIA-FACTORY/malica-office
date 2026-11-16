@@ -10,17 +10,21 @@ import { corpsBrevo } from "../courriel/brevo.ts";
 import { courrielDeNotification, TONS } from "./courriel-de-notification.ts";
 
 const BASE = {
+  code: "piece.retournee",
+  organisation: "Société Démo SARL",
+  urlPublique: "https://app.essai.local",
   titre: "Une pièce vous a été retournée",
   corps: "La comptabilité a retourné une pièce.",
   action: { libelle: "Ouvrir dans Malica", url: "https://app.essai.local/pme/notifications" },
 };
 
+// Le signal de l'étiquette, dans le clair écrit en ligne (charte du 13 novembre 2026).
 const COULEUR: Record<string, string> = {
-  succes: "#3A8F54",
-  erreur: "#BF4424",
-  alerte: "#B58614",
-  en_cours: "#2968A5",
-  neutre: "#555555",
+  succes: "#235340",
+  erreur: "#B23A1C",
+  alerte: "#8A5B00",
+  en_cours: "#1F6FB2",
+  neutre: "#5F6673",
 };
 
 describe("le gabarit commun du courriel", () => {
@@ -35,14 +39,49 @@ describe("le gabarit commun du courriel", () => {
     assert.match(ar.html, /text-align:right/);
   });
 
-  it("chaque ton colore la barre, et seulement elle", () => {
+  it("chaque ton colore l'étiquette : le point et le mot", () => {
     for (const ton of TONS) {
       const { html } = courrielDeNotification({ ...BASE, locale: "fr", ton });
-      assert.ok(
-        html.includes(`background:${COULEUR[ton]};font-size:0`),
-        `ton ${ton} : barre absente`,
-      );
+      assert.ok(html.includes(`background:${COULEUR[ton]};"></span>`), `ton ${ton} : point absent`);
+      assert.ok(html.includes(`color:${COULEUR[ton]};">Pièce</td>`), `ton ${ton} : mot absent`);
     }
+  });
+
+  it("l'étiquette dit la famille du genre, la pastille la société", () => {
+    const mandat = courrielDeNotification({
+      ...BASE,
+      locale: "fr",
+      ton: "succes",
+      code: "mandat.accepte",
+    });
+    assert.match(mandat.html, />Mandat<\/td>/);
+    assert.match(mandat.html, />Société Démo SARL<\/td>/);
+    const inconnu = courrielDeNotification({
+      ...BASE,
+      locale: "fr",
+      ton: "neutre",
+      code: "autre.chose",
+      organisation: null,
+    });
+    assert.match(inconnu.html, />Malica<\/td>/);
+    assert.ok(!inconnu.html.includes('class="m-pastille"'), "sans société, pas de pastille");
+  });
+
+  it("Malica signe les relances d'impayé, où elle parle en « je »", () => {
+    const relance = courrielDeNotification({
+      ...BASE,
+      locale: "fr",
+      ton: "alerte",
+      code: "impaye.rappel",
+    });
+    const mandat = courrielDeNotification({
+      ...BASE,
+      locale: "fr",
+      ton: "succes",
+      code: "mandat.accepte",
+    });
+    assert.match(relance.html, /— Malica</);
+    assert.ok(!mandat.html.includes("— Malica<"));
   });
 
   it("refuse un ton inconnu plutôt que de le deviner", () => {
@@ -56,12 +95,14 @@ describe("le gabarit commun du courriel", () => {
     const { html } = courrielDeNotification({ ...BASE, locale: "fr", ton: "neutre" });
     assert.match(html, /<meta name="viewport"/);
     assert.match(html, /@media only screen and \(max-width: 620px\)/);
+    assert.match(html, /courriel\/rg-noir\.png/, "le repère vient de l'appli elle-même");
     assert.match(html, /@media \(prefers-color-scheme: dark\)/);
     assert.match(html, /max-width:600px/);
   });
 
   it("échappe titre, corps et lien : rien n'est exécuté", () => {
     const { html } = courrielDeNotification({
+      ...BASE,
       locale: "fr",
       ton: "erreur",
       titre: "<script>x</script>",
@@ -89,7 +130,7 @@ describe("le gabarit commun du courriel", () => {
   it("une langue inconnue prend le français, sans écraser le ton", () => {
     const { html } = courrielDeNotification({ ...BASE, locale: "de", ton: "succes" });
     assert.match(html, /<html lang="fr" dir="ltr">/);
-    assert.ok(html.includes(`background:${COULEUR["succes"]};font-size:0`));
+    assert.ok(html.includes(`background:${COULEUR["succes"]};"></span>`));
   });
 
   it("le corps Brevo porte le rendu tel quel, sans réseau", () => {

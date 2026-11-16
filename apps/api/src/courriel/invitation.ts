@@ -2,19 +2,18 @@
  * Le courriel qui invite le contact d'une PME à rejoindre son espace.
  *
  * Fonction pure : des noms, un lien, une date — un sujet, un HTML, un texte.
- * Le HTML suit les contraintes des messageries, pas celles d'un navigateur :
- * tableaux, styles en ligne, aucune feuille ni image distante (bloquées par
- * défaut chez beaucoup), 600 px de large, lisible sans ses couleurs. La
- * version texte dit la même chose, pour les messageries qui n'affichent pas le
- * HTML et pour les filtres qui s'en méfient.
- *
- * L'identité est celle de l'application : l'encre et le papier, le souci en
- * accent, Inter quand la messagerie la connaît. Tout ce que le cabinet a
- * saisi est échappé.
+ * Le HTML est celui du cadre commun (`cadre.ts`, maquettes E06 et E07 du
+ * 13 novembre 2026). La seule image est le repère rG, servi par l'appli
+ * elle-même ; bloquée, son nom la remplace. La version texte dit la même
+ * chose, pour les messageries qui n'affichent pas le HTML et pour les filtres
+ * qui s'en méfient. Tout ce que le cabinet a saisi est échappé.
  */
 
+import { MESSAGES } from "@malica/socle/messages";
+
 import { envoyerParBrevo, type ConfigurationCourriel } from "./brevo.ts";
-import { ENCRE, FILET, GRIS, PAPIER, POLICE, AMBRE, echapper } from "./charte.ts";
+import { cadreDeCourriel, type LigneDeDonnees } from "./cadre.ts";
+import { echapper } from "./charte.ts";
 
 export interface InvitationCourriel {
   cabinet: string;
@@ -34,25 +33,34 @@ function phrases(i: InvitationCourriel, cabinet: string, pme: string) {
   if (i.pour === "comptabilite")
     return {
       sujet: `${i.pme} vous invite à tenir sa comptabilité sur Malica`,
-      apercu: `${pme} vous invite à tenir sa comptabilité.`,
       titre: "Une société vous confie sa comptabilité.",
       corpsTexte: `${i.pme} vous invite à tenir sa comptabilité sur Malica Office.`,
       corpsHtml: `<strong style="font-weight:600;">${pme}</strong> vous invite à tenir sa comptabilité sur Malica Office.`,
       suite:
         "Créez votre accès ou connectez-vous, choisissez votre comptabilité ou créez-la : le mandat devient actif dès que vous acceptez.",
       bouton: "Voir l'invitation",
-      demandeur: pme,
+      demandeurTexte: i.pme,
+      apercuTexte: `${i.pme} vous invite à tenir sa comptabilité.`,
+      etiquette: MESSAGES.fr["courriel.etiquette.mandat"],
+      organisation: i.pme,
+      donnees: [{ libelle: "Société", valeur: i.pme }] as LigneDeDonnees[],
     };
   return {
     sujet: `${i.cabinet} vous ouvre votre espace Malica`,
-    apercu: `${cabinet} a ouvert le dossier de ${pme}. Votre espace vous attend.`,
     titre: "Votre espace est prêt.",
     corpsTexte: `${i.cabinet} a ouvert le dossier de ${i.pme} sur Malica Office, et vous invite à le rejoindre.`,
     corpsHtml: `<strong style="font-weight:600;">${cabinet}</strong> a ouvert le dossier de <strong style="font-weight:600;">${pme}</strong> sur Malica Office, et vous invite à le rejoindre.`,
     suite:
       "Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.",
     bouton: "Rejoindre mon espace",
-    demandeur: cabinet,
+    demandeurTexte: i.cabinet,
+    apercuTexte: `${i.cabinet} a ouvert le dossier de ${i.pme}. Votre espace vous attend.`,
+    etiquette: MESSAGES.fr["courriel.etiquette.invitation"],
+    organisation: i.pme,
+    donnees: [
+      { libelle: "Société", valeur: i.pme },
+      { libelle: "Comptabilité", valeur: i.cabinet },
+    ] as LigneDeDonnees[],
   };
 }
 
@@ -74,7 +82,6 @@ export function courrielInvitation(i: InvitationCourriel): {
 
   const cabinet = echapper(i.cabinet);
   const pme = echapper(i.pme);
-  const lien = echapper(i.lien);
   const jusquau = dateLisible(i.expireLe);
   const p = phrases(i, cabinet, pme);
 
@@ -97,66 +104,20 @@ export function courrielInvitation(i: InvitationCourriel): {
     `— Malica Office`,
   ].join("\n");
 
-  const html = `<!doctype html>
-<html lang="fr" dir="ltr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light only">
-<meta name="supported-color-schemes" content="light">
-<title>${echapper(sujet)}</title>
-</head>
-<body style="margin:0;padding:0;background:${PAPIER};-webkit-text-size-adjust:100%;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${PAPIER};">${p.apercu}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAPIER};">
-<tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid ${FILET};">
-
-<tr><td style="background:${ENCRE};padding:28px 40px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="width:10px;height:10px;background:${AMBRE};font-size:0;line-height:0;">&nbsp;</td>
-<td style="padding-left:12px;font-family:${POLICE};font-size:12px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:${PAPIER};">Malica Office</td>
-</tr></table>
-</td></tr>
-
-<tr><td style="height:3px;background:${AMBRE};font-size:0;line-height:0;">&nbsp;</td></tr>
-
-<tr><td style="padding:44px 40px 8px 40px;font-family:${POLICE};">
-<p style="margin:0 0 14px 0;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:${AMBRE};">Invitation</p>
-<h1 style="margin:0;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-0.02em;color:${ENCRE};">${p.titre}</h1>
-<p style="margin:20px 0 0 0;font-size:17px;line-height:1.6;color:${ENCRE};">${p.corpsHtml}</p>
-<p style="margin:14px 0 0 0;font-size:16px;line-height:1.6;color:${GRIS};">${p.suite}</p>
-</td></tr>
-
-<tr><td style="padding:32px 40px 8px 40px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="background:${ENCRE};">
-<a href="${lien}" style="display:inline-block;padding:16px 30px;font-family:${POLICE};font-size:15px;font-weight:600;letter-spacing:0.02em;color:${PAPIER};text-decoration:none;">${p.bouton}&nbsp;&nbsp;&rarr;</a>
-</td>
-</tr></table>
-</td></tr>
-
-<tr><td style="padding:24px 40px 0 40px;font-family:${POLICE};">
-<p style="margin:0;font-size:13px;line-height:1.6;color:${GRIS};">Le bouton ne s'ouvre pas&nbsp;? Copiez ce lien dans votre navigateur&nbsp;:</p>
-<p style="margin:6px 0 0 0;font-size:13px;line-height:1.5;word-break:break-all;"><a href="${lien}" style="color:${ENCRE};text-decoration:underline;">${lien}</a></p>
-</td></tr>
-
-<tr><td style="padding:32px 40px 40px 40px;font-family:${POLICE};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="border-top:1px solid ${FILET};padding-top:20px;font-size:13px;line-height:1.6;color:${GRIS};">
-Ce lien est personnel. Il vaut jusqu'au <strong style="color:${ENCRE};font-weight:600;">${jusquau}</strong>, une seule fois, avec l'adresse à laquelle ce courriel vous parvient.<br>
-Si vous n'attendiez pas cette invitation, ignorez ce message&nbsp;: rien ne se passera.
-</td>
-</tr></table>
-</td></tr>
-
-</table>
-<p style="margin:20px 0 0 0;font-family:${POLICE};font-size:11px;letter-spacing:0.08em;color:${GRIS};">MALICA OFFICE &middot; envoyé à la demande de ${p.demandeur}</p>
-</td></tr>
-</table>
-</body>
-</html>
-`;
+  const html = cadreDeCourriel({
+    locale: "fr",
+    // Le repère et le lien des réglages partent de l'adresse publique, celle du lien.
+    urlPublique: new URL(i.lien).origin,
+    apercu: p.apercuTexte,
+    organisation: p.organisation,
+    etiquette: { texte: p.etiquette, signal: "attend" },
+    titre: p.titre,
+    paragraphesHtml: [p.corpsHtml, echapper(p.suite)],
+    donnees: p.donnees,
+    action: { libelle: p.bouton, url: i.lien },
+    noteHtml: `Lien personnel, valable jusqu'au <strong style="font-weight:600;">${jusquau}</strong>, une seule fois, avec l'adresse à laquelle ce message vous parvient. Si vous n'attendiez pas cette invitation, ignorez ce message&nbsp;: rien ne se passera.`,
+    raison: `Envoyé à la demande de ${p.demandeurTexte}.`,
+  });
 
   return { sujet, html, texte };
 }

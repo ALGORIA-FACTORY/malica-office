@@ -45,10 +45,14 @@ describe("le courriel d'invitation", () => {
     assert.throws(() => courrielInvitation({ ...INVITATION, lien: "javascript:alert(1)" }));
   });
 
-  it("tient sans feuille de style externe ni image distante", () => {
+  it("tient sans feuille externe ; sa seule image est le repère, servi par l'appli elle-même", () => {
     const c = courrielInvitation(INVITATION);
+    const origine = new URL(INVITATION.lien).origin;
     assert.ok(!/<link\b/i.test(c.html), "aucune feuille externe");
-    assert.ok(!/<img\b/i.test(c.html), "aucune image à télécharger");
+    const images = [...c.html.matchAll(/<img\b[^>]*src="([^"]+)"/gi)].map((m) => m[1]!);
+    assert.ok(images.length > 0, "le repère rG");
+    for (const src of images) assert.ok(src.startsWith(`${origine}/courriel/rg-`), src);
+    assert.match(c.html, /alt="Malica Office"/, "bloquée, l'image laisse son nom");
     assert.match(c.html, /^<!doctype html>/i);
   });
 });
