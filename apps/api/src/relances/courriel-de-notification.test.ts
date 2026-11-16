@@ -84,6 +84,40 @@ describe("le gabarit commun du courriel", () => {
     assert.ok(!mandat.html.includes("— Malica<"));
   });
 
+  it("l'objet vient du gabarit, ses jetons remplis ; troué, il redevient le titre", () => {
+    const plein = courrielDeNotification({
+      ...BASE,
+      locale: "fr",
+      ton: "alerte",
+      sujet: "Relance — facture {{numero}}",
+      donnees: { numero: "F-2026-0042" },
+    });
+    assert.equal(plein.sujet, "Relance — facture F-2026-0042");
+    const troue = courrielDeNotification({
+      ...BASE,
+      locale: "fr",
+      ton: "alerte",
+      sujet: "Facture {{numero}}",
+    });
+    assert.equal(troue.sujet, BASE.titre);
+    assert.equal(
+      courrielDeNotification({ ...BASE, locale: "fr", ton: "alerte" }).sujet,
+      BASE.titre,
+    );
+  });
+
+  it("le pied dit pourquoi : la raison propre aux impayés, sinon la générale", () => {
+    const impaye = courrielDeNotification({
+      ...BASE,
+      code: "impaye.relance",
+      locale: "fr",
+      ton: "alerte",
+    });
+    assert.match(impaye.html, /Une facture de votre abonnement reste due\./);
+    const autre = courrielDeNotification({ ...BASE, locale: "fr", ton: "alerte" });
+    assert.doesNotMatch(autre.html, /reste due/);
+  });
+
   it("refuse un ton inconnu plutôt que de le deviner", () => {
     assert.throws(
       () => courrielDeNotification({ ...BASE, locale: "fr", ton: "joyeux" }),

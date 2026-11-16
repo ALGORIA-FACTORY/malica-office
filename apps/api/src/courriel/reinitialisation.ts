@@ -12,7 +12,27 @@ import { MESSAGES } from "@malica/socle/messages";
 import { envoyerParBrevo, type ConfigurationCourriel } from "./brevo.ts";
 import { cadreDeCourriel } from "./cadre.ts";
 
-export function courrielReinitialisation(lienBrut: string): {
+/** L'heure de Tunis, lisible : « 16 nov. 2026 · 11:42 » ou « 12:42 ». */
+function heure(d: Date, avecJour: boolean): string {
+  const f = new Intl.DateTimeFormat("fr-FR", {
+    ...(avecJour ? { day: "numeric", month: "short", year: "numeric" } : {}),
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Africa/Tunis",
+  }).formatToParts(d);
+  const v = (t: string) => f.find((p) => p.type === t)?.value ?? "";
+  const hm = `${v("hour")}:${v("minute")}`;
+  return avecJour ? `${v("day")} ${v("month")} ${v("year")} · ${hm}` : hm;
+}
+
+/**
+ * `demande` et `expireLe` : quand la demande a été faite et jusqu'à quand le lien vaut
+ * (maquette E03, « Demandé le » et « Valable jusqu'à »). Absents, le bloc ne s'affiche pas.
+ */
+export function courrielReinitialisation(
+  lienBrut: string,
+  quand?: { demandeLe: Date; expireLe: Date },
+): {
   sujet: string;
   html: string;
   texte: string;
@@ -45,6 +65,12 @@ export function courrielReinitialisation(lienBrut: string): {
     paragraphesHtml: [
       "Une demande a été faite pour votre accès Malica Office. Le lien ci-dessous est valable une heure, une seule fois. Vos sessions ouvertes sur d'autres appareils seront fermées.",
     ],
+    donnees: quand
+      ? [
+          { libelle: "Demandé le", valeur: heure(quand.demandeLe, true), mono: true },
+          { libelle: "Valable jusqu'à", valeur: heure(quand.expireLe, false), mono: true },
+        ]
+      : [],
     action: { libelle: "Choisir un nouveau mot de passe", url: lienBrut },
     noteHtml:
       "Vous n'êtes pas à l'origine de cette demande&nbsp;? Ignorez ce message&nbsp;: votre mot de passe actuel reste valable.",
@@ -56,7 +82,7 @@ export function courrielReinitialisation(lienBrut: string): {
 
 /** Envoie le lien si Brevo est configuré. Ne lève jamais : la réponse de l'API ne doit rien trahir. */
 export async function envoyerReinitialisation(
-  i: { email: string; secret: string },
+  i: { email: string; secret: string; expireLe?: Date },
   config: ConfigurationCourriel | null,
   fetchImpl: typeof fetch = fetch,
 ): Promise<"envoye" | "non_configure" | "echec"> {
@@ -65,7 +91,10 @@ export async function envoyerReinitialisation(
     return "non_configure";
   }
   try {
-    const c = courrielReinitialisation(`${config.urlPublique}/reinitialiser#${i.secret}`);
+    const c = courrielReinitialisation(
+      `${config.urlPublique}/reinitialiser#${i.secret}`,
+      i.expireLe ? { demandeLe: new Date(), expireLe: i.expireLe } : undefined,
+    );
     await envoyerParBrevo(
       {
         cle: config.cle,

@@ -11,7 +11,7 @@
  */
 import { LOCALES, MESSAGES, type Locale } from "@malica/socle/messages";
 
-import { cadreDeCourriel, type Signal } from "../courriel/cadre.ts";
+import { cadreDeCourriel, type Frise, type Signal } from "../courriel/cadre.ts";
 import { echapper } from "../courriel/charte.ts";
 
 /** Le ton d'un gabarit, tel que la base le garde. */
@@ -42,6 +42,85 @@ export interface Notification {
   organisation: string | null;
   /** L'adresse publique de l'appli (repère, lien des réglages). */
   urlPublique: string;
+  /** Ce que l'événement a porté (`notif.envois.donnees`) : numéro, montant, devise… */
+  donnees?: Record<string, unknown> | null;
+  /** Les jours du recouvrement en vigueur (`recouvrement.*_jours`), pour la frise d'impayé. */
+  calendrier?: Record<string, number> | null;
+  /** L'adresse à laquelle on peut répondre (« Répondre à ce message »). */
+  repondreA?: string | null;
+  /** L'objet du gabarit, avec ses jetons (`{{numero}}`) ; absent, l'objet est le titre. */
+  sujet?: string | null;
+}
+
+/**
+ * L'objet : celui du gabarit, ses jetons remplis par les données de l'événement.
+ * Un jeton sans valeur, et l'objet redevient le titre : un objet troué ne part pas.
+ */
+function objet(n: Notification): string {
+  if (!n.sujet) return n.titre;
+  const rempli = n.sujet.replace(
+    /\{\{(\w+)\}\}/g,
+    (tout, cle: string) => texte(n.donnees?.[cle]) ?? tout,
+  );
+  return /\{\{/.test(rempli) ? n.titre : rempli;
+}
+
+/** Les paliers de l'impayé, dans l'ordre, et le jour de chacun dans le calendrier. */
+const PALIERS = [
+  { code: "impaye.rappel", libelle: "courriel.frise.echue", jour: "recouvrement.rappel_jours" },
+  { code: "impaye.relance", libelle: "courriel.frise.relance", jour: "recouvrement.relance_jours" },
+  {
+    code: "impaye.avis_de_suspension",
+    libelle: "courriel.frise.avis",
+    jour: "recouvrement.avis_suspension_jours",
+  },
+  {
+    code: "impaye.suspension",
+    libelle: "courriel.frise.suspension",
+    jour: "recouvrement.suspension_jours",
+  },
+] as const;
+
+function texte(v: unknown): string | null {
+  return typeof v === "string" && v.trim() !== "" ? v : typeof v === "number" ? String(v) : null;
+}
+
+/**
+ * La frise d'un impayé (maquettes E33 à E36) : la facture, le reste dû, et les
+ * quatre paliers. Sans numéro ni montant, pas de frise : on n'invente rien.
+ */
+function friseDImpaye(n: Notification, m: (typeof MESSAGES)[Locale]): Frise | null {
+  const i = PALIERS.findIndex((p) => p.code === n.code);
+  const numero = texte(n.donnees?.["numero"]);
+  const reste = texte(n.donnees?.["reste"]);
+  const devise = texte(n.donnees?.["devise"]);
+  if (i < 0 || !numero || !reste || !devise) return null;
+  return {
+    reference: `${numero} · ${m["courriel.frise.resteDu"]}`,
+    montant: reste,
+    devise,
+    etapes: PALIERS.map((p, k) => {
+      const jours = n.calendrier?.[p.jour];
+      return {
+        libelle: m[p.libelle],
+        jour: typeof jours === "number" ? `J+${jours}` : null,
+        atteinte: k <= i,
+        courante: k === i,
+      };
+    }),
+  };
+}
+
+/** L'étiquette propre au genre quand la maquette en donne une ; sinon le mot de sa famille. */
+function etiquette(code: string, m: (typeof MESSAGES)[Locale]): string {
+  const propre = (m as Record<string, string>)[`courriel.etiquette.${code}`];
+  return propre ?? m[`courriel.etiquette.${famille(code)}`];
+}
+
+/** La raison du pied : propre au genre (« Une facture de votre abonnement reste due. »), sinon la générale. */
+function raison(code: string, m: (typeof MESSAGES)[Locale]): string {
+  const genre = code.startsWith("impaye.") ? "impaye" : code;
+  return (m as Record<string, string>)[`courriel.raison.${genre}`] ?? m["courriel.notif.pied"];
 }
 
 function langue(locale: string): Locale {
@@ -75,16 +154,22 @@ export function courrielDeNotification(n: Notification): {
     urlPublique: n.urlPublique,
     apercu: n.corps,
     organisation: n.organisation,
-    etiquette: { texte: m[`courriel.etiquette.${famille(n.code)}`], signal },
+    etiquette: { texte: etiquette(n.code, m), signal },
     titre: n.titre,
     // Le corps vient de la base : échappé avant d'entrer dans le HTML.
     paragraphesHtml: [echapper(n.corps)],
+    frise: friseDImpaye(n, m),
     action: n.action,
+    // E34 : à la relance, on peut répondre plutôt que payer — « on trouve une solution ».
+    actionSecondaire:
+      n.code === "impaye.relance" && n.repondreA
+        ? { libelle: m["courriel.repondre"], url: `mailto:${n.repondreA}` }
+        : null,
     signature: parleMalica,
-    raison: m["courriel.notif.pied"],
+    raison: raison(n.code, m),
   });
 
-  const texte = [
+  const corpsTexte = [
     n.titre,
     "",
     n.corps,
@@ -94,5 +179,5 @@ export function courrielDeNotification(n: Notification): {
     parleMalica ? m["courriel.cadre.signature"] : "— Malica Office",
   ].join("\n");
 
-  return { sujet: n.titre, html, texte };
+  return { sujet: objet(n), html, texte: corpsTexte };
 }

@@ -19,7 +19,7 @@
  * (`prefers-color-scheme`). Tout texte reçu est échappé ; aucune phrase n'est
  * écrite ici — elles viennent du dictionnaire du Socle ou de la base.
  */
-import { MESSAGES, RTL_LOCALES, type Locale } from "@malica/socle/messages";
+import { LOCALES, MESSAGES, RTL_LOCALES, type Locale } from "@malica/socle/messages";
 
 import {
   CLAIR,
@@ -43,6 +43,25 @@ export interface LigneDeDonnees {
   mono?: boolean;
 }
 
+/** Une étape de la frise d'impayé : son nom, son jour, et où l'on en est. */
+interface EtapeDeFrise {
+  libelle: string;
+  /** « J+15 » : le jour, tel que le calendrier de recouvrement le fixe. */
+  jour: string | null;
+  /** L'étape est passée ou en cours : sa barre prend la couleur du signal. */
+  atteinte: boolean;
+  /** L'étape où l'on est : son nom en gras. */
+  courante: boolean;
+}
+
+/** La carte d'un impayé : la facture, le reste dû, et la frise des paliers. */
+export interface Frise {
+  reference: string;
+  montant: string;
+  devise: string;
+  etapes: EtapeDeFrise[];
+}
+
 export interface Cadre {
   locale: Locale;
   /** L'adresse publique de l'appli : le repère et le lien des réglages en partent. */
@@ -56,7 +75,10 @@ export interface Cadre {
   /** Le texte : un ou deux paragraphes, déjà échappés ou écrits en HTML sûr. */
   paragraphesHtml: string[];
   donnees?: LigneDeDonnees[];
+  frise?: Frise | null;
   action?: { libelle: string; url: string } | null;
+  /** Un second geste, en lien, à côté du bouton (« Répondre à ce message »). */
+  actionSecondaire?: { libelle: string; url: string } | null;
   /** Une précision sous un filet, après le bouton (un lien personnel, une demande à ignorer). */
   noteHtml?: string | null;
   /** « — Malica » : quand c'est Malica qui parle à la première personne. */
@@ -64,6 +86,9 @@ export interface Cadre {
   /** Pourquoi ce message arrive, en tête du pied. */
   raison: string;
 }
+
+/** Le nom de chaque langue au pied : FR · EN · العربية, comme sur les maquettes. */
+const LANGUE_COURTE: Record<Locale, string> = { fr: "FR", en: "EN", ar: "العربية" };
 
 /** La couleur et le fond d'un signal, dans une palette. */
 function couleurDuSignal(p: Palette, s: Signal): string {
@@ -107,6 +132,7 @@ body { margin: 0; padding: 0; }
   .m-t3 { color: ${s.texte3} !important; }
   .m-signal { color: ${couleurDuSignal(s, signal)} !important; }
   .m-point { background: ${couleurDuSignal(s, signal)} !important; }
+  .m-piste { background: ${s.piste} !important; }
   .m-bouton { background: ${s.accent} !important; }
   .m-bouton a { color: ${s.surAccent} !important; }
   .m-pastille { border-color: ${s.filet} !important; }
@@ -137,6 +163,8 @@ function repere(urlPublique: string, taille: number, opacite = 1): string {
 export function cadreDeCourriel(c: Cadre): string {
   if (c.action && !/^https?:\/\//i.test(c.action.url)) throw new Error("lien d'action invalide");
   if (!/^https?:\/\//i.test(c.urlPublique)) throw new Error("adresse publique invalide");
+  if (c.actionSecondaire && !/^(https?:\/\/|mailto:)/i.test(c.actionSecondaire.url))
+    throw new Error("lien secondaire invalide");
   if (!(SIGNAUX as readonly string[]).includes(c.etiquette.signal))
     throw new Error(`signal de courriel inconnu : ${c.etiquette.signal}`);
 
@@ -177,12 +205,42 @@ ${c.donnees
 </td></tr>`
       : "";
 
+  const frise = c.frise
+    ? `<tr><td class="m-pad" style="padding:22px 36px 0 36px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="m-bloc" style="background:${p.bloc};border:1px solid ${p.filet};border-radius:18px;">
+<tr><td style="padding:20px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td class="m-t2" style="font-family:${police};font-size:14px;color:${p.texte2};text-align:${debut};vertical-align:bottom;">${echapper(c.frise.reference)}</td>
+<td class="m-tx" style="font-family:${POLICE_MONO};font-size:22px;font-weight:600;color:${p.texte};text-align:${fin};white-space:nowrap;vertical-align:bottom;" dir="ltr">${echapper(c.frise.montant)} <span class="m-t3" style="font-size:12px;color:${p.texte3};">${echapper(c.frise.devise)}</span></td>
+</tr></table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;"><tr>
+${c.frise.etapes
+  .map(
+    (
+      e,
+      i,
+    ) => `<td width="${Math.floor(100 / c.frise!.etapes.length)}%" style="vertical-align:top;${i > 0 ? (dir === "rtl" ? "padding-right:8px;" : "padding-left:8px;") : ""}">
+<div class="${e.atteinte ? "m-point" : "m-piste"}" style="height:6px;border-radius:999px;background:${e.atteinte ? signal : p.piste};font-size:0;line-height:0;">&nbsp;</div>
+<div class="${e.courante ? "m-tx" : "m-t3"}" style="margin-top:8px;font-family:${police};font-size:12px;font-weight:${e.courante ? 600 : 500};color:${e.courante ? p.texte : p.texte3};">${echapper(e.libelle)}</div>
+${e.jour ? `<div class="m-t3" style="margin-top:2px;font-family:${POLICE_MONO};font-size:11px;color:${p.texte3};" dir="ltr">${echapper(e.jour)}</div>` : ""}
+</td>`,
+  )
+  .join("\n")}
+</tr></table>
+</td></tr></table>
+</td></tr>`
+    : "";
+
   const bouton = c.action
     ? `<tr><td class="m-pad" style="padding:28px 36px 0 36px;" align="${debut}">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" class="m-bouton-plein"><tr>
 <td class="m-bouton" style="background:${p.accent};border-radius:999px;">
 <a href="${echapper(c.action.url)}" style="display:inline-block;padding:15px 28px;font-family:${police};font-size:16px;line-height:22px;font-weight:600;color:${p.surAccent};text-decoration:none;border-radius:999px;">${echapper(c.action.libelle)}&nbsp;&nbsp;${dir === "rtl" ? "&larr;" : "&rarr;"}</a>
-</td></tr></table>
+</td>${
+        c.actionSecondaire
+          ? `<td style="padding:0 22px;font-family:${police};font-size:15px;font-weight:600;"><a class="m-tx" href="${echapper(c.actionSecondaire.url)}" style="color:${p.texte};text-decoration:underline;">${echapper(c.actionSecondaire.libelle)}</a></td>`
+          : ""
+      }</tr></table>
 </td></tr>
 <tr><td class="m-pad" style="padding:18px 36px 0 36px;font-family:${police};text-align:${debut};">
 <p class="m-t3" style="margin:0;font-size:12px;line-height:1.5;color:${p.texte3};">${echapper(m["courriel.notif.lienSecours"])}</p>
@@ -241,6 +299,7 @@ ${feuille(c.etiquette.signal)}
 ${c.paragraphesHtml.map((h) => `<p class="m-t2" style="margin:16px 0 0 0;font-size:16px;line-height:1.6;color:${p.texte2};">${h}</p>`).join("\n")}
 </td></tr>
 ${donnees}
+${frise}
 ${bouton}
 ${note}
 ${signature}
@@ -253,7 +312,11 @@ ${signature}
 <td style="vertical-align:middle;">${repere(base, 16, 0.6)}</td>
 <td class="m-t3" style="padding:0 10px;font-family:${POLICE_MONO};font-size:11px;letter-spacing:0.14em;color:${p.texte3};" dir="ltr">MALICA OFFICE &middot; ALGORIA FACTORY &middot; TUNIS</td>
 </tr></table>
-<p class="m-t3" style="margin:10px 0 0 0;font-size:12px;line-height:1.6;color:${p.texte3};">${echapper(c.raison)} <a class="m-t2" href="${echapper(reglages)}" style="color:${p.texte2};text-decoration:underline;">${echapper(m["courriel.cadre.reglerAlertes"])}</a></p>
+<p class="m-t3" style="margin:10px 0 0 0;font-size:12px;line-height:1.6;color:${p.texte3};">${echapper(c.raison)} <a class="m-t2" href="${echapper(reglages)}" style="color:${p.texte2};text-decoration:underline;">${echapper(m["courriel.cadre.reglerAlertes"])}</a>${LOCALES.map(
+    // La langue des messages se choisit dans les réglages ; chaque lien y mène.
+    (l) =>
+      ` &middot; <a class="m-t2" href="${echapper(reglages)}" lang="${l}" style="color:${p.texte2};text-decoration:underline;">${echapper(LANGUE_COURTE[l])}</a>`,
+  ).join("")}</p>
 <p class="m-t3" style="margin:6px 0 0 0;font-size:12px;line-height:1.6;color:${p.texte3};">${echapper(m["courriel.cadre.devise"])}</p>
 </td></tr>
 

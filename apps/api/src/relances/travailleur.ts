@@ -35,6 +35,9 @@ interface CourrielARemettre {
   ton: string;
   code: string;
   organisation: string | null;
+  donnees: Record<string, unknown> | null;
+  calendrier: Record<string, number> | null;
+  sujet: string | null;
 }
 
 /** Combien de courriels un tour remet au plus : un incident ne vide pas la file d'un coup. */
@@ -88,6 +91,11 @@ export async function tourDeRelances(d: Dependances) {
           code: c.code,
           organisation: c.organisation,
           urlPublique: config.urlPublique,
+          donnees: c.donnees,
+          calendrier: c.calendrier,
+          sujet: c.sujet,
+          // Répondre à une adresse qui ne lit pas ne sert à rien : pas de lien alors.
+          repondreA: /^no-?reply@/i.test(config.expediteur.email) ? null : config.expediteur.email,
           titre: c.titre,
           corps: c.corps,
           action:
