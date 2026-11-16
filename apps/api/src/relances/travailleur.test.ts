@@ -20,6 +20,9 @@ const COURRIEL = {
   action_libelle: "Payer",
   action_route: "/pme/reglages",
   ton: "alerte",
+  // Ce que la file rend depuis 20261229090000 : le genre (l'étiquette) et la société (la pastille).
+  code: "impaye.rappel",
+  organisation: "SOCIETE ESSAI",
 };
 
 /**
