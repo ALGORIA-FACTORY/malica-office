@@ -7,7 +7,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 const DOSSIER = new URL("../.github/workflows/", import.meta.url);
-const SENSIBLE = /\bvars\.([A-Z0-9_]*(?:KEY|CLE|TOKEN|JETON|SECRET|PASSWORD|MOT_DE_PASSE)[A-Z0-9_]*)\b/g;
+const SENSIBLE =
+  /\bvars\.([A-Z0-9_]*(?:KEY|CLE|TOKEN|JETON|SECRET|PASSWORD|MOT_DE_PASSE)[A-Z0-9_]*)\b/g;
 
 test("aucun workflow ne lit une clé dans une variable", () => {
   const fautes = [];
