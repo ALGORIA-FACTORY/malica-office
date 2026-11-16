@@ -12,7 +12,7 @@ import type { Libelles } from "./libelles.ts";
 
 const MIGRATIONS = fileURLToPath(new URL("../../../../db/migrations", import.meta.url));
 const LIGNE =
-  /^\s*\('([a-zA-Z_.]+)', '(fr|en|ar)', '((?:[^']|'')*)', date '(\d{4}-\d{2}-\d{2})'\)/gm;
+  /^\s*\('([a-zA-Z0-9_.]+)', '(fr|en|ar)', '((?:[^']|'')*)', date '(\d{4}-\d{2}-\d{2})'\)/gm;
 
 interface Version {
   cle: string;

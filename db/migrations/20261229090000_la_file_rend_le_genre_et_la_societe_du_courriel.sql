@@ -176,7 +176,7 @@ $$;
 -- porte aucun texte de courriel.
 
 create table notif.libelles_courriel (
-  cle            text not null check (cle ~ '^[a-z][a-zA-Z_.]*$'),
+  cle            text not null check (cle ~ '^[a-z][a-zA-Z0-9_.]*$'),
   locale         text not null check (locale in ('fr', 'en', 'ar')),
   texte          text not null check (btrim(texte) <> ''),
   effective_from date not null,
