@@ -25,21 +25,26 @@ export async function organisationDEssai(db: Requete, args: string, params: unkn
     : premier.startsWith("'pme'")
       ? "pme"
       : String(params[0]);
-  if (genre === "pme") {
-    const devis = await db.query<{ r: { offre_multisociete_requise?: boolean } | null }>(
-      "select public.societe_en_plus_devis() as r",
-    );
-    if (devis.rows[0]?.r?.offre_multisociete_requise) {
-      const offre = await db.query<{ code: string }>(
-        `select code from public.mes_offres()
-          where empechement is null and not courant
-            and (organisations_max is null or organisations_max > 1)
-          order by rang limit 1`,
-      );
-      const code = offre.rows[0]?.code;
-      if (!code) throw new Error("aucune offre n'accueille une société de plus");
-      await db.query("select public.forfait_changer($1)", [code]);
-    }
-  }
+  if (genre === "pme") await accueillirUneSocieteDePlus(db);
   return db.query<{ id: string }>(`select public.create_organization(${args}, true) as id`, params);
+}
+
+/**
+ * Avant une société de plus : si l'offre de la personne n'en accueille qu'une, elle monte,
+ * par la vraie porte, à la moins chère qui en accueille plusieurs. Sans effet sinon.
+ */
+export async function accueillirUneSocieteDePlus(db: Requete) {
+  const devis = await db.query<{ r: { offre_multisociete_requise?: boolean } | null }>(
+    "select public.societe_en_plus_devis() as r",
+  );
+  if (!devis.rows[0]?.r?.offre_multisociete_requise) return;
+  const offre = await db.query<{ code: string }>(
+    `select code from public.mes_offres()
+      where empechement is null and not courant
+        and (organisations_max is null or organisations_max > 1)
+      order by rang limit 1`,
+  );
+  const code = offre.rows[0]?.code;
+  if (!code) throw new Error("aucune offre n'accueille une société de plus");
+  await db.query("select public.forfait_changer($1)", [code]);
 }

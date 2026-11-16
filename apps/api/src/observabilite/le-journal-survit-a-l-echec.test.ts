@@ -25,7 +25,7 @@ import { creerCompte, emettreJeton, type Utilisateur } from "../auth.ts";
 import { consignerEnBase, fermerLePool, sousIdentite, sousIdentiteDuServeur } from "../db.ts";
 import { consigner, mesurer, tracerUnTravail, type Evenement } from "./journal.ts";
 import { nouvelleTrace, noterLObjet, sousLaTrace } from "./trace.ts";
-import { organisationDEssai } from "../organisation-d-essai.ts";
+import { accueillirUneSocieteDePlus, organisationDEssai } from "../organisation-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["DATABASE_URL_ADMIN"] && process.env["JWT_SECRET"],
@@ -351,6 +351,9 @@ describe("le journal survit à l'échec métier", { skip: !BASE_CONFIGUREE }, ()
         body: JSON.stringify({ depot: "identite", methode: "createOrganization", args }),
       });
 
+    // Une société de plus pour ce compte : son offre doit l'accueillir, et le prix en plus
+    // est accepté, comme l'écran le ferait (décision du 15 novembre 2026, 20261228110000).
+    await sousIdentite(a.id, accueillirUneSocieteDePlus);
     const reussi = await appeler(
       [
         {
@@ -359,6 +362,7 @@ describe("le journal survit à l'échec métier", { skip: !BASE_CONFIGUREE }, ()
           validationMode: "autonome",
           jurisdiction: "TN",
           currency: "TND",
+          supplementAccepte: true,
         },
       ],
       "creer-1",
