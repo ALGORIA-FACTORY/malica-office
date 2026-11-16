@@ -114,8 +114,9 @@ export function clictopay(
 
 /**
  * Flouci : `generate_payment` crée la session, `verify_payment` la lit
- * (docs.flouci.com, relue le 16 novembre 2026). Flouci compte en millimes, ne
- * connaît que le dinar, et la même adresse sert le bac à sable et la
+ * (docs.flouci.com, relue le 16 novembre 2026). Flouci compte en millimes ; la
+ * devise qu'il traite vit en table (`facturation.devises_par_prestataire`), où
+ * la base refuse les autres avant toute demande de lien. La même adresse sert le bac à sable et la
  * production : seules les clés changent. L'adresse vit en table (la tour).
  */
 export function flouci(
@@ -131,8 +132,6 @@ export function flouci(
     code: config.code,
     simule: false,
     async creerLien(d) {
-      // 788 : le dinar (ISO 4217). Flouci n'en traite pas d'autre.
-      if (d.devise !== "788") throw new Error(`flouci : devise ${d.devise} non traitée`);
       const r = await fetchImpl(`${base}/api/v2/generate_payment`, {
         method: "POST",
         headers: { ...entetes, "content-type": "application/json" },

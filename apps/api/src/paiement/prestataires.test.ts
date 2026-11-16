@@ -173,15 +173,21 @@ describe("les prestataires de paiement", () => {
     assert.equal(corps["accept_card"], true);
   });
 
-  it("Flouci refuse une autre devise que le dinar, et un refus de sa part se dit", async () => {
-    const p = flouci({ ...FLC, url: "https://x" }, fauxFetch({ result: { success: true } }, []));
-    const d = { paiementId: "p", unites: 1, devise: "952", libelle: "x", retour: "https://r" };
-    await assert.rejects(p.creerLien(d), /devise 952/);
+  it("un refus de Flouci se dit", async () => {
     const refus = flouci(
       { ...FLC, url: "https://x" },
       fauxFetch({ result: { status: 400, message: "Bad Request" } }, [], 400),
     );
-    await assert.rejects(refus.creerLien({ ...d, devise: "788" }), /HTTP 400/);
+    await assert.rejects(
+      refus.creerLien({
+        paiementId: "p",
+        unites: 1,
+        devise: "788",
+        libelle: "x",
+        retour: "https://r",
+      }),
+      /HTTP 400/,
+    );
   });
 
   it("Flouci : SUCCESS est payé, FAILURE/EXPIRED refusé, PENDING attend, sans success rien n'est cru", async () => {
