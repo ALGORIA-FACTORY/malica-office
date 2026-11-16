@@ -59,6 +59,44 @@ describe("le courriel d'invitation", () => {
   });
 });
 
+describe("la carte de l'invitation (maquettes E06, E07)", () => {
+  const CARTE = {
+    matricule: "1234567A/A/M/000",
+    offre: "Team",
+    payeur: "comptabilite" as const,
+    invitant: null,
+    comptabiliteInvitee: null,
+  };
+
+  it("au dirigeant : la société, son matricule, sa comptabilité et son offre", () => {
+    const c = courrielInvitation({ ...INVITATION, carte: CARTE });
+    assert.match(c.html, />AF</, "les initiales de la société");
+    assert.match(c.html, /1234567A\/A\/M\/000/);
+    assert.match(c.html, /Team · prise en charge par la comptabilité/);
+    assert.match(c.texte, /Lien personnel, valable jusqu'au 18 octobre 2026/);
+  });
+
+  it("à la comptabilité : qui invite, l'offre à la charge de la société, le mandat", () => {
+    const c = courrielInvitation({
+      ...INVITATION,
+      cabinet: "",
+      pour: "comptabilite",
+      carte: {
+        ...CARTE,
+        payeur: "societe",
+        invitant: "Personne Essai",
+        comptabiliteInvitee: "Cabinet Essai",
+      },
+    });
+    assert.match(c.html, /Personne Essai<\/strong> vous invite à tenir la comptabilité de/);
+    assert.match(c.html, /Son abonnement reste à sa charge\./);
+    assert.match(c.html, /Team · à sa charge/);
+    assert.match(c.html, /actif dès votre accord/);
+    assert.match(c.html, /Demande de mandat/);
+    assert.match(c.html, /Cabinet Essai/, "la pastille : sa comptabilité");
+  });
+});
+
 describe("la configuration d'envoi", () => {
   it("sans clé, rien n'est configuré — et on le dit", () => {
     assert.equal(configurationCourriel({}), null);

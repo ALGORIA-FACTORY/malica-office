@@ -11,6 +11,7 @@ import { configurationCourriel } from "../courriel/brevo.ts";
 import {
   envoyerInvitation,
   LANGUE_DES_INVITATIONS,
+  type CarteDInvitation,
   type StatutCourriel,
 } from "../courriel/invitation.ts";
 import { libelle, libellesDuCourriel } from "../courriel/libelles.ts";
@@ -59,6 +60,15 @@ export interface FicheFiscale {
 }
 
 /** pg rend une date SQL à minuit locale : `toISOString` afficherait la veille. */
+
+/** La carte de l'invitation que l'on vient d'émettre (maquettes E06, E07). */
+async function carteDInvitation(db: Requete, jeton: string): Promise<CarteDInvitation | null> {
+  const { rows } = await db.query<{ c: CarteDInvitation | null }>(
+    "select notif.carte_d_invitation($1) as c",
+    [jeton],
+  );
+  return rows[0]?.c ?? null;
+}
 
 export const identite = {
   /**
@@ -570,6 +580,7 @@ export const identite = {
     }
     const noms = config ? await identite.lireInvitationParLien(db, r.jeton) : null;
     const libelles = config ? await libellesDuCourriel(db, LANGUE_DES_INVITATIONS) : {};
+    const carte = config ? await carteDInvitation(db, r.jeton) : null;
     const envoi = await envoyerInvitation(
       {
         cabinet: noms?.cabinet ?? (config ? libelle(libelles, "invitation.cabinetInconnu") : ""),
@@ -578,6 +589,7 @@ export const identite = {
         jeton: r.jeton,
         expireLe: new Date(r.expiresAt),
         libelles,
+        carte,
       },
       config,
     );
@@ -618,10 +630,12 @@ export const identite = {
     }
     const noms = config ? await identite.lireInvitationParLien(db, r.jeton) : null;
     const libelles = config ? await libellesDuCourriel(db, LANGUE_DES_INVITATIONS) : {};
+    const carte = config ? await carteDInvitation(db, r.jeton) : null;
     const envoi = await envoyerInvitation(
       {
         cabinet: "",
         libelles,
+        carte,
         pme: noms?.pme ?? "",
         email: r.email,
         jeton: r.jeton,

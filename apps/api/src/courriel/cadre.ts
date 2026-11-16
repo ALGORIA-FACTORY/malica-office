@@ -65,6 +65,12 @@ export interface Frise {
   etapes: EtapeDeFrise[];
 }
 
+/** La société en tête du bloc de données : ses initiales, son nom, son matricule. */
+interface Entite {
+  nom: string;
+  matricule: string | null;
+}
+
 export interface Cadre {
   locale: Locale;
   /** Les textes du cadre dans la langue du message (`notif.libelles_du_courriel`). */
@@ -82,6 +88,8 @@ export interface Cadre {
   donnees?: LigneDeDonnees[];
   frise?: Frise | null;
   action?: { libelle: string; url: string } | null;
+  /** La société en tête du bloc de données (maquettes E06, E07). */
+  entite?: Entite | null;
   /** Un second geste, en lien, à côté du bouton (« Répondre à ce message »). */
   actionSecondaire?: { libelle: string; url: string } | null;
   /** Une précision sous un filet, après le bouton (un lien personnel, une demande à ignorer). */
@@ -108,6 +116,18 @@ function couleurDuSignal(p: Palette, s: Signal): string {
     case "neutre":
       return p.texte3;
   }
+}
+
+/** Les initiales d'une société, sur sa carte : « Kchaou Négoce SARL » → « KN ». */
+function initiales(nom: string): string {
+  const mots = nom
+    .trim()
+    .split(/\s+/)
+    .filter((m) => m.length > 0);
+  return mots
+    .slice(0, 2)
+    .map((m) => [...m][0]!.toLocaleUpperCase("fr"))
+    .join("");
 }
 
 /** L'initiale de la société, dans sa pastille. */
@@ -194,21 +214,38 @@ export function cadreDeCourriel(c: Cadre): string {
     : "";
 
   const donnees =
-    c.donnees && c.donnees.length > 0
+    (c.donnees && c.donnees.length > 0) || c.entite
       ? `<tr><td class="m-pad" style="padding:22px 36px 0 36px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="m-bloc" style="background:${p.bloc};border:1px solid ${p.filet};border-radius:18px;">
-<tr><td style="padding:6px 22px;">
+${
+  c.entite
+    ? `<tr><td style="padding:20px 22px ${c.donnees && c.donnees.length > 0 ? "14px" : "20px"} 22px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td class="m-initiale" width="44" height="44" align="center" style="width:44px;height:44px;border-radius:12px;background:${p.faitFond};color:${p.fait};font-family:${police};font-size:15px;font-weight:700;">${echapper(initiales(c.entite.nom))}</td>
+<td style="${dir === "rtl" ? "padding-right" : "padding-left"}:14px;vertical-align:middle;">
+<div class="m-tx" style="font-family:${police};font-size:17px;font-weight:600;color:${p.texte};">${echapper(c.entite.nom)}</div>
+${c.entite.matricule ? `<div class="m-t3" style="margin-top:3px;font-family:${POLICE_MONO};font-size:12px;color:${p.texte3};" dir="ltr">${echapper(c.entite.matricule)}</div>` : ""}
+</td></tr></table>
+</td></tr>`
+    : ""
+}${
+          c.donnees && c.donnees.length > 0
+            ? `<tr><td style="padding:${c.entite ? "0" : "6px"} 22px 6px 22px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 ${c.donnees
-  .map(
-    (l, i) => `<tr>
-<td class="m-t2${i > 0 ? " m-filet" : ""}" style="padding:13px 0;${i > 0 ? `border-top:1px solid ${p.filet};` : ""}font-family:${police};font-size:14px;line-height:1.4;color:${p.texte2};text-align:${debut};">${echapper(l.libelle)}</td>
-<td class="m-tx${i > 0 ? " m-filet" : ""}" style="padding:13px 0;${i > 0 ? `border-top:1px solid ${p.filet};` : ""}font-family:${l.mono ? POLICE_MONO : police};font-size:14px;line-height:1.4;font-weight:600;color:${p.texte};text-align:${fin};">${echapper(l.valeur)}</td>
-</tr>`,
-  )
+  .map((l, i) => {
+    const filet = i > 0 || c.entite;
+    return `<tr>
+<td class="m-t2${filet ? " m-filet" : ""}" style="padding:13px 0;${filet ? `border-top:1px solid ${p.filet};` : ""}font-family:${police};font-size:14px;line-height:1.4;color:${p.texte2};text-align:${debut};">${echapper(l.libelle)}</td>
+<td class="m-tx${filet ? " m-filet" : ""}" style="padding:13px 0;${filet ? `border-top:1px solid ${p.filet};` : ""}font-family:${l.mono ? POLICE_MONO : police};font-size:14px;line-height:1.4;font-weight:600;color:${p.texte};text-align:${fin};">${echapper(l.valeur)}</td>
+</tr>`;
+  })
   .join("\n")}
 </table>
-</td></tr></table>
+</td></tr>`
+            : ""
+        }
+</table>
 </td></tr>`
       : "";
 

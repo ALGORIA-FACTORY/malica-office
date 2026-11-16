@@ -31,6 +31,7 @@ declare
   pref       record;
   v_locale   text;
   v_titre    text;
+  v_jetons   jsonb;
   v_corps    text;
   v_abandon  text := null;
   v_heure    time;
@@ -133,10 +134,20 @@ begin
   -- La substitution : {{jeton}} → valeur. Un jeton absent reste visible dans
   -- le texte rendu plutôt que de disparaître — on veut le voir en recette,
   -- pas découvrir une phrase amputée chez un client.
-  v_titre := g.titre; v_corps := g.corps;
+  -- Une date JJ/MM/AAAA se dit aussi en toutes lettres, dans la langue du
+  -- gabarit : `{{cle_longue}}` (« 9 janvier »), comme les maquettes.
+  v_jetons := p_jetons;
   for k in select jsonb_object_keys(p_jetons) loop
-    v_titre := replace(v_titre, '{{' || k || '}}', coalesce(p_jetons ->> k, ''));
-    v_corps := replace(v_corps, '{{' || k || '}}', coalesce(p_jetons ->> k, ''));
+    if (p_jetons ->> k) ~ '^\d{2}/\d{2}/\d{4}$' then
+      v_jetons := v_jetons || jsonb_build_object(
+        k || '_longue', notif.date_longue(to_date(p_jetons ->> k, 'DD/MM/YYYY'), g.locale));
+    end if;
+  end loop;
+
+  v_titre := g.titre; v_corps := g.corps;
+  for k in select jsonb_object_keys(v_jetons) loop
+    v_titre := replace(v_titre, '{{' || k || '}}', coalesce(v_jetons ->> k, ''));
+    v_corps := replace(v_corps, '{{' || k || '}}', coalesce(v_jetons ->> k, ''));
   end loop;
 
   insert into notif.envois
@@ -148,8 +159,8 @@ begin
      case when v_abandon is null then 'a_remettre' else 'abandonne' end,
      v_abandon,
      -- Ce que l'événement a porté : le courriel en dessine ses données (montant,
-     -- frise, échéance) et son objet (20261229090000).
-     p_jetons)
+     -- frise, échéance) et son objet.
+     v_jetons)
   returning id into v_id;
 
   return jsonb_build_object('envoi_id', v_id, 'poste', v_abandon is null,
@@ -274,45 +285,51 @@ insert into notif.libelles_courriel (cle, locale, texte, effective_from) values
   ('invitation.dirigeant.sujet', 'fr', '{{cabinet}} vous ouvre votre espace Malica', date '2026-11-16'),
   ('invitation.dirigeant.sujet', 'en', '{{cabinet}} opens your Malica space', date '2026-11-16'),
   ('invitation.dirigeant.sujet', 'ar', '{{cabinet}} يفتح لكم فضاءكم على Malica', date '2026-11-16'),
-  ('invitation.dirigeant.apercu', 'fr', '{{cabinet}} a ouvert le dossier de {{pme}}. Votre espace vous attend.', date '2026-11-16'),
-  ('invitation.dirigeant.apercu', 'en', '{{cabinet}} opened the file of {{pme}}. Your space is waiting.', date '2026-11-16'),
-  ('invitation.dirigeant.apercu', 'ar', 'فتح {{cabinet}} ملف {{pme}}. فضاؤكم في انتظاركم.', date '2026-11-16'),
+  ('invitation.dirigeant.apercu', 'fr', 'Le dossier de {{pme}} est prêt. Lien valable jusqu''au {{date}}.', date '2026-11-16'),
+  ('invitation.dirigeant.apercu', 'en', 'The file of {{pme}} is ready. Link valid until {{date}}.', date '2026-11-16'),
+  ('invitation.dirigeant.apercu', 'ar', 'ملف {{pme}} جاهز. الرابط صالح حتى {{date}}.', date '2026-11-16'),
   ('invitation.dirigeant.titre', 'fr', 'Votre espace est prêt.', date '2026-11-16'),
   ('invitation.dirigeant.titre', 'en', 'Your space is ready.', date '2026-11-16'),
   ('invitation.dirigeant.titre', 'ar', 'فضاؤكم جاهز.', date '2026-11-16'),
-  ('invitation.dirigeant.corps', 'fr', '{{cabinet}} a ouvert le dossier de {{pme}} sur Malica Office, et vous invite à le rejoindre.', date '2026-11-16'),
-  ('invitation.dirigeant.corps', 'en', '{{cabinet}} opened the file of {{pme}} on Malica Office, and invites you to join it.', date '2026-11-16'),
-  ('invitation.dirigeant.corps', 'ar', 'فتح {{cabinet}} ملف {{pme}} على Malica Office، ويدعوكم للانضمام إليه.', date '2026-11-16'),
-  ('invitation.dirigeant.suite', 'fr', 'Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.', date '2026-11-16'),
-  ('invitation.dirigeant.suite', 'en', 'Photograph your invoices: Malica reads them, files them, and passes them to your accountant.', date '2026-11-16'),
-  ('invitation.dirigeant.suite', 'ar', 'صوّروا فواتيركم: تقرؤها Malica وتصنّفها وتحيلها إلى محاسبكم.', date '2026-11-16'),
+  ('invitation.dirigeant.corps', 'fr', '{{cabinet}} a ouvert le dossier de {{pme}} et vous invite à le rejoindre.', date '2026-11-16'),
+  ('invitation.dirigeant.corps', 'en', '{{cabinet}} opened the file of {{pme}} and invites you to join it.', date '2026-11-16'),
+  ('invitation.dirigeant.corps', 'ar', 'فتح {{cabinet}} ملف {{pme}} ويدعوكم للانضمام إليه.', date '2026-11-16'),
   ('invitation.dirigeant.bouton', 'fr', 'Rejoindre mon espace', date '2026-11-16'),
   ('invitation.dirigeant.bouton', 'en', 'Join my space', date '2026-11-16'),
   ('invitation.dirigeant.bouton', 'ar', 'الانضمام إلى فضائي', date '2026-11-16'),
   ('invitation.comptabilite.sujet', 'fr', '{{pme}} vous invite à tenir sa comptabilité sur Malica', date '2026-11-16'),
   ('invitation.comptabilite.sujet', 'en', '{{pme}} invites you to keep its books on Malica', date '2026-11-16'),
   ('invitation.comptabilite.sujet', 'ar', 'تدعوكم {{pme}} لمسك محاسبتها على Malica', date '2026-11-16'),
-  ('invitation.comptabilite.apercu', 'fr', '{{pme}} vous invite à tenir sa comptabilité.', date '2026-11-16'),
-  ('invitation.comptabilite.apercu', 'en', '{{pme}} invites you to keep its books.', date '2026-11-16'),
-  ('invitation.comptabilite.apercu', 'ar', 'تدعوكم {{pme}} لمسك محاسبتها.', date '2026-11-16'),
+  ('invitation.comptabilite.apercu', 'fr', 'Acceptez le mandat : il devient actif tout de suite.', date '2026-11-16'),
+  ('invitation.comptabilite.apercu', 'en', 'Accept the mandate: it becomes active right away.', date '2026-11-16'),
+  ('invitation.comptabilite.apercu', 'ar', 'اقبلوا العقد: يصبح ساريًا فورًا.', date '2026-11-16'),
+  ('invitation.comptabilite.apercuSansFrais', 'fr', 'Acceptez le mandat : il devient actif tout de suite. Rien ne vous est facturé.', date '2026-11-16'),
+  ('invitation.comptabilite.apercuSansFrais', 'en', 'Accept the mandate: it becomes active right away. Nothing is billed to you.', date '2026-11-16'),
+  ('invitation.comptabilite.apercuSansFrais', 'ar', 'اقبلوا العقد: يصبح ساريًا فورًا. لا شيء يُفوتر عليكم.', date '2026-11-16'),
   ('invitation.comptabilite.titre', 'fr', 'Une société vous confie sa comptabilité.', date '2026-11-16'),
   ('invitation.comptabilite.titre', 'en', 'A company entrusts you with its books.', date '2026-11-16'),
   ('invitation.comptabilite.titre', 'ar', 'شركة تأتمنكم على محاسبتها.', date '2026-11-16'),
-  ('invitation.comptabilite.corps', 'fr', '{{pme}} vous invite à tenir sa comptabilité sur Malica Office.', date '2026-11-16'),
-  ('invitation.comptabilite.corps', 'en', '{{pme}} invites you to keep its books on Malica Office.', date '2026-11-16'),
-  ('invitation.comptabilite.corps', 'ar', 'تدعوكم {{pme}} لمسك محاسبتها على Malica Office.', date '2026-11-16'),
-  ('invitation.comptabilite.suite', 'fr', 'Créez votre accès ou connectez-vous, choisissez votre comptabilité ou créez-la : le mandat devient actif dès que vous acceptez.', date '2026-11-16'),
-  ('invitation.comptabilite.suite', 'en', 'Create your access or sign in, choose your practice or create it: the mandate becomes active as soon as you accept.', date '2026-11-16'),
-  ('invitation.comptabilite.suite', 'ar', 'أنشئوا حسابكم أو سجّلوا الدخول، واختاروا مكتب محاسبتكم أو أنشئوه: يصبح العقد ساريًا فور قبولكم.', date '2026-11-16'),
+  ('invitation.comptabilite.corps', 'fr', '{{invitant}} vous invite à tenir la comptabilité de {{pme}}.', date '2026-11-16'),
+  ('invitation.comptabilite.corps', 'en', '{{invitant}} invites you to keep the books of {{pme}}.', date '2026-11-16'),
+  ('invitation.comptabilite.corps', 'ar', 'يدعوكم {{invitant}} لمسك محاسبة {{pme}}.', date '2026-11-16'),
+  ('invitation.comptabilite.corpsSansInvitant', 'fr', '{{pme}} vous invite à tenir sa comptabilité sur Malica Office.', date '2026-11-16'),
+  ('invitation.comptabilite.corpsSansInvitant', 'en', '{{pme}} invites you to keep its books on Malica Office.', date '2026-11-16'),
+  ('invitation.comptabilite.corpsSansInvitant', 'ar', 'تدعوكم {{pme}} لمسك محاسبتها على Malica Office.', date '2026-11-16'),
+  ('invitation.comptabilite.chargeSociete', 'fr', 'Son abonnement reste à sa charge.', date '2026-11-16'),
+  ('invitation.comptabilite.chargeSociete', 'en', 'Its subscription stays at its own expense.', date '2026-11-16'),
+  ('invitation.comptabilite.chargeSociete', 'ar', 'يبقى اشتراكها على نفقتها.', date '2026-11-16'),
+  ('invitation.comptabilite.note', 'fr', 'Pas encore de comptabilité sur Malica ? Le lien vous la fait créer en deux minutes, puis vous acceptez — sans revenir à ce message.', date '2026-11-16'),
+  ('invitation.comptabilite.note', 'en', 'No practice on Malica yet? The link lets you create it in two minutes, then you accept — without coming back to this message.', date '2026-11-16'),
+  ('invitation.comptabilite.note', 'ar', 'لا مكتب محاسبة لكم على Malica بعد؟ يتيح لكم الرابط إنشاءه في دقيقتين، ثم تقبلون — دون العودة إلى هذه الرسالة.', date '2026-11-16'),
+  ('invitation.dirigeant.note', 'fr', 'Lien personnel, valable jusqu''au {{date}}, une seule fois, avec l''adresse à laquelle ce message vous parvient.', date '2026-11-16'),
+  ('invitation.dirigeant.note', 'en', 'Personal link, valid until {{date}}, once, with the address this message reached.', date '2026-11-16'),
+  ('invitation.dirigeant.note', 'ar', 'رابط شخصي صالح حتى {{date}}، لمرة واحدة، بالعنوان الذي وصلتكم عليه هذه الرسالة.', date '2026-11-16'),
   ('invitation.comptabilite.bouton', 'fr', 'Voir l''invitation', date '2026-11-16'),
   ('invitation.comptabilite.bouton', 'en', 'See the invitation', date '2026-11-16'),
   ('invitation.comptabilite.bouton', 'ar', 'عرض الدعوة', date '2026-11-16'),
   ('invitation.cabinetInconnu', 'fr', 'Votre comptabilité', date '2026-11-16'),
   ('invitation.cabinetInconnu', 'en', 'Your accountant', date '2026-11-16'),
   ('invitation.cabinetInconnu', 'ar', 'محاسبكم', date '2026-11-16'),
-  ('invitation.note', 'fr', 'Lien personnel, valable jusqu''au {{date}}, une seule fois, avec l''adresse à laquelle ce message vous parvient. Si vous n''attendiez pas cette invitation, ignorez ce message : rien ne se passera.', date '2026-11-16'),
-  ('invitation.note', 'en', 'Personal link, valid until {{date}}, once, with the address this message reached. If you were not expecting this invitation, ignore this message: nothing will happen.', date '2026-11-16'),
-  ('invitation.note', 'ar', 'رابط شخصي صالح حتى {{date}}، لمرة واحدة، بالعنوان الذي وصلتكم عليه هذه الرسالة. إن لم تكونوا تنتظرون هذه الدعوة فتجاهلوا هذه الرسالة: لن يحدث شيء.', date '2026-11-16'),
   ('invitation.raison', 'fr', 'Envoyé à la demande de {{demandeur}}.', date '2026-11-16'),
   ('invitation.raison', 'en', 'Sent at the request of {{demandeur}}.', date '2026-11-16'),
   ('invitation.raison', 'ar', 'أُرسلت بطلب من {{demandeur}}.', date '2026-11-16'),
@@ -337,6 +354,66 @@ insert into notif.libelles_courriel (cle, locale, texte, effective_from) values
   ('reinitialisation.raison', 'fr', 'Une demande de nouveau mot de passe a été faite pour cette adresse.', date '2026-11-16'),
   ('reinitialisation.raison', 'en', 'A new password was requested for this address.', date '2026-11-16'),
   ('reinitialisation.raison', 'ar', 'طُلبت كلمة مرور جديدة لهذا العنوان.', date '2026-11-16'),
+  ('etiquette.demandeMandat', 'fr', 'Demande de mandat', date '2026-11-16'),
+  ('etiquette.demandeMandat', 'en', 'Mandate request', date '2026-11-16'),
+  ('etiquette.demandeMandat', 'ar', 'طلب عقد مسك', date '2026-11-16'),
+  ('donnee.dirigeant', 'fr', 'Dirigeant(e)', date '2026-11-16'),
+  ('donnee.dirigeant', 'en', 'Manager', date '2026-11-16'),
+  ('donnee.dirigeant', 'ar', 'المسيّر', date '2026-11-16'),
+  ('donnee.offre', 'fr', 'Offre', date '2026-11-16'),
+  ('donnee.offre', 'en', 'Plan', date '2026-11-16'),
+  ('donnee.offre', 'ar', 'العرض', date '2026-11-16'),
+  ('donnee.mandat', 'fr', 'Mandat', date '2026-11-16'),
+  ('donnee.mandat', 'en', 'Mandate', date '2026-11-16'),
+  ('donnee.mandat', 'ar', 'العقد', date '2026-11-16'),
+  ('mandat.actifDesAccord', 'fr', 'actif dès votre accord', date '2026-11-16'),
+  ('mandat.actifDesAccord', 'en', 'active as soon as you agree', date '2026-11-16'),
+  ('mandat.actifDesAccord', 'ar', 'ساري فور موافقتكم', date '2026-11-16'),
+  ('offre.chargeComptabilite', 'fr', 'prise en charge par la comptabilité', date '2026-11-16'),
+  ('offre.chargeComptabilite', 'en', 'paid by the accountant', date '2026-11-16'),
+  ('offre.chargeComptabilite', 'ar', 'على نفقة المحاسب', date '2026-11-16'),
+  ('offre.chargeSociete.dirigeant', 'fr', 'à votre charge', date '2026-11-16'),
+  ('offre.chargeSociete.dirigeant', 'en', 'at your expense', date '2026-11-16'),
+  ('offre.chargeSociete.dirigeant', 'ar', 'على نفقتكم', date '2026-11-16'),
+  ('offre.chargeSociete.comptabilite', 'fr', 'à sa charge', date '2026-11-16'),
+  ('offre.chargeSociete.comptabilite', 'en', 'at its expense', date '2026-11-16'),
+  ('offre.chargeSociete.comptabilite', 'ar', 'على نفقتها', date '2026-11-16'),
+  ('mois.1', 'fr', 'janvier', date '2026-11-16'),
+  ('mois.1', 'en', 'January', date '2026-11-16'),
+  ('mois.1', 'ar', 'جانفي', date '2026-11-16'),
+  ('mois.2', 'fr', 'février', date '2026-11-16'),
+  ('mois.2', 'en', 'February', date '2026-11-16'),
+  ('mois.2', 'ar', 'فيفري', date '2026-11-16'),
+  ('mois.3', 'fr', 'mars', date '2026-11-16'),
+  ('mois.3', 'en', 'March', date '2026-11-16'),
+  ('mois.3', 'ar', 'مارس', date '2026-11-16'),
+  ('mois.4', 'fr', 'avril', date '2026-11-16'),
+  ('mois.4', 'en', 'April', date '2026-11-16'),
+  ('mois.4', 'ar', 'أفريل', date '2026-11-16'),
+  ('mois.5', 'fr', 'mai', date '2026-11-16'),
+  ('mois.5', 'en', 'May', date '2026-11-16'),
+  ('mois.5', 'ar', 'ماي', date '2026-11-16'),
+  ('mois.6', 'fr', 'juin', date '2026-11-16'),
+  ('mois.6', 'en', 'June', date '2026-11-16'),
+  ('mois.6', 'ar', 'جوان', date '2026-11-16'),
+  ('mois.7', 'fr', 'juillet', date '2026-11-16'),
+  ('mois.7', 'en', 'July', date '2026-11-16'),
+  ('mois.7', 'ar', 'جويلية', date '2026-11-16'),
+  ('mois.8', 'fr', 'août', date '2026-11-16'),
+  ('mois.8', 'en', 'August', date '2026-11-16'),
+  ('mois.8', 'ar', 'أوت', date '2026-11-16'),
+  ('mois.9', 'fr', 'septembre', date '2026-11-16'),
+  ('mois.9', 'en', 'September', date '2026-11-16'),
+  ('mois.9', 'ar', 'سبتمبر', date '2026-11-16'),
+  ('mois.10', 'fr', 'octobre', date '2026-11-16'),
+  ('mois.10', 'en', 'October', date '2026-11-16'),
+  ('mois.10', 'ar', 'أكتوبر', date '2026-11-16'),
+  ('mois.11', 'fr', 'novembre', date '2026-11-16'),
+  ('mois.11', 'en', 'November', date '2026-11-16'),
+  ('mois.11', 'ar', 'نوفمبر', date '2026-11-16'),
+  ('mois.12', 'fr', 'décembre', date '2026-11-16'),
+  ('mois.12', 'en', 'December', date '2026-11-16'),
+  ('mois.12', 'ar', 'ديسمبر', date '2026-11-16'),
   ('donnee.societe', 'fr', 'Société', date '2026-11-16'),
   ('donnee.societe', 'en', 'Company', date '2026-11-16'),
   ('donnee.societe', 'ar', 'الشركة', date '2026-11-16'),
@@ -412,6 +489,65 @@ as $$
 $$;
 revoke all on function notif.langue_de_la_personne(uuid) from public, anon, authenticated;
 grant execute on function notif.langue_de_la_personne(uuid) to malica_api;
+
+-- Une date en toutes lettres, sans l'année : « 9 janvier », « 9 January », « 9 جانفي ».
+-- Le nom du mois vient des textes du courriel (`mois.1` à `mois.12`).
+create function notif.date_longue(p_date date, p_locale text)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select extract(day from p_date)::int || ' ' ||
+         (notif.libelles_du_courriel(p_locale) ->> ('mois.' || extract(month from p_date)::int))
+$$;
+revoke all on function notif.date_longue(date, text) from public, anon, authenticated;
+
+-- La carte d'une invitation (maquettes E06, E07) : ce que le courriel montre
+-- de la société — son matricule, son offre et qui la paie — et qui invite.
+-- Lue par l'API juste après l'émission, avec le jeton qu'elle vient de recevoir.
+create function notif.carte_d_invitation(p_jeton text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+           'matricule', nullif(btrim(o.legal_id), ''),
+           'offre', (select ro.libelle
+                       from facturation.licence_organisations lo
+                       join facturation.licences l on l.id = lo.licence_id
+                       join ref.offres ro on ro.code = l.offre_code and ro.effective_from <= current_date
+                      where lo.tenant_id = o.id
+                      order by ro.effective_from desc
+                      limit 1),
+           -- La comptabilité paie si elle est un payeur courant ; sinon la société.
+           'payeur', (select case when bool_or(pc.payeur_type = 'cabinet') then 'comptabilite'
+                                  when bool_or(pc.payeur_type = 'titulaire') then 'societe' end
+                        from facturation.licence_organisations lo
+                        join facturation.payeur_courant_v pc on pc.licence_id = lo.licence_id
+                       where lo.tenant_id = o.id),
+           'invitant', (select nullif(btrim(pr.display_name), '')
+                          from identity.profiles pr where pr.user_id = i.invited_by),
+           -- La comptabilité invitée, si l'adresse en tient déjà une sur Malica.
+           'comptabiliteInvitee', (select c.name
+                                     from auth.users u
+                                     join identity.memberships ms on ms.user_id = u.id
+                                     join identity.organizations c on c.id = ms.tenant_id
+                                    where lower(u.email) = lower(i.email)
+                                      and c.kind = 'cabinet' and c.archived_at is null
+                                    order by ms.created_at
+                                    limit 1))
+    from identity.invitations i
+    join identity.organizations o on o.id = i.tenant_id
+   where auth.uid() is not null
+     and i.invited_by = auth.uid()
+     and i.token_hash = encode(sha256(convert_to(coalesce(p_jeton, ''), 'UTF8')), 'hex')
+$$;
+revoke all on function notif.carte_d_invitation(text) from public, anon;
+grant execute on function notif.carte_d_invitation(text) to authenticated;
 
 -- --- 3. La file rend le genre, la société, l'objet, la frise et les textes ---
 

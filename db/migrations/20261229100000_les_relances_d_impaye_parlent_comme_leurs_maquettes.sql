@@ -21,13 +21,13 @@ insert into notif.gabarits
 values
   -- E33 · impaye.rappel
   ('impaye.rappel', 'email', 'fr', 'Facture {{numero}} — échéance passée', 'Votre facture est échue.',
-   'Elle arrivait à échéance le {{echeance}}. Rien ne change pour l''instant : je continue à lire.',
+   'Elle arrivait à échéance le {{echeance_longue}}. Rien ne change pour l''instant : je continue à lire.',
    'Régler maintenant', '/pme/reglages', 'alerte', date '2026-11-16'),
   ('impaye.rappel', 'email', 'en', 'Invoice {{numero}} — past due', 'Your invoice is past due.',
-   'It was due on {{echeance}}. Nothing changes for now: I keep reading.',
+   'It was due on {{echeance_longue}}. Nothing changes for now: I keep reading.',
    'Pay now', '/pme/reglages', 'alerte', date '2026-11-16'),
   ('impaye.rappel', 'email', 'ar', 'الفاتورة {{numero}} — حلّ أجلها', 'حلّ أجل فاتورتكم.',
-   'كان أجلها {{echeance}}. لا شيء يتغير الآن: أواصل القراءة.',
+   'كان أجلها {{echeance_longue}}. لا شيء يتغير الآن: أواصل القراءة.',
    'الدفع الآن', '/pme/reglages', 'alerte', date '2026-11-16'),
 
   -- E34 · impaye.relance
@@ -42,17 +42,17 @@ values
    'الدفع الآن', '/pme/reglages', 'alerte', date '2026-11-16'),
 
   -- E35 · impaye.avis_de_suspension
-  ('impaye.avis_de_suspension', 'email', 'fr', 'Suspension le {{date_suspension}} — facture {{numero}}',
-   'Je suspendrai le service le {{date_suspension}}.',
-   'Au {{date_suspension}}, j''arrête les lectures, l''envoi à la comptabilité et l''export. La caméra reste ouverte et vos pièces vous attendent : rien ne sera perdu.',
+  ('impaye.avis_de_suspension', 'email', 'fr', 'Suspension le {{date_suspension_longue}} — facture {{numero}}',
+   'Je suspendrai le service le {{date_suspension_longue}}.',
+   'Au {{date_suspension_longue}}, j''arrête les lectures, l''envoi à la comptabilité et l''export. La caméra reste ouverte et vos pièces vous attendent : rien ne sera perdu.',
    'Régler maintenant', '/pme/reglages', 'erreur', date '2026-11-16'),
-  ('impaye.avis_de_suspension', 'email', 'en', 'Suspension on {{date_suspension}} — invoice {{numero}}',
-   'I will suspend the service on {{date_suspension}}.',
-   'On {{date_suspension}}, I stop reading, sending to your accountant and exporting. The camera stays open and your documents wait for you: nothing will be lost.',
+  ('impaye.avis_de_suspension', 'email', 'en', 'Suspension on {{date_suspension_longue}} — invoice {{numero}}',
+   'I will suspend the service on {{date_suspension_longue}}.',
+   'On {{date_suspension_longue}}, I stop reading, sending to your accountant and exporting. The camera stays open and your documents wait for you: nothing will be lost.',
    'Pay now', '/pme/reglages', 'erreur', date '2026-11-16'),
-  ('impaye.avis_de_suspension', 'email', 'ar', 'إيقاف في {{date_suspension}} — الفاتورة {{numero}}',
-   'سأوقف الخدمة في {{date_suspension}}.',
-   'في {{date_suspension}} أوقف القراءة والإرسال إلى المحاسب والتصدير. تبقى الكاميرا مفتوحة ووثائقكم في انتظاركم: لن يضيع شيء.',
+  ('impaye.avis_de_suspension', 'email', 'ar', 'إيقاف في {{date_suspension_longue}} — الفاتورة {{numero}}',
+   'سأوقف الخدمة في {{date_suspension_longue}}.',
+   'في {{date_suspension_longue}} أوقف القراءة والإرسال إلى المحاسب والتصدير. تبقى الكاميرا مفتوحة ووثائقكم في انتظاركم: لن يضيع شيء.',
    'الدفع الآن', '/pme/reglages', 'erreur', date '2026-11-16'),
 
   -- E36 · impaye.suspension
