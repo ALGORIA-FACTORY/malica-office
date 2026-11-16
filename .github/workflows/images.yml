@@ -126,6 +126,10 @@ jobs:
           # Un secret, jamais une variable : une variable s'imprime en clair
           # dans le journal d'Actions, public sur ce dépôt (16 novembre 2026).
           BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          CLICTOPAY_UTILISATEUR: ${{ secrets.CLICTOPAY_UTILISATEUR }}
+          CLICTOPAY_MOT_DE_PASSE: ${{ secrets.CLICTOPAY_MOT_DE_PASSE }}
+          FLOUCI_CLE_PUBLIQUE: ${{ secrets.FLOUCI_CLE_PUBLIQUE }}
+          FLOUCI_CLE_PRIVEE: ${{ secrets.FLOUCI_CLE_PRIVEE }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploi
@@ -149,5 +153,7 @@ jobs:
           #
           # Après eux, les secrets d'application, une ligne NOM=valeur chacun :
           # deployer.sh ne retient que ceux de sa liste.
-          printf '%s\n%s\nBREVO_API_KEY=%s\n' "$GITHUB_ACTOR" "$JETON" "$BREVO_API_KEY" |
+          printf '%s\n%s\nBREVO_API_KEY=%s\nCLICTOPAY_UTILISATEUR=%s\nCLICTOPAY_MOT_DE_PASSE=%s\nFLOUCI_CLE_PUBLIQUE=%s\nFLOUCI_CLE_PRIVEE=%s\n' \
+            "$GITHUB_ACTOR" "$JETON" "$BREVO_API_KEY" \
+            "$CLICTOPAY_UTILISATEUR" "$CLICTOPAY_MOT_DE_PASSE" "$FLOUCI_CLE_PUBLIQUE" "$FLOUCI_CLE_PRIVEE" |
             ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $BRANCHE"

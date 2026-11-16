@@ -154,6 +154,23 @@ describe("les moyens de paiement vivent en table", { skip: !ADMIN }, () => {
     });
   });
 
+  it("un prestataire ne traite que les devises que la table lui donne : Flouci, le dinar seul", async () => {
+    await aBlanc(async (db) => {
+      const admis = (prestataire: string, devise: string) =>
+        sous(db, randomUUID(), () =>
+          db.query("select public.paiement_moyen_admis('visa', $1, $2) as d", [
+            prestataire,
+            devise,
+          ]),
+        );
+      const { rows } = await admis("flouci", "TND");
+      assert.ok(rows[0]?.d, "le dinar passe chez Flouci");
+      await assert.rejects(admis("flouci", "XOF"), /paiement\.moyen_indisponible/);
+      // Les prestataires d'avant gardent toutes les devises du référentiel.
+      await admis("clictopay", "XOF");
+    });
+  });
+
   it("un lien se crée pour un moyen actif que le prestataire accepte, et l'événement le garde", async () => {
     await aBlanc(async (db) => {
       const d = await unPaiement(db);

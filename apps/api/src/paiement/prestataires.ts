@@ -19,6 +19,8 @@
  *
  *   CLICTOPAY_UTILISATEUR         l'identifiant marchand de l'API
  *   CLICTOPAY_MOT_DE_PASSE        son mot de passe
+ *   FLOUCI_CLE_PUBLIQUE           le jeton public de l'application Flouci
+ *   FLOUCI_CLE_PRIVEE             son jeton privé
  *
  * Un prestataire qui n'ouvre rien — ou un adaptateur sans ses secrets — ferme
  * le paiement en ligne, et on le dit (`null`) : l'offre reste ouverte, la
@@ -111,6 +113,83 @@ export function clictopay(
 }
 
 /**
+ * Flouci : `generate_payment` crée la session, `verify_payment` la lit
+ * (docs.flouci.com, relue le 16 novembre 2026). Flouci compte en millimes ; la
+ * devise qu'il traite vit en table (`facturation.devises_par_prestataire`), où
+ * la base refuse les autres avant toute demande de lien. La même adresse sert le bac à sable et la
+ * production : seules les clés changent. L'adresse vit en table (la tour).
+ */
+export function flouci(
+  config: { code: string; url: string; clePublique: string; clePrivee: string },
+  fetchImpl: typeof fetch = fetch,
+): Prestataire {
+  const base = config.url.replace(/\/+$/, "");
+  const entetes = {
+    authorization: `Bearer ${config.clePublique}:${config.clePrivee}`,
+    accept: "application/json",
+  };
+  return {
+    code: config.code,
+    simule: false,
+    async creerLien(d) {
+      const r = await fetchImpl(`${base}/api/v2/generate_payment`, {
+        method: "POST",
+        headers: { ...entetes, "content-type": "application/json" },
+        body: JSON.stringify({
+          amount: String(d.unites),
+          accept_card: true,
+          success_link: d.retour,
+          fail_link: d.retour,
+          // L'identifiant du paiement : Flouci le rend tel quel à la vérification.
+          developer_tracking_id: d.paiementId,
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!r.ok) throw new Error(`flouci generate_payment : HTTP ${r.status}`);
+      const corps = (await r.json()) as { result?: Record<string, unknown> };
+      const res = corps.result ?? {};
+      const reference = typeof res["payment_id"] === "string" ? res["payment_id"] : null;
+      const lien = typeof res["link"] === "string" ? res["link"] : null;
+      if (res["success"] !== true || !reference || !lien) {
+        throw new Error(`flouci generate_payment : ${String(res["message"] ?? res["status"])}`);
+      }
+      return { reference, lien };
+    },
+    async etat(reference) {
+      const r = await fetchImpl(`${base}/api/v2/verify_payment/${encodeURIComponent(reference)}`, {
+        method: "GET",
+        headers: entetes,
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!r.ok) throw new Error(`flouci verify_payment : HTTP ${r.status}`);
+      const corps = (await r.json()) as { success?: unknown; result?: Record<string, unknown> };
+      const res = corps.result ?? {};
+      const statut = typeof res["status"] === "string" ? res["status"] : null;
+      // Le contenu ne se lit que si `success` est vrai (consigne de Flouci).
+      // SUCCESS : payé. FAILURE, EXPIRED, SYSTEM_FAILURE : la session est
+      // close sans argent. PENDING, PREAUTH_SUCCESS : on attend.
+      const etat: EtatChezLePrestataire =
+        corps.success !== true
+          ? "en_attente"
+          : statut === "SUCCESS"
+            ? "paye"
+            : statut === "FAILURE" || statut === "EXPIRED" || statut === "SYSTEM_FAILURE"
+              ? "refuse"
+              : "en_attente";
+      return {
+        etat,
+        detail: {
+          status: statut,
+          type: res["type"] ?? null,
+          amount: res["amount"] ?? null,
+          developer_tracking_id: res["developer_tracking_id"] ?? null,
+        },
+      };
+    },
+  };
+}
+
+/**
  * Le simulateur du staging : il renvoie à l'adresse de retour, marquée
  * `simulateur=1`, où l'écran propose « Payer » ou « Refuser ». La décision y
  * est inscrite directement (`simulerPaiement`), donc `etat` n'a rien à
@@ -174,6 +253,22 @@ export const ADAPTATEURS: Readonly<
           langue: r.langue,
           utilisateur: env["CLICTOPAY_UTILISATEUR"]!.trim(),
           motDePasse: env["CLICTOPAY_MOT_DE_PASSE"]!.trim(),
+        },
+        fetchImpl,
+      );
+    },
+  },
+  flouci: {
+    pret: (env) => Boolean(env["FLOUCI_CLE_PUBLIQUE"]?.trim() && env["FLOUCI_CLE_PRIVEE"]?.trim()),
+    creer(r, env, fetchImpl) {
+      const url = r.url_api?.trim();
+      if (!url || !this.pret(env)) return null;
+      return flouci(
+        {
+          code: r.prestataire,
+          url,
+          clePublique: env["FLOUCI_CLE_PUBLIQUE"]!.trim(),
+          clePrivee: env["FLOUCI_CLE_PRIVEE"]!.trim(),
         },
         fetchImpl,
       );

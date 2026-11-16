@@ -11,16 +11,27 @@ import { describe, it } from "node:test";
 import {
   adresseDeRetour,
   clictopay,
+  flouci,
   prestataireDuReglage,
   type ReglagePaiement,
 } from "./prestataires.ts";
 
-function fauxFetch(reponse: Record<string, unknown>, vus: Array<{ url: string; corps: string }>) {
+function fauxFetch(
+  reponse: Record<string, unknown>,
+  vus: Array<{ url: string; corps: string; entetes?: Record<string, string> }>,
+  statut = 200,
+) {
   return (async (url: string | URL | Request, init?: RequestInit) => {
-    vus.push({ url: String(url), corps: String(init?.body ?? "") });
-    return new Response(JSON.stringify(reponse), { status: 200 });
+    vus.push({
+      url: String(url),
+      corps: String(init?.body ?? ""),
+      entetes: init?.headers as Record<string, string>,
+    });
+    return new Response(JSON.stringify(reponse), { status: statut });
   }) as typeof fetch;
 }
+
+const FLC = { code: "flouci", clePublique: "pub", clePrivee: "priv" };
 
 const CTP = { code: "clictopay", langue: "fr", utilisateur: "u", motDePasse: "m" };
 
@@ -132,5 +143,84 @@ describe("les prestataires de paiement", () => {
       null,
       "un adaptateur que ce serveur ne connaît pas ferme le paiement",
     );
+  });
+  it("Flouci reçoit les millimes et l'identifiant du paiement, et rend son lien", async () => {
+    const vus: Array<{ url: string; corps: string; entetes?: Record<string, string> }> = [];
+    const p = flouci(
+      { ...FLC, url: "https://developers.flouci.com/" },
+      fauxFetch(
+        {
+          result: { success: true, payment_id: "AgCK", link: "https://checkout.flouci.com/x/AgCK" },
+        },
+        vus,
+      ),
+    );
+    const r = await p.creerLien({
+      paiementId: "p-1",
+      unites: 17850,
+      devise: "788",
+      libelle: "Passage Solo -> Team",
+      retour: "https://app.exemple.tn/pme/reglages?paiement=p-1",
+    });
+    assert.deepEqual(r, { reference: "AgCK", lien: "https://checkout.flouci.com/x/AgCK" });
+    assert.equal(vus[0]!.url, "https://developers.flouci.com/api/v2/generate_payment");
+    assert.equal(vus[0]!.entetes?.["authorization"], "Bearer pub:priv");
+    const corps = JSON.parse(vus[0]!.corps) as Record<string, unknown>;
+    assert.equal(corps["amount"], "17850");
+    assert.equal(corps["developer_tracking_id"], "p-1");
+    assert.equal(corps["success_link"], "https://app.exemple.tn/pme/reglages?paiement=p-1");
+    assert.equal(corps["fail_link"], corps["success_link"]);
+    assert.equal(corps["accept_card"], true);
+  });
+
+  it("un refus de Flouci se dit", async () => {
+    const refus = flouci(
+      { ...FLC, url: "https://x" },
+      fauxFetch({ result: { status: 400, message: "Bad Request" } }, [], 400),
+    );
+    await assert.rejects(
+      refus.creerLien({
+        paiementId: "p",
+        unites: 1,
+        devise: "788",
+        libelle: "x",
+        retour: "https://r",
+      }),
+      /HTTP 400/,
+    );
+  });
+
+  it("Flouci : SUCCESS est payé, FAILURE/EXPIRED refusé, PENDING attend, sans success rien n'est cru", async () => {
+    const vus: Array<{ url: string; corps: string }> = [];
+    for (const [reponse, attendu] of [
+      [{ success: true, result: { status: "SUCCESS", amount: 17850 } }, "paye"],
+      [{ success: true, result: { status: "FAILURE" } }, "refuse"],
+      [{ success: true, result: { status: "EXPIRED" } }, "refuse"],
+      [{ success: true, result: { status: "PENDING" } }, "en_attente"],
+      [{ success: false, result: { status: "SUCCESS" } }, "en_attente"],
+    ] as const) {
+      const p = flouci({ ...FLC, url: "https://developers.flouci.com" }, fauxFetch(reponse, vus));
+      assert.equal((await p.etat("AgCK")).etat, attendu);
+    }
+    assert.equal(vus[0]!.url, "https://developers.flouci.com/api/v2/verify_payment/AgCK");
+  });
+
+  it("Flouci ne s'ouvre qu'avec ses deux clés, posées sur le serveur", () => {
+    const reglage: ReglagePaiement = {
+      prestataire: "flouci",
+      adaptateur: "flouci",
+      ouvre_le_paiement: true,
+      langue: null,
+      url_api: "https://developers.flouci.com",
+      url_retour: "https://staging.exemple.tn/",
+    };
+    assert.equal(prestataireDuReglage(reglage, {}), null);
+    assert.equal(prestataireDuReglage(reglage, { FLOUCI_CLE_PUBLIQUE: "pub" }), null);
+    const ouvert = prestataireDuReglage(reglage, {
+      FLOUCI_CLE_PUBLIQUE: "pub",
+      FLOUCI_CLE_PRIVEE: "priv",
+    });
+    assert.equal(ouvert?.prestataire.code, "flouci");
+    assert.equal(ouvert?.prestataire.simule, false);
   });
 });
