@@ -19,7 +19,7 @@
  * (`prefers-color-scheme`). Tout texte reçu est échappé ; aucune phrase n'est
  * écrite ici — elles viennent du dictionnaire du Socle ou de la base.
  */
-import { LOCALES, MESSAGES, RTL_LOCALES, type Locale } from "@malica/socle/messages";
+import { LOCALES, RTL_LOCALES, type Locale } from "@malica/socle/messages";
 
 import {
   CLAIR,
@@ -30,13 +30,14 @@ import {
   SOMBRE,
   type Palette,
 } from "./charte.ts";
+import { libelle, type Libelles } from "./libelles.ts";
 
 /** Le signal de l'étiquette : la couleur fonctionnelle du message. */
 const SIGNAUX = ["fait", "attend", "retard", "info", "neutre"] as const;
 export type Signal = (typeof SIGNAUX)[number];
 
 /** Une ligne du bloc de données : un libellé à gauche, une valeur à droite. */
-export interface LigneDeDonnees {
+interface LigneDeDonnees {
   libelle: string;
   valeur: string;
   /** La valeur est un chiffre ou une référence : en IBM Plex Mono. */
@@ -66,6 +67,8 @@ export interface Frise {
 
 export interface Cadre {
   locale: Locale;
+  /** Les textes du cadre dans la langue du message (`notif.libelles_du_courriel`). */
+  libelles: Libelles;
   /** L'adresse publique de l'appli : le repère et le lien des réglages en partent. */
   urlPublique: string;
   /** Le texte d'aperçu que montre la boîte de réception, sous l'objet. */
@@ -90,7 +93,6 @@ export interface Cadre {
 }
 
 /** Le nom de chaque langue au pied : FR · EN · العربية, comme sur les maquettes. */
-const LANGUE_COURTE: Record<Locale, string> = { fr: "FR", en: "EN", ar: "العربية" };
 
 /** La couleur et le fond d'un signal, dans une palette. */
 function couleurDuSignal(p: Palette, s: Signal): string {
@@ -154,10 +156,10 @@ ${SIGNAUX.map((x) => `  .m-s-${x} { background: ${couleurDuSignal(s, x)} !import
 }
 
 /** Le repère rG : noir sur le clair, blanc sur le sombre ; son nom s'il n'est pas chargé. */
-function repere(urlPublique: string, taille: number, opacite = 1): string {
+function repere(urlPublique: string, nom: string, taille: number, opacite = 1): string {
   const style = `width:${taille}px;height:${taille}px;border:0;outline:none;text-decoration:none;opacity:${opacite};vertical-align:middle;`;
   return (
-    `<img class="logo-clair" src="${echapper(`${urlPublique}/courriel/rg-noir.png`)}" width="${taille}" height="${taille}" alt="Malica Office" style="${style}">` +
+    `<img class="logo-clair" src="${echapper(`${urlPublique}/courriel/rg-noir.png`)}" width="${taille}" height="${taille}" alt="${echapper(nom)}" style="${style}">` +
     `<img class="logo-sombre" src="${echapper(`${urlPublique}/courriel/rg-blanc.png`)}" width="${taille}" height="${taille}" alt="" style="${style}display:none;">`
   );
 }
@@ -171,7 +173,7 @@ export function cadreDeCourriel(c: Cadre): string {
   if (!(SIGNAUX as readonly string[]).includes(c.etiquette.signal))
     throw new Error(`signal de courriel inconnu : ${c.etiquette.signal}`);
 
-  const m = MESSAGES[c.locale];
+  const l = c.libelles;
   const p = CLAIR;
   const dir = RTL_LOCALES.includes(c.locale) ? "rtl" : "ltr";
   const debut = dir === "rtl" ? "right" : "left";
@@ -248,7 +250,7 @@ ${e.jour ? `<div class="m-t3" style="margin-top:2px;font-family:${POLICE_MONO};f
       }</tr></table>
 </td></tr>
 <tr><td class="m-pad" style="padding:18px 36px 0 36px;font-family:${police};text-align:${debut};">
-<p class="m-t3" style="margin:0;font-size:12px;line-height:1.5;color:${p.texte3};">${echapper(m["courriel.notif.lienSecours"])}</p>
+<p class="m-t3" style="margin:0;font-size:12px;line-height:1.5;color:${p.texte3};">${echapper(libelle(l, "cadre.lienSecours"))}</p>
 <p style="margin:4px 0 0 0;font-size:12px;line-height:1.5;word-break:break-all;" dir="ltr"><a class="m-t2" href="${echapper(c.action.url)}" style="font-family:${POLICE_MONO};color:${p.texte2};text-decoration:underline;">${echapper(c.action.url)}</a></p>
 </td></tr>`
     : "";
@@ -264,8 +266,8 @@ ${e.jour ? `<div class="m-t3" style="margin-top:2px;font-family:${POLICE_MONO};f
   const signature = c.signature
     ? `<tr><td class="m-pad" style="padding:24px 36px 0 36px;text-align:${debut};">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td class="m-initiale" width="30" height="30" align="center" style="width:30px;height:30px;border-radius:999px;background:${p.faitFond};">${repere(base, 14, 0.9)}</td>
-<td class="m-t2" style="padding:0 10px;font-family:${police};font-size:14px;color:${p.texte2};">${echapper(m["courriel.cadre.signature"])}</td>
+<td class="m-initiale" width="30" height="30" align="center" style="width:30px;height:30px;border-radius:999px;background:${p.faitFond};">${repere(base, libelle(l, "cadre.produit"), 14, 0.9)}</td>
+<td class="m-t2" style="padding:0 10px;font-family:${police};font-size:14px;color:${p.texte2};">${echapper(libelle(l, "cadre.signature"))}</td>
 </tr></table>
 </td></tr>`
     : "";
@@ -288,7 +290,7 @@ ${feuille(c.etiquette.signal)}
 
 <tr><td style="padding:0 4px 18px 4px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="text-align:${debut};vertical-align:middle;">${repere(base, 30)}</td>
+<td style="text-align:${debut};vertical-align:middle;">${repere(base, libelle(l, "cadre.produit"), 30)}</td>
 <td style="text-align:${fin};vertical-align:middle;" align="${fin}">${pastille}</td>
 </tr></table>
 </td></tr>
@@ -314,15 +316,15 @@ ${signature}
 
 <tr><td class="m-pad" style="padding:26px 6px 0 6px;font-family:${police};text-align:${debut};">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="vertical-align:middle;">${repere(base, 16, 0.6)}</td>
-<td class="m-t3" style="padding:0 10px;font-family:${POLICE_MONO};font-size:11px;letter-spacing:0.14em;color:${p.texte3};" dir="ltr">MALICA OFFICE &middot; ALGORIA FACTORY &middot; TUNIS</td>
+<td style="vertical-align:middle;">${repere(base, libelle(l, "cadre.produit"), 16, 0.6)}</td>
+<td class="m-t3" style="padding:0 10px;font-family:${POLICE_MONO};font-size:11px;letter-spacing:0.14em;color:${p.texte3};" dir="ltr">${echapper(libelle(l, "cadre.marque"))}</td>
 </tr></table>
-<p class="m-t3" style="margin:10px 0 0 0;font-size:12px;line-height:1.6;color:${p.texte3};">${echapper(c.raison)} <a class="m-t2" href="${echapper(reglages)}" style="color:${p.texte2};text-decoration:underline;">${echapper(m["courriel.cadre.reglerAlertes"])}</a>${LOCALES.map(
+<p class="m-t3" style="margin:10px 0 0 0;font-size:12px;line-height:1.6;color:${p.texte3};">${echapper(c.raison)} <a class="m-t2" href="${echapper(reglages)}" style="color:${p.texte2};text-decoration:underline;">${echapper(libelle(l, "cadre.reglerAlertes"))}</a>${LOCALES.map(
     // La langue des messages se choisit dans les réglages ; chaque lien y mène.
-    (l) =>
-      ` &middot; <a class="m-t2" href="${echapper(reglages)}" lang="${l}" style="color:${p.texte2};text-decoration:underline;">${echapper(LANGUE_COURTE[l])}</a>`,
+    (langue) =>
+      ` &middot; <a class="m-t2" href="${echapper(reglages)}" lang="${langue}" style="color:${p.texte2};text-decoration:underline;">${echapper(libelle(l, `cadre.langue.${langue}`))}</a>`,
   ).join("")}</p>
-<p class="m-t3" style="margin:6px 0 0 0;font-size:12px;line-height:1.6;color:${p.texte3};">${echapper(m["courriel.cadre.devise"])}</p>
+<p class="m-t3" style="margin:6px 0 0 0;font-size:12px;line-height:1.6;color:${p.texte3};">${echapper(libelle(l, "cadre.devise"))}</p>
 </td></tr>
 
 </table>

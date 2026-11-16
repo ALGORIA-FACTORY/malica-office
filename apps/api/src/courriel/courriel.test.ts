@@ -9,12 +9,14 @@ import { describe, it } from "node:test";
 
 import { configurationCourriel, envoyerParBrevo, type Expedition } from "./brevo.ts";
 import { courrielInvitation, envoyerInvitation } from "./invitation.ts";
+import { libellesDEssai } from "./libelles-d-essai.ts";
 
 const INVITATION = {
   cabinet: "Cabinet d'Expertises CADG",
   pme: "ALGORIA FACTORY SARL",
   lien: "https://app.malica.tn/invitation/" + "a".repeat(64),
   expireLe: new Date("2026-10-18T10:00:00Z"),
+  libelles: libellesDEssai("fr"),
 };
 
 describe("le courriel d'invitation", () => {
@@ -133,6 +135,7 @@ describe("l'envoi d'une invitation", () => {
     email: "contact@algoria-factory.com",
     jeton: "b".repeat(64),
     expireLe: new Date("2026-10-18T10:00:00Z"),
+    libelles: libellesDEssai("fr"),
   };
   const config = {
     cle: "cle",

@@ -7,6 +7,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { libellesDEssai } from "../courriel/libelles-d-essai.ts";
 import type { Requete } from "../db.ts";
 
 import { tourDeRelances } from "./travailleur.ts";
@@ -24,8 +25,9 @@ const COURRIEL = {
   code: "impaye.rappel",
   organisation: "SOCIETE ESSAI",
   donnees: null,
-  calendrier: null,
+  frise: null,
   sujet: null,
+  libelles: libellesDEssai("fr"),
 };
 
 /**

@@ -7,17 +7,21 @@
  * serveur, ni dans un journal d'accès, ni dans un en-tête Referer.
  */
 
-import { MESSAGES } from "@malica/socle/messages";
+import { LOCALES, type Locale } from "@malica/socle/messages";
 
 import { envoyerParBrevo, type ConfigurationCourriel } from "./brevo.ts";
 import { cadreDeCourriel } from "./cadre.ts";
+import { echapper } from "./charte.ts";
+import { libelle, type Libelles } from "./libelles.ts";
 
-/** L'heure de Tunis, lisible : « 16 nov. 2026 · 11:42 » ou « 12:42 ». */
-function heure(d: Date, avecJour: boolean): string {
-  const f = new Intl.DateTimeFormat("fr-FR", {
+/** L'heure de Tunis, lisible dans la langue : « 16 nov. 2026 · 11:42 » ou « 12:42 ». */
+function heure(d: Date, avecJour: boolean, locale: Locale): string {
+  const f = new Intl.DateTimeFormat(locale, {
     ...(avecJour ? { day: "numeric", month: "short", year: "numeric" } : {}),
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
+    numberingSystem: "latn",
     timeZone: "Africa/Tunis",
   }).formatToParts(d);
   const v = (t: string) => f.find((p) => p.type === t)?.value ?? "";
@@ -26,11 +30,14 @@ function heure(d: Date, avecJour: boolean): string {
 }
 
 /**
- * `demande` et `expireLe` : quand la demande a été faite et jusqu'à quand le lien vaut
- * (maquette E03, « Demandé le » et « Valable jusqu'à »). Absents, le bloc ne s'affiche pas.
+ * `quand` : quand la demande a été faite et jusqu'à quand le lien vaut
+ * (maquette E03, « Demandé le » et « Valable jusqu'à »). Absent, le bloc ne s'affiche pas.
+ * `libelles` : les textes du courriel dans la langue de la personne.
  */
 export function courrielReinitialisation(
   lienBrut: string,
+  libelles: Libelles,
+  locale: string,
   quand?: { demandeLe: Date; expireLe: Date },
 ): {
   sujet: string;
@@ -38,51 +45,57 @@ export function courrielReinitialisation(
   texte: string;
 } {
   if (!/^https?:\/\//i.test(lienBrut)) throw new Error("lien de réinitialisation invalide");
-  const sujet = "Choisir un nouveau mot de passe — Malica Office";
+  const loc: Locale = (LOCALES as readonly string[]).includes(locale) ? (locale as Locale) : "fr";
+  const l = libelles;
+  const t = (cle: string) => libelle(l, `reinitialisation.${cle}`);
 
   const texte = [
-    `Bonjour,`,
-    ``,
-    `Une demande de nouveau mot de passe a été faite pour votre accès Malica Office.`,
-    ``,
-    `Choisir un nouveau mot de passe :`,
+    libelle(l, "cadre.bonjour"),
+    "",
+    t("corps"),
+    "",
+    t("bouton"),
     lienBrut,
-    ``,
-    `Ce lien vaut une heure, une seule fois. Vos sessions ouvertes sur d'autres appareils seront fermées.`,
-    ``,
-    `Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.`,
-    ``,
-    `— Malica Office`,
+    "",
+    t("note"),
+    "",
+    libelle(l, "cadre.signatureTexte"),
   ].join("\n");
 
   const html = cadreDeCourriel({
-    locale: "fr",
+    locale: loc,
+    libelles: l,
     // Le repère et le lien des réglages partent de l'adresse publique, celle du lien.
     urlPublique: new URL(lienBrut).origin,
-    apercu: "Le lien est valable une heure, une seule fois.",
-    etiquette: { texte: MESSAGES.fr["courriel.etiquette.securite"], signal: "info" },
-    titre: "Choisissez un nouveau mot de passe.",
-    paragraphesHtml: [
-      "Une demande a été faite pour votre accès Malica Office. Le lien ci-dessous est valable une heure, une seule fois. Vos sessions ouvertes sur d'autres appareils seront fermées.",
-    ],
+    apercu: t("apercu"),
+    etiquette: { texte: libelle(l, "etiquette.securite"), signal: "info" },
+    titre: t("titre"),
+    paragraphesHtml: [echapper(t("corps"))],
     donnees: quand
       ? [
-          { libelle: "Demandé le", valeur: heure(quand.demandeLe, true), mono: true },
-          { libelle: "Valable jusqu'à", valeur: heure(quand.expireLe, false), mono: true },
+          {
+            libelle: libelle(l, "donnee.demandeLe"),
+            valeur: heure(quand.demandeLe, true, loc),
+            mono: true,
+          },
+          {
+            libelle: libelle(l, "donnee.valableJusqua"),
+            valeur: heure(quand.expireLe, false, loc),
+            mono: true,
+          },
         ]
       : [],
-    action: { libelle: "Choisir un nouveau mot de passe", url: lienBrut },
-    noteHtml:
-      "Vous n'êtes pas à l'origine de cette demande&nbsp;? Ignorez ce message&nbsp;: votre mot de passe actuel reste valable.",
-    raison: "Une demande de nouveau mot de passe a été faite pour cette adresse.",
+    action: { libelle: t("bouton"), url: lienBrut },
+    noteHtml: echapper(t("note")),
+    raison: t("raison"),
   });
 
-  return { sujet, html, texte };
+  return { sujet: t("sujet"), html, texte };
 }
 
 /** Envoie le lien si Brevo est configuré. Ne lève jamais : la réponse de l'API ne doit rien trahir. */
 export async function envoyerReinitialisation(
-  i: { email: string; secret: string; expireLe?: Date },
+  i: { email: string; secret: string; expireLe?: Date; locale: string; libelles: Libelles },
   config: ConfigurationCourriel | null,
   fetchImpl: typeof fetch = fetch,
 ): Promise<"envoye" | "non_configure" | "echec"> {
@@ -93,6 +106,8 @@ export async function envoyerReinitialisation(
   try {
     const c = courrielReinitialisation(
       `${config.urlPublique}/reinitialiser#${i.secret}`,
+      i.libelles,
+      i.locale,
       i.expireLe ? { demandeLe: new Date(), expireLe: i.expireLe } : undefined,
     );
     await envoyerParBrevo(

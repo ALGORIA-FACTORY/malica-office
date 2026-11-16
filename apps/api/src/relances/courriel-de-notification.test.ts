@@ -8,6 +8,11 @@ import { describe, it } from "node:test";
 
 import { corpsBrevo } from "../courriel/brevo.ts";
 import { courrielDeNotification, TONS } from "./courriel-de-notification.ts";
+import { libellesDEssai } from "../courriel/libelles-d-essai.ts";
+
+/** Le courriel, avec les textes que les migrations écrivent pour sa langue. */
+const rendre = (n: Omit<Parameters<typeof courrielDeNotification>[0], "libelles">) =>
+  courrielDeNotification({ ...n, libelles: libellesDEssai(n.locale) });
 
 const BASE = {
   code: "piece.retournee",
@@ -19,6 +24,13 @@ const BASE = {
 };
 
 // Le signal de l'étiquette, dans le clair écrit en ligne (charte du 13 novembre 2026).
+const FRISE = [
+  { code: "impaye.rappel", signal: "attend", jour: 1, repondre: false },
+  { code: "impaye.relance", signal: "attend", jour: 15, repondre: true },
+  { code: "impaye.avis_de_suspension", signal: "retard", jour: 25, repondre: false },
+  { code: "impaye.suspension", signal: "retard", jour: 30, repondre: false },
+] as const;
+
 const COULEUR: Record<string, string> = {
   succes: "#235340",
   erreur: "#B23A1C",
@@ -29,9 +41,9 @@ const COULEUR: Record<string, string> = {
 
 describe("le gabarit commun du courriel", () => {
   it("rend dans les trois langues, avec le sens de lecture de la langue", () => {
-    const fr = courrielDeNotification({ ...BASE, locale: "fr", ton: "alerte" });
-    const en = courrielDeNotification({ ...BASE, locale: "en", ton: "alerte" });
-    const ar = courrielDeNotification({ ...BASE, locale: "ar", ton: "alerte" });
+    const fr = rendre({ ...BASE, locale: "fr", ton: "alerte" });
+    const en = rendre({ ...BASE, locale: "en", ton: "alerte" });
+    const ar = rendre({ ...BASE, locale: "ar", ton: "alerte" });
     assert.match(fr.html, /<html lang="fr" dir="ltr">/);
     assert.match(en.html, /<html lang="en" dir="ltr">/);
     assert.match(ar.html, /<html lang="ar" dir="rtl">/);
@@ -41,14 +53,14 @@ describe("le gabarit commun du courriel", () => {
 
   it("chaque ton colore l'étiquette : le point et le mot", () => {
     for (const ton of TONS) {
-      const { html } = courrielDeNotification({ ...BASE, locale: "fr", ton });
+      const { html } = rendre({ ...BASE, locale: "fr", ton });
       assert.ok(html.includes(`background:${COULEUR[ton]};"></span>`), `ton ${ton} : point absent`);
       assert.ok(html.includes(`color:${COULEUR[ton]};">Pièce</td>`), `ton ${ton} : mot absent`);
     }
   });
 
   it("l'étiquette dit la famille du genre, la pastille la société", () => {
-    const mandat = courrielDeNotification({
+    const mandat = rendre({
       ...BASE,
       locale: "fr",
       ton: "succes",
@@ -56,7 +68,7 @@ describe("le gabarit commun du courriel", () => {
     });
     assert.match(mandat.html, />Mandat<\/td>/);
     assert.match(mandat.html, />Société Démo SARL<\/td>/);
-    const inconnu = courrielDeNotification({
+    const inconnu = rendre({
       ...BASE,
       locale: "fr",
       ton: "neutre",
@@ -68,13 +80,14 @@ describe("le gabarit commun du courriel", () => {
   });
 
   it("Malica signe les relances d'impayé, où elle parle en « je »", () => {
-    const relance = courrielDeNotification({
+    const relance = rendre({
       ...BASE,
       locale: "fr",
       ton: "alerte",
       code: "impaye.rappel",
+      frise: FRISE,
     });
-    const mandat = courrielDeNotification({
+    const mandat = rendre({
       ...BASE,
       locale: "fr",
       ton: "succes",
@@ -84,8 +97,25 @@ describe("le gabarit commun du courriel", () => {
     assert.ok(!mandat.html.includes("— Malica<"));
   });
 
+  it("la relance dessine sa frise, chaque palier dans sa couleur, et propose de répondre", () => {
+    const c = rendre({
+      ...BASE,
+      locale: "fr",
+      ton: "alerte",
+      code: "impaye.relance",
+      frise: FRISE,
+      donnees: { numero: "F-1", reste: "41,460", devise: "TND" },
+      repondreA: "support@essai.local",
+    });
+    assert.match(c.html, /F-1 · reste dû/);
+    assert.match(c.html, /J\+15/);
+    assert.match(c.html, /mailto:support@essai\.local/);
+    assert.match(c.html, /class="m-s-attend"/);
+    assert.doesNotMatch(c.html, /class="m-s-retard"/, "l'avis n'est pas encore atteint");
+  });
+
   it("l'objet vient du gabarit, ses jetons remplis ; troué, il redevient le titre", () => {
-    const plein = courrielDeNotification({
+    const plein = rendre({
       ...BASE,
       locale: "fr",
       ton: "alerte",
@@ -93,40 +123,37 @@ describe("le gabarit commun du courriel", () => {
       donnees: { numero: "F-2026-0042" },
     });
     assert.equal(plein.sujet, "Relance — facture F-2026-0042");
-    const troue = courrielDeNotification({
+    const troue = rendre({
       ...BASE,
       locale: "fr",
       ton: "alerte",
       sujet: "Facture {{numero}}",
     });
     assert.equal(troue.sujet, BASE.titre);
-    assert.equal(
-      courrielDeNotification({ ...BASE, locale: "fr", ton: "alerte" }).sujet,
-      BASE.titre,
-    );
+    assert.equal(rendre({ ...BASE, locale: "fr", ton: "alerte" }).sujet, BASE.titre);
   });
 
   it("le pied dit pourquoi : la raison propre aux impayés, sinon la générale", () => {
-    const impaye = courrielDeNotification({
+    const impaye = rendre({
       ...BASE,
       code: "impaye.relance",
       locale: "fr",
       ton: "alerte",
     });
     assert.match(impaye.html, /Une facture de votre abonnement reste due\./);
-    const autre = courrielDeNotification({ ...BASE, locale: "fr", ton: "alerte" });
+    const autre = rendre({ ...BASE, locale: "fr", ton: "alerte" });
     assert.doesNotMatch(autre.html, /reste due/);
   });
 
   it("refuse un ton inconnu plutôt que de le deviner", () => {
     assert.throws(
-      () => courrielDeNotification({ ...BASE, locale: "fr", ton: "joyeux" }),
+      () => rendre({ ...BASE, locale: "fr", ton: "joyeux" }),
       /ton de courriel inconnu/,
     );
   });
 
   it("est responsive et prévu pour le mode sombre", () => {
-    const { html } = courrielDeNotification({ ...BASE, locale: "fr", ton: "neutre" });
+    const { html } = rendre({ ...BASE, locale: "fr", ton: "neutre" });
     assert.match(html, /<meta name="viewport"/);
     assert.match(html, /@media only screen and \(max-width: 620px\)/);
     assert.match(html, /courriel\/rg-noir\.png/, "le repère vient de l'appli elle-même");
@@ -135,7 +162,7 @@ describe("le gabarit commun du courriel", () => {
   });
 
   it("échappe titre, corps et lien : rien n'est exécuté", () => {
-    const { html } = courrielDeNotification({
+    const { html } = rendre({
       ...BASE,
       locale: "fr",
       ton: "erreur",
@@ -151,7 +178,7 @@ describe("le gabarit commun du courriel", () => {
   it("refuse un lien d'action qui n'est pas http(s)", () => {
     assert.throws(
       () =>
-        courrielDeNotification({
+        rendre({
           ...BASE,
           locale: "fr",
           ton: "neutre",
@@ -162,13 +189,13 @@ describe("le gabarit commun du courriel", () => {
   });
 
   it("une langue inconnue prend le français, sans écraser le ton", () => {
-    const { html } = courrielDeNotification({ ...BASE, locale: "de", ton: "succes" });
+    const { html } = rendre({ ...BASE, locale: "de", ton: "succes" });
     assert.match(html, /<html lang="fr" dir="ltr">/);
     assert.ok(html.includes(`background:${COULEUR["succes"]};"></span>`));
   });
 
   it("le corps Brevo porte le rendu tel quel, sans réseau", () => {
-    const message = courrielDeNotification({ ...BASE, locale: "ar", ton: "succes" });
+    const message = rendre({ ...BASE, locale: "ar", ton: "succes" });
     const corps = JSON.parse(
       corpsBrevo({
         cle: "cle-factice-non-envoyee",

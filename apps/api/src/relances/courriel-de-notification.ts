@@ -4,15 +4,15 @@
  *
  * Fonction pure. Le titre et le corps sont ceux que la base a rendus depuis le
  * gabarit `email` du genre, dans la langue de la personne. Le ton du gabarit
- * (succès, alerte, erreur, en cours, neutre) devient le signal de l'étiquette ;
- * le mot de l'étiquette dit la famille du genre (mandat, pièce, abonnement…).
- * L'habillage vient du dictionnaire du Socle, dans la même langue : rien n'est
- * écrit ici en français, et un courriel arabe se lit de droite à gauche.
+ * devient le signal de l'étiquette. Tous les autres textes (étiquette, pied,
+ * frise, lien de secours, signature) viennent de `notif.libelles_courriel`,
+ * dans la même langue : le code n'en écrit aucun.
  */
-import { LOCALES, MESSAGES, type Locale } from "@malica/socle/messages";
+import { LOCALES, type Locale } from "@malica/socle/messages";
 
 import { cadreDeCourriel, type Frise, type Signal } from "../courriel/cadre.ts";
 import { echapper } from "../courriel/charte.ts";
+import { libelle, libelleSiPresent, type Libelles } from "../courriel/libelles.ts";
 
 /** Le ton d'un gabarit, tel que la base le garde. */
 export const TONS = ["neutre", "succes", "erreur", "alerte", "en_cours"] as const;
@@ -26,9 +26,15 @@ const SIGNAL_DU_TON: Record<Ton, Signal> = {
   neutre: "neutre",
 };
 
-/** Les familles qui ont leur mot d'étiquette ; les autres portent « Malica ». */
-const FAMILLES = ["acces", "conseil", "mandat", "piece", "place", "impaye"] as const;
-type Famille = (typeof FAMILLES)[number];
+/** Un palier de l'impayé, tel que la file le rend (`notif.paliers_impaye`). */
+export interface Palier {
+  code: string;
+  signal: "attend" | "retard";
+  /** Le jour du palier, tiré du calendrier de recouvrement en vigueur. */
+  jour: number | null;
+  /** À ce palier, on peut répondre plutôt que payer (E34). */
+  repondre: boolean;
+}
 
 export interface Notification {
   locale: string;
@@ -42,14 +48,20 @@ export interface Notification {
   organisation: string | null;
   /** L'adresse publique de l'appli (repère, lien des réglages). */
   urlPublique: string;
+  /** Les textes du cadre, dans la langue du message. */
+  libelles: Libelles;
   /** Ce que l'événement a porté (`notif.envois.donnees`) : numéro, montant, devise… */
   donnees?: Record<string, unknown> | null;
-  /** Les jours du recouvrement en vigueur (`recouvrement.*_jours`), pour la frise d'impayé. */
-  calendrier?: Record<string, number> | null;
+  /** Les paliers de l'impayé, dans l'ordre ; absents pour les autres genres. */
+  frise?: readonly Palier[] | null;
   /** L'adresse à laquelle on peut répondre (« Répondre à ce message »). */
   repondreA?: string | null;
   /** L'objet du gabarit, avec ses jetons (`{{numero}}`) ; absent, l'objet est le titre. */
   sujet?: string | null;
+}
+
+function texte(v: unknown): string | null {
+  return typeof v === "string" && v.trim() !== "" ? v : typeof v === "number" ? String(v) : null;
 }
 
 /**
@@ -65,75 +77,36 @@ function objet(n: Notification): string {
   return /\{\{/.test(rempli) ? n.titre : rempli;
 }
 
-/** Les paliers de l'impayé, dans l'ordre, et le jour de chacun dans le calendrier. */
-const PALIERS = [
-  {
-    code: "impaye.rappel",
-    signal: "attend",
-    libelle: "courriel.frise.echue",
-    jour: "recouvrement.rappel_jours",
-  },
-  {
-    code: "impaye.relance",
-    signal: "attend",
-    libelle: "courriel.frise.relance",
-    jour: "recouvrement.relance_jours",
-  },
-  {
-    code: "impaye.avis_de_suspension",
-    signal: "retard",
-    libelle: "courriel.frise.avis",
-    jour: "recouvrement.avis_suspension_jours",
-  },
-  {
-    code: "impaye.suspension",
-    signal: "retard",
-    libelle: "courriel.frise.suspension",
-    jour: "recouvrement.suspension_jours",
-  },
-] as const;
-
-function texte(v: unknown): string | null {
-  return typeof v === "string" && v.trim() !== "" ? v : typeof v === "number" ? String(v) : null;
-}
-
-/**
- * La frise d'un impayé (maquettes E33 à E36) : la facture, le reste dû, et les
- * quatre paliers. Sans numéro ni montant, pas de frise : on n'invente rien.
- */
-function friseDImpaye(n: Notification, m: (typeof MESSAGES)[Locale]): Frise | null {
-  const i = PALIERS.findIndex((p) => p.code === n.code);
+/** La carte de l'impayé : la facture, le reste dû, et où l'on en est des paliers. */
+function friseDImpaye(n: Notification, l: Libelles): Frise | null {
+  const paliers = n.frise ?? [];
+  const i = paliers.findIndex((p) => p.code === n.code);
   const numero = texte(n.donnees?.["numero"]);
   const reste = texte(n.donnees?.["reste"]);
   const devise = texte(n.donnees?.["devise"]);
   if (i < 0 || !numero || !reste || !devise) return null;
   return {
-    reference: `${numero} · ${m["courriel.frise.resteDu"]}`,
+    reference: `${numero} · ${libelle(l, "frise.resteDu")}`,
     montant: reste,
     devise,
-    etapes: PALIERS.map((p, k) => {
-      const jours = n.calendrier?.[p.jour];
-      return {
-        libelle: m[p.libelle],
-        jour: typeof jours === "number" ? `J+${jours}` : null,
-        atteinte: k <= i,
-        signal: p.signal,
-        courante: k === i,
-      };
-    }),
+    etapes: paliers.map((p, k) => ({
+      libelle: libelle(l, `frise.${p.code}`),
+      jour: typeof p.jour === "number" ? `J+${p.jour}` : null,
+      atteinte: k <= i,
+      signal: p.signal,
+      courante: k === i,
+    })),
   };
 }
 
-/** L'étiquette propre au genre quand la maquette en donne une ; sinon le mot de sa famille. */
-function etiquette(code: string, m: (typeof MESSAGES)[Locale]): string {
-  const propre = (m as Record<string, string>)[`courriel.etiquette.${code}`];
-  return propre ?? m[`courriel.etiquette.${famille(code)}`];
-}
-
-/** La raison du pied : propre au genre (« Une facture de votre abonnement reste due. »), sinon la générale. */
-function raison(code: string, m: (typeof MESSAGES)[Locale]): string {
-  const genre = code.startsWith("impaye.") ? "impaye" : code;
-  return (m as Record<string, string>)[`courriel.raison.${genre}`] ?? m["courriel.notif.pied"];
+/** Le texte le plus propre : celui du genre, sinon celui de sa famille, sinon le général. */
+function propre(l: Libelles, prefixe: string, code: string, general: string): string {
+  const famille = code.split(".")[0] ?? "";
+  return (
+    libelleSiPresent(l, `${prefixe}.${code}`) ??
+    libelleSiPresent(l, `${prefixe}.${famille}`) ??
+    libelle(l, general)
+  );
 }
 
 function langue(locale: string): Locale {
@@ -146,50 +119,47 @@ function tonConnu(ton: string): Ton {
   throw new Error(`ton de courriel inconnu : ${ton}`);
 }
 
-function famille(code: string): Famille | "autre" {
-  const f = code.split(".")[0] ?? "";
-  return (FAMILLES as readonly string[]).includes(f) ? (f as Famille) : "autre";
-}
-
 export function courrielDeNotification(n: Notification): {
   sujet: string;
   html: string;
   texte: string;
 } {
   const loc = langue(n.locale);
-  const m = MESSAGES[loc];
+  const l = n.libelles;
   const signal = SIGNAL_DU_TON[tonConnu(n.ton)];
-  // C'est Malica qui parle à la première personne dans les relances d'impayé.
-  const parleMalica = n.code.startsWith("impaye.");
+  const palier = n.frise?.find((p) => p.code === n.code) ?? null;
+  // Dans les relances d'impayé, c'est Malica qui parle à la première personne : elle signe.
+  const parleMalica = palier !== null;
+  const raison = propre(l, "raison", n.code, "cadre.raison");
 
   const html = cadreDeCourriel({
     locale: loc,
+    libelles: l,
     urlPublique: n.urlPublique,
     apercu: n.corps,
     organisation: n.organisation,
-    etiquette: { texte: etiquette(n.code, m), signal },
+    etiquette: { texte: propre(l, "etiquette", n.code, "etiquette.autre"), signal },
     titre: n.titre,
     // Le corps vient de la base : échappé avant d'entrer dans le HTML.
     paragraphesHtml: [echapper(n.corps)],
-    frise: friseDImpaye(n, m),
+    frise: friseDImpaye(n, l),
     action: n.action,
-    // E34 : à la relance, on peut répondre plutôt que payer — « on trouve une solution ».
     actionSecondaire:
-      n.code === "impaye.relance" && n.repondreA
-        ? { libelle: m["courriel.repondre"], url: `mailto:${n.repondreA}` }
+      palier?.repondre && n.repondreA
+        ? { libelle: libelle(l, "cadre.repondre"), url: `mailto:${n.repondreA}` }
         : null,
     signature: parleMalica,
-    raison: raison(n.code, m),
+    raison,
   });
 
   const corpsTexte = [
     n.titre,
     "",
     n.corps,
-    ...(n.action ? ["", `${n.action.libelle} :`, n.action.url] : []),
+    ...(n.action ? ["", n.action.libelle, n.action.url] : []),
     "",
-    m["courriel.notif.pied"],
-    parleMalica ? m["courriel.cadre.signature"] : "— Malica Office",
+    raison,
+    libelle(l, parleMalica ? "cadre.signature" : "cadre.signatureTexte"),
   ].join("\n");
 
   return { sujet: objet(n), html, texte: corpsTexte };

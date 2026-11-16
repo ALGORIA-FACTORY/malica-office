@@ -1,18 +1,15 @@
 -- ======================================================================
---  La file rend aussi le genre et la société de chaque courriel
---  (maquettes du 13 novembre 2026, adoptées le 16 novembre).
+--  Les courriels au modèle des maquettes du 13 novembre 2026 (adoptées le
+--  16 novembre) : ce que la file rend, et les textes qui vivent en base.
 --
---  Le cadre commun des courriels porte une étiquette — le mot de la famille
---  du genre : mandat, pièce, abonnement… — et la pastille de la société
---  concernée, et chaque maquette ses données (un montant, une frise, une
---  échéance). La file les rend avec le reste : `code` (le genre),
---  `organisation` (le nom de la société, s'il y en a une), `donnees` (ce que
---  l'événement a porté) et, pour les relances d'impayé, `calendrier` (les jours
---  de recouvrement en vigueur).
+--  1. `notif.poster` garde sur la ligne `email` les jetons de l'événement.
+--  2. Les textes du cadre, de l'invitation et du mot de passe (fr/en/ar) :
+--     `notif.libelles_courriel` ; les paliers de l'impayé : `notif.paliers_impaye`.
+--  3. La file rend `code`, `organisation`, `donnees`, `frise` (les paliers et
+--     leur jour), `sujet` (l'objet du gabarit) et `libelles` (les textes de la
+--     langue). Le type de retour change : la fonction se recrée.
 --
---  Repris de sa définition en vigueur (20261227120000) ; seules les cinq
---  colonnes s'ajoutent (et l'objet, `sujet`, que le gabarit porte). Le type de retour change : la fonction se recrée.
---  REJEU (R11) : aucune donnée de référence écrite.
+--  R11 : les données de référence portent une date littérale.
 -- ======================================================================
 
 begin;
@@ -160,15 +157,271 @@ begin
 end
 $$;
 
--- --- 2. La file rend le genre, la société, l'objet et les données ------------
+-- --- 2. Les textes du courriel vivent en base -------------------------------
+--
+-- Tout ce que le cadre écrit autour du message (étiquette, pied, frise, lien de
+-- secours, signature), et les textes de l'invitation et du mot de passe, en
+-- fr / en / ar. Une correction est une ligne nouvelle, datée (R7) ; le code ne
+-- porte aucun texte de courriel.
+
+create table notif.libelles_courriel (
+  cle            text not null check (cle ~ '^[a-z][a-zA-Z_.]*$'),
+  locale         text not null check (locale in ('fr', 'en', 'ar')),
+  texte          text not null check (btrim(texte) <> ''),
+  effective_from date not null,
+  primary key (cle, locale, effective_from)
+);
+alter table notif.libelles_courriel enable row level security;
+revoke all on notif.libelles_courriel from public, anon, authenticated;
+
+insert into notif.libelles_courriel (cle, locale, texte, effective_from) values
+  ('cadre.raison', 'fr', 'Vous recevez ce message parce que vous tenez cet abonnement Malica Office. Vous pouvez régler vos notifications dans vos réglages.', date '2026-11-16'),
+  ('cadre.raison', 'en', 'You receive this message because you hold this Malica Office subscription. You can adjust your notifications in your settings.', date '2026-11-16'),
+  ('cadre.raison', 'ar', 'تتلقون هذه الرسالة لأنكم أصحاب اشتراك Malica Office هذا. يمكنكم ضبط إشعاراتكم من إعداداتكم.', date '2026-11-16'),
+  ('cadre.signature', 'fr', '— Malica', date '2026-11-16'),
+  ('cadre.signature', 'en', '— Malica', date '2026-11-16'),
+  ('cadre.signature', 'ar', '— Malica', date '2026-11-16'),
+  ('cadre.reglerAlertes', 'fr', 'Régler mes alertes', date '2026-11-16'),
+  ('cadre.reglerAlertes', 'en', 'Manage my alerts', date '2026-11-16'),
+  ('cadre.reglerAlertes', 'ar', 'ضبط تنبيهاتي', date '2026-11-16'),
+  ('cadre.devise', 'fr', 'L’IA propose. Un moteur déterministe valide.', date '2026-11-16'),
+  ('cadre.devise', 'en', 'AI proposes. A deterministic engine validates.', date '2026-11-16'),
+  ('cadre.devise', 'ar', 'الذكاء الاصطناعي يقترح، ومحرّك حتمي يُصادق.', date '2026-11-16'),
+  ('cadre.lienSecours', 'fr', 'Le bouton ne s''ouvre pas ? Copiez ce lien dans votre navigateur :', date '2026-11-16'),
+  ('cadre.lienSecours', 'en', 'The button does not open? Copy this link into your browser:', date '2026-11-16'),
+  ('cadre.lienSecours', 'ar', 'الزر لا يفتح؟ انسخوا هذا الرابط في متصفحكم:', date '2026-11-16'),
+  ('cadre.repondre', 'fr', 'Répondre à ce message', date '2026-11-16'),
+  ('cadre.repondre', 'en', 'Reply to this message', date '2026-11-16'),
+  ('cadre.repondre', 'ar', 'الردّ على هذه الرسالة', date '2026-11-16'),
+  ('cadre.bonjour', 'fr', 'Bonjour,', date '2026-11-16'),
+  ('cadre.bonjour', 'en', 'Hello,', date '2026-11-16'),
+  ('cadre.bonjour', 'ar', 'مرحبًا،', date '2026-11-16'),
+  ('cadre.produit', 'fr', 'Malica Office', date '2026-11-16'),
+  ('cadre.produit', 'en', 'Malica Office', date '2026-11-16'),
+  ('cadre.produit', 'ar', 'Malica Office', date '2026-11-16'),
+  ('cadre.marque', 'fr', 'MALICA OFFICE · ALGORIA FACTORY · TUNIS', date '2026-11-16'),
+  ('cadre.marque', 'en', 'MALICA OFFICE · ALGORIA FACTORY · TUNIS', date '2026-11-16'),
+  ('cadre.marque', 'ar', 'MALICA OFFICE · ALGORIA FACTORY · TUNIS', date '2026-11-16'),
+  ('cadre.langue.fr', 'fr', 'FR', date '2026-11-16'),
+  ('cadre.langue.fr', 'en', 'FR', date '2026-11-16'),
+  ('cadre.langue.fr', 'ar', 'FR', date '2026-11-16'),
+  ('cadre.langue.en', 'fr', 'EN', date '2026-11-16'),
+  ('cadre.langue.en', 'en', 'EN', date '2026-11-16'),
+  ('cadre.langue.en', 'ar', 'EN', date '2026-11-16'),
+  ('cadre.langue.ar', 'fr', 'العربية', date '2026-11-16'),
+  ('cadre.langue.ar', 'en', 'العربية', date '2026-11-16'),
+  ('cadre.langue.ar', 'ar', 'العربية', date '2026-11-16'),
+  ('cadre.signatureTexte', 'fr', '— Malica Office', date '2026-11-16'),
+  ('cadre.signatureTexte', 'en', '— Malica Office', date '2026-11-16'),
+  ('cadre.signatureTexte', 'ar', '— Malica Office', date '2026-11-16'),
+  ('etiquette.acces', 'fr', 'Abonnement', date '2026-11-16'),
+  ('etiquette.acces', 'en', 'Subscription', date '2026-11-16'),
+  ('etiquette.acces', 'ar', 'الاشتراك', date '2026-11-16'),
+  ('etiquette.conseil', 'fr', 'Question', date '2026-11-16'),
+  ('etiquette.conseil', 'en', 'Question', date '2026-11-16'),
+  ('etiquette.conseil', 'ar', 'سؤال', date '2026-11-16'),
+  ('etiquette.mandat', 'fr', 'Mandat', date '2026-11-16'),
+  ('etiquette.mandat', 'en', 'Mandate', date '2026-11-16'),
+  ('etiquette.mandat', 'ar', 'عقد المسك', date '2026-11-16'),
+  ('etiquette.piece', 'fr', 'Pièce', date '2026-11-16'),
+  ('etiquette.piece', 'en', 'Document', date '2026-11-16'),
+  ('etiquette.piece', 'ar', 'وثيقة', date '2026-11-16'),
+  ('etiquette.place', 'fr', 'Équipe', date '2026-11-16'),
+  ('etiquette.place', 'en', 'Team', date '2026-11-16'),
+  ('etiquette.place', 'ar', 'الفريق', date '2026-11-16'),
+  ('etiquette.impaye', 'fr', 'Facture', date '2026-11-16'),
+  ('etiquette.impaye', 'en', 'Invoice', date '2026-11-16'),
+  ('etiquette.impaye', 'ar', 'فاتورة', date '2026-11-16'),
+  ('etiquette.invitation', 'fr', 'Invitation', date '2026-11-16'),
+  ('etiquette.invitation', 'en', 'Invitation', date '2026-11-16'),
+  ('etiquette.invitation', 'ar', 'دعوة', date '2026-11-16'),
+  ('etiquette.securite', 'fr', 'Sécurité', date '2026-11-16'),
+  ('etiquette.securite', 'en', 'Security', date '2026-11-16'),
+  ('etiquette.securite', 'ar', 'الأمان', date '2026-11-16'),
+  ('etiquette.autre', 'fr', 'Malica', date '2026-11-16'),
+  ('etiquette.autre', 'en', 'Malica', date '2026-11-16'),
+  ('etiquette.autre', 'ar', 'Malica', date '2026-11-16'),
+  ('etiquette.impaye.rappel', 'fr', 'Échéance passée', date '2026-11-16'),
+  ('etiquette.impaye.rappel', 'en', 'Past due', date '2026-11-16'),
+  ('etiquette.impaye.rappel', 'ar', 'حلّ الأجل', date '2026-11-16'),
+  ('etiquette.impaye.relance', 'fr', 'Relance', date '2026-11-16'),
+  ('etiquette.impaye.relance', 'en', 'Reminder', date '2026-11-16'),
+  ('etiquette.impaye.relance', 'ar', 'تذكير', date '2026-11-16'),
+  ('etiquette.impaye.avis_de_suspension', 'fr', 'Avis', date '2026-11-16'),
+  ('etiquette.impaye.avis_de_suspension', 'en', 'Notice', date '2026-11-16'),
+  ('etiquette.impaye.avis_de_suspension', 'ar', 'إشعار', date '2026-11-16'),
+  ('etiquette.impaye.suspension', 'fr', 'Suspendu', date '2026-11-16'),
+  ('etiquette.impaye.suspension', 'en', 'Suspended', date '2026-11-16'),
+  ('etiquette.impaye.suspension', 'ar', 'موقوف', date '2026-11-16'),
+  ('raison.impaye', 'fr', 'Une facture de votre abonnement reste due.', date '2026-11-16'),
+  ('raison.impaye', 'en', 'An invoice for your subscription is still due.', date '2026-11-16'),
+  ('raison.impaye', 'ar', 'ما زالت فاتورة من اشتراككم مستحقة.', date '2026-11-16'),
+  ('frise.resteDu', 'fr', 'reste dû', date '2026-11-16'),
+  ('frise.resteDu', 'en', 'outstanding', date '2026-11-16'),
+  ('frise.resteDu', 'ar', 'المتبقي', date '2026-11-16'),
+  ('frise.impaye.rappel', 'fr', 'Échue', date '2026-11-16'),
+  ('frise.impaye.rappel', 'en', 'Overdue', date '2026-11-16'),
+  ('frise.impaye.rappel', 'ar', 'حلّ الأجل', date '2026-11-16'),
+  ('frise.impaye.relance', 'fr', 'Relance', date '2026-11-16'),
+  ('frise.impaye.relance', 'en', 'Reminder', date '2026-11-16'),
+  ('frise.impaye.relance', 'ar', 'تذكير', date '2026-11-16'),
+  ('frise.impaye.avis_de_suspension', 'fr', 'Avis', date '2026-11-16'),
+  ('frise.impaye.avis_de_suspension', 'en', 'Notice', date '2026-11-16'),
+  ('frise.impaye.avis_de_suspension', 'ar', 'إشعار', date '2026-11-16'),
+  ('frise.impaye.suspension', 'fr', 'Suspension', date '2026-11-16'),
+  ('frise.impaye.suspension', 'en', 'Suspension', date '2026-11-16'),
+  ('frise.impaye.suspension', 'ar', 'إيقاف', date '2026-11-16'),
+  ('invitation.dirigeant.sujet', 'fr', '{{cabinet}} vous ouvre votre espace Malica', date '2026-11-16'),
+  ('invitation.dirigeant.sujet', 'en', '{{cabinet}} opens your Malica space', date '2026-11-16'),
+  ('invitation.dirigeant.sujet', 'ar', '{{cabinet}} يفتح لكم فضاءكم على Malica', date '2026-11-16'),
+  ('invitation.dirigeant.apercu', 'fr', '{{cabinet}} a ouvert le dossier de {{pme}}. Votre espace vous attend.', date '2026-11-16'),
+  ('invitation.dirigeant.apercu', 'en', '{{cabinet}} opened the file of {{pme}}. Your space is waiting.', date '2026-11-16'),
+  ('invitation.dirigeant.apercu', 'ar', 'فتح {{cabinet}} ملف {{pme}}. فضاؤكم في انتظاركم.', date '2026-11-16'),
+  ('invitation.dirigeant.titre', 'fr', 'Votre espace est prêt.', date '2026-11-16'),
+  ('invitation.dirigeant.titre', 'en', 'Your space is ready.', date '2026-11-16'),
+  ('invitation.dirigeant.titre', 'ar', 'فضاؤكم جاهز.', date '2026-11-16'),
+  ('invitation.dirigeant.corps', 'fr', '{{cabinet}} a ouvert le dossier de {{pme}} sur Malica Office, et vous invite à le rejoindre.', date '2026-11-16'),
+  ('invitation.dirigeant.corps', 'en', '{{cabinet}} opened the file of {{pme}} on Malica Office, and invites you to join it.', date '2026-11-16'),
+  ('invitation.dirigeant.corps', 'ar', 'فتح {{cabinet}} ملف {{pme}} على Malica Office، ويدعوكم للانضمام إليه.', date '2026-11-16'),
+  ('invitation.dirigeant.suite', 'fr', 'Photographiez vos factures : Malica les lit, les classe, et les transmet à votre comptabilité.', date '2026-11-16'),
+  ('invitation.dirigeant.suite', 'en', 'Photograph your invoices: Malica reads them, files them, and passes them to your accountant.', date '2026-11-16'),
+  ('invitation.dirigeant.suite', 'ar', 'صوّروا فواتيركم: تقرؤها Malica وتصنّفها وتحيلها إلى محاسبكم.', date '2026-11-16'),
+  ('invitation.dirigeant.bouton', 'fr', 'Rejoindre mon espace', date '2026-11-16'),
+  ('invitation.dirigeant.bouton', 'en', 'Join my space', date '2026-11-16'),
+  ('invitation.dirigeant.bouton', 'ar', 'الانضمام إلى فضائي', date '2026-11-16'),
+  ('invitation.comptabilite.sujet', 'fr', '{{pme}} vous invite à tenir sa comptabilité sur Malica', date '2026-11-16'),
+  ('invitation.comptabilite.sujet', 'en', '{{pme}} invites you to keep its books on Malica', date '2026-11-16'),
+  ('invitation.comptabilite.sujet', 'ar', 'تدعوكم {{pme}} لمسك محاسبتها على Malica', date '2026-11-16'),
+  ('invitation.comptabilite.apercu', 'fr', '{{pme}} vous invite à tenir sa comptabilité.', date '2026-11-16'),
+  ('invitation.comptabilite.apercu', 'en', '{{pme}} invites you to keep its books.', date '2026-11-16'),
+  ('invitation.comptabilite.apercu', 'ar', 'تدعوكم {{pme}} لمسك محاسبتها.', date '2026-11-16'),
+  ('invitation.comptabilite.titre', 'fr', 'Une société vous confie sa comptabilité.', date '2026-11-16'),
+  ('invitation.comptabilite.titre', 'en', 'A company entrusts you with its books.', date '2026-11-16'),
+  ('invitation.comptabilite.titre', 'ar', 'شركة تأتمنكم على محاسبتها.', date '2026-11-16'),
+  ('invitation.comptabilite.corps', 'fr', '{{pme}} vous invite à tenir sa comptabilité sur Malica Office.', date '2026-11-16'),
+  ('invitation.comptabilite.corps', 'en', '{{pme}} invites you to keep its books on Malica Office.', date '2026-11-16'),
+  ('invitation.comptabilite.corps', 'ar', 'تدعوكم {{pme}} لمسك محاسبتها على Malica Office.', date '2026-11-16'),
+  ('invitation.comptabilite.suite', 'fr', 'Créez votre accès ou connectez-vous, choisissez votre comptabilité ou créez-la : le mandat devient actif dès que vous acceptez.', date '2026-11-16'),
+  ('invitation.comptabilite.suite', 'en', 'Create your access or sign in, choose your practice or create it: the mandate becomes active as soon as you accept.', date '2026-11-16'),
+  ('invitation.comptabilite.suite', 'ar', 'أنشئوا حسابكم أو سجّلوا الدخول، واختاروا مكتب محاسبتكم أو أنشئوه: يصبح العقد ساريًا فور قبولكم.', date '2026-11-16'),
+  ('invitation.comptabilite.bouton', 'fr', 'Voir l''invitation', date '2026-11-16'),
+  ('invitation.comptabilite.bouton', 'en', 'See the invitation', date '2026-11-16'),
+  ('invitation.comptabilite.bouton', 'ar', 'عرض الدعوة', date '2026-11-16'),
+  ('invitation.cabinetInconnu', 'fr', 'Votre comptabilité', date '2026-11-16'),
+  ('invitation.cabinetInconnu', 'en', 'Your accountant', date '2026-11-16'),
+  ('invitation.cabinetInconnu', 'ar', 'محاسبكم', date '2026-11-16'),
+  ('invitation.note', 'fr', 'Lien personnel, valable jusqu''au {{date}}, une seule fois, avec l''adresse à laquelle ce message vous parvient. Si vous n''attendiez pas cette invitation, ignorez ce message : rien ne se passera.', date '2026-11-16'),
+  ('invitation.note', 'en', 'Personal link, valid until {{date}}, once, with the address this message reached. If you were not expecting this invitation, ignore this message: nothing will happen.', date '2026-11-16'),
+  ('invitation.note', 'ar', 'رابط شخصي صالح حتى {{date}}، لمرة واحدة، بالعنوان الذي وصلتكم عليه هذه الرسالة. إن لم تكونوا تنتظرون هذه الدعوة فتجاهلوا هذه الرسالة: لن يحدث شيء.', date '2026-11-16'),
+  ('invitation.raison', 'fr', 'Envoyé à la demande de {{demandeur}}.', date '2026-11-16'),
+  ('invitation.raison', 'en', 'Sent at the request of {{demandeur}}.', date '2026-11-16'),
+  ('invitation.raison', 'ar', 'أُرسلت بطلب من {{demandeur}}.', date '2026-11-16'),
+  ('reinitialisation.sujet', 'fr', 'Choisir un nouveau mot de passe — Malica Office', date '2026-11-16'),
+  ('reinitialisation.sujet', 'en', 'Choose a new password — Malica Office', date '2026-11-16'),
+  ('reinitialisation.sujet', 'ar', 'اختيار كلمة مرور جديدة — Malica Office', date '2026-11-16'),
+  ('reinitialisation.apercu', 'fr', 'Le lien est valable une heure, une seule fois.', date '2026-11-16'),
+  ('reinitialisation.apercu', 'en', 'The link is valid for one hour, once.', date '2026-11-16'),
+  ('reinitialisation.apercu', 'ar', 'الرابط صالح لساعة واحدة، لمرة واحدة.', date '2026-11-16'),
+  ('reinitialisation.titre', 'fr', 'Choisissez un nouveau mot de passe.', date '2026-11-16'),
+  ('reinitialisation.titre', 'en', 'Choose a new password.', date '2026-11-16'),
+  ('reinitialisation.titre', 'ar', 'اختاروا كلمة مرور جديدة.', date '2026-11-16'),
+  ('reinitialisation.corps', 'fr', 'Une demande a été faite pour votre accès Malica Office. Le lien ci-dessous est valable une heure, une seule fois. Vos sessions ouvertes sur d''autres appareils seront fermées.', date '2026-11-16'),
+  ('reinitialisation.corps', 'en', 'A request was made for your Malica Office access. The link below is valid for one hour, once. Your sessions open on other devices will be closed.', date '2026-11-16'),
+  ('reinitialisation.corps', 'ar', 'قُدّم طلب لحسابكم على Malica Office. الرابط أدناه صالح لساعة واحدة، لمرة واحدة. ستُغلق جلساتكم المفتوحة على أجهزة أخرى.', date '2026-11-16'),
+  ('reinitialisation.bouton', 'fr', 'Choisir un nouveau mot de passe', date '2026-11-16'),
+  ('reinitialisation.bouton', 'en', 'Choose a new password', date '2026-11-16'),
+  ('reinitialisation.bouton', 'ar', 'اختيار كلمة مرور جديدة', date '2026-11-16'),
+  ('reinitialisation.note', 'fr', 'Vous n''êtes pas à l''origine de cette demande ? Ignorez ce message : votre mot de passe actuel reste valable.', date '2026-11-16'),
+  ('reinitialisation.note', 'en', 'Did not make this request? Ignore this message: your current password stays valid.', date '2026-11-16'),
+  ('reinitialisation.note', 'ar', 'لستم من قدّم هذا الطلب؟ تجاهلوا هذه الرسالة: تبقى كلمة مروركم الحالية صالحة.', date '2026-11-16'),
+  ('reinitialisation.raison', 'fr', 'Une demande de nouveau mot de passe a été faite pour cette adresse.', date '2026-11-16'),
+  ('reinitialisation.raison', 'en', 'A new password was requested for this address.', date '2026-11-16'),
+  ('reinitialisation.raison', 'ar', 'طُلبت كلمة مرور جديدة لهذا العنوان.', date '2026-11-16'),
+  ('donnee.societe', 'fr', 'Société', date '2026-11-16'),
+  ('donnee.societe', 'en', 'Company', date '2026-11-16'),
+  ('donnee.societe', 'ar', 'الشركة', date '2026-11-16'),
+  ('donnee.comptabilite', 'fr', 'Comptabilité', date '2026-11-16'),
+  ('donnee.comptabilite', 'en', 'Accountant', date '2026-11-16'),
+  ('donnee.comptabilite', 'ar', 'المحاسبة', date '2026-11-16'),
+  ('donnee.demandeLe', 'fr', 'Demandé le', date '2026-11-16'),
+  ('donnee.demandeLe', 'en', 'Requested on', date '2026-11-16'),
+  ('donnee.demandeLe', 'ar', 'طُلب في', date '2026-11-16'),
+  ('donnee.valableJusqua', 'fr', 'Valable jusqu''à', date '2026-11-16'),
+  ('donnee.valableJusqua', 'en', 'Valid until', date '2026-11-16'),
+  ('donnee.valableJusqua', 'ar', 'صالح حتى', date '2026-11-16');
+
+
+-- Les paliers de l'impayé : leur ordre, leur couleur, et le paramètre de
+-- recouvrement qui fixe leur jour (R4 : le jour reste dans `ref.socle_params`).
+create table notif.paliers_impaye (
+  code      text primary key check (code like 'impaye.%'),
+  rang      integer not null unique check (rang > 0),
+  signal    text not null check (signal in ('attend', 'retard')),
+  parametre text not null check (parametre like 'recouvrement.%'),
+  -- E34 : à ce palier, on peut répondre plutôt que payer (« on trouve une solution »).
+  repondre  boolean not null
+);
+alter table notif.paliers_impaye enable row level security;
+revoke all on notif.paliers_impaye from public, anon, authenticated;
+
+insert into notif.paliers_impaye (code, rang, signal, parametre, repondre) values
+  ('impaye.rappel',              1, 'attend', 'recouvrement.rappel_jours',           false),
+  ('impaye.relance',             2, 'attend', 'recouvrement.relance_jours',          true),
+  ('impaye.avis_de_suspension',  3, 'retard', 'recouvrement.avis_suspension_jours',  false),
+  ('impaye.suspension',          4, 'retard', 'recouvrement.suspension_jours',       false);
+
+-- Un palier dont le paramètre n'existe pas ne dessinerait pas son jour : refusé ici.
+do $$
+begin
+  if exists (select 1 from notif.paliers_impaye pa
+              where not exists (select 1 from ref.socle_params sp where sp.code = pa.parametre)) then
+    raise exception 'notif.paliers_impaye : paramètre de recouvrement inconnu';
+  end if;
+end
+$$;
+
+-- Les textes d'une langue : pour chaque clé, la version en vigueur dans la
+-- langue, sinon en français.
+create function notif.libelles_du_courriel(p_locale text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(jsonb_object_agg(x.cle, x.texte), '{}'::jsonb)
+    from (select distinct on (l.cle) l.cle, l.texte
+            from notif.libelles_courriel l
+           where l.locale in (p_locale, 'fr')
+             and l.effective_from <= current_date
+           order by l.cle, (l.locale = p_locale) desc, l.effective_from desc) x
+$$;
+revoke all on function notif.libelles_du_courriel(text) from public, anon, authenticated;
+grant execute on function notif.libelles_du_courriel(text) to malica_api, authenticated;
+
+-- La langue d'une personne, pour un courriel qui part avant toute session
+-- (le mot de passe oublié) : celle de son profil, sinon le français.
+create function notif.langue_de_la_personne(p_user uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((select pr.locale from identity.profiles pr where pr.user_id = p_user), 'fr')
+$$;
+revoke all on function notif.langue_de_la_personne(uuid) from public, anon, authenticated;
+grant execute on function notif.langue_de_la_personne(uuid) to malica_api;
+
+-- --- 3. La file rend le genre, la société, l'objet, la frise et les textes ---
 
 drop function notif.reserver_courriels(integer, interval);
 
 create function notif.reserver_courriels(p_limite integer, p_duree interval)
 returns table (envoi_id uuid, email text, locale text, titre text, corps text,
                action_libelle text, action_route text, ton text,
-               code text, organisation text, donnees jsonb, calendrier jsonb,
-               sujet text)
+               code text, organisation text, donnees jsonb, frise jsonb,
+               sujet text, libelles jsonb)
 language plpgsql
 volatile
 security definer
@@ -224,22 +477,22 @@ begin
   select p.id, u.email::text, g.locale, p.titre_rendu, p.corps_rendu,
          g.action_libelle, g.action_route, g.ton,
          p.code, o.name, p.donnees,
-         -- Les relances d'impayé dessinent leur frise (échue, relance, avis, suspension) :
-         -- les jours viennent du calendrier de recouvrement en vigueur, jamais du code (R4).
-         case when p.code like 'impaye.%' then (
-           -- comme `facturation.a_relancer_v`, qui décide des paliers
-           select jsonb_object_agg(x.code, x.jours)
-             from (select sp.code, max(sp.value_num) as jours
-                     from ref.socle_params sp
-                    where sp.code in ('recouvrement.rappel_jours', 'recouvrement.relance_jours',
-                                      'recouvrement.avis_suspension_jours',
-                                      'recouvrement.suspension_jours')
-                      and sp.valid_from <= current_date
-                      and (sp.valid_to is null or sp.valid_to >= current_date)
-                    group by sp.code) x)
+         -- Les relances d'impayé dessinent leur frise : les paliers dans l'ordre, leur
+         -- couleur, leur jour tiré du calendrier de recouvrement en vigueur (R4).
+         case when exists (select 1 from notif.paliers_impaye x where x.code = p.code) then (
+           select jsonb_agg(jsonb_build_object(
+                    'code', pa.code, 'signal', pa.signal, 'repondre', pa.repondre,
+                    'jour', (select max(sp.value_num) from ref.socle_params sp
+                              where sp.code = pa.parametre
+                                and sp.valid_from <= current_date
+                                and (sp.valid_to is null or sp.valid_to >= current_date)))
+                  order by pa.rang)
+             from notif.paliers_impaye pa)
          end,
          -- L'objet du message (le gabarit le porte) ; ses jetons, le travailleur les remplit.
-         g.sujet
+         g.sujet,
+         -- Les textes du cadre, dans la langue du message.
+         notif.libelles_du_courriel(g.locale)
     from pris p
     join notif.gabarits g on g.id = p.gabarit_id
     join auth.users u on u.id = p.destinataire

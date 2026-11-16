@@ -20,6 +20,7 @@ import type { InvitationRecue } from "@malica/socle/ports/repositories";
 import { creerCompte, type Utilisateur } from "./auth.ts";
 import { BASE_CONFIGUREE } from "./circuit-d-essai.ts";
 import { courrielInvitation } from "./courriel/invitation.ts";
+import { libellesDEssai } from "./courriel/libelles-d-essai.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
@@ -42,6 +43,7 @@ describe("le courriel qui invite une comptabilité", () => {
       lien: "https://malica.example/invitation#abc",
       expireLe: new Date("2026-12-12T00:00:00Z"),
       pour: "comptabilite",
+      libelles: libellesDEssai("fr"),
     });
     for (const texte of [c.sujet, c.texte, c.html]) {
       assert.match(texte, /tenir sa comptabilité/);
