@@ -35,7 +35,7 @@ const TON_ATTENDU: Record<string, string> = {
   "acces.propose": "alerte",
   "acces.accepte": "succes",
   "acces.refuse": "erreur",
-  "acces.monte": "en_cours",
+  "acces.monte": "succes",
   "acces.arrete": "alerte",
   "acces.repris": "en_cours",
   "acces.descente_demandee": "alerte",
@@ -47,7 +47,7 @@ const TON_ATTENDU: Record<string, string> = {
   "mandat.revoque": "erreur",
   "mandat.succede": "en_cours",
   "mandat.lettre_au_confrere": "en_cours",
-  "place.donnee": "en_cours",
+  "place.donnee": "succes",
   "place.suggeree": "alerte",
   "piece.a_valider": "alerte",
   "piece.demande": "alerte",
@@ -106,7 +106,7 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
   it("chaque type a son envoi par courriel dans fr, en et ar", async () => {
     await aBlanc(async (db) => {
       const { rows } = await db.query<{ code: string; n: string }>(
-        `select g.code, count(*)::text as n
+        `select g.code, count(distinct g.locale)::text as n
            from notif.gabarits g
           where g.canal = 'email' and g.effective_from <= current_date
           group by g.code`,

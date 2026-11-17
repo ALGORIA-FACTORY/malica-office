@@ -10,7 +10,8 @@
 --  2. `acces.monte` porte aussi l'offre d'avant (la carte « Team → Premium »).
 --  3. `notif.cartes_courriel` : la carte de chaque genre (passage, montant,
 --     lignes) ; ses textes sont des clés de `notif.libelles_courriel`.
---  4. Nouvelles versions datées des gabarits `email` (R7), textes en base.
+--  4. Nouvelles versions datées des gabarits `email` (R7), textes en base ;
+--     les versions remplacées jamais envoyées sont retirées.
 --
 --  R4 : la devise vient de la fiscalité en vigueur, les droits de `ref.offres`.
 --  R11 : dates littérales.
@@ -560,5 +561,13 @@ values
   ('place.donnee', 'email', 'fr', 'Votre comptabilité a ouvert une place dans votre équipe', 'Une place de plus, offerte.', '{{cabinet}} a ouvert une place dans votre équipe pour {{email}}. Cette personne reçoit son invitation.', 'Voir mon équipe', '/pme/reglages', 'succes', date '2026-11-17'),
   ('place.donnee', 'email', 'en', 'Your accountant opened a seat in your team', 'One more seat, on them.', '{{cabinet}} opened a seat in your team for {{email}}. This person receives an invitation.', 'See my team', '/pme/reglages', 'succes', date '2026-11-17'),
   ('place.donnee', 'email', 'ar', 'فتح محاسبكم مقعدًا في فريقكم', 'مقعد إضافي على نفقتهم.', 'فتح {{cabinet}} مقعدًا في فريقكم لـ {{email}}. يتلقى هذا الشخص دعوته.', 'عرض فريقي', '/pme/reglages', 'succes', date '2026-11-17');
+
+-- Les versions remplacées qu'aucun envoi n'a utilisées s'en vont ; celles qui
+-- ont servi restent, car elles prouvent ce qui est parti.
+delete from notif.gabarits g
+ where g.code in ('acces.monte', 'acces.propose', 'acces.accepte', 'place.donnee')
+   and g.canal = 'email'
+   and g.effective_from < date '2026-11-17'
+   and not exists (select 1 from notif.envois e where e.gabarit_id = g.id);
 
 commit;
