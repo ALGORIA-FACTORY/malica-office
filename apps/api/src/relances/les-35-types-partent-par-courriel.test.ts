@@ -22,7 +22,11 @@ import pg from "pg";
 import { corpsBrevo } from "../courriel/brevo.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
 
-import { courrielDeNotification, type Palier } from "./courriel-de-notification.ts";
+import {
+  courrielDeNotification,
+  type LigneDeCarte,
+  type Palier,
+} from "./courriel-de-notification.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -170,6 +174,7 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
           frise: Palier[] | null;
           donnees: Record<string, unknown> | null;
           sujet: string | null;
+          carte: LigneDeCarte[] | null;
         }>("select * from notif.reserver_courriels(1000000, interval '10 minutes')");
         return rows.filter((r) => r.email === email);
       })();
@@ -209,6 +214,7 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
           frise: c.frise,
           donnees: c.donnees,
           sujet: c.sujet,
+          carte: c.carte,
         });
         assert.ok(c.titre.trim().length > 0, `${code} : titre vide`);
         assert.ok(!/\{\{/.test(message.html + message.texte), `${code} : jeton non remplacé`);
