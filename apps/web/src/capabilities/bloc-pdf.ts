@@ -16,11 +16,11 @@
  */
 import type { BlocImprimable } from "@/lib/bloc-imprimable";
 
-/** A4 à 200 dpi, en pixels. La même échelle que les pages numérisées. */
-const LARGEUR = 1654;
-const HAUTEUR = 2339;
-const MARGE = 130;
-const QUALITE = 0.82;
+import { HAUTEUR_A4, LARGEUR_A4, MARGE_A4, nouvelleToileA4, pdfDesToiles } from "./page-a4";
+
+const LARGEUR = LARGEUR_A4;
+const HAUTEUR = HAUTEUR_A4;
+const MARGE = MARGE_A4;
 const INTERLIGNE = 62;
 const POLICE = "system-ui, sans-serif";
 
@@ -71,15 +71,10 @@ export async function rendreBlocEnPdf(
     y += INTERLIGNE - 10;
   };
   const nouvellePage = () => {
-    const canevas = document.createElement("canvas");
-    canevas.width = LARGEUR;
-    canevas.height = HAUTEUR;
-    const c = canevas.getContext("2d");
-    if (!c) throw new Error("bloc.canevas_indisponible");
-    ctx = c;
-    pages.push(canevas);
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, LARGEUR, HAUTEUR);
+    const toile = nouvelleToileA4();
+    if (!toile) throw new Error("bloc.canevas_indisponible");
+    ctx = toile.ctx;
+    pages.push(toile.canevas);
     ctx.textBaseline = "alphabetic";
     y = MARGE + 60;
     ctx.direction = direction;
@@ -124,27 +119,5 @@ export async function rendreBlocEnPdf(
   ctx.fillStyle = GRIS;
   ctx.fillText(bloc.pied, rtl ? LARGEUR - MARGE : MARGE, y, utile);
 
-  const jpegs = await Promise.all(
-    pages.map(
-      (canevas) =>
-        new Promise<Blob>((resoudre, rejeter) => {
-          canevas.toBlob(
-            (b) => (b ? resoudre(b) : rejeter(new Error("bloc.encodage_impossible"))),
-            "image/jpeg",
-            QUALITE,
-          );
-        }),
-    ),
-  );
-  const { buildImagesPdf } = await import("./scanner");
-  return buildImagesPdf(
-    await Promise.all(
-      jpegs.map(async (jpeg) => ({
-        jpeg: new Uint8Array(await jpeg.arrayBuffer()),
-        widthPx: LARGEUR,
-        heightPx: HAUTEUR,
-      })),
-    ),
-    bloc.titre,
-  );
+  return pdfDesToiles(pages, bloc.titre, "bloc.encodage_impossible");
 }

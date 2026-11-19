@@ -50,6 +50,7 @@
  * Pur : aucun réseau, aucune base. `garde.test.ts` l'éprouve phrase par phrase.
  */
 
+import { comparable } from "@malica/socle/mot-comparable";
 import type { SourceDeLAssistant } from "@malica/socle/ports/assistant";
 
 import { nombresDe } from "../conseil/cite.ts";
@@ -83,15 +84,9 @@ export interface RegleDeLaGarde {
   entier_liant_des: number;
 }
 
-const sansAccent = (t: string): string =>
-  t
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("fr");
-
 /** La marque telle qu'elle se cherche : un mot, une racine, ou un signe trouvé tel quel. */
 function chercheurDeMarque(marque: string): ((phrase: string) => boolean) | null {
-  const m = sansAccent(marque.trim());
+  const m = comparable(marque.trim());
   if (!m) return null;
   const racine = m.endsWith("*");
   const corps = racine ? m.slice(0, -1) : m;
@@ -300,7 +295,7 @@ export class GardeDesChiffres {
     if (this.tableur && this.sources.length === 0) return [];
     const chiffres = chiffresDe(sansFormules(phrase));
     if (chiffres.length === 0) return chiffres;
-    const cherchee = sansAccent(phrase);
+    const cherchee = comparable(phrase);
     if (this.marques.some((trouve) => trouve(cherchee))) return chiffres;
     const seuil = this.entierLiantDes;
     return chiffres.filter((n) => n.includes(".") || Number(n) >= seuil);
@@ -598,8 +593,8 @@ export class GardeDesChiffres {
         const corps = phrase.trimEnd();
         // Le modèle l'écrit parfois lui-même, malgré la consigne (« 18 % (non
         // vérifié) », relevé le 11 novembre 2026) : la marque ne se dit qu'une fois.
-        const motsDeLaMarque = sansAccent(this.marque.replace(/[_*()]/g, "").trim());
-        const dejaDite = motsDeLaMarque !== "" && sansAccent(corps).includes(motsDeLaMarque);
+        const motsDeLaMarque = comparable(this.marque.replace(/[_*()]/g, "").trim());
+        const dejaDite = motsDeLaMarque !== "" && comparable(corps).includes(motsDeLaMarque);
         garder(dejaDite ? phrase : `${corps} ${this.marque}${phrase.slice(corps.length)}`);
         this.marqueesDuTour.push(corps.replace(/\s+/g, " ").trim());
       } else {
