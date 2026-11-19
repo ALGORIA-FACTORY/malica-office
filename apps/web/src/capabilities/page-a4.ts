@@ -13,7 +13,7 @@ export const HAUTEUR_A4 = 2339;
 export const MARGE_A4 = 130;
 
 /** Qualité JPEG : la même que les pages numérisées. */
-export const QUALITE_JPEG = 0.82;
+const QUALITE_JPEG = 0.82;
 
 /** Un canevas blanc de la taille d'une page ; `null` si le navigateur n'en donne pas. */
 export function nouvelleToileA4(): {
