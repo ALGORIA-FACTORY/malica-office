@@ -1,3 +1,9 @@
+/**
+ * Une société en plus se dit AVANT le geste : dans l'inclus de la licence
+ * d'accueil, « n sur m » ; au-delà, le prix de la grille tel que la base le
+ * rend, jamais un chiffre inventé ; et quand la porte refuserait, l'écran le
+ * dit d'abord.
+ */
 import { describe, expect, it } from "vitest";
 
 import { ligneDeLaSocieteEnPlus } from "../societe-en-plus";

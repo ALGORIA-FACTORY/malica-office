@@ -23,13 +23,11 @@
  */
 import type { Recu } from "@malica/socle/use-cases/recu-de-paiement";
 
-/** A4 à 200 dpi, en pixels. La même échelle que les pages numérisées. */
-const LARGEUR = 1654;
-const HAUTEUR = 2339;
-const MARGE = 130;
+import { HAUTEUR_A4, LARGEUR_A4, MARGE_A4, nouvelleToileA4, pdfDesToiles } from "./page-a4";
 
-/** Qualité JPEG : la même que les pages numérisées. */
-const QUALITE = 0.82;
+const LARGEUR = LARGEUR_A4;
+const HAUTEUR = HAUTEUR_A4;
+const MARGE = MARGE_A4;
 
 export interface RecuRendu {
   blob: Blob;
@@ -44,18 +42,14 @@ export interface RecuRendu {
  * écrit avec des lettres arabes.
  */
 export async function rendreRecuEnPdf(recu: Recu, direction: "ltr" | "rtl"): Promise<RecuRendu> {
-  const canevas = document.createElement("canvas");
-  canevas.width = LARGEUR;
-  canevas.height = HAUTEUR;
-  const ctx = canevas.getContext("2d");
-  if (!ctx) throw new Error("recu.canevas_indisponible");
+  const toile = nouvelleToileA4();
+  if (!toile) throw new Error("recu.canevas_indisponible");
+  const { canevas, ctx } = toile;
 
   const rtl = direction === "rtl";
   const debut = rtl ? LARGEUR - MARGE : MARGE;
   const fin = rtl ? MARGE : LARGEUR - MARGE;
 
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(0, 0, LARGEUR, HAUTEUR);
   ctx.fillStyle = "#0A0A0A";
   ctx.textBaseline = "alphabetic";
   ctx.direction = direction;
@@ -133,23 +127,6 @@ export async function rendreRecuEnPdf(recu: Recu, direction: "ltr" | "rtl"): Pro
     pied += 40;
   }
 
-  const jpeg = await new Promise<Blob>((resoudre, rejeter) => {
-    canevas.toBlob(
-      (b) => (b ? resoudre(b) : rejeter(new Error("recu.encodage_impossible"))),
-      "image/jpeg",
-      QUALITE,
-    );
-  });
-  const { buildImagesPdf } = await import("./scanner");
-  const pdf = buildImagesPdf(
-    [
-      {
-        jpeg: new Uint8Array(await jpeg.arrayBuffer()),
-        widthPx: LARGEUR,
-        heightPx: HAUTEUR,
-      },
-    ],
-    recu.titre,
-  );
+  const pdf = await pdfDesToiles([canevas], recu.titre, "recu.encodage_impossible");
   return { blob: pdf, name: `recu-${recu.emisLe}.pdf` };
 }

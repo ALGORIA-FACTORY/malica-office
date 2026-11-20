@@ -22,6 +22,7 @@
  *
  * Les sommes sont exactes (`sommeDecimale`, en entiers) : pas un millime perdu.
  */
+import { comparable } from "../../mot-comparable.ts";
 import { sommeDecimale } from "../../somme-decimale.ts";
 
 export interface PieceLuePourLesAchats {
@@ -57,12 +58,9 @@ export interface AchatsParFournisseur {
 
 const SENS_ACHAT = "facture_achat";
 
-/** La clé d'un nom : sans casse, sans accent, sans ponctuation. */
+/** La clé d'un nom : sans casse, sans accent (`comparable`), sans ponctuation. */
 function cleDuNom(nom: string): string {
-  return nom
-    .normalize("NFD")
-    .replace(/\p{M}+/gu, "")
-    .toLocaleLowerCase("fr")
+  return comparable(nom)
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 }

@@ -35,6 +35,7 @@ import { z } from "zod";
 import type { DeclarationTva, TaxRate } from "@malica/socle/ports/repositories";
 import type { BlocDeReponse, PropositionDAction } from "@malica/socle/ports/assistant";
 import { achatsParFournisseur } from "@malica/socle/engines/achats/par-fournisseur";
+import { comparable } from "@malica/socle/mot-comparable";
 import { piecesParMois } from "@malica/socle/engines/pieces/par-mois";
 import { computePnl } from "@malica/socle/engines/pnl/snapshot";
 import { moisGlissants } from "@malica/socle/exercice";
@@ -474,7 +475,7 @@ function erreur(message: string): ResultatDOutil {
 
 /** Comparer sans casse ni accents : « Électricité » se trouve en tapant « electricite ». */
 function plat(s: string | null | undefined): string {
-  return (s ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("fr");
+  return comparable(s ?? "");
 }
 
 const STATUTS: Record<string, string> = {
