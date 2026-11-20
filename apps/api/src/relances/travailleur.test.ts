@@ -28,6 +28,7 @@ const COURRIEL = {
   frise: null,
   sujet: null,
   libelles: libellesDEssai("fr"),
+  carte: null,
 };
 
 /**

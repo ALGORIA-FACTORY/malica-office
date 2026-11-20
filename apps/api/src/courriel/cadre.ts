@@ -90,6 +90,10 @@ export interface Cadre {
   action?: { libelle: string; url: string } | null;
   /** La société en tête du bloc de données (maquettes E06, E07). */
   entite?: Entite | null;
+  /** Un changement d'offre, « Team → Premium » (maquettes E19 à E24). */
+  passage?: { de: string; a: string } | null;
+  /** Une somme mise en avant, et son unité (« 0,000 » « TND pour vous »). */
+  montant?: { valeur: string; unite: string } | null;
   /** Un second geste, en lien, à côté du bouton (« Répondre à ce message »). */
   actionSecondaire?: { libelle: string; url: string } | null;
   /** Une précision sous un filet, après le bouton (un lien personnel, une demande à ignorer). */
@@ -214,7 +218,7 @@ export function cadreDeCourriel(c: Cadre): string {
     : "";
 
   const donnees =
-    (c.donnees && c.donnees.length > 0) || c.entite
+    (c.donnees && c.donnees.length > 0) || c.entite || c.passage || c.montant
       ? `<tr><td class="m-pad" style="padding:22px 36px 0 36px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="m-bloc" style="background:${p.bloc};border:1px solid ${p.filet};border-radius:18px;">
 ${
@@ -229,12 +233,30 @@ ${c.entite.matricule ? `<div class="m-t3" style="margin-top:3px;font-family:${PO
 </td></tr>`
     : ""
 }${
+          c.passage || c.montant
+            ? `<tr><td style="padding:20px 22px ${c.donnees && c.donnees.length > 0 ? "6px" : "20px"} 22px;">
+${
+  c.passage
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;"><tr>
+<td class="m-t3 m-filet" style="border:1px solid ${p.filet};border-radius:999px;padding:6px 14px;font-family:${police};font-size:13px;font-weight:600;color:${p.texte3};">${echapper(c.passage.de)}</td>
+<td class="m-t3" style="padding:0 10px;font-family:${police};font-size:16px;color:${p.texte3};">${dir === "rtl" ? "&larr;" : "&rarr;"}</td>
+<td class="m-initiale" style="border-radius:999px;padding:6px 14px;background:${p.faitFond};font-family:${police};font-size:13px;font-weight:600;color:${p.fait};">${echapper(c.passage.a)}</td>
+</tr></table>`
+    : ""
+}${
+                c.montant
+                  ? `<div dir="ltr" style="text-align:${debut};"><span class="m-tx" style="font-family:${POLICE_MONO};font-size:38px;line-height:1.1;font-weight:600;letter-spacing:-0.02em;color:${p.texte};">${echapper(c.montant.valeur)}</span><span class="m-t3" style="font-family:${POLICE_MONO};font-size:13px;color:${p.texte3};">&nbsp;&nbsp;${echapper(c.montant.unite)}</span></div>`
+                  : ""
+              }
+</td></tr>`
+            : ""
+        }${
           c.donnees && c.donnees.length > 0
-            ? `<tr><td style="padding:${c.entite ? "0" : "6px"} 22px 6px 22px;">
+            ? `<tr><td style="padding:${c.entite || c.passage || c.montant ? "0" : "6px"} 22px 6px 22px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 ${c.donnees
   .map((l, i) => {
-    const filet = i > 0 || c.entite;
+    const filet = i > 0 || c.entite || c.passage || c.montant;
     return `<tr>
 <td class="m-t2${filet ? " m-filet" : ""}" style="padding:13px 0;${filet ? `border-top:1px solid ${p.filet};` : ""}font-family:${police};font-size:14px;line-height:1.4;color:${p.texte2};text-align:${debut};">${echapper(l.libelle)}</td>
 <td class="m-tx${filet ? " m-filet" : ""}" style="padding:13px 0;${filet ? `border-top:1px solid ${p.filet};` : ""}font-family:${l.mono ? POLICE_MONO : police};font-size:14px;line-height:1.4;font-weight:600;color:${p.texte};text-align:${fin};">${echapper(l.valeur)}</td>

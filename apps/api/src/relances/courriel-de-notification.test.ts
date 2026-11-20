@@ -114,6 +114,50 @@ describe("le gabarit commun du courriel", () => {
     assert.doesNotMatch(c.html, /class="m-s-retard"/, "l'avis n'est pas encore atteint");
   });
 
+  it("la montée d'offre : le passage, rien à payer, les droits, les noms en gras (E23)", () => {
+    const c = rendre({
+      ...BASE,
+      locale: "fr",
+      ton: "succes",
+      code: "acces.monte",
+      corps: "Cabinet Essai a monté votre offre. Elle reste à sa charge.",
+      donnees: {
+        cabinet: "Cabinet Essai",
+        offre: "Premium",
+        avant: "Team",
+        offre_lectures: 140,
+        offre_places: 4,
+        offre_societes: 2,
+        offre_devise: "TND",
+      },
+      carte: [
+        { genre: "passage", libelle: "carte.passage.avant", valeur: "carte.passage.offre" },
+        { genre: "montant", libelle: "unite.pourVous", valeur: "valeur.zeroPourVous" },
+        { genre: "ligne", libelle: "donnee.lectures", valeur: "valeur.lecturesParSociete" },
+        { genre: "ligne", libelle: "donnee.places", valeur: "valeur.placesEnPlus" },
+      ],
+    });
+    assert.match(c.html, />Team</);
+    assert.match(c.html, />Premium</);
+    assert.match(c.html, /TND pour vous/);
+    assert.match(c.html, /140 par mois et par société/);
+    assert.match(c.html, /4 en plus de vous/);
+    assert.match(c.html, /<strong[^>]*>Cabinet Essai<\/strong> a monté/);
+    assert.match(c.html, /Votre abonnement est pris en charge par Cabinet Essai\./);
+  });
+
+  it("une ligne dont un jeton manque ne s'affiche pas", () => {
+    const c = rendre({
+      ...BASE,
+      locale: "fr",
+      ton: "succes",
+      code: "acces.monte",
+      donnees: { offre: "Premium" },
+      carte: [{ genre: "montant", libelle: "unite.pourVous", valeur: "valeur.zeroPourVous" }],
+    });
+    assert.doesNotMatch(c.html, /pour vous/);
+  });
+
   it("l'objet vient du gabarit, ses jetons remplis ; troué, il redevient le titre", () => {
     const plein = rendre({
       ...BASE,

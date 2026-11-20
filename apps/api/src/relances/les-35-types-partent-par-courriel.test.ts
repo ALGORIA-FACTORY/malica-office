@@ -22,7 +22,11 @@ import pg from "pg";
 import { corpsBrevo } from "../courriel/brevo.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
 
-import { courrielDeNotification, type Palier } from "./courriel-de-notification.ts";
+import {
+  courrielDeNotification,
+  type LigneDeCarte,
+  type Palier,
+} from "./courriel-de-notification.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -31,7 +35,7 @@ const TON_ATTENDU: Record<string, string> = {
   "acces.propose": "alerte",
   "acces.accepte": "succes",
   "acces.refuse": "erreur",
-  "acces.monte": "en_cours",
+  "acces.monte": "succes",
   "acces.arrete": "alerte",
   "acces.repris": "en_cours",
   "acces.descente_demandee": "alerte",
@@ -43,7 +47,7 @@ const TON_ATTENDU: Record<string, string> = {
   "mandat.revoque": "erreur",
   "mandat.succede": "en_cours",
   "mandat.lettre_au_confrere": "en_cours",
-  "place.donnee": "en_cours",
+  "place.donnee": "succes",
   "place.suggeree": "alerte",
   "piece.a_valider": "alerte",
   "piece.demande": "alerte",
@@ -102,7 +106,7 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
   it("chaque type a son envoi par courriel dans fr, en et ar", async () => {
     await aBlanc(async (db) => {
       const { rows } = await db.query<{ code: string; n: string }>(
-        `select g.code, count(*)::text as n
+        `select g.code, count(distinct g.locale)::text as n
            from notif.gabarits g
           where g.canal = 'email' and g.effective_from <= current_date
           group by g.code`,
@@ -170,6 +174,7 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
           frise: Palier[] | null;
           donnees: Record<string, unknown> | null;
           sujet: string | null;
+          carte: LigneDeCarte[] | null;
         }>("select * from notif.reserver_courriels(1000000, interval '10 minutes')");
         return rows.filter((r) => r.email === email);
       })();
@@ -209,6 +214,7 @@ describe("les 35 types d'événement partent par courriel", { skip: !ADMIN }, ()
           frise: c.frise,
           donnees: c.donnees,
           sujet: c.sujet,
+          carte: c.carte,
         });
         assert.ok(c.titre.trim().length > 0, `${code} : titre vide`);
         assert.ok(!/\{\{/.test(message.html + message.texte), `${code} : jeton non remplacé`);
