@@ -57,7 +57,12 @@ import {
 } from "./controles.ts";
 import { lireLeChange, type ChangeDuJugement } from "./cours-de-change.ts";
 import { partiesSelonLeSens } from "./parties-selon-le-sens.ts";
-import { normaliserMontants, type ResultatNormalisation } from "./normaliser-montants.ts";
+import {
+  normaliserMontants,
+  tauxNul,
+  type EntreeMontants,
+  type ResultatNormalisation,
+} from "./normaliser-montants.ts";
 import { appliquerLesPrecisions } from "./precisions-de-lecture.ts";
 import {
   lireLesReglagesComptables,
@@ -267,6 +272,8 @@ export interface LectureAJuger {
   recueLe: string;
   confianceParChamp: Record<string, number>;
   doublonDe: string | null;
+  /** Les champs du pied qu'une personne a saisis (`capture.precisions`). */
+  saisis?: ReadonlySet<string>;
 }
 
 /** Ce que le référentiel daté dit, pour juger cette lecture-là. */
@@ -321,7 +328,12 @@ interface PayloadLu {
   }>;
   other_charges?: Array<{ code?: string | null; amount?: string | null }>;
   references?: Record<string, string>;
-  totals?: { base_ht?: string | null; vat?: string | null; ttc?: string | null };
+  totals?: {
+    base_ht?: string | null;
+    vat?: string | null;
+    ttc?: string | null;
+    withholding?: string | null;
+  };
 }
 
 /** Le sens retenu : celui que la personne a dit, à défaut celui de la lecture. */
@@ -410,6 +422,7 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
     brut("totals.base_ht"),
     brut("totals.vat"),
     brut("totals.ttc"),
+    brut("totals.withholding"),
     ...droits.map((_, i) => brut(`other_charges[${i}].amount`)),
   ];
   const decidee = deviseDeLaPiece(
@@ -437,6 +450,7 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
     htTotal: "totals.base_ht",
     tva: "totals.vat",
     ttc: "totals.ttc",
+    retenue: "totals.withholding",
     ...Object.fromEntries(
       lignes.map((_, i) => [
         `ht${i}`,
@@ -497,6 +511,7 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
           tva,
           autres,
           ttc,
+          retenue: brut("totals.withholding"),
           chemins: {
             ...chemins,
             ht0: brut("lines[0].base_ht") !== null ? "lines[0].base_ht" : "totals.base_ht",
@@ -542,23 +557,37 @@ function normaliserLaLecture(l: LectureAJuger, r: ReferentielDuJugement): Result
       devise,
     );
 
-  return normaliserMontants(
-    {
-      bases: lignes.map((x, i) => ({
-        ht: brut(`lines[${i}].base_ht`) ?? (lignes.length === 1 ? brut("totals.base_ht") : null),
-        taux: r.taux.get(x.tax_code!)!,
-        // Le HT du pied, si la ligne ne se lit pas (29 octobre 2026).
-        pied: lignes.length === 1 ? brut("totals.base_ht") : null,
-      })),
-      // Plusieurs taux : le HT du pied prouve une base illisible.
-      htTotal: lignes.length > 1 ? brut("totals.base_ht") : null,
-      tva: brut("totals.vat"),
-      autres,
-      ttc: brut("totals.ttc"),
-      chemins,
-    },
+  const entree: EntreeMontants = {
+    bases: lignes.map((x, i) => ({
+      ht: brut(`lines[${i}].base_ht`) ?? (lignes.length === 1 ? brut("totals.base_ht") : null),
+      taux: r.taux.get(x.tax_code!)!,
+      // Le HT du pied, si la ligne ne se lit pas (29 octobre 2026).
+      pied: lignes.length === 1 ? brut("totals.base_ht") : null,
+    })),
+    // Plusieurs taux : le HT du pied prouve une base illisible.
+    htTotal: lignes.length > 1 ? brut("totals.base_ht") : null,
+    tva: brut("totals.vat"),
+    autres,
+    ttc: brut("totals.ttc"),
+    retenue: brut("totals.withholding"),
+    chemins,
+  };
+  const n = normaliserMontants(entree, lecture);
+  /*
+   * LA SAISIE QUI NE TIENT PAS, À TAUX NUL (21 novembre 2026). Au pilote, un
+   * per diem à l'export : base saisie 0,00, total 360. La saisie l'emporte
+   * toujours sur la lecture, et la facture ne tient pas. Sans elle, le taux
+   * nul prouverait la base : on la PROPOSE, la personne la prend d'un geste.
+   */
+  const saisie = l.saisis?.has("totals.base_ht") || l.saisis?.has("lines[0].base_ht");
+  if (n.etat === "tranche" || !saisie || lignes.length !== 1 || !tauxNul(entree.bases[0]!.taux))
+    return n;
+  const sansLaSaisie = normaliserMontants(
+    { ...entree, bases: [{ ht: null, taux: entree.bases[0]!.taux }] },
     lecture,
   );
+  const base = sansLaSaisie.deduits.find((d) => d.champ === "lines[0].base_ht");
+  return sansLaSaisie.etat === "tranche" && base ? { ...n, baseProposee: base.valeur } : n;
 }
 
 /**
@@ -657,7 +686,7 @@ export function jugerLaLecture(
  * valeur à écrire. Une analyse posée avant ce marqueur le porte NUL : elle
  * est périmée par définition.
  */
-export const REGLES_DU_JUGEMENT = "2026-11-12.6cd32273b3b3";
+export const REGLES_DU_JUGEMENT = "2026-11-21.739d178a851a";
 
 /*
  * Les référentiels de MOTS que le jugement compare au texte imprimé, et que la
@@ -1020,6 +1049,7 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     recueLe: piece.recue_le,
     confianceParChamp: extraction.confiance_par_champ ?? {},
     doublonDe: piece.doublon_de,
+    ...(corrige ? { saisis: new Set(saisies.map((s) => s.champ)) } : {}),
   };
 
   // Tous les taux en vigueur à la date de la pièce : ceux que la lecture

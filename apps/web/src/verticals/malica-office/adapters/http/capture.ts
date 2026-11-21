@@ -241,6 +241,7 @@ export function creerCaptureHttp(): CaptureRepository {
         corrections?: CorrectionDeLecture[];
         prouves?: string[];
         decimalesDeLaPiece?: number | null;
+        baseProposee?: string | null;
         archive?: { mandatClosLe: string } | null;
         lectureRefusee?: { motif: string; le: string } | null;
         suivi?: SuiviDEnvoi | null;
@@ -266,6 +267,7 @@ export function creerCaptureHttp(): CaptureRepository {
         corrections: brut.corrections ?? [],
         prouves: brut.prouves ?? [],
         decimalesDeLaPiece: brut.decimalesDeLaPiece ?? null,
+        baseProposee: brut.baseProposee ?? null,
         archive: brut.archive ?? null,
         lectureRefusee: brut.lectureRefusee ?? null,
         suivi: brut.suivi ?? null,

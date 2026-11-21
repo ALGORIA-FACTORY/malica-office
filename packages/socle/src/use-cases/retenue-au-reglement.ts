@@ -176,3 +176,39 @@ export function constaterLaRetenue(e: EntreeRetenue): ConstatDeRetenue {
     retenues,
   };
 }
+
+/** La retenue qu'une facture imprime, telle que sa lecture l'a prouvée. */
+export interface RetenueImprimee {
+  /** Le montant imprimé, en valeur absolue : « 14.280 ». */
+  retenue: string;
+  /** Le TTC avant droits hors TVA (HT + TVA) : l'assiette d'une retenue « ttc ». */
+  ttc: string;
+  /** La TVA de la pièce : l'assiette d'une retenue « tva ». */
+  tva: string | null;
+  decimales: number;
+}
+
+/**
+ * Quel taux du référentiel donne la retenue imprimée ?
+ *
+ * 21 novembre 2026, la note d'honoraires de MAP : « Retenue à la source 3 %
+ * -14,280 » sur 476,000. Le pourcentage imprimé n'est pas lu : il se PROUVE.
+ * Seul un taux du référentiel dont le calcul (même arrondi que
+ * `constaterLaRetenue`) tombe exactement sur le montant imprimé est reconnu ;
+ * aucun, ou deux, et rien ne l'est — le comptable qualifie, comme avant.
+ * Ce n'est qu'une proposition : la qualification reste la sienne.
+ */
+export function reconnaitreLaRetenueImprimee(
+  e: RetenueImprimee,
+  taux: readonly TauxDeRetenue[],
+): { code: string; assiette: string } | null {
+  const imprimee = D(e.retenue);
+  if (!imprimee.isFinite() || imprimee.lte(0)) return null;
+  const tombent = taux.flatMap((t) => {
+    const assiette = t.base === "tva" ? e.tva : e.ttc;
+    if (assiette === null) return [];
+    const montant = toFixedStr(D(assiette).times(D(t.taux)), e.decimales);
+    return D(montant).eq(imprimee) ? [{ code: t.code, assiette }] : [];
+  });
+  return tombent.length === 1 ? tombent[0]! : null;
+}

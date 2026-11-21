@@ -555,3 +555,106 @@ describe("un droit taxable entre dans la base de la TVA, comme le référentiel 
     assert.equal(n.montants.bases[0]!.ht, null);
   });
 });
+
+/*
+ * 21 novembre 2026, au pilote : un per diem facturé à l'export, « Total 360 »,
+ * code TVA EXPORT, aucune base lue. Le dirigeant : « je mets TVA export, le
+ * calcul doit être correct ». À taux nul, la base n'est pas devinée : elle
+ * est le total moins les droits, et l'égalité le prouve.
+ */
+describe("la base d'un taux nul se déduit du total (EXPORT, EXO)", () => {
+  it("aucune base lue, taux nul, total lu : base = total, déduite et nommée", () => {
+    const r = normaliserMontants({ bases: [{ ht: null, taux: "0" }], ttc: "360,000" }, P);
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 360_000);
+    assert.equal(r.montants.ttc, 360_000);
+    assert.equal(r.deduits.length, 1);
+    assert.equal(r.deduits[0]!.champ, "lines[0].base_ht");
+    assert.equal(r.deduits[0]!.valeur, "360.000");
+    assert.match(r.deduits[0]!.formule, /taux nul/);
+    // Une valeur déduite n'a jamais la confiance d'une valeur lue.
+    assert.ok(r.confiance < 1);
+  });
+
+  it("une base illisible, une TVA imprimée à zéro et un timbre : base = total − droits", () => {
+    const r = normaliserMontants(
+      { bases: [{ ht: "##", taux: "0" }], tva: "0,000", autres: ["1,000"], ttc: "361,000" },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 360_000);
+    assert.equal(r.montants.tva, 0);
+    assert.equal(r.deduits[0]!.formule.includes("droits"), true);
+  });
+
+  it("une TVA imprimée non nulle contredit le taux nul : rien n'est déduit", () => {
+    const r = normaliserMontants(
+      { bases: [{ ht: null, taux: "0" }], tva: "68,400", ttc: "428,400" },
+      P,
+    );
+    assert.notEqual(r.etat, "tranche");
+    assert.equal(r.montants.bases[0]!.ht, null);
+  });
+
+  it("un taux non nul sans base reste illisible : seul le taux nul prouve", () => {
+    const r = normaliserMontants({ bases: [{ ht: null, taux: TAUX }], ttc: "119,000" }, P);
+    assert.equal(r.etat, "illisible");
+  });
+
+  it("sans total lu, rien ne se déduit", () => {
+    const r = normaliserMontants({ bases: [{ ht: null, taux: "0" }] }, P);
+    assert.equal(r.etat, "illisible");
+  });
+});
+
+/*
+ * La note d'honoraires de MAP (juillet 2026) : HT 400,000, TVA 19 % 76,000,
+ * TTC 476,000, « Retenue à la source 3 % -14,280 », timbre 1,000, « Net à
+ * payer 462,720 ». Le total que la lecture prouve est le net à payer : sans la
+ * retenue dans l'équation, 400 + 76 + 1 = 477 ≠ 462,720, et la facture « ne
+ * tenait pas ».
+ */
+describe("la retenue à la source imprimée sur la facture", () => {
+  const MAP = {
+    bases: [{ ht: "400,000", taux: TAUX }],
+    tva: "76,000",
+    autres: ["1,000"],
+    retenue: "-14,280",
+    ttc: "462,720",
+  };
+
+  it("le net à payer tient : HT + TVA + droits − retenue = net", () => {
+    const r = normaliserMontants(MAP, P);
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 400_000);
+    assert.equal(r.montants.tva, 76_000);
+    assert.deepEqual(r.montants.autres, [1_000]);
+    assert.equal(r.montants.retenue, 14_280);
+    // Ce que la facture doit avant la retenue : l'écriture d'achat ne change pas.
+    assert.equal(r.montants.ttc, 477_000);
+    assert.equal(r.imprime.retenue, "-14,280");
+    assert.deepEqual(r.deduits, []);
+  });
+
+  it("la retenue s'écrit aussi sans signe", () => {
+    const r = normaliserMontants({ ...MAP, retenue: "14,280" }, P);
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.retenue, 14_280);
+  });
+
+  it("une retenue qui ne ferme pas le net : la facture ne tient pas", () => {
+    const r = normaliserMontants({ ...MAP, retenue: "-14,000" }, P);
+    assert.equal(r.etat, "incoherent");
+    assert.equal(r.montants.retenue, null);
+  });
+
+  it("sans retenue, rien ne change : montants.retenue est nul", () => {
+    const r = normaliserMontants(
+      { bases: [{ ht: "400,000", taux: TAUX }], tva: "76,000", autres: ["1,000"], ttc: "477,000" },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.retenue, null);
+    assert.equal(r.montants.ttc, 477_000);
+  });
+});

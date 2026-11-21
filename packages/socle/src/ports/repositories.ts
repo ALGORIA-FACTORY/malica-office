@@ -1416,6 +1416,12 @@ export interface PieceDossier {
   /** Les décimales de la devise de la pièce au référentiel (R4) ; `null` si elle n'y est pas. */
   decimalesDeLaPiece: number | null;
   /**
+   * La base qu'un code de TVA à taux nul prouve (TTC − droits) quand la base
+   * SAISIE ne fait pas tenir la facture : l'écran la propose en un geste.
+   * `null` sinon.
+   */
+  baseProposee: string | null;
+  /**
    * La pièce se lit dans l'ARCHIVE d'une comptabilité dont le mandat a pris fin
    * (`mandatClosLe`, AAAA-MM-JJ) : lecture seule, aucun geste. `null` partout
    * ailleurs — y compris chez la même comptabilité, mandatée de nouveau.
@@ -4191,6 +4197,11 @@ export type PropositionDeReglement =
       tauxDisponibles: TauxDeRetenue[];
       ttc: string | null;
       paye: string;
+      /**
+       * La retenue que la facture imprime, reconnue à un taux du référentiel :
+       * l'écran du comptable la pré-remplit, il la qualifie toujours.
+       */
+      retenueLue: { code: string; assiette: string; montant: string } | null;
       retenue:
         | { cas: "a_confirmer" }
         | {
