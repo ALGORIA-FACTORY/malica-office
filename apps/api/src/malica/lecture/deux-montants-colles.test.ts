@@ -373,3 +373,55 @@ describe("la garde de vraisemblance — une TVA ne dépasse jamais sa base", () 
     );
   });
 });
+
+describe("la note d'honoraires à retenue imprimée — le total des lignes aussi (revue Codex de #416)", () => {
+  /*
+   * MAP : base 400,000, TVA 76,000, TTC de la ligne 476,000, timbre 1,000,
+   * retenue -14,280, net à payer 462,720. La contrainte du pied rajoutait la
+   * retenue ; celle qui somme les TTC des lignes ne la portait pas, et
+   * demandait 476 + 1 = 477 au net imprimé : ARITHMETIQUE_INCOHERENTE sur une
+   * lecture juste.
+   */
+  const NOTE: PageToken[] = [
+    jeton(0, "400,000", 1, 0.6),
+    jeton(1, "76,000", 2, 0.6),
+    jeton(2, "476,000", 3, 0.6),
+    jeton(3, "Total HT", 0, 0.66),
+    jeton(4, "400,000", 2, 0.66),
+    jeton(5, "TVA", 0, 0.69),
+    jeton(6, "76,000", 2, 0.69),
+    jeton(7, "Retenue", 0, 0.72),
+    jeton(8, "-14,280", 2, 0.72),
+    jeton(9, "Timbre", 0, 0.75),
+    jeton(10, "1,000", 2, 0.75),
+    jeton(11, "Net à payer", 0, 0.78),
+    jeton(12, "462,720", 2, 0.78),
+  ];
+  const lu = buildExtractFromTokenPlan({
+    tokens: NOTE,
+    selection: {
+      issuer: null,
+      document_date: null,
+      currency: "TND",
+      document_kind: "facture_achat",
+      lines: [
+        { label: "TVA 19%", tax_code: "TVA_19", base_ht: ref(0), vat_amount: ref(1), ttc: ref(2) },
+      ],
+      articles: [],
+      other_charges: [{ label: "Timbre", amount: ref(10) }],
+      references: {},
+      overall_confidence: 0.5,
+      totals: { base_ht: ref(4), vat: ref(6), ttc: ref(12), withholding: ref(8) },
+    } as unknown as VisionSelection,
+    ...devisesDEssai(DINAR),
+    matriculeDossier: null,
+  });
+
+  it("aucune incohérence arithmétique n'est signalée", () => {
+    const faux = lu.flags.filter((f) => f.code === "ARITHMETIQUE_INCOHERENTE");
+    assert.deepEqual(
+      faux.map((f) => `${f.field} : ${f.detail}`),
+      [],
+    );
+  });
+});

@@ -219,6 +219,18 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
     );
   });
 
+  it("après un acompte, le solde paie encore le net : la retenue reste due (revue Codex de #416)", async () => {
+    // 100,000 en espèces d'abord, sans retenue qualifiée : le solde est
+    // 477,000 − 100,000 − 14,280 = 362,720, pas 377,000.
+    const id = await piece("retenue-acompte", "477.000", "462.720", "14.280");
+    await regler(id, "especes", 100_000);
+    await regler(id, "virement", null);
+    assert.deepEqual(
+      (await vivants(id)).map((l) => l.montantMineur),
+      [100_000, 362_720],
+    );
+  });
+
   it("le TTC qui fait foi est celui de l'analyse, pas le brut du solveur", async () => {
     const id = await piece("solveur", "100.000", "9999.999");
     await regler(id, "especes", null);

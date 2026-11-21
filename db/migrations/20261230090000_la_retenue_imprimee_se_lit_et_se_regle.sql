@@ -22,7 +22,7 @@
 --      règlement par le comptable, que l'écran pré-remplit.
 --
 -- Corps de `capture.un_reglement_dit_vrai` repris de 20261229120000 (clés `refus.paiement.*`) ; seul le montant
--- d'un règlement complet change. SECURITY DEFINER et propriétaire gardés.
+-- d'un règlement sans montant (le solde) change. SECURITY DEFINER et propriétaire gardés.
 --
 -- R4 : aucun taux ici — le taux se reconnaît au référentiel (`ref.retenues_au_reglement`).
 -- REJEU (R11) : aucune horloge n'écrit dans `ref`.
@@ -84,6 +84,7 @@ as $function$
 declare
   v_ttc  bigint;
   v_paye bigint;
+  v_retenue_eteinte bigint;
   v_courante uuid;
   v_versions uuid[];
 begin
@@ -144,10 +145,23 @@ begin
     if v_ttc is null then
       raise exception 'refus.paiement.montant_requis' using errcode = 'check_violation';
     end if;
-    -- Un premier règlement complet paie le NET : la retenue que la facture
-    -- imprime et déduit reste au comptable, qui la qualifie au règlement.
+    -- Le solde paie le NET : la retenue que la facture imprime et déduit
+    -- reste au comptable, qui la qualifie au règlement. Ce qu'un règlement
+    -- déjà qualifié en a éteint (sa dette éteinte au-delà de son montant) ne
+    -- se retranche plus ; un acompte non qualifié laisse la retenue entière
+    -- (revue Codex de #416 : 100,000 puis le solde rendait 377,000 au lieu de
+    -- 362,720).
+    select coalesce(sum(greatest(
+             round(app.dette_eteinte(p.id) * power(10, d.exposant))::bigint - p.montant_mineur, 0)), 0)
+      into v_retenue_eteinte
+      from capture.paiements p
+      join ref.devises d on d.code = p.devise
+     where p.piece_id = any (v_versions) and p.annule_paiement_id is null
+       and p.moyen_code <> 'non_paye' and p.montant_mineur is not null
+       and app.dette_eteinte(p.id) is not null
+       and not exists (select 1 from capture.paiements a where a.annule_paiement_id = p.id);
     new.montant_mineur := v_ttc - v_paye
-      - case when v_paye = 0 then coalesce(capture.retenue_lue_mineur(v_courante), 0) else 0 end;
+      - greatest(coalesce(capture.retenue_lue_mineur(v_courante), 0) - v_retenue_eteinte, 0);
     if new.montant_mineur <= 0 then
       raise exception 'refus.paiement.deja_solde' using errcode = 'check_violation';
     end if;

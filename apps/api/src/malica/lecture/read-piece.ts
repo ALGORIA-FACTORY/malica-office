@@ -242,8 +242,9 @@ export function buildExtractFromTokenPlan(params: {
         parties: [
           ...selection.lines.map((_, i) => `lines[${i}].${champ}`),
           // Même raison que ci-dessus : le TTC du pied porte les droits hors
-          // TVA, que les lignes par taux, elles, ne portent pas.
-          ...(champ === "ttc" ? droits : []),
+          // TVA, que les lignes par taux, elles, ne portent pas — et, quand la
+          // facture la déduit, la retenue (le total désigné est alors le net).
+          ...(champ === "ttc" ? [...droits, ...retenue] : []),
         ],
       });
     }
