@@ -428,8 +428,14 @@ describe("l'intégrité de la base", { skip: !BASE_CONFIGUREE }, () => {
         continue;
       }
       if (message.startsWith("refus.")) continue;
-      // Une clé du dictionnaire, dite dans les trois langues, se traduit à l'écran.
-      if (/^[a-z_]+(\.[a-z0-9_]+)+$/.test(message) && languesSans(message).length === 0) continue;
+      /*
+       * Une clé du dictionnaire qui ne commence pas par `refus.` n'est PAS dite
+       * à l'écran : la frontière ne reconnaît que `refus.*` et rend
+       * `refus.inattendu` pour tout le reste. Ce relevé l'acceptait (« elle se
+       * traduit à l'écran ») ; c'était faux, et treize refus du règlement
+       * (`paiement.*`) sont restés tus jusqu'au pilote (21 novembre 2026). Une
+       * telle clé tombe donc dans le relevé ci-dessous, comme une phrase brute.
+       */
       const nom = /errcode\s*=\s*'([0-9A-Za-z_]+)'/i.exec(stmt)?.[1] ?? "raise_exception";
       const code = /^[0-9A-Z]{5}$/.test(nom) ? nom : SQLSTATE[nom];
       if (!code) {

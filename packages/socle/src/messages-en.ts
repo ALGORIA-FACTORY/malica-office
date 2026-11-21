@@ -4348,29 +4348,30 @@ export const en: Dict = {
   "pme.payer.indisponible": "Not available here",
   "pme.payer.securise": "Secure payment by {prestataire}",
   "pme.payer.rienARegler": "This payment is no longer due.",
-  "paiement.moyen_indisponible": "This payment method is not available.",
+  "refus.paiement.moyen_indisponible": "This payment method is not available.",
   "pme.reglages.paiement.facture": "Invoice {numero}",
   "pme.reglages.factures.titre": "Your invoices",
   "pme.reglages.factures.reste": "Left to pay: {montant} {devise} incl. VAT",
   "pme.reglages.factures.etat.a_echoir": "Not yet due",
   "pme.reglages.factures.etat.en_retard": "Overdue",
-  "paiement.facture_rien_a_regler": "Nothing is left to pay on this invoice.",
-  "paiement.depasse_le_total": "This payment is more than what remains to be paid on the invoice.",
-  "paiement.montant_positif": "A payment amount must be greater than zero.",
-  "paiement.montant_requis": "The invoice total has not been read: enter the amount paid.",
-  "paiement.deja_solde": "This invoice is already fully paid.",
-  "paiement.date_future":
+  "refus.paiement.facture_rien_a_regler": "Nothing is left to pay on this invoice.",
+  "refus.paiement.depasse_le_total":
+    "This payment is more than what remains to be paid on the invoice.",
+  "refus.paiement.montant_positif": "A payment amount must be greater than zero.",
+  "refus.paiement.montant_requis": "The invoice total has not been read: enter the amount paid.",
+  "refus.paiement.deja_solde": "This invoice is already fully paid.",
+  "refus.paiement.date_future":
     'A payment cannot be dated in the future. If it is planned, choose "Not paid yet".',
-  "paiement.en_double": "This payment was just recorded: it counts only once.",
-  "paiement.deja_regle":
+  "refus.paiement.en_double": "This payment was just recorded: it counts only once.",
+  "refus.paiement.deja_regle":
     'A payment is already recorded: correct it rather than adding "Not paid yet".',
-  "paiement.deja_non_paye": '"Not paid yet" is already recorded.',
-  "paiement.non_paye_ne_se_corrige_pas":
+  "refus.paiement.deja_non_paye": '"Not paid yet" is already recorded.',
+  "refus.paiement.non_paye_ne_se_corrige_pas":
     '"Not paid yet" is not corrected: remove it or add a payment.',
-  "paiement.motif_qui_retire": "This reason removes the payment: nothing replaces it.",
-  "paiement.montant_perime":
+  "refus.paiement.motif_qui_retire": "This reason removes the payment: nothing replaces it.",
+  "refus.paiement.montant_perime":
     "The amount due has changed since: start the payment again from your invoices.",
-  "paiement.prestataire_du_lien":
+  "refus.paiement.prestataire_du_lien":
     "This payment was opened with another provider: it is checked there.",
   "pme.reglages.offres.aRegler": "Done: you are now on {offre}. Pay the month's difference below.",
   "pme.reglages.recharges.aRegler": "Top-up added: its reads are already there. Pay for it below.",
@@ -4719,6 +4720,9 @@ export const en: Dict = {
   "pme.capture.fin.gardees": "{count} kept for you",
   "pme.capture.fin.gardees#one": "{count} kept for you",
   "pme.capture.fin.gardees#other": "{count} kept for you",
+  "pme.capture.fin.surSaFiche": "{count} to settle from their page",
+  "pme.capture.fin.surSaFiche#one": "{count} to settle from its page",
+  "pme.capture.fin.surSaFiche#other": "{count} to settle from their page",
   "pme.capture.fin.reglePar": "Paid by {moyen}",
   "pme.capture.fin.reglePar.talon": "Paid by {moyen} — stub expected",
   "pme.capture.fin.moyenADire": "Means of payment still to be told — each document keeps it open",

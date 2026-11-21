@@ -515,7 +515,7 @@ export function CommentCEstPaye({
    * reste vaut zéro sans qu'aucun règlement n'existe. « J'ai tout payé »
    * n'avait alors rien à inscrire et « Enregistrer » restait gris sans un mot ;
    * « Une partie seulement » annonçait un plafond de zéro et laissait partir un
-   * montant que la base refuse (`paiement.depasse_le_total`). La feuille dit
+   * montant que la base refuse (`refus.paiement.depasse_le_total`). La feuille dit
    * donc qu'il n'y a rien à régler, et un montant au-dessus du plafond ne part
    * plus.
    */
