@@ -21,7 +21,7 @@
 --      fournisseur reste crédité du TTC, timbre compris) ; la retenue se qualifie au
 --      règlement par le comptable, que l'écran pré-remplit.
 --
--- Corps de `capture.un_reglement_dit_vrai` repris de 20261111100000 ; seul le montant
+-- Corps de `capture.un_reglement_dit_vrai` repris de 20261229120000 (clés `refus.paiement.*`) ; seul le montant
 -- d'un règlement complet change. SECURITY DEFINER et propriétaire gardés.
 --
 -- R4 : aucun taux ici — le taux se reconnaît au référentiel (`ref.retenues_au_reglement`).
@@ -123,13 +123,13 @@ begin
                 where p.piece_id = any (v_versions) and p.annule_paiement_id is null
                   and p.moyen_code <> 'non_paye'
                   and not exists (select 1 from capture.paiements a where a.annule_paiement_id = p.id)) then
-      raise exception 'paiement.deja_regle' using errcode = 'check_violation';
+      raise exception 'refus.paiement.deja_regle' using errcode = 'check_violation';
     end if;
     if exists (select 1 from capture.paiements p
                 where p.piece_id = any (v_versions) and p.annule_paiement_id is null
                   and p.moyen_code = 'non_paye'
                   and not exists (select 1 from capture.paiements a where a.annule_paiement_id = p.id)) then
-      raise exception 'paiement.deja_non_paye' using errcode = 'check_violation';
+      raise exception 'refus.paiement.deja_non_paye' using errcode = 'check_violation';
     end if;
     new.montant_mineur := null;
     new.paye_le := null;
@@ -142,30 +142,30 @@ begin
 
   if new.montant_mineur is null then
     if v_ttc is null then
-      raise exception 'paiement.montant_requis' using errcode = 'check_violation';
+      raise exception 'refus.paiement.montant_requis' using errcode = 'check_violation';
     end if;
     -- Un premier règlement complet paie le NET : la retenue que la facture
     -- imprime et déduit reste au comptable, qui la qualifie au règlement.
     new.montant_mineur := v_ttc - v_paye
       - case when v_paye = 0 then coalesce(capture.retenue_lue_mineur(v_courante), 0) else 0 end;
     if new.montant_mineur <= 0 then
-      raise exception 'paiement.deja_solde' using errcode = 'check_violation';
+      raise exception 'refus.paiement.deja_solde' using errcode = 'check_violation';
     end if;
   end if;
 
   if new.montant_mineur <= 0 then
-    raise exception 'paiement.montant_positif' using errcode = 'check_violation';
+    raise exception 'refus.paiement.montant_positif' using errcode = 'check_violation';
   end if;
 
   if v_ttc is not null and v_paye + new.montant_mineur > v_ttc then
-    raise exception 'paiement.depasse_le_total' using errcode = 'check_violation';
+    raise exception 'refus.paiement.depasse_le_total' using errcode = 'check_violation';
   end if;
 
   if new.paye_le is null then
     new.paye_le := current_date;
   end if;
   if new.paye_le > current_date + 1 then
-    raise exception 'paiement.date_future' using errcode = 'check_violation';
+    raise exception 'refus.paiement.date_future' using errcode = 'check_violation';
   end if;
 
   if exists (select 1 from capture.paiements p
@@ -175,7 +175,7 @@ begin
                 and p.paye_le is not distinct from new.paye_le
                 and p.created_at > now() - interval '10 seconds'
                 and not exists (select 1 from capture.paiements a where a.annule_paiement_id = p.id)) then
-    raise exception 'paiement.en_double' using errcode = 'check_violation';
+    raise exception 'refus.paiement.en_double' using errcode = 'check_violation';
   end if;
 
   return new;
