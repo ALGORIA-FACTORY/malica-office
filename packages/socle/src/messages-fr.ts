@@ -634,6 +634,7 @@ export const fr = {
   "pme.piece.retour": "Vos documents",
   "pme.piece.voir": "Voir la facture",
   "pme.detail.voir": "Voir le détail",
+  "pme.crayon.baseProposee": "Base = {montant} ?",
   "pme.detail.titre": "Ce que j'ai lu, ligne par ligne",
   "pme.detail.lignesAVerifier": "Lignes lues, à vérifier",
   "pme.detail.lignesAVerifierAide":

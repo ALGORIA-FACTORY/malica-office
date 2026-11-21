@@ -17,6 +17,7 @@ export const frBibliotheque = {
   "cab.retenue.vatSettled": "TVA de cette part",
   "cab.retenue.taxEvidence": "Certificat ou justification fiscale",
   "cab.retenue.preview": "Vérifier l’écriture",
+  "cab.retenue.lueSurLaFacture": "Lue sur la facture : {montant}",
   "cab.retenue.declarer": "Déclarer une retenue",
   "cab.retenue.edit": "Modifier le traitement",
   "cab.retenue.unconfirmed": "Traitement fiscal non tracé sur cette écriture : à vérifier.",

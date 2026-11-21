@@ -100,6 +100,12 @@ export interface ChampsDeLaGrille {
   readonly base: string | null;
   readonly tva: string | null;
   readonly ttc: readonly { readonly variante: string | null; readonly champ: string }[];
+  /**
+   * La retenue à la source déduite du total au rôle `ttc` (attribut `retenue`
+   * de la preuve `somme`, M04) : quand elle est imprimée, ce total est le net
+   * à payer qu'elle laisse.
+   */
+  readonly retenue: readonly { readonly variante: string | null; readonly champ: string }[];
   /** Le champ du montant en lettres (preuve `lettres`), s'il y en a une. */
   readonly lettres: string | null;
   /** Clé de la sortie du moteur (`quantite`, `prix`…) → code du champ de la grille. */
@@ -117,6 +123,10 @@ export function champsDeLaGrille(grille: Grille): ChampsDeLaGrille {
     lettres: nomDuChamp(preuves.find((x) => x.e["op"] === "lettres")?.e["champ"]),
     ttc: preuves.flatMap(({ p, e }) => {
       const champ = e["op"] === "somme" && e["role"] === "ttc" ? nomDuChamp(e["total"]) : null;
+      return champ ? [{ variante: p.variante ?? null, champ }] : [];
+    }),
+    retenue: preuves.flatMap(({ p, e }) => {
+      const champ = e["op"] === "somme" && e["role"] === "ttc" ? nomDuChamp(e["retenue"]) : null;
       return champ ? [{ variante: p.variante ?? null, champ }] : [];
     }),
     lignes: Object.fromEntries(
@@ -936,6 +946,16 @@ export function selectionParLeSudoku(
    * que l'aval relise ce que la pièce imprime — des mots, pas un nombre — et que
    * le contrôle le dise (« le total en chiffres ne se lit pas »).
    */
+  /*
+   * La retenue à la source que la variante prouvée déduit de son total
+   * (21 novembre 2026, note d'honoraires de MAP : 476 + 1 − 14,280 = 462,720).
+   * Sans elle, la chaîne recevait le net à payer comme TTC, et HT + TVA +
+   * droits ne le faisaient jamais : la facture « ne tenait pas ».
+   */
+  const retenue = roles.retenue
+    .filter((t) => t.variante === null || t.variante === sortie.variante)
+    .map((t) => c[t.champ])
+    .find((lu) => lu?.statut === "prouve" && lu.refs.length > 0 && lu.valeur !== "0");
   const lettres = roles.lettres ? c[roles.lettres] : undefined;
   const ttc =
     ttcProuve && sortie.par_lettres === ttcProuve.champ
@@ -953,6 +973,7 @@ export function selectionParLeSudoku(
       base_ht: roles.ht ? ref(c[roles.ht]?.refs) : null,
       vat: montants.length === 1 ? ref(montants[0]!.refs) : selection.totals.vat,
       ttc,
+      ...(retenue ? { withholding: ref(retenue.refs) } : {}),
     },
   };
 }

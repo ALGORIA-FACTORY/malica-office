@@ -123,7 +123,10 @@ function monter() {
   );
 }
 
-const reglement = (retenue: unknown): PropositionDeReglement =>
+const reglement = (
+  retenue: unknown,
+  retenueLue: { code: string; assiette: string; montant: string } | null = null,
+): PropositionDeReglement =>
   ({
     ok: true,
     inscrite: null,
@@ -140,6 +143,7 @@ const reglement = (retenue: unknown): PropositionDeReglement =>
     ttc: "1234.500",
     paye: "1215.988",
     retenue,
+    retenueLue,
   }) as PropositionDeReglement;
 
 beforeEach(() => {
@@ -235,6 +239,24 @@ describe("revue d'une pièce", () => {
           justification: "Attestation d'exonération 118",
         }),
       );
+    });
+
+    it("la retenue imprimée sur la facture ouvre la qualification, pré-remplie", async () => {
+      // La note d'honoraires de MAP : la retenue lue et reconnue au référentiel.
+      api.reglement.mockResolvedValue(
+        reglement({ cas: "sans_objet" }, { code: "RAS", assiette: "1234.500", montant: "18.512" }),
+      );
+      monter();
+      const retenue = (await screen.findByRole("combobox", {
+        name: "cab.retenue.withholding",
+      })) as HTMLSelectElement;
+      await waitFor(() => expect(retenue.value).toBe("RAS"));
+      expect(screen.getByText("cab.retenue.lueSurLaFacture")).toBeTruthy();
+      expect((screen.getByLabelText("cab.retenue.irBase") as HTMLInputElement).value).toBe(
+        "1234.500",
+      );
+      // Une proposition, pas une qualification : rien n'est envoyé sans le comptable.
+      expect(api.reglement).not.toHaveBeenCalledWith("paiement", expect.anything());
     });
 
     it("sous le seuil, le comptable peut quand même déclarer une retenue", async () => {
