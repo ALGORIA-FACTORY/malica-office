@@ -109,6 +109,7 @@ export function buildExtractFromTokenPlan(params: {
     selection.totals.base_ht,
     selection.totals.vat,
     selection.totals.ttc,
+    selection.totals.withholding,
     ...selection.articles.flatMap((a) => [
       a.quantity,
       a.unit_price_ht,
@@ -154,6 +155,10 @@ export function buildExtractFromTokenPlan(params: {
   relever("totals.base_ht", selection.totals.base_ht);
   relever("totals.vat", selection.totals.vat);
   relever("totals.ttc", selection.totals.ttc);
+  // La retenue déduite sur la facture : le total désigné est alors le net à
+  // payer, et elle entre dans son équation, imprimée en négatif.
+  const retenue = selection.totals.withholding ? ["totals.withholding"] : [];
+  if (selection.totals.withholding) relever("totals.withholding", selection.totals.withholding);
   selection.articles.forEach((a, j) => {
     relever(`articles[${j}].quantity`, a.quantity);
     relever(`articles[${j}].unit_price_ht`, a.unit_price_ht);
@@ -212,7 +217,11 @@ export function buildExtractFromTokenPlan(params: {
   // de timbre, donc presque toute facture tunisienne violait cette contrainte.
   const droits = selection.other_charges.map((_, k) => `other_charges[${k}].amount`);
   const contraintes: Contrainte[] = [
-    { type: "somme", total: "totals.ttc", parties: ["totals.base_ht", "totals.vat", ...droits] },
+    {
+      type: "somme",
+      total: "totals.ttc",
+      parties: ["totals.base_ht", "totals.vat", ...droits, ...retenue],
+    },
   ];
   selection.lines.forEach((_, i) =>
     contraintes.push({
@@ -368,6 +377,9 @@ export function buildExtractFromTokenPlan(params: {
   const totalBase = montant("totals.base_ht", selection.totals.base_ht, "totaux", "piece.total.ht");
   let totalVat = montant("totals.vat", selection.totals.vat, "totaux", "piece.total.tva");
   const totalTtc = montant("totals.ttc", selection.totals.ttc, "totaux", "piece.total.ttc");
+  const totalRetenue = selection.totals.withholding
+    ? montant("totals.withholding", selection.totals.withholding, "totaux", "piece.total.retenue")
+    : null;
 
   /*
    * ======================== LA TVA D'UNE FACTURE À PLUSIEURS TAUX (recette du 11 novembre 2026)
@@ -608,9 +620,12 @@ export function buildExtractFromTokenPlan(params: {
     const texte = texteDuMontantCite(tokens, selection.totals.ttc);
     const mots = texte ? texte.split(/\s+/u).filter((m) => m.length > 0) : [];
     const lu = mots.length > 0 ? lireLeMontantEnLettres(mots, regles.lettres) : null;
+    // La retenue lue s'y ajoute avec son signe : imprimée en négatif, elle retranche.
     const somme = otherCharges.reduce(
       (s, c) => s.plus(D(c["amount"]!)),
-      D(totalBase).plus(D(totalVat)),
+      D(totalBase)
+        .plus(D(totalVat))
+        .plus(D(totalRetenue ?? 0)),
     );
     if (lu && lu.devise === devise.code && lu.mots > 0) {
       const unite = 10 ** decimals;
@@ -640,6 +655,7 @@ export function buildExtractFromTokenPlan(params: {
       base_ht: totalBase ?? null,
       vat: totalVat ?? null,
       ttc: ttcRetenu ?? null,
+      ...(totalRetenue !== null ? { withholding: totalRetenue } : {}),
     },
     references,
     // La confiance globale du désignateur, sous une clé stable : c'est

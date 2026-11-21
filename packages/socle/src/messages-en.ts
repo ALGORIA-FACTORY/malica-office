@@ -595,6 +595,7 @@ export const en: Dict = {
   "pme.piece.retour": "Your documents",
   "pme.piece.voir": "View the invoice",
   "pme.detail.voir": "View the detail",
+  "pme.crayon.baseProposee": "Base = {montant}?",
   "pme.detail.titre": "What I read, line by line",
   "pme.detail.lignesAVerifier": "Lines read, to check",
   "pme.detail.lignesAVerifierAide":

@@ -50,7 +50,12 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
   };
 
   /** Une pièce, lue avec ce TTC (ou sans total lu). */
-  async function piece(cle: string, ttc: string | null, ttcDuSolveur: string | null = ttc) {
+  async function piece(
+    cle: string,
+    ttc: string | null,
+    ttcDuSolveur: string | null = ttc,
+    retenue: string | null = null,
+  ) {
     const p = (await rpc("capture", "enregistrer", {
       tenantId: org,
       source: "photo",
@@ -85,7 +90,13 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
             p.id,
             rows[0]!.id,
             packId,
-            JSON.stringify({ etat: "tranche", montants: { ttc: Math.round(Number(ttc) * 1000) } }),
+            JSON.stringify({
+              etat: "tranche",
+              montants: {
+                ttc: Math.round(Number(ttc) * 1000),
+                ...(retenue === null ? {} : { retenue: Math.round(Number(retenue) * 1000) }),
+              },
+            }),
           ],
         );
     });
@@ -184,6 +195,17 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
     );
     const sansTotal = await piece("sans-total", null);
     await assert.rejects(() => regler(sansTotal, "especes", null), /paiement\.montant_requis/);
+  });
+
+  it("la retenue imprimée sur la facture : le règlement complet paie le net", async () => {
+    // Note d'honoraires de MAP : 477,000 dus (timbre compris), 14,280 retenus,
+    // 462,720 versés. Le reste se qualifie au règlement, par le comptable.
+    const id = await piece("retenue", "477.000", "462.720", "14.280");
+    await regler(id, "virement", null);
+    assert.deepEqual(
+      (await vivants(id)).map((l) => l.montantMineur),
+      [462_720],
+    );
   });
 
   it("le TTC qui fait foi est celui de l'analyse, pas le brut du solveur", async () => {

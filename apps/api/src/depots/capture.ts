@@ -880,7 +880,8 @@ export const capture = {
       // Ce que le dernier jugement de la dernière lecture a VÉRIFIÉ : un champ
       // que l'arithmétique prouve se dit « prouvé par le calcul », pas « lu ».
       db.query(
-        `select a.normalisation ->> 'etat' as etat, a.normalisation -> 'fermes' as fermes
+        `select a.normalisation ->> 'etat' as etat, a.normalisation -> 'fermes' as fermes,
+                a.normalisation ->> 'baseProposee' as base_proposee
            from capture.analyses a
            join lateral (select id from capture.extractions x
                           where x.piece_id = a.piece_id order by x.created_at desc limit 1) e
@@ -971,6 +972,10 @@ export const capture = {
         Array.isArray((juge as Record<string, unknown>[])[0]?.["fermes"])
           ? ((juge as Record<string, unknown>[])[0]!["fermes"] as string[])
           : [],
+      // La base qu'un taux nul prouverait sans la saisie qui ne tient pas : un geste la prend.
+      baseProposee:
+        ((juge as Record<string, unknown>[])[0]?.["base_proposee"] as string | null | undefined) ??
+        null,
       decimalesDeLaPiece:
         (exposant as Record<string, unknown>[])[0]?.["exposant"] === undefined
           ? null
