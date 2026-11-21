@@ -385,6 +385,8 @@ function PmeCapturer() {
   const [moyen, setMoyen] = useState<string | null>(null);
   const [reference, setReference] = useState("");
   const [paye, setPaye] = useState(false);
+  /** Les pièces du lot dont le total n'est pas prouvé : elles se règlent sur leur fiche. */
+  const [aReglerSurLaFiche, setAReglerSurLaFiche] = useState(0);
   const [transmis, setTransmis] = useState<boolean | null>(null);
   /**
    * Ce qui est parti, et ce qui est resté — l'écran « Envoyé » les dit
@@ -704,15 +706,24 @@ function PmeCapturer() {
       if (!pme.packId || !moyen) throw new Error(t("common.error"));
       /*
        * Sans total lu, la base refuse un règlement sans montant
-       * (`paiement.montant_requis`) : on ne devine pas. Ces pièces se règlent
+       * (`refus.paiement.montant_requis`) : on ne devine pas. Ces pièces se règlent
        * sur leur fiche, où le montant se dit.
        */
       /*
        * Chaque règlement est sa propre transaction : si le lot échoue en
        * route, les premiers restent inscrits. Rejouer le lot doit finir le
-       * travail — une pièce déjà soldée (`paiement.deja_solde`) est sautée,
+       * travail — une pièce déjà soldée (`refus.paiement.deja_solde`) est sautée,
        * pas une raison de s'arrêter avant les suivantes.
        */
+      /*
+       * 21 novembre 2026, au pilote : l'écran voyait un total, la base n'en
+       * retient que de PROUVÉS (`capture.ttc_mineur`) — la note d'honoraires
+       * dont la retenue à la source ne tombait pas juste n'en avait pas. Son
+       * refus (`refus.paiement.montant_requis`) arrêtait tout le lot. « Rien ne
+       * bloque » : elle est mise de côté, les autres passent, et l'écran dit
+       * combien restent à régler sur leur fiche.
+       */
+      let surLaFiche = 0;
       for (const p of lues.filter((x) => x.total !== null)) {
         try {
           await office().capture.enregistrerPaiement({
@@ -723,12 +734,19 @@ function PmeCapturer() {
             reference: reference.trim() === "" ? null : reference.trim(),
           });
         } catch (e) {
-          if (!(vientDeNous(e) && e.message === "paiement.deja_solde")) throw e;
+          if (vientDeNous(e) && e.message === "refus.paiement.deja_solde") continue;
+          if (vientDeNous(e) && e.message === "refus.paiement.montant_requis") {
+            surLaFiche += 1;
+            continue;
+          }
+          throw e;
         }
       }
+      return surLaFiche + lues.filter((x) => x.total === null).length;
     },
-    onSuccess: async () => {
+    onSuccess: async (surLaFiche) => {
       setErreur(null);
+      setAReglerSurLaFiche(surLaFiche);
       setPaye(true);
       await qc.invalidateQueries({ queryKey: clePiecesLues(pme.tenantId) });
       setEtape(8);
@@ -956,6 +974,7 @@ function PmeCapturer() {
     setMoyen(null);
     setReference("");
     setPaye(false);
+    setAReglerSurLaFiche(0);
     setPayeOui(false);
     setTransmis(null);
     setEnvoiDuLot(null);
@@ -1950,6 +1969,9 @@ function PmeCapturer() {
               ) : (
                 <Fin am>{t("pme.capture.fin.moyenADire")}</Fin>
               )}
+              {paye && aReglerSurLaFiche > 0 ? (
+                <Fin am>{t("pme.capture.fin.surSaFiche", { count: aReglerSurLaFiche })}</Fin>
+              ) : null}
               {aRepondre.length > 0 ? (
                 <Fin am>{t("pme.capture.fin.questions", { count: aRepondre.length })}</Fin>
               ) : null}

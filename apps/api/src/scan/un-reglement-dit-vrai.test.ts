@@ -18,6 +18,7 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
+import { refusLisible } from "../refus.ts";
 import { executerRpc } from "../rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -183,7 +184,17 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
       [100_000, 513_493],
     );
     const sansTotal = await piece("sans-total", null);
-    await assert.rejects(() => regler(sansTotal, "especes", null), /paiement\.montant_requis/);
+    /*
+     * Le refus doit franchir la FRONTIÈRE (`refus.ts`), pas seulement sortir de
+     * la base : levé `paiement.montant_requis`, il devenait `refus.inattendu`
+     * (« Ce geste n'a pas abouti »), et le règlement groupé, qui le reconnaît,
+     * s'arrêtait — pilote, 21 novembre 2026. La seule expression régulière ne
+     * le voyait pas : elle trouvait la clé dans les deux formes.
+     */
+    await assert.rejects(
+      () => regler(sansTotal, "especes", null),
+      (e: unknown) => refusLisible(e) === "refus.paiement.montant_requis",
+    );
   });
 
   it("le TTC qui fait foi est celui de l'analyse, pas le brut du solveur", async () => {

@@ -222,7 +222,7 @@ const ANNEE = AUJOURDHUI.getUTCFullYear();
 /*
  * Aucune date du jeu ne tombe après aujourd'hui. Le 1er novembre 2026, une
  * facture datée du 3 et réglée six jours plus tard était un règlement FUTUR,
- * que la base refuse (`paiement.date_future`) : le jeu échouait chaque mois,
+ * que la base refuse (`refus.paiement.date_future`) : le jeu échouait chaque mois,
  * du 1er jusque vers le 18. Une date du mois qui n'est pas encore venue
  * devient aujourd'hui.
  */
