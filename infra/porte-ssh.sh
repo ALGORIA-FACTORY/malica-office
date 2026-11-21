@@ -1,15 +1,27 @@
 #!/usr/bin/env bash
-# La porte SSH de la CI : la clé de déploiement ne sait faire que deux choses.
+# La porte SSH de la CI : la clé de déploiement ne sait faire que trois choses.
 #
 # Dans ~malica/.ssh/authorized_keys, la clé publique de la CI est préfixée :
 #   command="/srv/malica/depot/infra/porte-ssh.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA…
 #
 # sshd lance alors ce script à la place de ce que le client demande, et lui
-# passe la demande dans SSH_ORIGINAL_COMMAND. Deux formes passent ; tout le
+# passe la demande dans SSH_ORIGINAL_COMMAND. Trois formes passent ; tout le
 # reste — un shell, une copie, un tunnel — est refusé.
 #
 #   deposer <version>    l'entrée standard porte un paquet git (bundle)
 #   deployer <version>   l'entrée standard porte, ou non, un jeton de registre
+#   journal <réf>[,<réf>…]  relit, en lecture seule, les pannes que l'écran a
+#                        citées (« réf. 28AE8D15 ») : huit chiffres hexadécimaux
+#                        chacune, vingt au plus. Rien d'autre ne s'y glisse.
+#
+# ================================================= POURQUOI « JOURNAL » EXISTE
+#
+# 21 novembre 2026. Cinq pannes sur la fiche d'une pièce, au pilote ; l'écran
+# donne une référence, le détail (la pile, le refus) est dans
+# audit.journal_client. Le port SSH du pilote n'est ouvert qu'à la CI : sans
+# cette commande, personne ne pouvait lire la panne sans ouvrir un shell. La
+# référence est contrôlée ICI, avant même d'appeler le déployeur, puis une
+# seconde fois derrière.
 #
 # ================================================ POURQUOI « DEPOSER » EXISTE
 #
@@ -36,8 +48,16 @@ deposer\ *)
 deployer\ *)
   exec "${DEPLOYEUR:-/srv/malica/depot/infra/deployer.sh}" "${SSH_ORIGINAL_COMMAND#deployer }"
   ;;
+journal\ *)
+  refs="${SSH_ORIGINAL_COMMAND#journal }"
+  [[ "$refs" =~ ^[0-9A-F]{8}(,[0-9A-F]{8}){0,19}$ ]] || {
+    echo "refusé : « journal » attend une à vingt références de huit chiffres hexadécimaux, séparées par des virgules" >&2
+    exit 1
+  }
+  exec "${DEPLOYEUR:-/srv/malica/depot/infra/deployer.sh}" --journal "$refs"
+  ;;
 *)
-  echo "refusé : cette clé ne sait que « deposer <version> » et « deployer <version> »" >&2
+  echo "refusé : cette clé ne sait que « deposer <version> », « deployer <version> » et « journal <réf> »" >&2
   exit 1
   ;;
 esac

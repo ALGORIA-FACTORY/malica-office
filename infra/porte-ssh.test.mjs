@@ -1,5 +1,5 @@
 /**
- * La porte SSH du déploiement ne laisse passer que deux phrases.
+ * La porte SSH du déploiement ne laisse passer que trois phrases.
  *
  * ================================================================= POURQUOI
  *
@@ -110,6 +110,37 @@ describe(
       const r = demander("deposer main");
       assert.equal(r.code, 0);
       assert.deepEqual(r.args, ["--deposer", "main"]);
+    });
+
+    it("laisse passer « journal <réf>[,<réf>…] », en le marquant comme tel", () => {
+      // Relire une panne n'est ni déposer ni déployer : le déployeur doit le
+      // savoir, sinon des références seraient prises pour une version.
+      const r = demander("journal 28AE8D15,FE93C5BF");
+      assert.equal(r.code, 0);
+      assert.deepEqual(r.args, ["--journal", "28AE8D15,FE93C5BF"]);
+    });
+
+    it("refuse un « journal » dont la référence n'est pas huit chiffres hexadécimaux", () => {
+      /*
+       * La référence finit dans une requête : rien d'autre que [0-9A-F]{8}
+       * ne doit passer la porte — ni minuscules, ni guillemet, ni point-virgule,
+       * ni une vingt-et-unième référence.
+       */
+      const trop = Array.from({ length: 21 }, () => "28AE8D15").join(",");
+      for (const demande of [
+        "journal",
+        "journal 28ae8d15",
+        "journal 28AE8D1",
+        "journal 28AE8D15;id",
+        "journal 28AE8D15' or '1'='1",
+        "journal 28AE8D15 FE93C5BF",
+        `journal ${trop}`,
+        "journaux 28AE8D15",
+      ]) {
+        const r = demander(demande);
+        assert.equal(r.code, 1, demande);
+        assert.equal(r.args, null, demande);
+      }
     });
 
     it("refuse un shell", () => {
