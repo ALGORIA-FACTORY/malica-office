@@ -648,6 +648,32 @@ describe("la retenue à la source imprimée sur la facture", () => {
     assert.equal(r.montants.retenue, null);
   });
 
+  it("la TVA illisible se déduit en rajoutant la retenue au net (revue Codex de #415)", () => {
+    // Sans la retenue, la TVA déduite valait 462,720 − 400 − 1 = 61,720 :
+    // une TVA fausse, « vérifiée » pourtant par HT × taux.
+    const r = normaliserMontants({ ...MAP, tva: "##" }, P);
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.tva, 76_000);
+    assert.equal(r.montants.ttc, 477_000);
+    const d = r.deduits.find((x) => x.champ === "totals.vat");
+    assert.equal(d?.valeur, "76.000");
+    assert.match(d!.formule, /retenue/);
+  });
+
+  it("la base d'un taux nul se déduit en rajoutant la retenue au net", () => {
+    // Une prestation exportée, retenue imprimée : base = net + retenue − droits.
+    const r = normaliserMontants(
+      { bases: [{ ht: null, taux: "0" }], autres: ["1,000"], retenue: "-10,500", ttc: "340,500" },
+      P,
+    );
+    assert.equal(r.etat, "tranche", r.raison);
+    assert.equal(r.montants.bases[0]!.ht, 350_000);
+    assert.equal(r.montants.ttc, 351_000);
+    const d = r.deduits.find((x) => x.champ === "lines[0].base_ht");
+    assert.equal(d?.valeur, "350.000");
+    assert.match(d!.formule, /retenue/);
+  });
+
   it("sans retenue, rien ne change : montants.retenue est nul", () => {
     const r = normaliserMontants(
       { bases: [{ ht: "400,000", taux: TAUX }], tva: "76,000", autres: ["1,000"], ttc: "477,000" },

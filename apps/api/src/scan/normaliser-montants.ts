@@ -491,7 +491,8 @@ export function normaliserMontants(
     tauxNul(entree.bases[0]!.taux) &&
     seLit(entree.ttc) &&
     (texte(entree.tva) === null || seLit(entree.tva)) &&
-    texte(entree.retenue) === null &&
+    // Une retenue imprimée se lit, comme les droits : elle se rajoute au net.
+    (texte(entree.retenue) === null || seLit(entree.retenue)) &&
     (entree.autres ?? []).every((a) =>
       typeof a === "string" ? seLit(a) : seLit(a.brut) && !a.taxable,
     );
@@ -933,7 +934,7 @@ export function normaliserMontants(
     return {
       hts: entree.bases.map((_, i) =>
         baseDuTauxNul
-          ? ttc! - (par.get("tva") ?? 0n) - autres.reduce((s, a) => s + a, 0n)
+          ? ttc! + (retenue ?? 0n) - (par.get("tva") ?? 0n) - autres.reduce((s, a) => s + a, 0n)
           : i === baseDeduite
             ? par.get("htTotal")! - lues
             : par.get(`ht${i}`)!,
@@ -1016,8 +1017,13 @@ export function normaliserMontants(
     const v = valeurs(pris, autresCompris, assiette);
     const somme = (xs: bigint[]) => xs.reduce((s, x) => s + x, 0n);
     // La TVA illisible vaut le reste du TTC lu : l'écriture tombe sur le total imprimé.
+    // Sur une pièce qui déduit une retenue, le total lu est le NET : la retenue
+    // s'y rajoute, sans quoi la TVA déduite en serait amputée (revue de #415).
     const tva =
-      tvaNonLue !== null && v.ttc !== undefined ? v.ttc - somme(v.hts) - somme(v.autres) : v.tva;
+      tvaNonLue !== null && v.ttc !== undefined
+        ? v.ttc + (v.retenue ?? 0n) - somme(v.hts) - somme(v.autres)
+        : v.tva;
+    const avecRetenue = v.retenue !== undefined && v.retenue !== 0n;
     const montant = (x: bigint) => depuisUniteMineure(Number(x), p.decimales);
     // Les montants imprimés qui alimentent la formule, et ce que la pièce
     // imprimait à la place de la valeur déduite.
@@ -1030,15 +1036,18 @@ export function normaliserMontants(
       deduits.push({
         champ: "totals.vat",
         valeur: montant(tva),
-        formule: "TVA = TTC − HT − droits, vérifiée par HT × taux",
+        formule: avecRetenue
+          ? "TVA = net + retenue − HT − droits, vérifiée par HT × taux"
+          : "TVA = TTC − HT − droits, vérifiée par HT × taux",
         operandes: operandes("tva", tvaNonLue),
       });
     if (baseDuTauxNul)
       deduits.push({
         champ: "lines[0].base_ht",
         valeur: montant(v.hts[0]!),
-        formule:
-          (entree.autres ?? []).length > 0
+        formule: avecRetenue
+          ? "base = net + retenue − droits (taux nul)"
+          : (entree.autres ?? []).length > 0
             ? "base = TTC − droits (taux nul)"
             : "base = TTC (taux nul, aucun droit)",
         operandes: operandes("", entree.bases[0]!.ht),
