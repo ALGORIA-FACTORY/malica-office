@@ -292,8 +292,9 @@ principal() {
 #
 # La sortie part dans le journal d'une action GitHub, et le dépôt est PUBLIC.
 # On n'y met donc que le technique : l'heure, l'endroit du code, la version, la
-# plateforme, le message (courriels et longues suites de chiffres masqués) et
-# la pile d'appels. Jamais le dossier ni la personne.
+# plateforme, le message et la pile d'appels — l'un et l'autre avec courriels
+# et longues suites de chiffres masqués : une pile JavaScript commence par le
+# message de l'erreur, elle le répète tel quel. Jamais le dossier ni la personne.
 journal() {
   local refs="${1:?usage : deployer.sh --journal <réf>[,<réf>…]}"
   [[ "$refs" =~ ^[0-9A-F]{8}(,[0-9A-F]{8}){0,19}$ ]] || {
@@ -309,8 +310,9 @@ journal() {
              left(regexp_replace(regexp_replace(message,
                '[^[:space:]@]+@[^[:space:]@]+', '«courriel»', 'g'),
                '[0-9]{6,}', '«nombre»', 'g'), 1200) as message,
-             left(regexp_replace(coalesce(pile, ''),
-               '[^[:space:]@]+@[^[:space:]@]+', '«courriel»', 'g'), 4000) as pile
+             left(regexp_replace(regexp_replace(coalesce(pile, ''),
+               '[^[:space:]@]+@[^[:space:]@]+', '«courriel»', 'g'),
+               '[0-9]{6,}', '«nombre»', 'g'), 4000) as pile
         from audit.journal_client
        where message ~ '$motif'
        order by at"
