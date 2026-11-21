@@ -7,9 +7,10 @@
 #
 # Le même bouton RELIT aussi le journal des pannes (21 novembre 2026) : on
 # laisse la version vide et l'on donne les références que l'écran a citées
-# (« 28AE8D15,FE93C5BF »). Même approbation, même tunnel, même porte SSH
-# (infra/porte-ssh.sh, commande « journal ») ; rien n'est déposé ni déployé,
-# et la base est lue en transaction en lecture seule.
+# (« 28AE8D15,FE93C5BF »), ou un nombre de jours pour relire les lectures de
+# pièces échouées. Même approbation, même tunnel, même porte SSH
+# (infra/porte-ssh.sh, commandes « journal » et « lectures ») ; rien n'est
+# déposé ni déployé, et la base est lue en transaction en lecture seule.
 
 name: Déployer
 
@@ -27,6 +28,10 @@ on:
         required: false
       journal:
         description: "Références des pannes à relire (28AE8D15,FE93C5BF) — seulement si la version est vide"
+        type: string
+        required: false
+      lectures:
+        description: "Ou : relire les lectures échouées de ces N derniers jours (1 à 7) — seulement si la version est vide"
         type: string
         required: false
 
@@ -52,13 +57,19 @@ jobs:
         env:
           VERSION: ${{ github.event.inputs.version }}
           JOURNAL: ${{ github.event.inputs.journal }}
+          LECTURES: ${{ github.event.inputs.lectures }}
         run: |
           if [ -z "$VERSION" ]; then
+            if [ -n "$LECTURES" ]; then
+              [ -z "$JOURNAL" ] || { echo "des références OU un nombre de jours, pas les deux" >&2; exit 1; }
+              [[ "$LECTURES" =~ ^[1-7]$ ]] || { echo "lectures : un nombre de jours, de 1 à 7" >&2; exit 1; }
+              exit 0
+            fi
             [[ "$JOURNAL" =~ ^[0-9A-F]{8}(,[0-9A-F]{8}){0,19}$ ]] \
-              || { echo "sans version, une à vingt références de huit chiffres hexadécimaux sont attendues (28AE8D15,FE93C5BF)" >&2; exit 1; }
+              || { echo "sans version, une à vingt références de huit chiffres hexadécimaux (28AE8D15,FE93C5BF), ou un nombre de jours de lectures, sont attendus" >&2; exit 1; }
             exit 0
           fi
-          [ -z "$JOURNAL" ] || { echo "une version OU des références, pas les deux" >&2; exit 1; }
+          [ -z "$JOURNAL$LECTURES" ] || { echo "une version OU une relecture, pas les deux" >&2; exit 1; }
           [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]] \
             || { echo "une étiquette v<majeure>.<mineure>.<correctif> est attendue" >&2; exit 1; }
 
@@ -122,7 +133,7 @@ jobs:
           gcloud compute instances describe "$MACHINE" --project="$PROJET" --zone="$ZONE" --format='value(status)' >&2 || true
           exit 1
 
-      - name: Relire le journal des pannes sur ${{ github.event.inputs.environnement }}
+      - name: Relire le pilote (journal des pannes ou lectures échouées), en lecture seule
         if: github.event.inputs.version == ''
         env:
           CLE: ${{ secrets.DEPLOI_CLE_SSH }}
@@ -130,12 +141,15 @@ jobs:
           PORT: ${{ vars.DEPLOI_PORT || '22' }}
           EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
           JOURNAL: ${{ github.event.inputs.journal }}
+          LECTURES: ${{ github.event.inputs.lectures }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploi
           chmod 600 ~/.ssh/deploi
           printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploi -p "$PORT" -o BatchMode=yes "malica@$HOTE" "journal $JOURNAL" </dev/null
+          # La demande a été vérifiée plus haut ; la porte la revérifie.
+          if [ -n "$LECTURES" ]; then demande="lectures $LECTURES"; else demande="journal $JOURNAL"; fi
+          ssh -i ~/.ssh/deploi -p "$PORT" -o BatchMode=yes "malica@$HOTE" "$demande" </dev/null
 
       - name: Déposer ${{ github.event.inputs.version }}, puis déployer sur ${{ github.event.inputs.environnement }}
         if: github.event.inputs.version != ''

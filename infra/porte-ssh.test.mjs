@@ -1,5 +1,5 @@
 /**
- * La porte SSH du déploiement ne laisse passer que trois phrases.
+ * La porte SSH du déploiement ne laisse passer que quatre phrases.
  *
  * ================================================================= POURQUOI
  *
@@ -136,6 +136,29 @@ describe(
         "journal 28AE8D15 FE93C5BF",
         `journal ${trop}`,
         "journaux 28AE8D15",
+      ]) {
+        const r = demander(demande);
+        assert.equal(r.code, 1, demande);
+        assert.equal(r.args, null, demande);
+      }
+    });
+
+    it("laisse passer « lectures <jours> », en le marquant comme tel", () => {
+      const r = demander("lectures 3");
+      assert.equal(r.code, 0);
+      assert.deepEqual(r.args, ["--lectures", "3"]);
+    });
+
+    it("refuse un « lectures » hors de 1 à 7 jours, ou qui porte autre chose", () => {
+      // Le nombre finit dans une requête : un seul chiffre de 1 à 7, rien d'autre.
+      for (const demande of [
+        "lectures",
+        "lectures 0",
+        "lectures 8",
+        "lectures 30",
+        "lectures 3;id",
+        "lectures 3 days'; delete",
+        "lecturesx 3",
       ]) {
         const r = demander(demande);
         assert.equal(r.code, 1, demande);

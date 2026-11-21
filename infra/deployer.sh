@@ -4,6 +4,7 @@
 #   deployer.sh --deposer <version>   l'entrée standard porte un paquet git
 #   deployer.sh <version>             l'entrée standard porte, ou non, un jeton
 #   deployer.sh --journal <réf>[,…]   relit les pannes citées, en lecture seule
+#   deployer.sh --lectures <jours>    relit les lectures échouées, en lecture seule
 #
 # ================================================== LE SERVEUR NE DÉTIENT RIEN
 #
@@ -318,6 +319,35 @@ journal() {
        order by at"
 }
 
+# Relire, en lecture seule, les lectures de pièces qui ont échoué récemment.
+#
+# 21 novembre 2026 : une note d'honoraires dite « illisible » au pilote se
+# lisait parfaitement hors de lui ; la cause est le motif du travail échoué
+# (`fabrique.travail_faits`), que seul le pilote garde. Mêmes règles que
+# `journal` : transaction en lecture seule, sortie technique seulement, motif
+# masqué (courriels, longues suites de chiffres), ni dossier ni personne — la
+# pièce n'est nommée que par son identifiant.
+lectures() {
+  local jours="${1:?usage : deployer.sh --lectures <jours>}"
+  [[ "$jours" =~ ^[1-7]$ ]] || {
+    echo "nombre de jours invalide : $jours" >&2
+    exit 2
+  }
+  compose exec -T -e PGOPTIONS='-c default_transaction_read_only=on' postgres \
+    psql -X -q -U postgres -d malica -v ON_ERROR_STOP=1 -P pager=off -x -c "
+      select to_char(f.inscrit_le at time zone 'Africa/Tunis', 'YYYY-MM-DD HH24:MI:SS') as heure,
+             t.piece_id as piece, f.nature as fait, f.tentative,
+             left(regexp_replace(regexp_replace(f.motif,
+               '[^[:space:]@]+@[^[:space:]@]+', '«courriel»', 'g'),
+               '[0-9]{6,}', '«nombre»', 'g'), 1500) as motif
+        from fabrique.travail_faits f
+        join fabrique.travaux t on t.tenant_id = f.tenant_id and t.id = f.travail_id
+       where f.nature not in ('pris', 'termine')
+         and f.inscrit_le > now() - interval '$jours days'
+       order by f.inscrit_le desc
+       limit 60"
+}
+
 # ================================== LE SCRIPT NE SE LIT PAS PENDANT QU'IL CHANGE
 #
 # `deployer` fait un `git checkout` du dépôt — et ce script EST dans le dépôt.
@@ -364,6 +394,9 @@ if [ "${1:-}" = "--deposer" ]; then
 elif [ "${1:-}" = "--journal" ]; then
   shift
   journal "$@"
+elif [ "${1:-}" = "--lectures" ]; then
+  shift
+  lectures "$@"
 else
   principal "$@"
 fi

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# La porte SSH de la CI : la clé de déploiement ne sait faire que trois choses.
+# La porte SSH de la CI : la clé de déploiement ne sait faire que quatre choses.
 #
 # Dans ~malica/.ssh/authorized_keys, la clé publique de la CI est préfixée :
 #   command="/srv/malica/depot/infra/porte-ssh.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA…
 #
 # sshd lance alors ce script à la place de ce que le client demande, et lui
-# passe la demande dans SSH_ORIGINAL_COMMAND. Trois formes passent ; tout le
+# passe la demande dans SSH_ORIGINAL_COMMAND. Quatre formes passent ; tout le
 # reste — un shell, une copie, un tunnel — est refusé.
 #
 #   deposer <version>    l'entrée standard porte un paquet git (bundle)
@@ -13,6 +13,10 @@
 #   journal <réf>[,<réf>…]  relit, en lecture seule, les pannes que l'écran a
 #                        citées (« réf. 28AE8D15 ») : huit chiffres hexadécimaux
 #                        chacune, vingt au plus. Rien d'autre ne s'y glisse.
+#   lectures <jours>     relit, en lecture seule, les lectures de pièces qui
+#                        ont échoué ces <jours> derniers (1 à 7) et leur motif
+#                        technique — la note d'honoraires « illisible » du
+#                        21 novembre se lisait parfaitement hors du pilote.
 #
 # ================================================= POURQUOI « JOURNAL » EXISTE
 #
@@ -56,8 +60,16 @@ journal\ *)
   }
   exec "${DEPLOYEUR:-/srv/malica/depot/infra/deployer.sh}" --journal "$refs"
   ;;
+lectures\ *)
+  jours="${SSH_ORIGINAL_COMMAND#lectures }"
+  [[ "$jours" =~ ^[1-7]$ ]] || {
+    echo "refusé : « lectures » attend un nombre de jours, de 1 à 7" >&2
+    exit 1
+  }
+  exec "${DEPLOYEUR:-/srv/malica/depot/infra/deployer.sh}" --lectures "$jours"
+  ;;
 *)
-  echo "refusé : cette clé ne sait que « deposer <version> », « deployer <version> » et « journal <réf> »" >&2
+  echo "refusé : cette clé ne sait que « deposer <version> », « deployer <version> », « journal <réf> » et « lectures <jours> »" >&2
   exit 1
   ;;
 esac
