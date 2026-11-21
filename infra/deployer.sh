@@ -3,6 +3,8 @@
 #
 #   deployer.sh --deposer <version>   l'entrée standard porte un paquet git
 #   deployer.sh <version>             l'entrée standard porte, ou non, un jeton
+#   deployer.sh --journal <réf>[,…]   relit les pannes citées, en lecture seule
+#   deployer.sh --lectures <jours>    relit les lectures échouées, en lecture seule
 #
 # ================================================== LE SERVEUR NE DÉTIENT RIEN
 #
@@ -282,6 +284,70 @@ principal() {
   exit 1
 }
 
+# Relire, en lecture seule, les pannes qu'un écran a citées par leur référence.
+#
+# L'écran dit « Une erreur est survenue. (réf. 28AE8D15) » ; la ligne du
+# journal porte « [ref 28AE8D15] … » en tête de son message. La transaction est
+# en lecture seule (PGOPTIONS) : une faute dans cette requête ne peut rien
+# écrire.
+#
+# La sortie part dans le journal d'une action GitHub, et le dépôt est PUBLIC.
+# On n'y met donc que le technique : l'heure, l'endroit du code, la version, la
+# plateforme, le message et la pile d'appels — l'un et l'autre avec courriels
+# et longues suites de chiffres masqués : une pile JavaScript commence par le
+# message de l'erreur, elle le répète tel quel. Jamais le dossier ni la personne.
+journal() {
+  local refs="${1:?usage : deployer.sh --journal <réf>[,<réf>…]}"
+  [[ "$refs" =~ ^[0-9A-F]{8}(,[0-9A-F]{8}){0,19}$ ]] || {
+    echo "références invalides : $refs" >&2
+    exit 2
+  }
+  local motif
+  motif="^\\[ref (${refs//,/|})\\] "
+  compose exec -T -e PGOPTIONS='-c default_transaction_read_only=on' postgres \
+    psql -X -q -U postgres -d malica -v ON_ERROR_STOP=1 -P pager=off -x -c "
+      select to_char(at at time zone 'Africa/Tunis', 'YYYY-MM-DD HH24:MI:SS') as heure,
+             ou, version, plateforme,
+             left(regexp_replace(regexp_replace(message,
+               '[^[:space:]@]+@[^[:space:]@]+', '«courriel»', 'g'),
+               '[0-9]{6,}', '«nombre»', 'g'), 1200) as message,
+             left(regexp_replace(regexp_replace(coalesce(pile, ''),
+               '[^[:space:]@]+@[^[:space:]@]+', '«courriel»', 'g'),
+               '[0-9]{6,}', '«nombre»', 'g'), 4000) as pile
+        from audit.journal_client
+       where message ~ '$motif'
+       order by at"
+}
+
+# Relire, en lecture seule, les lectures de pièces qui ont échoué récemment.
+#
+# 21 novembre 2026 : une note d'honoraires dite « illisible » au pilote se
+# lisait parfaitement hors de lui ; la cause est le motif du travail échoué
+# (`fabrique.travail_faits`), que seul le pilote garde. Mêmes règles que
+# `journal` : transaction en lecture seule, sortie technique seulement, motif
+# masqué (courriels, longues suites de chiffres), ni dossier ni personne — la
+# pièce n'est nommée que par son identifiant.
+lectures() {
+  local jours="${1:?usage : deployer.sh --lectures <jours>}"
+  [[ "$jours" =~ ^[1-7]$ ]] || {
+    echo "nombre de jours invalide : $jours" >&2
+    exit 2
+  }
+  compose exec -T -e PGOPTIONS='-c default_transaction_read_only=on' postgres \
+    psql -X -q -U postgres -d malica -v ON_ERROR_STOP=1 -P pager=off -x -c "
+      select to_char(f.inscrit_le at time zone 'Africa/Tunis', 'YYYY-MM-DD HH24:MI:SS') as heure,
+             t.piece_id as piece, f.nature as fait, f.tentative,
+             left(regexp_replace(regexp_replace(f.motif,
+               '[^[:space:]@]+@[^[:space:]@]+', '«courriel»', 'g'),
+               '[0-9]{6,}', '«nombre»', 'g'), 1500) as motif
+        from fabrique.travail_faits f
+        join fabrique.travaux t on t.tenant_id = f.tenant_id and t.id = f.travail_id
+       where f.nature not in ('pris', 'termine')
+         and f.inscrit_le > now() - interval '$jours days'
+       order by f.inscrit_le desc
+       limit 60"
+}
+
 # ================================== LE SCRIPT NE SE LIT PAS PENDANT QU'IL CHANGE
 #
 # `deployer` fait un `git checkout` du dépôt — et ce script EST dans le dépôt.
@@ -325,6 +391,12 @@ trap menage EXIT
 if [ "${1:-}" = "--deposer" ]; then
   shift
   deposer "$@"
+elif [ "${1:-}" = "--journal" ]; then
+  shift
+  journal "$@"
+elif [ "${1:-}" = "--lectures" ]; then
+  shift
+  lectures "$@"
 else
   principal "$@"
 fi
