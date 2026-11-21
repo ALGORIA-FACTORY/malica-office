@@ -25,6 +25,21 @@ describe("le code d'un échec de lecture", () => {
     expect(codeDeLecture("lecture.inconnue")).toBeNull();
     expect(codeDeLecture(null)).toBeNull();
   });
+
+  it("ne prend pas une autre panne pour une photo illisible (21 novembre 2026)", () => {
+    /*
+     * Au pilote, une note d'honoraires parfaitement lisible a été dite « ni texte
+     * ni image nette ». Le code se cherchait n'importe où dans le motif : une
+     * clé qui le CONTIENT (« reglage.lecture.illisible », un réglage du
+     * cabinet absent) devenait une photo à reprendre, et la personne reprenait
+     * une photo qui n'y était pour rien.
+     */
+    expect(codeDeLecture("reglage.lecture.illisible")).toBeNull();
+    expect(codeDeLecture("Error: reglage.lecture.illisible")).toBeNull();
+    expect(codeDeLecture("x_lecture.vide")).toBeNull();
+    expect(codeDeLecture("Error: lecture.illisible")).toBe("lecture.illisible");
+    expect(codeDeLecture("erreur_technique : lecture.vide")).toBe("lecture.vide");
+  });
 });
 
 describe("l'issue d'une lecture, une règle pour tous les écrans", () => {
