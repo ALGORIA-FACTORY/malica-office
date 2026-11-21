@@ -159,7 +159,14 @@ const SelectionResponse = z.object({
       .max(20)
       .default([]),
   ),
-  totals: orDefault(z.object({ base_ht: RefSchema, vat: RefSchema, ttc: RefSchema }).default({})),
+  // `withholding` : la retenue à la source DÉDUITE sur la facture, quand le
+  // total désigné est le net à payer qu'elle laisse (note d'honoraires MAP,
+  // 21 novembre 2026). Absente partout ailleurs.
+  totals: orDefault(
+    z
+      .object({ base_ht: RefSchema, vat: RefSchema, ttc: RefSchema, withholding: RefSchema })
+      .default({}),
+  ),
   references: orDefault(z.record(z.string(), RefSchema).default({})),
   overall_confidence: orDefault(z.coerce.number().min(0).max(1).default(0.5)),
 });
