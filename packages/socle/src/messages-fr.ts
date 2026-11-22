@@ -5197,7 +5197,7 @@ export const fr = {
     "Saisi au clavier, une seule fois : il ne se change plus ensuite.",
   "pme.bienvenue.corriger": "Corriger · saisie au clavier",
   "pme.bienvenue.pied":
-    "Ensuite : choisir votre forfait, puis inviter votre comptabilité — ou pas. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
+    "Ensuite : choisir votre forfait. Votre comptabilité, si vous l'avez invitée, a reçu votre invitation ; sinon, vous l'inviterez quand vous voudrez. Une société sans mandat fonctionne : vous capturez, vous lisez, vous exportez.",
   "pme.tva.barreGroupe": "TVA du groupe",
   /**
    * Le dessin écrit « Déclaration à déposer le 28. » — et le 28 est une

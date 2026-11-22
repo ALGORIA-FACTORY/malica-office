@@ -81,6 +81,13 @@ function OfficeHome() {
   });
   const operateur = plateforme.data === true;
 
+  // Les invitations adressées à la personne : un compte neuf qui en a une la lit ici.
+  const invitations = useQuery({
+    queryKey: ["invitations-pour-moi"],
+    queryFn: () => office().collab.invitationsPourMoi(),
+    retry: false,
+  });
+
   // Un seul espace disponible : on y entre directement, sans écran intermédiaire.
   useEffect(() => {
     // Dans la coque, il n'y a qu'un espace : celui du dirigeant. Le cabinet
@@ -90,6 +97,21 @@ function OfficeHome() {
       return;
     }
     if (orgsQuery.isPending || plateforme.isPending || operateur) return;
+    /*
+     * Un compte neuf, sans société ni invitation, entre directement dans la création de
+     * sa société (le dirigeant, 22 novembre 2026 : « l'invitation de la comptabilité dès le
+     * premier écran ») : c'est là que se donne l'e-mail de sa comptabilité. Celui qui a reçu
+     * une invitation reste ici pour la lire.
+     */
+    if (
+      pmeOrgs.length === 0 &&
+      cabinetOrgs.length === 0 &&
+      invitations.isFetched &&
+      (invitations.data ?? []).length === 0
+    ) {
+      void navigate({ to: "/onboarding", replace: true });
+      return;
+    }
     if (pmeOrgs.length > 0 && cabinetOrgs.length === 0) void navigate({ to: "/pme" });
     if (cabinetOrgs.length > 0 && pmeOrgs.length === 0) void navigate({ to: "/cabinet" });
   }, [
@@ -98,6 +120,8 @@ function OfficeHome() {
     operateur,
     pmeOrgs.length,
     cabinetOrgs.length,
+    invitations.isFetched,
+    invitations.data,
     navigate,
   ]);
 

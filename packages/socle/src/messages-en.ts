@@ -5030,7 +5030,7 @@ export const en: Dict = {
   "pme.bienvenue.matricule.aide": "Typed by hand, once: it cannot be changed afterwards.",
   "pme.bienvenue.corriger": "Edit · type it in",
   "pme.bienvenue.pied":
-    "Next: choose your plan, then invite your accountant — or not. A company without an engagement works: you capture, you read, you export.",
+    "Next: choose your plan. Your accountant, if you invited them, has received your invitation; otherwise, invite them whenever you like. A company without an engagement works: you capture, you read, you export.",
   "pme.tva.barreGroupe": "Group VAT",
   "pme.tva.sous": "Your accountant files this return.",
   "pme.tva.sousGroupe": "{count} companies — each files for itself.",
