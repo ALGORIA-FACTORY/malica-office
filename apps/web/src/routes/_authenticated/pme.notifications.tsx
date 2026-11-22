@@ -118,6 +118,7 @@ import {
 import {
   chaine,
   cleDuGenre,
+  variablesDuGenre,
   detailDe,
   gesteDeLaQuestion,
   seMontreIci,
@@ -208,7 +209,7 @@ function PmeNotifications() {
   });
 
   const kindLabel = (kind: string, payload: Record<string, unknown> = {}) =>
-    t(cleDuGenre(kind, payload));
+    t(cleDuGenre(kind, payload), variablesDuGenre(kind, payload, locale));
 
   // Dans la coque, rien ne parle d'abonnement (`seMontreIci`).
   const rows = (notifs.data ?? []).filter((n) => seMontreIci(n.kind, CIBLE_COQUE));
@@ -271,6 +272,15 @@ function PmeNotifications() {
         aller: () => {
           dabord();
           void navigate({ to: "/pme/reglages", search: { page: "abonnement" } });
+        },
+      };
+    }
+    if (kind === "echeance.approche") {
+      return {
+        libelle: t("pme.notifs.voirEcheances"),
+        aller: () => {
+          dabord();
+          void navigate({ to: "/pme/echeances" });
         },
       };
     }

@@ -3077,6 +3077,9 @@ export const fr = {
   "notif.kind.piece.retournee_par_le_proprietaire": "Pièce retournée par le propriétaire",
   "notif.kind.piece.supprimee_par_le_proprietaire": "Pièce supprimée par le propriétaire",
   "notif.kind.piece.demande": "Demande sur une pièce",
+  "notif.kind.echeance.approche": "{count} échéances le {date}",
+  "notif.kind.echeance.approche#one": "Une échéance le {date}",
+  "notif.kind.echeance.approche#other": "{count} échéances le {date}",
   "statut.cab.recue": "Reçue",
   "statut.cab.vue": "Vue",
   "statut.cab.corrigee": "Corrigée",
@@ -5453,6 +5456,7 @@ export const fr = {
   "refus.abonnement.couvert_par_la_licence":
     "Cette société est déjà couverte par la licence de son dirigeant, que vous payez.",
   "pme.notifs.voirEquipe": "Voir mon équipe",
+  "pme.notifs.voirEcheances": "Voir mes échéances",
   "cab.cli.kicker": "Portefeuille",
   "cab.cli.titre": "Clients",
   "cab.cli.panel":

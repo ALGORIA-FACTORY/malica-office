@@ -26,7 +26,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/i18n";
-import { cleDuGenre, detailDe } from "@/lib/libelle-de-notification";
+import { cleDuGenre, detailDe, variablesDuGenre } from "@/lib/libelle-de-notification";
 
 export interface DerniereNotification {
   id: string;
@@ -47,7 +47,7 @@ const DUREE_COCHE_MS = 2200;
 const ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
 
 export function ClocheDeLEntete({ nonLues, derniere }: ClocheProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const precedent = useRef<number | null>(null);
   const [sonne, setSonne] = useState(false);
   const [ile, setIle] = useState<DerniereNotification | null>(null);
@@ -145,7 +145,9 @@ export function ClocheDeLEntete({ nonLues, derniere }: ClocheProps) {
           <span className="pt" aria-hidden>
             {t("pme.cloche.nouvelle")}
           </span>
-          <b>{t(cleDuGenre(ile.kind, ile.payload))}</b>
+          <b>
+            {t(cleDuGenre(ile.kind, ile.payload), variablesDuGenre(ile.kind, ile.payload, locale))}
+          </b>
           {detailDe(ile.kind, ile.payload) ? <span>{detailDe(ile.kind, ile.payload)}</span> : null}
           <i className="temps" aria-hidden />
         </Link>

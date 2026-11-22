@@ -12,7 +12,9 @@ import {
   cleDuGenre,
   gesteDeLaQuestion,
   seMontreIci,
+  variablesDuGenre,
 } from "../libelle-de-notification";
+import { sourceDe } from "../tri-des-notifications";
 
 describe("ce qu'une notification dit, et ce qu'elle demande", () => {
   it("la cloche compte ce qui attend un geste, pas tout le non lu", () => {
@@ -51,5 +53,29 @@ describe("ce qu'une notification dit, et ce qu'elle demande", () => {
     expect(gesteDeLaQuestion("mandat.propose", {})).toBe("mandat");
     expect(gesteDeLaQuestion("mandat.propose", { tranchee: "actif" })).toBeNull();
     expect(gesteDeLaQuestion("piece.retournee", {})).toBeNull();
+  });
+});
+
+describe("l'échéance qui approche", () => {
+  it("dit son jour et le nombre de déclarations, pas leur composition", () => {
+    expect(cleDuGenre("echeance.approche")).toBe("notif.kind.echeance.approche");
+    expect(
+      variablesDuGenre("echeance.approche", { due_date: "2026-11-28", nombre: 3 }, "fr"),
+    ).toEqual({ count: 3, date: "28 novembre" });
+  });
+
+  it("un jour illisible ne casse pas la phrase", () => {
+    expect(variablesDuGenre("echeance.approche", { nombre: "x" }, "fr")).toEqual({
+      count: 1,
+      date: "",
+    });
+  });
+
+  it("les autres genres n'attendent rien de plus", () => {
+    expect(variablesDuGenre("piece.retournee", {}, "fr")).toBeUndefined();
+  });
+
+  it("c'est Malica qui la dit", () => {
+    expect(sourceDe("echeance.approche")).toBe("malica");
   });
 });

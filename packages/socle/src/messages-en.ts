@@ -2982,6 +2982,9 @@ export const en: Dict = {
   "notif.kind.piece.retournee_par_le_proprietaire": "Document returned by the owner",
   "notif.kind.piece.supprimee_par_le_proprietaire": "Document deleted by the owner",
   "notif.kind.piece.demande": "Request on a document",
+  "notif.kind.echeance.approche": "{count} deadlines on {date}",
+  "notif.kind.echeance.approche#one": "One deadline on {date}",
+  "notif.kind.echeance.approche#other": "{count} deadlines on {date}",
   "statut.cab.recue": "Received",
   "statut.cab.vue": "Seen",
   "statut.cab.corrigee": "Corrected",
@@ -5237,6 +5240,7 @@ export const en: Dict = {
   "refus.abonnement.couvert_par_la_licence":
     "This company is already covered by its owner's licence, which you pay.",
   "pme.notifs.voirEquipe": "See my team",
+  "pme.notifs.voirEcheances": "See my deadlines",
   "cab.cli.kicker": "Portfolio",
   "cab.cli.titre": "Clients",
   "cab.cli.panel":
