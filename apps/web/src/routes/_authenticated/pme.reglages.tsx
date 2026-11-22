@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { coque, COMMERCE, versionClient } from "@/capabilities/coque";
+import { coque, COMMERCE, estNatif, versionClient } from "@/capabilities/coque";
 import {
   ARegler,
   MesFactures,
@@ -1692,8 +1692,17 @@ function Versions() {
           {t("pme.reglages.version.application")} {native.version} ({native.build})
         </>
       ) : null}
-      {" · "}
-      {t("pme.reglages.version.canal")} {CANAL}
+      {/*
+       * Le canal est celui des mises à jour de la COQUE (staging, pilote, production). Dans
+       * un navigateur, il n'y en a pas : la page disait « canal atelier » sur l'adresse du
+       * pilote (22 novembre 2026). Elle ne le dit plus que dans l'application.
+       */}
+      {estNatif() ? (
+        <>
+          {" · "}
+          {t("pme.reglages.version.canal")} {CANAL}
+        </>
+      ) : null}
     </p>
   );
 }
