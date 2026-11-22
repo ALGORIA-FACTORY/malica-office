@@ -17,6 +17,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
+import { regrouperParJour } from "@/lib/echeances-par-jour";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { trancheDEcheance } from "@/lib/portefeuille-actif";
 import { office } from "@/verticals/malica-office/composition";
@@ -184,9 +185,16 @@ function PmeEcheances() {
 
   const rows = echeances.data ?? [];
   const today = new Date().toISOString().slice(0, 10);
+  /*
+   * Une ligne par jour (le dirigeant, 22 novembre 2026 : « groupée par jour, je ne
+   * veux pas la composition »). Le jour dit le nombre de déclarations, jamais leur liste.
+   */
+  const parJour = regrouperParJour(rows, today);
   // Le retard se constate en base, à la dérivation : l'écran le lit, il ne le recalcule pas.
-  const enRetard = rows.filter((e) => e.status === "en_retard");
-  const prochaine = rows.find((e) => e.status === "a_venir") ?? null;
+  const enRetard = parJour.filter((j) => !j.faites && j.premiere.status === "en_retard");
+  const prochaine = parJour.find((j) => !j.faites && j.premiere.status === "a_venir") ?? null;
+  const libelle = (j: (typeof parJour)[number]) =>
+    j.seule ?? t("pme.home.ech.groupe", { count: j.n });
   const echec = derivation.error ?? echeances.error ?? null;
 
   const jour = (iso: string) =>
@@ -206,7 +214,7 @@ function PmeEcheances() {
         ? t("pme.echeances.voice.late", { count: enRetard.length })
         : prochaine
           ? t("pme.echeances.voice.next", {
-              label: prochaine.label,
+              label: libelle(prochaine),
               days: jours(prochaine.dueDate),
             })
           : t("pme.echeances.voice.empty");
@@ -218,19 +226,19 @@ function PmeEcheances() {
   const tranches = [
     {
       titre: t("relation.echeances.retard"),
-      lignes: rows.filter((e) => trancheDEcheance(e.dueDate, today) === "retard"),
+      lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "retard"),
     },
     {
       titre: t("relation.echeances.semaine"),
-      lignes: rows.filter((e) => trancheDEcheance(e.dueDate, today) === "semaine"),
+      lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "semaine"),
     },
     {
       titre: t("relation.echeances.mois"),
-      lignes: rows.filter((e) => trancheDEcheance(e.dueDate, today) === "mois"),
+      lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "mois"),
     },
     {
       titre: t("pme.echeances.aVenir"),
-      lignes: rows.filter((e) => trancheDEcheance(e.dueDate, today) === "suite"),
+      lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "suite"),
     },
   ].filter((tr) => tr.lignes.length > 0);
 
@@ -335,18 +343,18 @@ function PmeEcheances() {
                 {/* Le compte, et lui seul : le total en dinars n'est pas servi. */}
                 <span>{tr.lignes.length}</span>
               </div>
-              {tr.lignes.map((e) => {
-                const retard = e.status === "en_retard";
-                const deposee = e.status === "fait";
-                const reste = jours(e.dueDate);
+              {tr.lignes.map((j) => {
+                const retard = !j.faites && j.premiere.status === "en_retard";
+                const deposee = j.faites;
+                const reste = jours(j.dueDate);
                 const ton = deposee ? "acc" : retard ? "ve" : reste <= BORNE_SEMAINE ? "am" : "";
                 return (
-                  <div className="rw" key={e.id}>
+                  <div className="rw" key={j.cle}>
                     <i className={ton === "acc" ? undefined : ton || undefined}>
                       <IconeObligation />
                     </i>
                     <span className="bd">
-                      <b>{e.label}</b>
+                      <b>{libelle(j)}</b>
                       <span className={ton || undefined}>
                         {deposee
                           ? t("pme.echeances.sous.deposee")
@@ -354,9 +362,9 @@ function PmeEcheances() {
                             ? t("pme.echeances.sous.retard", { count: Math.abs(reste) })
                             : t("pme.echeances.sous.avenir", { count: reste })}
                       </span>
-                      <OrigineDEcheance echeance={e} />
-                      {/* Toutes les sociétés : chaque échéance dit la sienne. */}
-                      {plusieurs ? <span>{nomDeSociete(e.tenantId)}</span> : null}
+                      <OrigineDEcheance echeance={j.premiere} />
+                      {/* Toutes les sociétés : chaque jour dit la sienne. */}
+                      {plusieurs ? <span>{nomDeSociete(j.tenantId)}</span> : null}
                     </span>
                     <span className="rt">
                       {/*
@@ -364,7 +372,7 @@ function PmeEcheances() {
                        * montant : `—`, ou l'état quand il y en a un à dire.
                        */}
                       <span className="vl">{deposee ? t("pme.echeances.reglee") : "—"}</span>
-                      <span className="dt">{jour(e.dueDate)}</span>
+                      <span className="dt">{jour(j.dueDate)}</span>
                     </span>
                   </div>
                 );

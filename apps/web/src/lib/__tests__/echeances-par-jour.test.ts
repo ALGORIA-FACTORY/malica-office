@@ -1,7 +1,7 @@
 /** Les échéances de l'accueil, une ligne par jour (22 novembre 2026). */
 import { describe, expect, it } from "vitest";
 
-import { echeancesParJour } from "../echeances-par-jour";
+import { echeancesParJour, regrouperParJour } from "../echeances-par-jour";
 
 const e = (id: string, dueDate: string, label: string, status = "a_faire", tenantId = "a") => ({
   id,
@@ -53,5 +53,25 @@ describe("les échéances groupées par jour", () => {
       2,
     );
     expect(jours.map((j) => j.dueDate)).toEqual(["2026-11-20", "2026-11-21"]);
+  });
+});
+
+describe("l'écran des échéances groupe aussi par jour", () => {
+  it("une ligne par jour, et les déposées à part, sans la liste", () => {
+    const jours = regrouperParJour(
+      [
+        e("1", "2026-11-20", "TVA", "en_retard"),
+        e("2", "2026-11-20", "Timbre", "en_retard"),
+        e("3", "2026-11-20", "TCL", "fait"),
+        e("4", "2026-11-30", "FOPROLOS"),
+      ],
+      "2026-11-22",
+    );
+    expect(jours.map((j) => [j.dueDate, j.faites, j.n, j.seule])).toEqual([
+      ["2026-11-20", false, 2, null],
+      ["2026-11-20", true, 1, "TCL"],
+      ["2026-11-30", false, 1, "FOPROLOS"],
+    ]);
+    expect(jours[0]!.premiere.id).toBe("1");
   });
 });
