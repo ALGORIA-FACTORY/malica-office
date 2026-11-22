@@ -51,7 +51,7 @@ create policy familles_choisies_ins on capture.familles_choisies for insert to a
 
 -- Le relecteur de nuit n'en a pas besoin : il ne la lit ni ne l'écrit (20261118100000).
 create policy service_hors_perimetre on capture.familles_choisies as restrictive
-  for all to authenticated using ((select app.service()) is null);
+  for select to authenticated using ((select app.service()) is null);
 
 create trigger familles_choisies_no_upd
   before update or delete on capture.familles_choisies
