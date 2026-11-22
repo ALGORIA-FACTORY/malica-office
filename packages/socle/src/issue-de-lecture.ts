@@ -34,9 +34,16 @@ const CODES_PHOTO = ["lecture.illisible", "lecture.vide", "lecture.trop_dense"] 
 const CODES_CONNUS = [...CODES_PHOTO, "lecture.trop_longue"] as const;
 export type CodeDeLecture = (typeof CODES_CONNUS)[number];
 
-/** Le code `lecture.*` porté par un motif d'échec, ou `null`. */
+/**
+ * Le code `lecture.*` porté par un motif d'échec, ou `null`.
+ *
+ * Le code doit commencer un mot : « reglage.lecture.illisible » (un réglage du
+ * cabinet absent) n'est pas une photo illisible. Cherché n'importe où, il
+ * l'était — au pilote, une note d'honoraires lisible a été dite « ni texte ni
+ * image nette » (21 novembre 2026).
+ */
 export function codeDeLecture(motif: string | null | undefined): CodeDeLecture | null {
-  const trouve = motif?.match(/lecture\.[a-z_]+/)?.[0];
+  const trouve = motif?.match(/(?<![\w.])lecture\.[a-z_]+/)?.[0];
   return CODES_CONNUS.find((c) => c === trouve) ?? null;
 }
 
