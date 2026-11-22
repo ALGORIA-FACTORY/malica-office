@@ -576,6 +576,18 @@ export const facturation = {
     return { change: Boolean(r?.change), paiement: r?.paiement ?? null };
   },
 
+  /**
+   * Le jeu d'essai, sur une base locale sans émetteur : l'offre s'ouvre sans paiement.
+   * Réservée au serveur (`rpc.ts`) ; la base exige aussi `malica.origine = 'serveur'`.
+   */
+  async ouvrirForfaitDEssai(db: Requete, offre: string, tenantId?: string) {
+    const { rows } = await db.query<{ r: boolean }>(
+      `select public.forfait_ouvrir_d_essai($1, $2) as r`,
+      [offre, tenantId ?? null],
+    );
+    return { change: Boolean(rows[0]?.r), paiement: null };
+  },
+
   /* ----------------------------------------------------- payer en ligne */
 
   /** Les paiements en ligne de la licence de l'appelant, et leur état déduit. */

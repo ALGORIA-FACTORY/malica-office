@@ -291,6 +291,29 @@ create trigger une_montee_payee_s_ouvre
   after insert on facturation.paiement_evenements
   for each row execute function facturation.une_montee_payee_s_ouvre();
 
+-- --- 4 bis. La porte d'essai ------------------------------------------------
+--
+-- Le jeu d'essai du développeur et les épreuves de la CI tournent sur une base
+-- locale sans émetteur : aucune montée n'y peut plus se payer. Comme pour les
+-- lectures toutes faites, ils jouent le serveur : cette porte n'ouvre l'offre
+-- que si `malica.origine = 'serveur'`, que seule l'API pose, et l'API ne la
+-- pose pour un appel venu de `/rpc` que sur une base locale avec les portes
+-- d'essai ouvertes (`rpc.ts`, `origineDEssai`). Ailleurs, elle refuse.
+
+create or replace function public.forfait_ouvrir_d_essai(p_offre text, p_tenant uuid default null)
+returns boolean
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  if coalesce(current_setting('malica.origine', true), '') <> 'serveur' then
+    raise exception 'refus.reserve.serveur' using errcode = 'insufficient_privilege';
+  end if;
+  return public.forfait_changer(p_offre, p_tenant);
+end
+$$;
+revoke all on function public.forfait_ouvrir_d_essai(text, uuid) from public, anon;
+grant execute on function public.forfait_ouvrir_d_essai(text, uuid) to authenticated;
+
 -- --- 5. Une montée payée par sa demande ne se repaie pas --------------------
 
 CREATE OR REPLACE FUNCTION public.paiement_montee_preparer(p_tenant uuid DEFAULT NULL::uuid)
