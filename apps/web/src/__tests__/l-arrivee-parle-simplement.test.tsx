@@ -24,6 +24,11 @@ const monde = vi.hoisted(() => ({
 }));
 const appels = vi.hoisted(() => ({
   creer: vi.fn(async (..._a: unknown[]) => "org-1"),
+  inviter: vi.fn(async (..._a: unknown[]): Promise<unknown> => ({
+    email: "",
+    jeton: "j",
+    lien: null,
+  })),
   pack: vi.fn(async () => ({
     ratified: false,
     jurisdiction: "TN",
@@ -72,6 +77,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
         identity: depot({
           listMyOrganizations: async () => monde.orgs,
           createOrganization: appels.creer,
+          inviterMaComptabilite: appels.inviter,
           definirOrganisation: saisie.definir,
         }),
         tour: depot({ suisJePlateforme: async () => monde.operateur }),
@@ -163,8 +169,8 @@ describe("4.2 — l'adresse du siège", () => {
   it("l'adresse tapée part comme adresse du siège, pas comme nom d'établissement", async () => {
     rendre(composant(RouteOnboarding));
     await screen.findByText(/onboarding\.jurisdiction\.option/);
-    const champs = screen.getAllByRole("textbox") as HTMLInputElement[];
-    fireEvent.change(champs[0]!, { target: { value: "Atelier Samia" } });
+    const nom = screen.getByText("onboarding.name").parentElement!.querySelector("input")!;
+    fireEvent.change(nom, { target: { value: "Atelier Samia" } });
     const adresse = screen.getByText("onboarding.adresse").parentElement!.querySelector("input")!;
     fireEvent.change(adresse, { target: { value: "12 rue de Marseille, Tunis" } });
     fireEvent.click(screen.getByRole("button", { name: "onboarding.submit" }));
@@ -172,6 +178,51 @@ describe("4.2 — l'adresse du siège", () => {
     const saisie = appels.creer.mock.calls[0]![0] as Record<string, unknown>;
     expect(saisie["adresse"]).toBe("12 rue de Marseille, Tunis");
     expect(saisie["defaultEntityName"]).toBeUndefined();
+  });
+});
+
+describe("l'invitation de la comptabilité dès la création (22 novembre 2026)", () => {
+  const champ = (cle: string) => screen.getByText(cle).parentElement!.querySelector("input")!;
+  const remplir = async (email: string) => {
+    rendre(composant(RouteOnboarding));
+    await screen.findByText(/onboarding\.jurisdiction\.option/);
+    fireEvent.change(champ("onboarding.name"), { target: { value: "Atelier Samia" } });
+    fireEvent.change(champ("onboarding.comptabilite"), { target: { value: email } });
+  };
+
+  it("l'e-mail donné invite la comptabilité de la société créée", async () => {
+    await remplir("cabinet@exemple.tn");
+    fireEvent.click(screen.getByRole("button", { name: "onboarding.submit" }));
+    await waitFor(() => expect(nav.aller).toHaveBeenCalled());
+    expect(appels.inviter).toHaveBeenCalledWith("org-1", "cabinet@exemple.tn");
+  });
+
+  it("sans e-mail, rien ne part", async () => {
+    await remplir("");
+    fireEvent.click(screen.getByRole("button", { name: "onboarding.submit" }));
+    await waitFor(() => expect(nav.aller).toHaveBeenCalled());
+    expect(appels.inviter).not.toHaveBeenCalled();
+  });
+
+  it("une invitation refusée ne crée pas une seconde société au renvoi", async () => {
+    appels.inviter.mockRejectedValueOnce(new Error("refus"));
+    await remplir("cabinet@exemple.tn");
+    fireEvent.click(screen.getByRole("button", { name: "onboarding.submit" }));
+    const renvoyer = await screen.findByRole("button", {
+      name: "onboarding.comptabilite.reessayer",
+    });
+    expect(nav.aller).not.toHaveBeenCalled();
+    fireEvent.click(renvoyer);
+    await waitFor(() => expect(nav.aller).toHaveBeenCalled());
+    expect(appels.creer).toHaveBeenCalledTimes(1);
+    expect(appels.inviter).toHaveBeenCalledTimes(2);
+  });
+
+  it("une comptabilité qui s'inscrit ne voit pas le champ", async () => {
+    rendre(composant(RouteOnboarding));
+    await screen.findByText(/onboarding\.jurisdiction\.option/);
+    fireEvent.click(screen.getByRole("button", { name: "onboarding.kind.cabinet" }));
+    expect(screen.queryByText("onboarding.comptabilite")).toBeNull();
   });
 });
 
