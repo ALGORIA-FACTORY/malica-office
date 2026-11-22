@@ -204,9 +204,14 @@ for (const d of DOSSIERS) {
   );
   const offreActuelle = forfait?.offre ?? forfait?.offre_code ?? forfait?.code ?? null;
   if (offreActuelle !== d.offre) {
-    const r = await etape(`${d.nom} : passage à l'offre ${d.offre}`, () =>
-      e.rpc("facturation", "changerForfait", [d.offre, org.id]),
-    );
+    // Payer d'abord (22 novembre 2026) : la montée se règle, ici par le simulateur.
+    const r = await etape(`${d.nom} : passage à l'offre ${d.offre}`, async () => {
+      const m = await e.rpc("facturation", "changerForfait", [d.offre, org.id]);
+      if (m && !m.change && m.paiement) {
+        await e.rpc("facturation", "simulerPaiement", [m.paiement.paiement_id, "paye"]);
+      }
+      return m;
+    });
     if (r !== null) e.verdict(`${d.nom} : offre ${d.offre} ouverte`, true);
   } else e.verdict(`${d.nom} : déjà en offre ${d.offre}`, true);
 

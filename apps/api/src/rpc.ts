@@ -117,6 +117,8 @@ const RESERVEES_AU_SERVEUR: Readonly<Partial<Record<NomDepot, ReadonlySet<string
   // client : la base exige aussi `malica.origine = 'serveur'`.
   conseil: new Set(["configurationAssistant"]),
   conversations: new Set(["ajouter", "journaliserControles"]),
+  // Le jeu d'essai sur base locale : ouvrir une offre sans paiement possible.
+  facturation: new Set(["ouvrirForfaitDEssai"]),
   fabrique: new Set([
     "enregistrerLecture",
     "inscrireExecution",

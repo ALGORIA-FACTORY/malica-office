@@ -30,7 +30,7 @@ import { idsDeSocietes } from "./societes.ts";
 /** Un paiement en ligne, tel que `facturation.paiements_en_ligne_v` le rend. */
 interface PaiementLu {
   paiement_id: string;
-  objet: "montee" | "recharge" | "annuel" | "facture";
+  objet: "montee" | "recharge" | "annuel" | "facture" | "montee_demandee";
   libelle: string;
   montant_ht: string;
   montant_tva: string;
@@ -564,17 +564,28 @@ export const facturation = {
    * peut ; un refus revient en `refus.forfait.empeche?motif=<code>&chiffres=<chiffres>`.
    */
   async changerForfait(db: Requete, offre: string, tenantId?: string) {
-    const { rows } = await db.query<{ r: boolean }>(`select public.forfait_changer($1, $2) as r`, [
-      offre,
-      tenantId ?? null,
-    ]);
-    // Une montée se paie aussitôt : la base prépare la différence du mois, ou
-    // rien (descente, même prix). L'offre, elle, est déjà ouverte.
-    const { rows: p } = await db.query<{ p: PaiementLu | null }>(
-      `select public.paiement_montee_preparer($1) as p`,
-      [tenantId ?? null],
+    // Payer d'abord (22 novembre 2026) : une montée que la société paie elle-même
+    // ne s'ouvre qu'au paiement confirmé — la base rend le paiement à régler, et
+    // `change` reste faux. Une descente, une montée pendant l'année ou sous la
+    // facturation immédiate gardent leur chemin : le forfait d'abord.
+    const { rows } = await db.query<{ r: { change: boolean; paiement: PaiementLu | null } }>(
+      `select public.forfait_demander($1, $2) as r`,
+      [offre, tenantId ?? null],
     );
-    return { change: Boolean(rows[0]?.r), paiement: p[0]?.p ?? null };
+    const r = rows[0]?.r;
+    return { change: Boolean(r?.change), paiement: r?.paiement ?? null };
+  },
+
+  /**
+   * Le jeu d'essai, sur une base locale sans émetteur : l'offre s'ouvre sans paiement.
+   * Réservée au serveur (`rpc.ts`) ; la base exige aussi `malica.origine = 'serveur'`.
+   */
+  async ouvrirForfaitDEssai(db: Requete, offre: string, tenantId?: string) {
+    const { rows } = await db.query<{ r: boolean }>(
+      `select public.forfait_ouvrir_d_essai($1, $2) as r`,
+      [offre, tenantId ?? null],
+    );
+    return { change: Boolean(rows[0]?.r), paiement: null };
   },
 
   /* ----------------------------------------------------- payer en ligne */

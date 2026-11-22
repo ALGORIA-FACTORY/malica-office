@@ -236,7 +236,17 @@ async function offreQuiAccueilleDeuxSocietes(pme) {
     .filter((o) => !o.empechement && Number(o.organisations_incluses) >= 2)
     .sort((a, b) => Number(a.rang) - Number(b.rang))[0];
   if (!cible) throw new Error("aucune offre n'accueille deux sociétés sans supplément");
-  await rpc("facturation", "changerForfait", [cible.code, pme]);
+  // Payer d'abord (22 novembre 2026) : une montée rend un paiement à régler ; le jeu
+  // d'essai le règle par le simulateur, qui n'existe que là où la tour l'a ouvert.
+  // Sans paiement possible (base locale sans émetteur), il joue le serveur : la porte
+  // d'essai, ouverte seulement sur une base locale (`rpc.ts`, `origineDEssai`).
+  const r = await rpc("facturation", "changerForfait", [cible.code, pme]).catch((e) => {
+    if (!/refus\.forfait\.paiement_indisponible/.test(e.message)) throw e;
+    return rpc("facturation", "ouvrirForfaitDEssai", [cible.code, pme]);
+  });
+  if (!r.change && r.paiement) {
+    await rpc("facturation", "simulerPaiement", [r.paiement.paiement_id, "paye"]);
+  }
   console.log(`  offre            ${cible.libelle} (deux sociétés)`);
 }
 
