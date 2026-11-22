@@ -597,13 +597,15 @@ function PmeHome() {
                   {a.devise}{" "}
                   {a.tvaEnCours
                     ? null
-                    : sensDuSolde(a.tva.solde) === "inconnu"
-                      ? t("pme.tva.soldeInconnu")
-                      : sensDuSolde(a.tva.solde) === "nul"
-                        ? t("pme.tva.soldeNul")
-                        : sensDuSolde(a.tva.solde) === "du"
-                          ? t("pme.home.reverser")
-                          : t("pme.home.credit")}
+                    : a.tva.aucunePiece
+                      ? t("pme.tva.aucunePiece")
+                      : sensDuSolde(a.tva.solde) === "inconnu"
+                        ? t("pme.tva.soldeInconnu")
+                        : sensDuSolde(a.tva.solde) === "nul"
+                          ? t("pme.tva.soldeNul")
+                          : sensDuSolde(a.tva.solde) === "du"
+                            ? t("pme.home.reverser")
+                            : t("pme.home.credit")}
                 </u>
               </span>
               <span className="dt">

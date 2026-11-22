@@ -65,6 +65,11 @@ export interface MoisDeTva {
   solde: string | null;
   /** Les pièces du mois hors du calcul — un extrait illisible, un taux inconnu. */
   horsDuCalcul: number;
+  /**
+   * Les entrées lues, aucune pièce ne compte ce mois-ci : la carte le dit (« Aucune facture
+   * comptée ce mois-ci ») au lieu d'un « à confirmer » qui attendrait quelque chose.
+   */
+  aucunePiece?: boolean;
 }
 
 export interface Accueil {
@@ -258,7 +263,8 @@ export function useAccueil(periode: string): Accueil {
     const calcules = mois.map((m) => {
       const dedans = parMois.get(m.periode);
       const declaration = declarations.get(monthBounds(m.periode).to);
-      if (!dedans || dedans.length === 0 || !declaration) return m;
+      if (!dedans || dedans.length === 0) return { ...m, aucunePiece: true };
+      if (!declaration) return m;
       // Le même calcul que l'écran de la TVA : un extrait illisible y est
       // refusé, et compté ici — jamais écarté en silence.
       const calcul = tvaDesExtraits({

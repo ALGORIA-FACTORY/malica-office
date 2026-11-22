@@ -3860,6 +3860,11 @@ export interface ChargesRepository {
   familles(packId: string, locale?: string): Promise<ChargeFamille[]>;
   anomalyThreshold(packId: string, code: string): Promise<AnomalyThresholdRow | null>;
   articles(tenantId: string, fromPeriod: string, toPeriod: string): Promise<PieceArticle[]>;
+  /**
+   * « Les classer » : la famille du pack choisie pour une ligne de charge (l'ordinal de
+   * l'article, 0 pour une pièce sans articles). Refusé quand le cabinet tient les livres.
+   */
+  classer(pieceId: string, ordinal: number, famille: string): Promise<{ id: string }>;
   enAttenteDeDate(tenantId: string): Promise<ChargesEnAttenteDeDate>;
   /**
    * Les articles d'une pièce en devise sans cours de change (31 octobre

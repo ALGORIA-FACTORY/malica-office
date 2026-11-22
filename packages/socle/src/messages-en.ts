@@ -759,10 +759,16 @@ export const en: Dict = {
   "pme.charges.disclaimer": "I flag and I ask; I never change an entry.",
   "pme.charges.estimation":
     "Estimate: these figures come from reading your documents; no accountant has reviewed them yet.",
+  "pme.charges.classer": "Classify this expense",
+  "refus.charge.classee_par_le_cabinet":
+    "Your accountant keeps your books: they classify your expenses.",
+  "refus.charge.famille_inconnue": "This family does not exist in the document's reference data.",
+  "refus.charge.ligne_inconnue": "This expense line cannot be found.",
   "pme.home.card.charges": "Your expenses",
   "pme.nav.home": "Company",
   "pme.tva.soldeNul": "Zero VAT balance",
   "pme.tva.soldeInconnu": "VAT balance to confirm",
+  "pme.tva.aucunePiece": "No invoice counted this month",
   "pme.nav.add": "Add a document",
   "pme.nav.office": "Workspace",
   "pme.nav.aria": "Main navigation",

@@ -286,6 +286,55 @@ describe("le crayon corrige le pied de la facture", { skip: !BASE_CONFIGUREE }, 
     assert.equal(rows[0]?.estimation, true, "elle compte, marquée estimation");
     const [ligne] = await charges();
     assert.equal(Number(ligne?.totalHt), 15000, "son HT entre au mois");
+    // Et la TVA de son mois la compte aussi, sans transmission (la carte de TVA restait vide).
+    const m = await mois();
+    const tva = (await pmeFait("office.extraitsTransmis", societe, `${m}-01`, `${m}-28`)) as Array<{
+      pieceId: string;
+    }>;
+    assert.ok(
+      tva.some((x) => x.pieceId === id),
+      "sans comptabilité, la pièce qui tient entre à la TVA de son mois",
+    );
+  });
+
+  // « Les classer » (22 novembre 2026) : une charge « Non classée » se range dans une famille du pack.
+  it("sans comptabilité, une charge se classe dans une famille du pack, et seulement du pack", async () => {
+    const id = await lue();
+    await corrige(id, "totals.vat", "2850.000");
+    await corrige(id, "totals.ttc", "17851.000");
+    const m = (
+      (await pmeFait("capture.dossier", id)) as {
+        extraction: { payload: { document_date: string } };
+      }
+    ).extraction.payload.document_date.slice(0, 7);
+    const ligne = async () =>
+      (
+        (await pmeFait("charges.articles", societe, m, m)) as Array<{
+          pieceId: string;
+          ordinal: number;
+          familleCode: string;
+          familleSource: string;
+        }>
+      ).find((a) => a.pieceId === id)!;
+    const avant = await ligne();
+    assert.equal(avant.familleSource, "fallback", "lue sans articles, elle est « à classer »");
+    await assert.rejects(
+      pmeFait("charges.classer", id, avant.ordinal, "PAS_UNE_FAMILLE"),
+      /refus\.charge\.famille_inconnue/,
+    );
+    const { rows } = await admin.query<{ code: string }>(
+      `select f.code from ref_charge_familles_v f
+        where f.pack_version_id = $1 and not f.is_fallback order by f.ordinal limit 1`,
+      [packId],
+    );
+    await pmeFait("charges.classer", id, avant.ordinal, rows[0]!.code);
+    const apres = await ligne();
+    assert.equal(apres.familleCode, rows[0]!.code);
+    assert.equal(apres.familleSource, "personne");
+    await assert.rejects(
+      fait(() => etranger, "charges.classer", id, avant.ordinal, rows[0]!.code),
+      /refus\.introuvable\.piece/,
+    );
   });
 
   /*

@@ -814,10 +814,16 @@ export const fr = {
   "pme.charges.disclaimer": "Je signale et j'interroge ; je ne modifie jamais une écriture.",
   "pme.charges.estimation":
     "Estimation : ces chiffres viennent de la lecture de vos pièces ; aucun comptable ne les a encore repris.",
+  "pme.charges.classer": "Classer cette charge",
+  "refus.charge.classee_par_le_cabinet":
+    "Votre comptabilité tient vos livres : c'est elle qui classe vos charges.",
+  "refus.charge.famille_inconnue": "Cette famille n'existe pas dans le référentiel de la pièce.",
+  "refus.charge.ligne_inconnue": "Cette ligne de charge est introuvable.",
   "pme.home.card.charges": "Vos charges",
   "pme.nav.home": "Société",
   "pme.tva.soldeNul": "Solde TVA nul",
   "pme.tva.soldeInconnu": "Solde TVA à confirmer",
+  "pme.tva.aucunePiece": "Aucune facture comptée ce mois-ci",
   "pme.nav.add": "Ajouter une pièce",
   "pme.nav.office": "Espace",
   "pme.nav.aria": "Navigation principale",

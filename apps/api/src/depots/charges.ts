@@ -152,6 +152,20 @@ export const charges = {
       .sort((a, b) => a.ordinal - b.ordinal);
   },
 
+  /**
+   * « Les classer » (22 novembre 2026) : la famille qu'une personne choisit pour une ligne
+   * de charge — l'ordinal de l'article, 0 pour une pièce lue sans articles. La base vérifie
+   * que la famille est celle du pack de la pièce, en vigueur à sa date, et que la société
+   * tient ses livres (`public.charge_classer`).
+   */
+  async classer(db: Requete, pieceId: string, ordinal: number, famille: string) {
+    const { rows } = await db.query<{ id: string }>(
+      "select public.charge_classer($1, $2, $3) as id",
+      [pieceId, ordinal, famille],
+    );
+    return { id: rows[0]!.id };
+  },
+
   async anomalyThreshold(db: Requete, packId: string, code: string) {
     const { rows } = await db.query(
       `select code, min_periods, deviation_ratio, min_amount, valid_from, valid_to
@@ -285,7 +299,10 @@ export const charges = {
                 coalesce((select y.normalisation ->> 'devise' from capture.analyses y
                            where y.piece_id = q.id order by y.created_at desc limit 1),
                          x.payload ->> 'currency'),
-                f.code, 'fallback',
+                -- La famille qu'une personne a choisie (« Les classer », 22 novembre 2026),
+                -- à défaut celle de repli du pack.
+                coalesce(fc.famille_code, f.code),
+                case when fc.famille_code is not null then 'personne' else 'fallback' end,
                 to_char(coalesce((x.payload ->> 'document_date')::date, v.recue_le), 'YYYY-MM'),
                 coalesce((x.payload ->> 'document_date')::date, v.recue_le),
                 'totals.base_ht', null, null, null, 'totals.base_ht', 'lecture'
@@ -305,6 +322,9 @@ export const charges = {
                                  or r.valid_to > coalesce((x.payload ->> 'document_date')::date,
                                                           v.recue_le))
                           order by r.valid_from desc limit 1) f on true
+           left join lateral (select c.famille_code from capture.familles_choisies c
+                               where c.piece_id = q.id and c.ordinal = 0
+                               order by c.decided_at desc limit 1) fc on true
           where q.tenant_id = $1 and q.source = 'lecture'
             and q.document_kind <> 'facture_vente'
             and coalesce(ht.valeur, x.payload #>> '{totals,base_ht}') ~ '^-?[0-9]+([.][0-9]+)?$'

@@ -176,6 +176,23 @@ function ChargesScreen() {
     queryFn: () => office().charges.articles(pme.tenantId, premierMois, dernierMois),
   });
 
+  /*
+   * « Les classer » (22 novembre 2026) : une ligne de charge se range dans une famille du
+   * pack de la pièce — la liste proposée est celle du référentiel tunisien (R4), jamais une
+   * liste écrite ici. Seule une société qui tient ses livres classe ses charges ; quand le
+   * cabinet les tient, ses écritures font foi et le choix n'est pas offert.
+   */
+  const classer = useMutation({
+    mutationFn: (v: { pieceId: string; ordinal: number; famille: string }) =>
+      office().charges.classer(v.pieceId, v.ordinal, v.famille),
+    onSuccess: async () => {
+      setError(null);
+      await qc.invalidateQueries({ queryKey: ["charges-articles", pme.tenantId] });
+    },
+    onError: (e: unknown) =>
+      setError(texteDeLErreur(e, "routes/_authenticated/pme.charges", t("common.error"))),
+  });
+
   const questions = useQuery({
     queryKey: ["charge-questions", pme.tenantId],
     queryFn: () => office().charges.questions(pme.tenantId),
@@ -422,46 +439,79 @@ function ChargesScreen() {
             <span>{t("pme.detail.compte", { count: lignesOuvertes.length })}</span>
           </div>
 
+          {error ? (
+            <p role="alert" className="mt-3 text-xs text-signal-warn">
+              {error}
+            </p>
+          ) : null}
+
           {lignesOuvertes.length > 0 ? (
             <div className="lines">
               {lignesOuvertes.map((a) => (
-                <Link
-                  key={`${a.pieceId}-${a.ordinal}`}
-                  to="/pme/piece/$pieceId"
-                  params={{ pieceId: a.pieceId }}
-                  className="ln"
-                >
-                  <span className="hd">
-                    <span className="nm">{a.designation || t("pme.list.sansEmetteur")}</span>
-                    {/*
-                     * Un montant NON CITÉ ne s'écrit pas : le moteur le
-                     * compte pour zéro faute de mieux, l'écran ne le
-                     * présente pas comme un prix lu. Celui que le cabinet a
-                     * inscrit en prenant la pièce en charge fait foi sans
-                     * citation : il décide.
-                     */}
-                    <span className="vl">
-                      {(a.citationTotalHt || a.source === "cabinet") && a.totalHt
-                        ? montant(a.totalHt, locale)
-                        : "—"}
+                <div key={`${a.pieceId}-${a.ordinal}`}>
+                  <Link
+                    key={`${a.pieceId}-${a.ordinal}`}
+                    to="/pme/piece/$pieceId"
+                    params={{ pieceId: a.pieceId }}
+                    className="ln"
+                  >
+                    <span className="hd">
+                      <span className="nm">{a.designation || t("pme.list.sansEmetteur")}</span>
+                      {/*
+                       * Un montant NON CITÉ ne s'écrit pas : le moteur le
+                       * compte pour zéro faute de mieux, l'écran ne le
+                       * présente pas comme un prix lu. Celui que le cabinet a
+                       * inscrit en prenant la pièce en charge fait foi sans
+                       * citation : il décide.
+                       */}
+                      <span className="vl">
+                        {(a.citationTotalHt || a.source === "cabinet") && a.totalHt
+                          ? montant(a.totalHt, locale)
+                          : "—"}
+                      </span>
                     </span>
-                  </span>
-                  <span className="qt">
-                    {t("pme.detail.qte", {
-                      q: a.citationQuantity && a.quantity ? quantite(a.quantity, locale) : "—",
-                    })}
-                    {a.citationUnitPriceHt && a.unitPriceHt
-                      ? " · " + t("pme.detail.pu", { pu: montant(a.unitPriceHt, locale) })
-                      : ""}
-                  </span>
-                  {/*
-                   * Le dessin pose ici deux marques de plus : `.tag`
-                   * (« À immobiliser ? Je vous demande ») et `.who`
-                   * (« Saisie Sami · 12 févr. »). Aucune des deux n'a de
-                   * donnée : pas de question au niveau de la ligne au
-                   * contrat, et `charges.articles` ne rend pas qui a saisi.
-                   */}
-                </Link>
+                    <span className="qt">
+                      {t("pme.detail.qte", {
+                        q: a.citationQuantity && a.quantity ? quantite(a.quantity, locale) : "—",
+                      })}
+                      {a.citationUnitPriceHt && a.unitPriceHt
+                        ? " · " + t("pme.detail.pu", { pu: montant(a.unitPriceHt, locale) })
+                        : ""}
+                    </span>
+                    {/*
+                     * Le dessin pose ici deux marques de plus : `.tag`
+                     * (« À immobiliser ? Je vous demande ») et `.who`
+                     * (« Saisie Sami · 12 févr. »). Aucune des deux n'a de
+                     * donnée : pas de question au niveau de la ligne au
+                     * contrat, et `charges.articles` ne rend pas qui a saisi.
+                     */}
+                  </Link>
+                  {estimation && a.source === "lecture" ? (
+                    <label className="qt flex items-center gap-2">
+                      <span aria-hidden>✎</span>
+                      <span className="sr-only">{t("pme.charges.classer")}</span>
+                      <select
+                        aria-label={t("pme.charges.classer")}
+                        value={a.familleCode}
+                        disabled={classer.isPending}
+                        onChange={(e) =>
+                          classer.mutate({
+                            pieceId: a.pieceId,
+                            ordinal: a.ordinal,
+                            famille: e.target.value,
+                          })
+                        }
+                        className="border border-input bg-card px-2 py-1 text-xs"
+                      >
+                        {(refs.data?.familles ?? []).map((f) => (
+                          <option key={f.code} value={f.code}>
+                            {f.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : (

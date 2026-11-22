@@ -1723,9 +1723,22 @@ function Versions() {
 function PannesConstatees() {
   const { t, locale } = useI18n();
   const pme = usePme();
+  /*
+   * Le dirigeant, 22 novembre 2026 : « cette partie ne doit pas être visible pour le
+   * client ». Le journal technique (écran, clés, identifiants, version) est l'outil des
+   * opérateurs d'ALGORIA, qui le relisent aussi par la tour et le déploiement. Le client
+   * garde « Signaler un problème » ; ses refus, eux, lui sont dits au moment du geste.
+   */
+  const plateforme = useQuery({
+    queryKey: ["tour-suis-je"],
+    queryFn: () => office().tour.suisJePlateforme(),
+    retry: false,
+  });
+  const operateur = plateforme.data === true;
   const pannes = useQuery({
     queryKey: ["pannes", pme.tenantId],
     queryFn: () => office().journal.dernieres(pme.tenantId, 20),
+    enabled: operateur,
   });
   const qc = useQueryClient();
   /*
@@ -1738,7 +1751,7 @@ function PannesConstatees() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pannes", pme.tenantId] }),
   });
 
-  if ((pannes.data ?? []).length === 0) return null;
+  if (!operateur || (pannes.data ?? []).length === 0) return null;
 
   return (
     <>
