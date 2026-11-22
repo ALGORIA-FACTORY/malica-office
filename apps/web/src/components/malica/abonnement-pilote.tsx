@@ -351,11 +351,15 @@ export function ChangerDOffre() {
     mutationFn: (code: string) => office().facturation.changerForfait(code, pme.tenantId),
     onSuccess: async (r, code) => {
       setArmee(null);
-      // Une montée mène au paiement : le bloc « À régler » apparaît juste dessous.
+      // Payer d'abord (22 novembre 2026) : une montée que la société paie elle-même ne
+      // s'ouvre qu'au paiement reçu ; le bloc « À régler » apparaît juste dessous.
+      const offre = libelleDOffre(catalogue, code);
       setRetour(
-        r.paiement
-          ? t("pme.reglages.offres.aRegler", { offre: libelleDOffre(catalogue, code) })
-          : t("pme.reglages.offres.fait", { offre: libelleDOffre(catalogue, code) }),
+        !r.change && r.paiement
+          ? t("pme.reglages.offres.payerPourOuvrir", { offre })
+          : r.paiement
+            ? t("pme.reglages.offres.aRegler", { offre })
+            : t("pme.reglages.offres.fait", { offre }),
       );
       await invalider();
     },

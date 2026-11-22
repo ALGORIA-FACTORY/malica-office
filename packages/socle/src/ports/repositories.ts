@@ -4716,7 +4716,7 @@ export type EtatDeFacture =
 /** Un paiement en ligne — une montée, une recharge, l'année, une facture — tel que la base le rend. */
 export interface PaiementEnLigne {
   paiement_id: string;
-  objet: "montee" | "recharge" | "annuel" | "facture";
+  objet: "montee" | "recharge" | "annuel" | "facture" | "montee_demandee";
   libelle: string;
   montant_ht: string;
   montant_tva: string;

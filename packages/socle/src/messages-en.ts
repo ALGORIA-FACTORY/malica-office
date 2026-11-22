@@ -4388,6 +4388,10 @@ export const en: Dict = {
   "refus.paiement.prestataire_du_lien":
     "This payment was opened with another provider: it is checked there.",
   "pme.reglages.offres.aRegler": "Done: you are now on {offre}. Pay the month's difference below.",
+  "pme.reglages.offres.payerPourOuvrir":
+    "{offre} opens as soon as the payment is received. Pay the month's difference below.",
+  "refus.forfait.paiement_indisponible":
+    "Online payment is not open yet: this plan change cannot be paid for now.",
   "pme.reglages.recharges.aRegler": "Top-up added: its reads are already there. Pay for it below.",
   "pme.reglages.sansPlafond": "no cap",
   "pme.home.greet.morning.prenom": "Good morning, {prenom}.",

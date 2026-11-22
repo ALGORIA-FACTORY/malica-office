@@ -4517,6 +4517,10 @@ export const fr = {
     "Ce paiement a été ouvert chez un autre prestataire : il se vérifie chez lui.",
   "pme.reglages.offres.aRegler":
     "C'est fait : vous êtes en {offre}. Réglez la différence du mois ci-dessous.",
+  "pme.reglages.offres.payerPourOuvrir":
+    "{offre} s'ouvre dès que le paiement est reçu. Réglez la différence du mois ci-dessous.",
+  "refus.forfait.paiement_indisponible":
+    "Le paiement en ligne n'est pas encore ouvert : ce passage d'offre ne peut pas se régler pour l'instant.",
   "pme.reglages.recharges.aRegler":
     "Recharge ajoutée : ses lectures sont déjà là. Réglez-la ci-dessous.",
   "pme.reglages.sansPlafond": "sans plafond",

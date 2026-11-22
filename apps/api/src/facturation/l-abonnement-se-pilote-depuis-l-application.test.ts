@@ -46,7 +46,8 @@ describe("l'abonnement se pilote depuis l'application", { skip: !BASE_CONFIGUREE
       "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
       [tenant, principal],
     );
-    await admin.query("select facturation.licence_naitre($1, $2, 'solo', current_date)", [
+    // Née en Team : la montée se paie d'abord (22 novembre 2026), elle n'est plus un geste gratuit.
+    await admin.query("select facturation.licence_naitre($1, $2, 'team', current_date)", [
       tenant,
       principal,
     ]);
@@ -73,8 +74,8 @@ describe("l'abonnement se pilote depuis l'application", { skip: !BASE_CONFIGUREE
       offres.map((o) => o.code),
       ["basic", "solo", "team", "premium"],
     );
-    assert.equal(offres.find((o) => o.courant)?.code, "solo");
-    assert.equal(offres.find((o) => o.code === "solo")?.empechement, "deja_courant");
+    assert.equal(offres.find((o) => o.courant)?.code, "team");
+    assert.equal(offres.find((o) => o.code === "team")?.empechement, "deja_courant");
   });
 
   it("le principal achète une recharge, règle l'automatique, et les relit", async () => {
@@ -111,10 +112,22 @@ describe("l'abonnement se pilote depuis l'application", { skip: !BASE_CONFIGUREE
     assert.equal(auto.recharge_code, premier.code);
   });
 
-  it("le principal passe en Team, invite un propriétaire, et lui transmet la licence", async () => {
-    await rpc(principal, "facturation", "changerForfait", "team", tenant);
+  it("le principal monte sans l'ouvrir avant de payer, invite un propriétaire, et lui transmet la licence", async () => {
+    // Payer d'abord : la montée rend un paiement à régler, ou se refuse quand aucun paiement
+    // n'est possible (pas d'émetteur désigné). Jamais elle ne s'ouvre gratuitement.
+    const monte = await rpc(principal, "facturation", "changerForfait", "premium", tenant).then(
+      (r) => r as { change: boolean; paiement: { objet: string } | null },
+      (e: { message?: string }) => {
+        assert.match(e.message ?? "", /refus\.forfait\.paiement_indisponible/);
+        return null;
+      },
+    );
+    if (monte) {
+      assert.equal(monte.change, false);
+      assert.equal(monte.paiement?.objet, "montee_demandee");
+    }
     const f = (await rpc(principal, "facturation", "monForfait")) as { offre: string };
-    assert.equal(f.offre, "team");
+    assert.equal(f.offre, "team", "rien ne s'ouvre avant le paiement");
 
     const inv = (await rpc(
       principal,

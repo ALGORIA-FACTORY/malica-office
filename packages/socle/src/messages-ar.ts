@@ -4211,6 +4211,10 @@ export const ar: Dict = {
   "refus.paiement.montant_perime": "تغيّر المبلغ المستحق منذ ذلك الحين: أعيدوا الدفع من فواتيركم.",
   "refus.paiement.prestataire_du_lien": "فُتح هذا الدفع لدى مزوّد آخر: يُتحقَّق منه لديه.",
   "pme.reglages.offres.aRegler": "تم: أنت الآن على باقة {offre}. ادفع فرق الشهر أدناه.",
+  "pme.reglages.offres.payerPourOuvrir":
+    "تُفتح باقة {offre} فور استلام الدفع. ادفع فرق الشهر أدناه.",
+  "refus.forfait.paiement_indisponible":
+    "الدفع الإلكتروني غير متاح بعد: لا يمكن دفع تغيير الباقة هذا حالياً.",
   "pme.reglages.recharges.aRegler": "أضيف الرصيد وقراءاته متاحة. ادفع ثمنه أدناه.",
   "pme.reglages.sansPlafond": "بلا سقف",
   "pme.home.greet.morning.prenom": "صباح الخير يا {prenom}.",
