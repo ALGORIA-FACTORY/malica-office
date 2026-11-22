@@ -139,6 +139,15 @@ describe("4.1 — choisissez votre espace", () => {
     expect(appels.pack).not.toHaveBeenCalled();
   });
 
+  // 22 novembre 2026 : l'invitation de la comptabilité dès le premier écran — un compte
+  // neuf, sans invitation reçue, entre directement dans la création de sa société.
+  it("un compte neuf sans invitation entre directement dans la création de sa société", async () => {
+    rendre(composant(RouteOffice));
+    await waitFor(() =>
+      expect(nav.aller).toHaveBeenCalledWith({ to: "/onboarding", replace: true }),
+    );
+  });
+
   it("une dirigeante ne voit ni rôle, ni mode de validation, ni juridiction", async () => {
     monde.orgs = [SOCIETE];
     rendre(composant(RouteOffice));

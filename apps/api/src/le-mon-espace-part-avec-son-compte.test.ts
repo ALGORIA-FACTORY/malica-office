@@ -89,7 +89,9 @@ describe("son Mon espace part avec son compte", { skip: !BASE_CONFIGUREE }, () =
   });
 
   it("il le supprime ; le propriétaire, non", async () => {
-    assert.equal(await s.fait("amel", "capture.supprimer", autre), false);
+    // Une pièce qu'on ne voit pas ne se supprime pas : un refus, plus un « faux » muet que
+    // l'écran disait en panne (pilote, 21 novembre 2026).
+    await assert.rejects(s.fait("amel", "capture.supprimer", autre), /refus\.introuvable\.piece$/);
     assert.equal(await s.fait("sami", "capture.supprimer", autre), true);
     const { rows } = await s.admin.query(`select 1 from capture.pieces where id = $1`, [autre]);
     assert.equal(rows.length, 0);

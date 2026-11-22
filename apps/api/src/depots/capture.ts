@@ -2012,13 +2012,21 @@ export const capture = {
     }
     // La base efface, ou archive une pièce qu'une écriture contre-passée
     // retient : celle-là garde ses octets.
-    return effacerPar(db, pieceId, async () => {
+    const faite = await effacerPar(db, pieceId, async () => {
       const { rows } = await db.query<{ issue: "supprimee" | "archivee" }>(
         `select public.capture_piece_supprimer($1, $2) as issue`,
         [pieceId, parAccord],
       );
       return { effacee: rows[0]?.issue === "supprimee" };
     });
+    /*
+     * Pilote, 21 novembre 2026 (journal 7635D7D6 et quatre autres) : sur le téléphone, une
+     * fiche restée à l'écran après que la pièce soit partie appelait « Supprimer » cinq fois,
+     * et chaque fois l'écran tombait en panne (« suppression sans effet »). Une pièce que
+     * l'appelant ne voit plus n'est pas une panne : c'est un refus, dit dans sa langue.
+     */
+    if (!faite) throw new Error("refus.introuvable.piece");
+    return true;
   },
 
   /**

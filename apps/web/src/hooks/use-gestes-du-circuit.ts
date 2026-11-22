@@ -257,7 +257,10 @@ async function supprimerUne(id: string): Promise<void> {
  * geste qui a échoué ; celle-ci ne la masque pas.
  */
 export async function effacerUnDepotAvorte(id: string): Promise<void> {
-  await office().capture.supprimer(id);
+  // Déjà partie (refus « introuvable ») : rien à effacer, et l'erreur du geste reste la sienne.
+  await office()
+    .capture.supprimer(id)
+    .catch(() => false);
 }
 
 /** Supprimer une pièce sans rien demander. `null` quand elle se demande. */
