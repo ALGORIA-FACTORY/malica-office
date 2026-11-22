@@ -321,6 +321,23 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
     });
   });
 
+  // Le pilote, 16 novembre 2026 : « Le référentiel ne porte pas encore ce qu'il faut ».
+  it("sans émetteur désigné, le devis se tait : il n'échoue pas", async () => {
+    await aBlanc(async (db) => {
+      const d = await decor(db, "basic", "2026-11-01");
+      // L'état du pilote : aucun émetteur désigné. La table est append-only (R7) ; l'épreuve
+      // l'efface dans sa transaction, annulée à la fin, triggers suspendus.
+      await db.query("set local session_replication_role = replica");
+      await db.query("delete from facturation.emetteurs");
+      await db.query("set local session_replication_role = origin");
+      const devis = await devisDu(db, d, "team", "2026-11-13");
+      assert.ok(devis, "un devis, pas une panne");
+      assert.equal(devis.a_regler_ttc, null);
+      assert.equal(devis.a_regler_tva, null);
+      assert.equal(devis.devise, null, "aucune TVA supposée (R4)");
+    });
+  });
+
   it("le prix plein des mois suivants est celui que la grille affiche pour l'offre", async () => {
     await aBlanc(async (db) => {
       const d = await decor(db, "solo", "2026-11-01");
