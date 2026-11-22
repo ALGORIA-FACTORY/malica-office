@@ -237,7 +237,13 @@ const GRILLE: Grille = {
       code: "M04",
       statut: "defaut_a_valider",
       variante: "ttc_hors_timbre",
-      expression: { op: "somme", total: "net_a_payer", parties: [], role: "ttc" },
+      expression: {
+        op: "somme",
+        total: "net_a_payer",
+        parties: [],
+        role: "ttc",
+        retenue: "montant_retenue_source",
+      },
     },
     {
       code: "M01",
@@ -344,6 +350,44 @@ describe("sudoku — la sélection rendue", () => {
       [],
     );
     assert.deepEqual(net.totals.ttc, { page: 1, ordinal: 116 });
+    assert.equal(net.totals.withholding, undefined, "aucune retenue imprimée : rien à retrancher");
+
+    /*
+     * La note d'honoraires de MAP : la variante M04 prouve le net à payer
+     * ET la retenue imprimée qu'il déduit. La chaîne reçoit les deux : le net
+     * comme total, la retenue pour le fermer (476 + 1 − 14,280 = 462,720).
+     */
+    const avecRetenue = selectionParLeSudoku(
+      cas.designation,
+      {
+        ...prouvee,
+        variante: "ttc_hors_timbre",
+        champs: {
+          ...prouvee.champs,
+          net_a_payer: { valeur: "462720", refs: ref(116), statut: "prouve" },
+          montant_retenue_source: { valeur: "-14280", refs: ref(118), statut: "prouve" },
+        },
+      },
+      GRILLE,
+      [],
+    );
+    assert.deepEqual(avecRetenue.totals.ttc, { page: 1, ordinal: 116 });
+    assert.deepEqual(avecRetenue.totals.withholding, { page: 1, ordinal: 118 });
+
+    // Une retenue que la variante prouvée ne porte pas ne passe pas.
+    const autreVariante = selectionParLeSudoku(
+      cas.designation,
+      {
+        ...prouvee,
+        champs: {
+          ...prouvee.champs,
+          montant_retenue_source: { valeur: "-14280", refs: ref(118), statut: "prouve" },
+        },
+      },
+      GRILLE,
+      [],
+    );
+    assert.equal(autreVariante.totals.withholding, undefined);
   });
 
   it("prouvée : totaux, ligne de TVA et droits sont ceux de la preuve", () => {
@@ -987,6 +1031,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
         { variante: "noyau", champ: "total_ttc" },
         { variante: "ttc_avec_timbre", champ: "total_ttc" },
       ],
+      retenue: [{ variante: "ttc_hors_timbre", champ: "montant_retenue_source" }],
       lignes: {
         designation: "designation",
         quantite: "quantite",

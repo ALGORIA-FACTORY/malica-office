@@ -16,6 +16,7 @@ export const enBibliotheque: MessagesDeLaBibliotheque = {
   "cab.retenue.vatSettled": "VAT in this amount",
   "cab.retenue.taxEvidence": "Certificate or tax justification",
   "cab.retenue.preview": "Check entry",
+  "cab.retenue.lueSurLaFacture": "Read on the invoice: {montant}",
   "cab.retenue.declarer": "Declare a withholding",
   "cab.retenue.edit": "Edit treatment",
   "cab.retenue.unconfirmed": "Tax treatment is not recorded for this entry: review required.",

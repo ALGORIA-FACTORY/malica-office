@@ -634,6 +634,7 @@ export const fr = {
   "pme.piece.retour": "Vos documents",
   "pme.piece.voir": "Voir la facture",
   "pme.detail.voir": "Voir le détail",
+  "pme.crayon.baseProposee": "Base = {montant} ?",
   "pme.detail.titre": "Ce que j'ai lu, ligne par ligne",
   "pme.detail.lignesAVerifier": "Lignes lues, à vérifier",
   "pme.detail.lignesAVerifierAide":
@@ -4477,29 +4478,29 @@ export const fr = {
   "pme.payer.indisponible": "Indisponible ici",
   "pme.payer.securise": "Paiement sécurisé par {prestataire}",
   "pme.payer.rienARegler": "Ce paiement n'est plus à régler.",
-  "paiement.moyen_indisponible": "Ce moyen de paiement n'est pas disponible.",
+  "refus.paiement.moyen_indisponible": "Ce moyen de paiement n'est pas disponible.",
   "pme.reglages.paiement.facture": "Facture {numero}",
   "pme.reglages.factures.titre": "Vos factures",
   "pme.reglages.factures.reste": "Reste à payer : {montant} {devise} TTC",
   "pme.reglages.factures.etat.a_echoir": "À échoir",
   "pme.reglages.factures.etat.en_retard": "En retard",
-  "paiement.facture_rien_a_regler": "Cette facture n'a plus rien à régler.",
-  "paiement.depasse_le_total": "Ce règlement dépasse ce qui reste à payer sur la facture.",
-  "paiement.montant_positif": "Le montant d'un règlement doit être supérieur à zéro.",
-  "paiement.montant_requis": "Le total de la facture n'est pas lu : dites le montant réglé.",
-  "paiement.deja_solde": "Cette facture est déjà entièrement réglée.",
-  "paiement.date_future":
+  "refus.paiement.facture_rien_a_regler": "Cette facture n'a plus rien à régler.",
+  "refus.paiement.depasse_le_total": "Ce règlement dépasse ce qui reste à payer sur la facture.",
+  "refus.paiement.montant_positif": "Le montant d'un règlement doit être supérieur à zéro.",
+  "refus.paiement.montant_requis": "Le total de la facture n'est pas lu : dites le montant réglé.",
+  "refus.paiement.deja_solde": "Cette facture est déjà entièrement réglée.",
+  "refus.paiement.date_future":
     "Un règlement ne peut pas être daté dans l'avenir. S'il est prévu, choisissez « Pas encore payé ».",
-  "paiement.en_double": "Ce règlement vient d'être inscrit : il ne compte qu'une fois.",
-  "paiement.deja_regle":
+  "refus.paiement.en_double": "Ce règlement vient d'être inscrit : il ne compte qu'une fois.",
+  "refus.paiement.deja_regle":
     "Un règlement est déjà inscrit : corrigez-le plutôt que d'ajouter « Pas encore payé ».",
-  "paiement.deja_non_paye": "« Pas encore payé » est déjà inscrit.",
-  "paiement.non_paye_ne_se_corrige_pas":
+  "refus.paiement.deja_non_paye": "« Pas encore payé » est déjà inscrit.",
+  "refus.paiement.non_paye_ne_se_corrige_pas":
     "« Pas encore payé » ne se corrige pas : retirez-le ou ajoutez un règlement.",
-  "paiement.motif_qui_retire": "Ce motif retire le règlement : rien ne le remplace.",
-  "paiement.montant_perime":
+  "refus.paiement.motif_qui_retire": "Ce motif retire le règlement : rien ne le remplace.",
+  "refus.paiement.montant_perime":
     "Le montant dû a changé depuis : reprenez le paiement depuis vos factures.",
-  "paiement.prestataire_du_lien":
+  "refus.paiement.prestataire_du_lien":
     "Ce paiement a été ouvert chez un autre prestataire : il se vérifie chez lui.",
   "pme.reglages.offres.aRegler":
     "C'est fait : vous êtes en {offre}. Réglez la différence du mois ci-dessous.",
@@ -4855,6 +4856,9 @@ export const fr = {
   "pme.capture.fin.gardees": "{count} gardées pour vous",
   "pme.capture.fin.gardees#one": "{count} gardée pour vous",
   "pme.capture.fin.gardees#other": "{count} gardées pour vous",
+  "pme.capture.fin.surSaFiche": "{count} à régler sur leur fiche",
+  "pme.capture.fin.surSaFiche#one": "{count} à régler sur sa fiche",
+  "pme.capture.fin.surSaFiche#other": "{count} à régler sur leur fiche",
   "pme.capture.fin.reglePar": "Règlement par {moyen}",
   "pme.capture.fin.reglePar.talon": "Règlement par {moyen} — talon attendu",
   "pme.capture.fin.moyenADire": "Moyen de paiement à dire — chaque pièce le garde ouvert",

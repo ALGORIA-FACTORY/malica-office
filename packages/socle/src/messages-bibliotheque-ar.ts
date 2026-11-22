@@ -16,6 +16,7 @@ export const arBibliotheque: MessagesDeLaBibliotheque = {
   "cab.retenue.vatSettled": "الأداء ضمن هذا المبلغ",
   "cab.retenue.taxEvidence": "شهادة الخصم أو التبرير الجبائي",
   "cab.retenue.preview": "التحقق من القيد",
+  "cab.retenue.lueSurLaFacture": "مقروء في الفاتورة: {montant}",
   "cab.retenue.declarer": "التصريح بخصم من المورد",
   "cab.retenue.edit": "تعديل المعالجة",
   "cab.retenue.unconfirmed": "المعالجة الجبائية لهذا القيد غير موثقة: يلزم التحقق.",
