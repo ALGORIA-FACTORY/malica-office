@@ -531,8 +531,32 @@ async function piecesLuesDe(
     `select code, exposant from ref.devises`,
   );
   const exposants = new Map(devises.map((d) => [d.code, Number(d.exposant)]));
+  /*
+   * CE QUE LA PERSONNE A CORRIGÉ VAUT DANS LA LISTE COMME SUR LA FICHE (pilote, 22
+   * novembre 2026). Le TTC d'une facture Phoenix, lu 178,900 et corrigé 179,500 : la
+   * fiche disait 179,500, la bibliothèque, le dossier et « Récemment lues » 178,900 —
+   * et le total du mois avec eux. La liste lit les mêmes précisions que la fiche
+   * (`precisions_v`, la dernière par champ), en une lecture pour toutes les pièces.
+   */
+  const ids = (rows as Record<string, unknown>[]).map((r) => r["id"] as string);
+  const { rows: dites } = ids.length
+    ? await db.query<{ piece_id: string; champ: string; valeur: string }>(
+        `select distinct on (piece_id, champ) piece_id, champ, valeur
+           from precisions_v
+          where piece_id = any($1::uuid[]) and champ in ('totals.ttc', 'document_date')
+          order by piece_id, champ, decided_at desc`,
+        [ids],
+      )
+    : { rows: [] };
+  const corrige = new Map(dites.map((d) => [`${d.piece_id}:${d.champ}`, d.valeur]));
   for (const r of rows as Record<string, unknown>[]) {
-    parSociete.get((r["tenant_id"] as string).toLowerCase())?.push(versPieceLue(r, exposants));
+    const id = r["id"] as string;
+    parSociete.get((r["tenant_id"] as string).toLowerCase())?.push(
+      versPieceLue(r, exposants, {
+        ttc: corrige.get(`${id}:totals.ttc`) ?? null,
+        date: corrige.get(`${id}:document_date`) ?? null,
+      }),
+    );
   }
   return tenantIds.map((tenantId) => ({
     tenantId,
@@ -545,7 +569,11 @@ function sensDeclare(type: unknown): "facture_achat" | "facture_vente" | null {
   return type === "facture_achat" || type === "facture_vente" ? type : null;
 }
 
-function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string, number>) {
+function versPieceLue(
+  r: Record<string, unknown>,
+  exposants: ReadonlyMap<string, number>,
+  dit: { ttc: string | null; date: string | null } = { ttc: null, date: null },
+) {
   const lu = (r["payload"] ?? null) as {
     issuer?: string;
     document_date?: string;
@@ -567,7 +595,8 @@ function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string,
     comptabilite: Boolean(r["comptabilite"]),
     remiseLe: r["remise_le"] ? new Date(r["remise_le"] as string).toISOString() : null,
     emetteur: (r["emetteur_dit"] as string | null) ?? lu?.issuer ?? null,
-    dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
+    // La date donnée à la main complète une date non lue, comme sur la fiche.
+    dateDocument: cab?.dateEcriture ?? dateDeLaPiece(lu?.document_date, dit.date),
     kind:
       cab?.documentKind ??
       // Le côté dit l'emporte sur le côté lu : la personne sait si elle a
@@ -580,7 +609,8 @@ function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string,
       // intention, la lecture la contredit quand elle sait — mais quand elle
       // ne dit rien, « Vérifier » rend ce que la personne a choisi (G6c).
       sensDeclare(r["document_kind"]),
-    total: cab?.ttc ?? lu?.totals?.ttc ?? null,
+    // Le TTC corrigé l'emporte sur le TTC lu, comme sur la fiche ; l'écriture du cabinet sur les deux.
+    total: cab?.ttc ?? dit.ttc ?? lu?.totals?.ttc ?? null,
     devise: cab?.devise ?? lu?.currency ?? null,
     decimales: exposants.get(cab?.devise ?? lu?.currency ?? "") ?? null,
     typeDeDocument: (r["document_kind"] as string | null) ?? null,
