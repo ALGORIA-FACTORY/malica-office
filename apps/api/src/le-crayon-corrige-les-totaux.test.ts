@@ -254,6 +254,17 @@ describe("le crayon corrige le pied de la facture", { skip: !BASE_CONFIGUREE }, 
     );
   });
 
+  // Pilote, 22 novembre 2026 : la fiche disait 179,500, la bibliothèque 178,900.
+  it("le total corrigé vaut dans la liste comme sur la fiche", async () => {
+    const id = await lue();
+    await corrige(id, "totals.ttc", "17851.000");
+    const [liste] = (await pmeFait("capture.listAvecLectureDesSocietes", [societe])) as Array<{
+      pieces: Array<{ id: string; total: string | null }>;
+    }>;
+    const ligne = liste!.pieces.find((p) => p.id === id);
+    assert.equal(ligne?.total, "17851.000", "la bibliothèque et le dossier lisent le total saisi");
+  });
+
   it("une correction suivante remplace la précédente sans la défaire : la dernière fait foi", async () => {
     const id = await lue();
     await corrige(id, "totals.vat", "2850.000");
