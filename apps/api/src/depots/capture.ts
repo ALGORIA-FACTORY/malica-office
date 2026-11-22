@@ -445,6 +445,9 @@ async function piecesLuesDe(
               -- Le jour du dernier export qui remet cette pièce (G5) ; nul : jamais remise.
               rm.remise_le,
               h.precision_kind,
+              -- Le côté d'un avoir dit par une personne, ou proposé par la PME au
+              -- cabinet qui tient les livres (« à confirmer »).
+              h.precision_sens, h.sens_propose,
               -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
               -- reste telle quelle), que la liste préfère au nom lu.
               h.emetteur_dit,
@@ -522,8 +525,14 @@ async function piecesLuesDe(
   const parSociete = new Map<string, PieceDeLaListe[]>(
     tenantIds.map((id) => [id.toLowerCase(), []]),
   );
+  // Les décimales de chaque devise (R4) : un total en euros se lit à deux décimales,
+  // en dinars à trois — jamais au format d'une autre devise (22 novembre 2026).
+  const { rows: devises } = await db.query<{ code: string; exposant: number }>(
+    `select code, exposant from ref.devises`,
+  );
+  const exposants = new Map(devises.map((d) => [d.code, Number(d.exposant)]));
   for (const r of rows as Record<string, unknown>[]) {
-    parSociete.get((r["tenant_id"] as string).toLowerCase())?.push(versPieceLue(r));
+    parSociete.get((r["tenant_id"] as string).toLowerCase())?.push(versPieceLue(r, exposants));
   }
   return tenantIds.map((tenantId) => ({
     tenantId,
@@ -536,7 +545,7 @@ function sensDeclare(type: unknown): "facture_achat" | "facture_vente" | null {
   return type === "facture_achat" || type === "facture_vente" ? type : null;
 }
 
-function versPieceLue(r: Record<string, unknown>) {
+function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string, number>) {
   const lu = (r["payload"] ?? null) as {
     issuer?: string;
     document_date?: string;
@@ -561,6 +570,10 @@ function versPieceLue(r: Record<string, unknown>) {
     dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
     kind:
       cab?.documentKind ??
+      // Le côté dit l'emporte sur le côté lu : la personne sait si elle a
+      // vendu ou acheté. Proposé au cabinet, il range déjà la pièce chez la PME.
+      sensDeclare(r["precision_sens"]) ??
+      sensDeclare(r["sens_propose"]) ??
       (lu?.document_kind as string | undefined) ??
       (r["precision_kind"] as string | null) ??
       // Le type DÉCLARÉ à l'import vient en dernier : une déclaration est une
@@ -569,7 +582,10 @@ function versPieceLue(r: Record<string, unknown>) {
       sensDeclare(r["document_kind"]),
     total: cab?.ttc ?? lu?.totals?.ttc ?? null,
     devise: cab?.devise ?? lu?.currency ?? null,
+    decimales: exposants.get(cab?.devise ?? lu?.currency ?? "") ?? null,
     typeDeDocument: (r["document_kind"] as string | null) ?? null,
+    // Un côté proposé par la PME, que le comptable n'a pas encore tranché.
+    sensAConfirmer: !cab?.documentKind && !r["precision_sens"] && Boolean(r["sens_propose"]),
     suivi: versSuivi(r),
     circuit: versCircuit(r),
     lectureRefusee: (r["lecture_refusee"] ?? null) as { motif: string; le: string } | null,
@@ -922,6 +938,20 @@ export const capture = {
      * d'écriture et la liste voient le même type ; la base garde les deux.
      */
     const brutLu = extraction?.["payload"];
+    /*
+     * Un type rangé selon le côté (un avoir, un bon de livraison) ne dit pas s'il
+     * est d'achat ou de vente : il ne remplace pas le sens lu, et le côté dit
+     * (précision `sens`) l'emporte (22 novembre 2026). Avant, « avoir » prenait la
+     * place du sens et la pièce retombait aux achats.
+     */
+    const { rows: rangement } = precisions["document_kind"]
+      ? await db.query<{ selon_le_cote: boolean }>(
+          `select dossier_si_vente is not null as selon_le_cote
+             from ref.document_types where code = $1`,
+          [precisions["document_kind"]],
+        )
+      : { rows: [] };
+    const typeSelonLeCote = rangement[0]?.selon_le_cote === true;
     const corrections: CorrectionDeLecture[] = (prec as Record<string, unknown>[])
       .filter((r) => r["de_lecture"] === true)
       .map((r) => ({
@@ -935,9 +965,10 @@ export const capture = {
       const brutPayload = extraction?.["payload"];
       if (!brutPayload || typeof brutPayload !== "object") return brutPayload;
       const p = { ...(brutPayload as Record<string, unknown>) };
-      if (precisions["document_kind"]) {
+      if (precisions["document_kind"] && !typeSelonLeCote) {
         p["document_kind"] = precisions["document_kind"];
       }
+      if (precisions["sens"]) p["document_kind"] = precisions["sens"];
       // La date donnée à la main complète une date non lue — jamais une date
       // lue. Sans elle, la fiche redemandait la date pour toujours.
       const date = dateDeLaPiece(
@@ -1019,7 +1050,10 @@ export const capture = {
     const { rows: pieces } = await db.query(
       `select id, tenant_id, storage_path, source, content_type,
               to_char(recue_le, 'YYYY-MM-DD') as recue_le,
-              document_kind, document_kind_statut
+              document_kind, document_kind_statut,
+              (select q.valeur from precisions_v q
+                where q.piece_id = pieces_v.id and q.champ = 'sens'
+                order by q.decided_at desc limit 1) as cote_dit
          from pieces_v where id = $1`,
       [pieceId],
     );
@@ -1093,6 +1127,7 @@ export const capture = {
         sens: sensConfirme(
           piece["document_kind"] as string | null,
           piece["document_kind_statut"] as string | null,
+          piece["cote_dit"] as string | null,
         ),
       },
       jurisdiction,

@@ -487,7 +487,7 @@ export const referentiel = {
   async typesDeDocument(db: Requete, locale: string) {
     const { rows } = await db.query(
       `select d.code, d.famille, d.porte_ecriture, d.transmissible, d.propose_a_la_capture,
-              d.dossier, d.dossier_si_vente,
+              d.dossier, d.dossier_si_vente, d.signe,
               coalesce(demandee.value, francais.value, d.libelle) as libelle
          from ref.document_types d
          left join ref_labels_v demandee
@@ -508,6 +508,7 @@ export const referentiel = {
       proposeALaCapture: Boolean(r["propose_a_la_capture"]),
       dossier: r["dossier"] as string,
       dossierSiVente: (r["dossier_si_vente"] as string | null) ?? null,
+      signe: Number(r["signe"]) === -1 ? (-1 as const) : (1 as const),
     }));
   },
 

@@ -869,10 +869,24 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
    * « Un achat » — sa réponse ne comptait que si elle redisait la lecture.
    * Le dirigeant sait s'il a payé ou encaissé ; la lecture le devine.
    */
+  /*
+   * Un type confirmé n'est un SENS que s'il en est un (facture d'achat, de
+   * vente). Un avoir confirmé ne disait pas son côté : « avoir » passait pour le
+   * sens et la pièce retombait aux achats (22 novembre 2026). Son côté se dit à
+   * part (précision `sens`) ; une simple proposition de la PME au cabinet
+   * (`sens_propose`) ne fait pas foi pour le jugement.
+   */
+  const { rows: cotes } = await db.query<{ valeur: string }>(
+    `select valeur from capture.precisions
+      where piece_id = $1 and champ = 'sens'
+      order by decided_at desc limit 1`,
+    [pieceId],
+  );
   const sensDit =
-    piece.document_kind_statut === "confirme" && piece.document_kind !== null
+    piece.document_kind_statut === "confirme" &&
+    (piece.document_kind === "facture_achat" || piece.document_kind === "facture_vente")
       ? piece.document_kind
-      : null;
+      : (cotes[0]?.valeur ?? null);
 
   const { rows: orgs } = await db.query<{
     name: string;
@@ -988,8 +1002,9 @@ async function jugerLaPiece(db: Requete, pieceId: string): Promise<JugementDeLaP
     tenantId: piece.tenant_id,
     packId: pack,
     jour: dateRef,
-    documentKind: piece.document_kind,
-    documentKindStatut: piece.document_kind_statut,
+    // Le sens dit (une facture confirmée, ou le côté d'un avoir) place les parties.
+    documentKind: sensDit ?? piece.document_kind,
+    documentKindStatut: sensDit ? "confirme" : piece.document_kind_statut,
     plan,
     lues: {
       emetteur: lues[NOM_MATRICULE_EMETTEUR] ?? null,

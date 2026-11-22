@@ -215,9 +215,19 @@ async function origineDuSens(db: Requete, pieceId: string): Promise<OrigineDuSen
     document_kind: string | null;
     statut: string | null;
     lu: string | null;
+    selon_le_cote: boolean;
+    cote_dit: string | null;
+    cote_propose: string | null;
   }>(
-    `select p.document_kind, p.document_kind_statut as statut, x.payload ->> 'document_kind' as lu
+    `select p.document_kind, p.document_kind_statut as statut, x.payload ->> 'document_kind' as lu,
+            coalesce(t.dossier_si_vente is not null, false) as selon_le_cote,
+            (select q.valeur from capture.precisions q where q.piece_id = p.id and q.champ = 'sens'
+              order by q.decided_at desc limit 1) as cote_dit,
+            (select q.valeur from capture.precisions q
+              where q.piece_id = p.id and q.champ = 'sens_propose'
+              order by q.decided_at desc limit 1) as cote_propose
        from capture.pieces p
+       left join ref.document_types t on t.code = p.document_kind
        left join lateral (select payload from capture.extractions e
                            where e.piece_id = p.id order by e.created_at desc limit 1) x on true
       where p.id = $1`,
@@ -225,6 +235,15 @@ async function origineDuSens(db: Requete, pieceId: string): Promise<OrigineDuSen
   );
   const r = rows[0];
   if (!r || r.document_kind === null) return null;
+  /*
+   * Un avoir : son type confirmé ne dit pas son côté (22 novembre 2026). Le côté dit par
+   * une personne est confirmé ; proposé par la PME, il est déclaré ; sinon, lu.
+   */
+  if (r.selon_le_cote) {
+    if (r.cote_dit) return "confirme";
+    if (r.cote_propose) return "declare";
+    return r.lu === "facture_achat" || r.lu === "facture_vente" ? "lu" : null;
+  }
   if (r.statut === "confirme") return "confirme";
   if (r.statut === "a_confirmer") return r.lu === r.document_kind ? "lu" : "declare";
   return null;

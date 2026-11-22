@@ -592,6 +592,8 @@ export interface ReferentialRepository {
       dossier: string;
       /** Le dossier quand la pièce est une vente (un avoir émis) ; sinon `null`. */
       dossierSiVente: string | null;
+      /** Le signe de ses montants dans un total : -1 retranche (un avoir). */
+      signe: 1 | -1;
     }>
   >;
   /**
@@ -1642,6 +1644,10 @@ export interface PieceLue {
   /** Le total TTC, chaîne décimale du Socle. */
   total: string | null;
   devise: string | null;
+  /** Les décimales de `devise` au référentiel (`ref.devises`) ; `null` si elle n'y est pas. */
+  decimales?: number | null;
+  /** Un côté proposé par la PME au cabinet qui tient les livres, pas encore tranché. */
+  sensAConfirmer?: boolean;
   /**
    * Pourquoi Malica a refusé de lire cette pièce — `null` si elle ne l'a pas
    * refusée, ou si elle a été lue depuis. `motif` est le CODE de la base
@@ -1890,13 +1896,14 @@ export interface CaptureRepository {
   /**
    * Ce que la personne précise ou corrige : le type de la pièce, un code que
    * le référentiel propose au choix (`propose_a_la_capture`), ou le nom de
-   * son émetteur (`issuer`, 3 novembre 2026). Une entrée
+   * son émetteur (`issuer`, 3 novembre 2026), ou le côté d'un avoir (`sens`,
+   * 22 novembre 2026 : proposé au cabinet quand il tient les livres). Une entrée
    * nouvelle, jamais une modification de la lecture (R7) ; la base contraint
    * le champ, la valeur et l'état de la pièce.
    */
   preciser(
     pieceId: string,
-    champ: "document_kind" | "issuer",
+    champ: "document_kind" | "issuer" | "sens",
     valeur: string,
   ): Promise<{ id: string | null; champ: string; valeur: string }>;
   /**

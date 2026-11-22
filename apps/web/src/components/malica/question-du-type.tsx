@@ -48,6 +48,12 @@ const SOUS_TYPES: Record<string, readonly string[] | undefined> = {
   ventes: ["facture_vente", "avoir", "bon_livraison"],
 };
 
+/** Le côté que dit chaque porte : il accompagne un sous-type commun aux deux (un avoir). */
+const SENS_DE_LA_PORTE: Record<string, "facture_achat" | "facture_vente" | undefined> = {
+  achats: "facture_achat",
+  ventes: "facture_vente",
+};
+
 /**
  * ============================================ UNE QUESTION POUR TOUT LE LOT
  *
@@ -76,8 +82,12 @@ export function QuestionDuType({
   ...sortie
 }: {
   documents: readonly string[];
-  /** Le TYPE à écrire : le dossier choisi le donne (`lib/dossiers.ts`). */
-  onRepondre: (code: string) => void;
+  /**
+   * Le TYPE à écrire : le dossier choisi le donne (`lib/dossiers.ts`). En correction,
+   * un sous-type choisi derrière une porte vient avec son CÔTÉ : « Ventes → Avoir »
+   * est un avoir sur vente, « Achats → Avoir » un avoir sur achat (22 novembre 2026).
+   */
+  onRepondre: (code: string, sens?: "facture_achat" | "facture_vente") => void;
   /** La pièce corrigée : son type et le sens lu, pour marquer son dossier. */
   actuel?: { typeDeDocument: string | null; kind: "facture_achat" | "facture_vente" | null } | null;
   /**
@@ -156,7 +166,10 @@ export function QuestionDuType({
               key={d.code}
               type="button"
               data-teinte={d.teinte}
-              aria-pressed={sortie.mode === "correction" ? d.code === dossierActuel : undefined}
+              // La porte touchée s'encadre aussitôt ; fermée, le dossier de la pièce.
+              aria-pressed={
+                sortie.mode === "correction" ? d.code === (porte ?? dossierActuel) : undefined
+              }
               aria-expanded={
                 SOUS_TYPES[d.code] && sortie.mode === "correction" ? porte === d.code : undefined
               }
@@ -224,13 +237,20 @@ export function QuestionDuType({
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {SOUS_TYPES[porte]!.map((code) => types.find((x) => x.code === code))
-                .filter((x): x is NonNullable<typeof x> => !!x)
+                // Le cabinet tient les livres : une facture (un type qui porte une
+                // écriture) ne se choisit pas ici ; un avoir, oui — son côté part au
+                // cabinet comme une proposition « à confirmer » (22 novembre 2026).
+                .filter(
+                  (x): x is NonNullable<typeof x> =>
+                    !!x &&
+                    (!sensAuCabinet || !x.porteEcriture || x.code === actuel?.typeDeDocument),
+                )
                 .map((x) => (
                   <button
                     key={x.code}
                     type="button"
-                    aria-pressed={actuel?.typeDeDocument === x.code}
-                    onClick={() => onRepondre(x.code)}
+                    aria-pressed={actuel?.typeDeDocument === x.code && porte === dossierActuel}
+                    onClick={() => onRepondre(x.code, SENS_DE_LA_PORTE[porte])}
                     className="h-9 rounded-full border border-border bg-background px-3.5 text-[13.5px] font-semibold aria-pressed:border-[var(--acc)] aria-pressed:bg-[var(--acc)] aria-pressed:text-[var(--on-acc)]"
                   >
                     {x.libelle}

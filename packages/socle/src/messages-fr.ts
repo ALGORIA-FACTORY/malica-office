@@ -2814,6 +2814,10 @@ export const fr = {
   "refus.precision.engagee":
     "Une pièce engagée ne se précise plus : elle se corrige par une écriture.",
   "refus.precision.type_non_propose": "Ce type de pièce n’est pas proposé : {type}.",
+  "refus.precision.sens_inconnu":
+    "Ce côté n’existe pas : {sens}. Une pièce est un achat ou une vente.",
+  "refus.precision.sens_sans_objet":
+    "Le type de cette pièce dit déjà s’il s’agit d’un achat ou d’une vente.",
   "refus.precision.date_illisible": "Cette date n’est pas lisible : {date}.",
   "refus.precision.date_a_venir": "Une date à venir ne se précise pas : {date}.",
   "refus.precision.nom_vide": "Le nom ne peut pas être vide.",
@@ -4744,6 +4748,7 @@ export const fr = {
   "pme.compta.rienTransmis": "Rien de transmis pour l'instant.",
   "pme.compta.mandatActif": "Mandat actif",
   "pme.type.plutot": "{porte} · c'est plutôt",
+  "pme.piece.sens.aConfirmer": "{dossier} · à confirmer par le cabinet",
   "pme.reglages.sommaire.avecCompta": "{count} sociétés avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#one": "{count} société avec une comptabilité",
   "pme.reglages.sommaire.avecCompta#other": "{count} sociétés avec une comptabilité",
