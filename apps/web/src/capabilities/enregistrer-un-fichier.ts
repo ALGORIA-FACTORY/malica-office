@@ -24,9 +24,16 @@ import { nomDeFichierSur } from "@/lib/nom-de-fichier";
 import { estNatif } from "./coque";
 
 export interface FichierRemis {
-  /** Où le fichier a été écrit, dans la coque native. Nul dans un navigateur. */
+  /**
+   * Où le fichier a été écrit, dans la coque native, tel que la personne le retrouve :
+   * « Documents/releve.pdf ». Jamais l'URI technique (`file:///…`), que l'écran
+   * affichait tel quel (21 novembre 2026). Nul dans un navigateur.
+   */
   chemin: string | null;
 }
+
+/** Le dossier du téléphone où la coque remet les fichiers (`Directory.Documents`). */
+const DOSSIER_DE_L_APPAREIL = "Documents";
 
 /**
  * Un nom libre dans les documents de l'application. Capacitor ÉCRASE un
@@ -78,13 +85,13 @@ export async function enregistrerUnFichier(
         ),
       sur,
     );
-    const { uri } = await Filesystem.writeFile({
+    await Filesystem.writeFile({
       path: chemin,
       data: base64,
       directory: Directory.Documents,
       recursive: true,
     });
-    return { chemin: uri };
+    return { chemin: `${DOSSIER_DE_L_APPAREIL}/${chemin}` };
   }
 
   const url = URL.createObjectURL(blob);
