@@ -195,7 +195,8 @@ export const ar: Dict = {
   "onboarding.legalId": "المعرف الجبائي (اختياري)",
   "onboarding.adresse": "عنوان المقر (اختياري)",
   "onboarding.comptabilite": "البريد الإلكتروني لمحاسبكم (اختياري)",
-  "onboarding.comptabilite.help": "يتلقى دعوة لمسك محاسبتكم فور إنشاء الشركة. إن لم يكن لكم محاسب، اتركوا الخانة فارغة: يمكنكم دعوته لاحقاً من الإعدادات › الشركات.",
+  "onboarding.comptabilite.help":
+    "يتلقى دعوة لمسك محاسبتكم فور إنشاء الشركة. إن لم يكن لكم محاسب، اتركوا الخانة فارغة: يمكنكم دعوته لاحقاً من الإعدادات › الشركات.",
   "onboarding.comptabilite.reessayer": "إعادة إرسال الدعوة",
   "onboarding.mode": "نمط المصادقة",
   "onboarding.mode.mandate": "مع محاسبة — تراجع قيودكم وتصادق عليها",

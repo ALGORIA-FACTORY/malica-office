@@ -201,7 +201,8 @@ export const en: Dict = {
   "onboarding.legalId": "Tax identification number (optional)",
   "onboarding.adresse": "Head office address (optional)",
   "onboarding.comptabilite": "Your accountant's email (optional)",
-  "onboarding.comptabilite.help": "They receive an invitation to keep your books as soon as the company is created. No accountant? Leave it empty: you can invite one later in Settings › Companies.",
+  "onboarding.comptabilite.help":
+    "They receive an invitation to keep your books as soon as the company is created. No accountant? Leave it empty: you can invite one later in Settings › Companies.",
   "onboarding.comptabilite.reessayer": "Send the invitation again",
   "onboarding.mode": "Validation mode",
   "onboarding.mode.mandate": "With an accountant — they review and approve your entries",

@@ -202,7 +202,8 @@ export const fr = {
   "onboarding.legalId": "Identifiant fiscal (facultatif)",
   "onboarding.adresse": "Adresse du siège (facultatif)",
   "onboarding.comptabilite": "E-mail de votre comptabilité (facultatif)",
-  "onboarding.comptabilite.help": "Elle reçoit une invitation à tenir votre comptabilité dès la création de la société. Sans comptabilité, laissez vide : vous pourrez l'inviter plus tard dans Réglages › Sociétés.",
+  "onboarding.comptabilite.help":
+    "Elle reçoit une invitation à tenir votre comptabilité dès la création de la société. Sans comptabilité, laissez vide : vous pourrez l'inviter plus tard dans Réglages › Sociétés.",
   "onboarding.comptabilite.reessayer": "Renvoyer l'invitation",
   "onboarding.mode": "Mode de validation",
   "onboarding.mode.mandate": "Avec une comptabilité — elle relit et valide vos écritures",
