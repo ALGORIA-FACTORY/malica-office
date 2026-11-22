@@ -4,6 +4,13 @@
 # publiées) et l'environnement. L'environnement GitHub `pilote` et
 # `production` exigent une approbation : la même personne relit ce qu'elle
 # envoie. Revenir en arrière est le même geste avec l'étiquette d'avant.
+#
+# Le même bouton RELIT aussi le journal des pannes (21 novembre 2026) : on
+# laisse la version vide et l'on donne les références que l'écran a citées
+# (« 28AE8D15,FE93C5BF »), ou un nombre de jours pour relire les lectures de
+# pièces échouées. Même approbation, même tunnel, même porte SSH
+# (infra/porte-ssh.sh, commandes « journal » et « lectures ») ; rien n'est
+# déposé ni déployé, et la base est lue en transaction en lecture seule.
 
 name: Déployer
 
@@ -16,9 +23,17 @@ on:
         options: [pilote, production]
         default: pilote
       version:
-        description: "Étiquette du dépôt (v0.3.1)"
+        description: "Étiquette du dépôt (v0.3.1) — vide pour relire le journal"
         type: string
-        required: true
+        required: false
+      journal:
+        description: "Références des pannes à relire (28AE8D15,FE93C5BF) — seulement si la version est vide"
+        type: string
+        required: false
+      lectures:
+        description: "Ou : relire les lectures échouées de ces N derniers jours (1 à 7) — seulement si la version est vide"
+        type: string
+        required: false
 
 concurrency:
   group: deployer-${{ github.event.inputs.environnement }}
@@ -38,9 +53,24 @@ jobs:
       name: ${{ github.event.inputs.environnement }}
       url: https://${{ vars.DOMAINE }}
     steps:
-      - name: Vérifier l'étiquette
+      - name: Vérifier la demande
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+          JOURNAL: ${{ github.event.inputs.journal }}
+          LECTURES: ${{ github.event.inputs.lectures }}
         run: |
-          [[ "${{ github.event.inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]] \
+          if [ -z "$VERSION" ]; then
+            if [ -n "$LECTURES" ]; then
+              [ -z "$JOURNAL" ] || { echo "des références OU un nombre de jours, pas les deux" >&2; exit 1; }
+              [[ "$LECTURES" =~ ^[1-7]$ ]] || { echo "lectures : un nombre de jours, de 1 à 7" >&2; exit 1; }
+              exit 0
+            fi
+            [[ "$JOURNAL" =~ ^[0-9A-F]{8}(,[0-9A-F]{8}){0,19}$ ]] \
+              || { echo "sans version, une à vingt références de huit chiffres hexadécimaux (28AE8D15,FE93C5BF), ou un nombre de jours de lectures, sont attendus" >&2; exit 1; }
+            exit 0
+          fi
+          [ -z "$JOURNAL$LECTURES" ] || { echo "une version OU une relecture, pas les deux" >&2; exit 1; }
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]] \
             || { echo "une étiquette v<majeure>.<mineure>.<correctif> est attendue" >&2; exit 1; }
 
       # Le serveur ne détient rien (infra/deployer.sh) : il n'a ni le code ni
@@ -50,6 +80,7 @@ jobs:
       # « refs/depose/<version> introuvable » ; sans le jeton, le « pull » des
       # images privées répond « unauthorized ».
       - uses: actions/checkout@v7
+        if: github.event.inputs.version != ''
         with:
           ref: ${{ github.event.inputs.version }}
           fetch-depth: 0
@@ -102,7 +133,26 @@ jobs:
           gcloud compute instances describe "$MACHINE" --project="$PROJET" --zone="$ZONE" --format='value(status)' >&2 || true
           exit 1
 
+      - name: Relire le pilote (journal des pannes ou lectures échouées), en lecture seule
+        if: github.event.inputs.version == ''
+        env:
+          CLE: ${{ secrets.DEPLOI_CLE_SSH }}
+          HOTE: ${{ vars.DEPLOI_HOTE }}
+          PORT: ${{ vars.DEPLOI_PORT || '22' }}
+          EMPREINTE: ${{ vars.DEPLOI_EMPREINTE_HOTE }}
+          JOURNAL: ${{ github.event.inputs.journal }}
+          LECTURES: ${{ github.event.inputs.lectures }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/deploi
+          chmod 600 ~/.ssh/deploi
+          printf '%s\n' "$EMPREINTE" > ~/.ssh/known_hosts
+          # La demande a été vérifiée plus haut ; la porte la revérifie.
+          if [ -n "$LECTURES" ]; then demande="lectures $LECTURES"; else demande="journal $JOURNAL"; fi
+          ssh -i ~/.ssh/deploi -p "$PORT" -o BatchMode=yes "malica@$HOTE" "$demande" </dev/null
+
       - name: Déposer ${{ github.event.inputs.version }}, puis déployer sur ${{ github.event.inputs.environnement }}
+        if: github.event.inputs.version != ''
         env:
           CLE: ${{ secrets.DEPLOI_CLE_SSH }}
           HOTE: ${{ vars.DEPLOI_HOTE }}
