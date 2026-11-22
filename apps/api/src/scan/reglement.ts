@@ -9,6 +9,7 @@ import { contrepartieDuDocument } from "@malica/socle/domain/contrepartie";
 import { referenceDuDocument } from "@malica/socle/use-cases/libelle-de-piece";
 import {
   constaterLaRetenue,
+  reconnaitreLaRetenueImprimee,
   RetenueNonQualifiee,
   type QualificationDeRetenue,
   type TauxDeRetenue,
@@ -30,6 +31,12 @@ export type PropositionDeReglement =
       tauxDisponibles: TauxDeRetenue[];
       ttc: string | null;
       paye: string;
+      /**
+       * La retenue que la FACTURE imprime, reconnue à un taux du référentiel
+       * (`reconnaitreLaRetenueImprimee`) : une proposition que l'écran du
+       * comptable pré-remplit, jamais une qualification.
+       */
+      retenueLue: { code: string; assiette: string; montant: string } | null;
     }
   | { ok: false; raison: string };
 
@@ -151,6 +158,8 @@ export async function propositionDeReglement(
     payload: { issuer?: string; currency?: string; references?: Record<string, string> } | null;
     ttc_mineur: number | null;
     tva_mineur: number | null;
+    retenue_mineur: number | null;
+    bases_mineur: number | null;
     jurisdiction: string;
     devise_comptable: string;
   }>(
@@ -159,6 +168,10 @@ export async function propositionDeReglement(
               as payload,
             (a.normalisation -> 'montants' ->> 'ttc')::bigint as ttc_mineur,
             (a.normalisation -> 'montants' ->> 'tva')::bigint as tva_mineur,
+            (a.normalisation -> 'montants' ->> 'retenue')::bigint as retenue_mineur,
+            (select sum((b ->> 'ht')::bigint)
+               from jsonb_array_elements(a.normalisation -> 'montants' -> 'bases') b)::bigint
+              as bases_mineur,
             o.jurisdiction, o.currency as devise_comptable
        from capture.pieces p
        join identity.organizations o on o.id = p.tenant_id
@@ -231,6 +244,7 @@ export async function propositionDeReglement(
     counterparty = mapping.length === 1 ? mapping[0]!.counterparty_account : "";
   }
   let tauxDisponibles: TauxDeRetenue[] = [];
+  let retenueLue: { code: string; assiette: string; montant: string } | null = null;
 
   let retenue: ConstatDeRetenue = { cas: "sans_objet" };
   const lignesDeRetenue: Array<{ montant: string; compte: string; libelle: string }> = [];
@@ -252,6 +266,21 @@ export async function propositionDeReglement(
     );
     const sensCourt = sens === "facture_achat" ? "achat" : "vente";
     tauxDisponibles = taux.filter((t) => t.sens === "tous" || t.sens === sensCourt);
+    // La retenue imprimée sur la facture : son assiette « ttc » est HT + TVA,
+    // hors droits (le timbre n'est pas un revenu du prestataire).
+    if (piece.retenue_mineur != null && piece.bases_mineur != null && piece.tva_mineur != null) {
+      const montant = depuisUniteMineure(Number(piece.retenue_mineur), decimales);
+      const reconnue = reconnaitreLaRetenueImprimee(
+        {
+          retenue: montant,
+          ttc: depuisUniteMineure(Number(piece.bases_mineur) + Number(piece.tva_mineur), decimales),
+          tva: depuisUniteMineure(Number(piece.tva_mineur), decimales),
+          decimales,
+        },
+        tauxDisponibles,
+      );
+      retenueLue = reconnue ? { ...reconnue, montant } : null;
+    }
     try {
       retenue = constaterLaRetenue({
         ttc,
@@ -348,6 +377,7 @@ export async function propositionDeReglement(
       tauxDisponibles,
       ttc,
       paye,
+      retenueLue,
     };
   } catch (e) {
     if (e instanceof ReglementIncomplet) return { ok: false, raison: e.message };

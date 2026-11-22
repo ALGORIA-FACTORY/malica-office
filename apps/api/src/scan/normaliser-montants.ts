@@ -82,6 +82,14 @@ export interface EntreeMontants {
   /** Le TTC imprimé. */
   ttc?: string | null;
   /**
+   * La retenue à la source imprimée sur la facture et DÉDUITE du total
+   * (« Retenue à la source 3 % -14,280 »), signée ou non. Présente, `ttc` est
+   * le net à payer qu'elle laisse : HT + TVA + droits − retenue = net. Le
+   * taux de la retenue n'est pas vérifié ici — il vit dans le référentiel, et
+   * l'appelant le confronte (`analyse.ts`).
+   */
+  retenue?: string | null;
+  /**
    * Le HT global du pied, sur une facture à PLUSIEURS taux. Il ne sert qu'à
    * prouver la base d'une ligne illisible (voir `deduits`).
    */
@@ -113,7 +121,17 @@ export interface ResultatNormalisation {
     bases: Array<{ ht: number | null; taux: string }>;
     tva: number | null;
     autres: Array<number | null>;
+    /**
+     * Ce que la pièce doit AVANT la retenue à la source : HT + TVA + droits.
+     * Sur une pièce qui déduit une retenue, le net imprimé en est le reste.
+     */
     ttc: number | null;
+    /**
+     * La retenue à la source imprimée, en valeur absolue — `null` quand la
+     * pièce n'en déduit pas. Absente des jugements posés avant le
+     * 21 novembre 2026 : un lecteur lit `?? null`.
+     */
+    retenue?: number | null;
   };
   /**
    * Ce que la pièce PORTE, tel qu'imprimé — indépendamment de ce qui a été
@@ -141,6 +159,8 @@ export interface ResultatNormalisation {
     tva: string | null;
     autres: Array<string | null>;
     ttc: string | null;
+    /** Absente des jugements posés avant le 21 novembre 2026. */
+    retenue?: string | null;
   };
   /** Indice de confiance, de 0 à 1 — 0 quand aucun chiffre n'est rendu. */
   confiance: number;
@@ -188,6 +208,14 @@ export interface ResultatNormalisation {
    * Absent des jugements posés avant le 30 octobre 2026 : un lecteur lit `?? false`.
    */
   parConvention: boolean;
+  /**
+   * La base que l'arithmétique proposerait si la personne retirait SA saisie :
+   * le code de TVA est à taux nul, la base saisie ne fait pas tenir la facture,
+   * et sans elle la base vaut TTC − droits (21 novembre 2026, le per diem du
+   * pilote saisi à 0,00). Posée par l'appelant (`analyse.ts`), jamais ici :
+   * une saisie n'est pas écrasée, elle se propose de remplacer — un geste.
+   */
+  baseProposee?: string;
   /**
    * Les droits que le référentiel dit TAXABLES (`autres[i].taxable`) et que
    * la lecture retenue laisse HORS de la base de la TVA : la facture ne tient
@@ -384,6 +412,7 @@ export function normaliserMontants(
     tva: texte(entree.tva),
     autres: (entree.autres ?? []).map((a) => texte(typeof a === "string" ? a : a.brut)),
     ttc: texte(entree.ttc),
+    retenue: texte(entree.retenue),
   };
 
   /**
@@ -405,6 +434,7 @@ export function normaliserMontants(
       tva: null,
       autres: (entree.autres ?? []).map(() => null),
       ttc: null,
+      retenue: null,
     },
     imprime,
     confiance: 0,
@@ -443,6 +473,30 @@ export function normaliserMontants(
    * arithmétique pose une RÉSERVE : le cabinet voit pourquoi. Quand rien ne
    * ferme, rien n'est rendu — comme avant.
    */
+  /*
+   * ============================== LA BASE D'UN TAUX NUL (21 novembre 2026)
+   *
+   *   base     = TTC − droits, quand la seule base porte un taux NUL du
+   *              paramétrage (EXPORT, EXO) : rien ne s'y ajoute que les
+   *              droits, et une TVA imprimée doit valoir zéro.
+   *
+   * Au pilote, un per diem facturé à l'export : « Total 360 », aucune base
+   * lue, et la pièce restait sans écriture. Le taux nul vient du paramétrage
+   * (aucun code n'est nommé ici, R4) ; tous les droits doivent se lire, sinon
+   * deux inconnues se compenseraient.
+   */
+  const baseDuTauxNul =
+    entree.bases.length === 1 &&
+    !seLit(entree.bases[0]!.ht) &&
+    tauxNul(entree.bases[0]!.taux) &&
+    seLit(entree.ttc) &&
+    (texte(entree.tva) === null || seLit(entree.tva)) &&
+    // Une retenue imprimée se lit, comme les droits : elle se rajoute au net.
+    (texte(entree.retenue) === null || seLit(entree.retenue)) &&
+    (entree.autres ?? []).every((a) =>
+      typeof a === "string" ? seLit(a) : seLit(a.brut) && !a.taxable,
+    );
+
   const illisibles = entree.bases.flatMap((b, i) => (seLit(b.ht) ? [] : [i]));
   const baseDeduite =
     entree.bases.length > 1 &&
@@ -457,11 +511,11 @@ export function normaliserMontants(
   type Champ = { nom: string; brut: string; chiffresArabes?: boolean; ecartees?: number[] };
   const champs: Champ[] = [];
   entree.bases.forEach((b, i) => {
-    if (b.ht === null || b.ht.trim() === "" || i === baseDeduite) return;
+    if (b.ht === null || b.ht.trim() === "" || i === baseDeduite || baseDuTauxNul) return;
     champs.push({ nom: `ht${i}`, brut: b.ht });
   });
   if (baseDeduite !== null) champs.push({ nom: "htTotal", brut: entree.htTotal! });
-  else if (entree.bases.some((b) => b.ht === null || b.ht.trim() === ""))
+  else if (!baseDuTauxNul && entree.bases.some((b) => b.ht === null || b.ht.trim() === ""))
     return vide("illisible", "un HT est absent : la facture ne peut pas être vérifiée");
   if (entree.tva) champs.push({ nom: "tva", brut: entree.tva });
   const attendus = new Map<string, number>();
@@ -471,6 +525,7 @@ export function normaliserMontants(
     if (a.attendu !== undefined) attendus.set(nom, a.attendu);
     return champs.push({ nom, brut: a.brut ?? "" });
   });
+  if (texte(entree.retenue) !== null) champs.push({ nom: "retenue", brut: entree.retenue! });
   if (entree.ttc) champs.push({ nom: "ttc", brut: entree.ttc });
 
   const brutes = champs.map((c) => {
@@ -489,7 +544,9 @@ export function normaliserMontants(
    * encore conçues ; il se dit, et le cabinet le saisit. Toutes les bases, la
    * TVA et le total imprimés en négatif : le signe ne se devine pas ailleurs.
    */
-  const signes = champs.flatMap((c, i) => (c.nom.startsWith("autre") ? [] : [brutes[i]!]));
+  const signes = champs.flatMap((c, i) =>
+    c.nom.startsWith("autre") || c.nom === "retenue" ? [] : [brutes[i]!],
+  );
   if (signes.length > 0 && signes.every((l) => l.length > 0 && l.every((c) => c.mineur < 0)))
     return vide(
       "avoir",
@@ -530,7 +587,7 @@ export function normaliserMontants(
   // La TVA illisible : écartée de l'équation, que le TTC LU ferme seul.
   let tvaNonLue: string | null = null;
   const iTva = champs.findIndex((c) => c.nom === "tva");
-  if (iTva >= 0 && !lu("tva") && lu("ttc") && baseDeduite === null) {
+  if (iTva >= 0 && !lu("tva") && lu("ttc") && baseDeduite === null && !baseDuTauxNul) {
     tvaNonLue = champs[iTva]!.brut;
     champs.splice(iTva, 1);
     brutes.splice(iTva, 1);
@@ -539,7 +596,7 @@ export function normaliserMontants(
   // Le droit illisible ou non cité, que le paramétrage fixe : il ne prend que
   // sa valeur fixée, et l'égalité devra tomber juste au millime (`verifie`).
   const droitsDeduits = new Set<string>();
-  if (tvaNonLue === null && baseDeduite === null && lu("tva") && lu("ttc")) {
+  if (tvaNonLue === null && baseDeduite === null && !baseDuTauxNul && lu("tva") && lu("ttc")) {
     const candidats = champs.flatMap((c, i) =>
       c.nom.startsWith("autre") && brutes[i]!.length === 0 && attendus.has(c.nom) ? [i] : [],
     );
@@ -759,7 +816,9 @@ export function normaliserMontants(
     lu("ttc") &&
     droitsDeduits.size === 0 &&
     tvaNonLue === null &&
-    baseDeduite === null
+    baseDeduite === null &&
+    !baseDuTauxNul &&
+    !lu("retenue")
   ) {
     ttcAvantLesDroits = true;
     const avant = combinaisonsValides(lectures);
@@ -800,7 +859,8 @@ export function normaliserMontants(
     { pris: Candidat[]; assiette: Assiette },
   ];
   const pleine = unique ? CONFIANCE_LECTURE_UNIQUE_VERIFIEE : CONFIANCE_TRANCHEE_PAR_ARITHMETIQUE;
-  const deduite = tvaNonLue !== null || baseDeduite !== null || droitsDeduits.size > 0;
+  const deduite =
+    tvaNonLue !== null || baseDeduite !== null || baseDuTauxNul || droitsDeduits.size > 0;
   return construire(
     retenue,
     "tranche",
@@ -863,16 +923,26 @@ export function normaliserMontants(
     const par = new Map(champs.map((c, i) => [c.nom, BigInt(pris[i]!.mineur)]));
     // La base déduite : le HT du pied, moins les bases lues.
     const lues = entree.bases.reduce(
-      (s, _, i) => (i === baseDeduite ? s : s + par.get(`ht${i}`)!),
+      (s, _, i) => (i === baseDeduite || baseDuTauxNul ? s : s + par.get(`ht${i}`)!),
       0n,
     );
+    const autres = (entree.autres ?? []).map((_, i) => par.get(`autre${i}`)!);
+    const brute = par.get("retenue");
+    // Imprimée en négatif ou non, une retenue se retranche : on en garde la valeur.
+    const retenue = brute === undefined ? undefined : brute < 0n ? -brute : brute;
+    const ttc = par.get("ttc");
     return {
       hts: entree.bases.map((_, i) =>
-        i === baseDeduite ? par.get("htTotal")! - lues : par.get(`ht${i}`)!,
+        baseDuTauxNul
+          ? ttc! + (retenue ?? 0n) - (par.get("tva") ?? 0n) - autres.reduce((s, a) => s + a, 0n)
+          : i === baseDeduite
+            ? par.get("htTotal")! - lues
+            : par.get(`ht${i}`)!,
       ),
       tva: par.get("tva"),
-      autres: (entree.autres ?? []).map((_, i) => par.get(`autre${i}`)!),
-      ttc: par.get("ttc"),
+      autres,
+      retenue,
+      ttc,
     };
   }
 
@@ -909,7 +979,7 @@ export function normaliserMontants(
     if (v.ttc !== undefined) {
       const tva = v.tva ?? tvaCalculee;
       const droits = ttcAvantLesDroits ? 0n : v.autres.reduce((s, a) => s + a, 0n);
-      const total = v.hts.reduce((s, h) => s + h, 0n) + tva + droits;
+      const total = v.hts.reduce((s, h) => s + h, 0n) + tva + droits - (v.retenue ?? 0n);
       // Un droit déduit vaut EXACTEMENT le reste : l'arrondi admis porte sur
       // la TVA, jamais sur un montant que le paramétrage fixe.
       if (abs(total - v.ttc) > (droitsDeduits.size > 0 ? 0n : tol)) return false;
@@ -947,8 +1017,13 @@ export function normaliserMontants(
     const v = valeurs(pris, autresCompris, assiette);
     const somme = (xs: bigint[]) => xs.reduce((s, x) => s + x, 0n);
     // La TVA illisible vaut le reste du TTC lu : l'écriture tombe sur le total imprimé.
+    // Sur une pièce qui déduit une retenue, le total lu est le NET : la retenue
+    // s'y rajoute, sans quoi la TVA déduite en serait amputée (revue de #415).
     const tva =
-      tvaNonLue !== null && v.ttc !== undefined ? v.ttc - somme(v.hts) - somme(v.autres) : v.tva;
+      tvaNonLue !== null && v.ttc !== undefined
+        ? v.ttc + (v.retenue ?? 0n) - somme(v.hts) - somme(v.autres)
+        : v.tva;
+    const avecRetenue = v.retenue !== undefined && v.retenue !== 0n;
     const montant = (x: bigint) => depuisUniteMineure(Number(x), p.decimales);
     // Les montants imprimés qui alimentent la formule, et ce que la pièce
     // imprimait à la place de la valeur déduite.
@@ -961,8 +1036,21 @@ export function normaliserMontants(
       deduits.push({
         champ: "totals.vat",
         valeur: montant(tva),
-        formule: "TVA = TTC − HT − droits, vérifiée par HT × taux",
+        formule: avecRetenue
+          ? "TVA = net + retenue − HT − droits, vérifiée par HT × taux"
+          : "TVA = TTC − HT − droits, vérifiée par HT × taux",
         operandes: operandes("tva", tvaNonLue),
+      });
+    if (baseDuTauxNul)
+      deduits.push({
+        champ: "lines[0].base_ht",
+        valeur: montant(v.hts[0]!),
+        formule: avecRetenue
+          ? "base = net + retenue − droits (taux nul)"
+          : (entree.autres ?? []).length > 0
+            ? "base = TTC − droits (taux nul)"
+            : "base = TTC (taux nul, aucun droit)",
+        operandes: operandes("", entree.bases[0]!.ht),
       });
     if (baseDeduite !== null)
       deduits.push({
@@ -986,8 +1074,12 @@ export function normaliserMontants(
         bases: v.hts.map((h, i) => ({ ht: Number(h), taux: taux[i]! })),
         tva: tva === undefined ? null : Number(tva),
         autres: v.autres.map(Number),
+        // Le dû avant la retenue : le net imprimé, plus ce qu'elle en retranche.
         ttc:
-          v.ttc === undefined ? null : Number(ttcAvantLesDroits ? v.ttc + somme(v.autres) : v.ttc),
+          v.ttc === undefined
+            ? null
+            : Number((ttcAvantLesDroits ? v.ttc + somme(v.autres) : v.ttc) + (v.retenue ?? 0n)),
+        retenue: v.retenue === undefined ? null : Number(v.retenue),
       },
       imprime,
       confiance: confianceRendue,
@@ -1014,6 +1106,11 @@ export function normaliserMontants(
  * La TVA d'une base, en unités mineures : arrondi(HT × taux), le taux lu comme
  * un rationnel exact — le calcul même qui vérifie la facture.
  */
+/** Le taux du paramétrage est-il nul (EXPORT, EXO) ? Lu comme un rationnel exact. */
+export function tauxNul(taux: string | number): boolean {
+  return rationnel(taux)[0] === 0n;
+}
+
 export function tvaDeBase(htMineur: number, taux: string | number): number {
   const [num, den] = rationnel(taux);
   return Number(arrondi(BigInt(htMineur) * num, den));

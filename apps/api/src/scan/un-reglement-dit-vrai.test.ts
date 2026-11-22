@@ -18,6 +18,7 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
+import { refusLisible } from "../refus.ts";
 import { executerRpc } from "../rpc.ts";
 
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
@@ -50,7 +51,12 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
   };
 
   /** Une pièce, lue avec ce TTC (ou sans total lu). */
-  async function piece(cle: string, ttc: string | null, ttcDuSolveur: string | null = ttc) {
+  async function piece(
+    cle: string,
+    ttc: string | null,
+    ttcDuSolveur: string | null = ttc,
+    retenue: string | null = null,
+  ) {
     const p = (await rpc("capture", "enregistrer", {
       tenantId: org,
       source: "photo",
@@ -85,7 +91,13 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
             p.id,
             rows[0]!.id,
             packId,
-            JSON.stringify({ etat: "tranche", montants: { ttc: Math.round(Number(ttc) * 1000) } }),
+            JSON.stringify({
+              etat: "tranche",
+              montants: {
+                ttc: Math.round(Number(ttc) * 1000),
+                ...(retenue === null ? {} : { retenue: Math.round(Number(retenue) * 1000) }),
+              },
+            }),
           ],
         );
     });
@@ -183,7 +195,40 @@ describe("un règlement dit vrai", { skip: !BASE_CONFIGUREE }, () => {
       [100_000, 513_493],
     );
     const sansTotal = await piece("sans-total", null);
-    await assert.rejects(() => regler(sansTotal, "especes", null), /paiement\.montant_requis/);
+    /*
+     * Le refus doit franchir la FRONTIÈRE (`refus.ts`), pas seulement sortir de
+     * la base : levé `paiement.montant_requis`, il devenait `refus.inattendu`
+     * (« Ce geste n'a pas abouti »), et le règlement groupé, qui le reconnaît,
+     * s'arrêtait — pilote, 21 novembre 2026. La seule expression régulière ne
+     * le voyait pas : elle trouvait la clé dans les deux formes.
+     */
+    await assert.rejects(
+      () => regler(sansTotal, "especes", null),
+      (e: unknown) => refusLisible(e) === "refus.paiement.montant_requis",
+    );
+  });
+
+  it("la retenue imprimée sur la facture : le règlement complet paie le net", async () => {
+    // Note d'honoraires de MAP : 477,000 dus (timbre compris), 14,280 retenus,
+    // 462,720 versés. Le reste se qualifie au règlement, par le comptable.
+    const id = await piece("retenue", "477.000", "462.720", "14.280");
+    await regler(id, "virement", null);
+    assert.deepEqual(
+      (await vivants(id)).map((l) => l.montantMineur),
+      [462_720],
+    );
+  });
+
+  it("après un acompte, le solde paie encore le net : la retenue reste due (revue Codex de #416)", async () => {
+    // 100,000 en espèces d'abord, sans retenue qualifiée : le solde est
+    // 477,000 − 100,000 − 14,280 = 362,720, pas 377,000.
+    const id = await piece("retenue-acompte", "477.000", "462.720", "14.280");
+    await regler(id, "especes", 100_000);
+    await regler(id, "virement", null);
+    assert.deepEqual(
+      (await vivants(id)).map((l) => l.montantMineur),
+      [100_000, 362_720],
+    );
   });
 
   it("le TTC qui fait foi est celui de l'analyse, pas le brut du solveur", async () => {

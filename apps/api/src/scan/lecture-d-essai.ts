@@ -23,7 +23,7 @@ export const JOUR_D_ESSAI = jourDEssai(0);
  * l'ont appris : le 11 novembre 2026, dix jours avant tombait le 1er, la pièce
  * « reçue la veille » l'était en octobre et la réserve devenait une anomalie ; et
  * du 11 au 30 novembre, la fin du mois de la facture (le 30) était dans le futur,
- * donc un règlement daté de ce jour était refusé (`paiement.date_future`).
+ * donc un règlement daté de ce jour était refusé (`refus.paiement.date_future`).
  */
 export function jourDEssai(decalageEnJours: number): string {
   const d = new Date();
