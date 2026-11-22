@@ -607,7 +607,10 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     const deSonia = await s.deposer("sonia", "entite");
     // Le relevé du 28 octobre : « Un siège supprime celle d'un autre ».
     // Ce qu'il ne lit pas n'existe pas pour lui : rien n'est effacé.
-    assert.equal(await s.fait("sami", "capture.supprimer", deSonia), false);
+    await assert.rejects(
+      s.fait("sami", "capture.supprimer", deSonia),
+      /refus\.introuvable\.piece$/,
+    );
     assert.ok(await vis(deSonia));
     const deSami = await s.deposer("sami", "entite");
     assert.equal(await s.fait("sami", "capture.supprimer", deSami), true);
@@ -628,7 +631,7 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
     );
     const privee = await s.deposer("sami", "personnel");
     // Mon espace d'un siège : le propriétaire ne le lit pas, il n'y efface rien.
-    assert.equal(await s.fait("amel", "capture.supprimer", privee), false);
+    await assert.rejects(s.fait("amel", "capture.supprimer", privee), /refus\.introuvable\.piece$/);
     assert.ok(await vis(privee));
   });
 
