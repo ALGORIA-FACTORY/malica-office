@@ -99,6 +99,26 @@ export function periodeMontree(
   return passees.length === 0 ? courante : passees.reduce((a, b) => (b > a ? b : a));
 }
 
+/**
+ * Ce que l'en-tête d'un dossier dit de ses périodes (21 novembre 2026) : toute leur
+ * étendue, pas la seule période déroulée — « Octobre » au-dessus d'un dossier qui tient
+ * aussi novembre se lisait faux. L'année est nommée quand les deux bouts n'en partagent
+ * pas une. `periodes` : les clés `AAAA-MM` (ou `AAAA`), dans n'importe quel ordre.
+ */
+export function etendueDesPeriodes(
+  periodes: readonly string[],
+  annuel: boolean,
+  nom: (cle: string, avecAnnee: boolean) => string,
+): string {
+  if (periodes.length === 0) return "";
+  const triees = [...periodes].sort();
+  const ancienne = triees[0]!;
+  const recente = triees[triees.length - 1]!;
+  if (ancienne === recente) return nom(recente, false);
+  const avecAnnee = !annuel && ancienne.slice(0, 4) !== recente.slice(0, 4);
+  return `${nom(ancienne, avecAnnee)} – ${nom(recente, avecAnnee)}`;
+}
+
 /** La pièce tombe-t-elle dans la période montrée (`AAAA-MM` ou `AAAA`) ? */
 export function dansLaPeriodeMontree(
   p: Pick<PieceLue, "dateDocument" | "createdAt">,

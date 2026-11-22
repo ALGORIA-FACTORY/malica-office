@@ -30,7 +30,12 @@ import { usePiecesDesSocietes } from "@/hooks/use-pieces-des-societes";
 import { ParTranches } from "@/components/malica/par-tranches";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
-import { dossierDeLaPiece, moisDeLaPiece, periodeMontree } from "@/lib/dossiers";
+import {
+  dossierDeLaPiece,
+  etendueDesPeriodes,
+  moisDeLaPiece,
+  periodeMontree,
+} from "@/lib/dossiers";
 import { montantDeLaPiece, totauxParDevise } from "@/lib/totaux-des-pieces";
 import { useRevenir } from "@/hooks/use-revenir";
 
@@ -183,7 +188,13 @@ function Dossier() {
           ...(avecAnnee ? { year: "numeric" } : {}),
           timeZone: "UTC",
         }).format(new Date(`${cle}-01T00:00:00Z`));
-  const etiquette = deroulee ? nomDePeriode(deroulee, false) : "";
+  /*
+   * L'EN-TÊTE DIT CE QUE LE DOSSIER CONTIENT (21 novembre 2026) : il nommait la seule
+   * période déroulée (« Octobre ») au-dessus d'un compte de TOUTES les pièces, novembre
+   * compris. Il dit désormais l'étendue des périodes : « Octobre – Novembre » ; l'année
+   * apparaît quand elles n'en partagent pas une.
+   */
+  const etiquette = etendueDesPeriodes(periodes, annuel, nomDePeriode);
 
   // Un avoir retranche, et chaque devise a son total, à ses décimales (22 novembre 2026).
   const total = (ps: readonly PieceLue[]) => {

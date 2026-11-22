@@ -55,9 +55,15 @@ describe("remettre un fichier dans la coque native", () => {
   it("un nom déjà pris n'est jamais écrasé : le second reçoit un nom libre", async () => {
     const a = await enregistrerUnFichier(pdf("un"), "releve.pdf");
     const b = await enregistrerUnFichier(pdf("deux"), "releve.pdf");
-    expect(a.chemin).toBe("file:///docs/releve.pdf");
-    expect(b.chemin).toBe("file:///docs/releve (2).pdf");
+    expect(a.chemin).toBe("Documents/releve.pdf");
+    expect(b.chemin).toBe("Documents/releve (2).pdf");
     expect(disque.size).toBe(2);
+  });
+
+  // 21 novembre 2026 : « Imprimer » affichait « file:///… » sur le téléphone.
+  it("le chemin rendu se lit : jamais l'URI technique", async () => {
+    const { chemin } = await enregistrerUnFichier(pdf("un"), "dossier.pdf");
+    expect(chemin).not.toMatch(/^file:|:\/\//);
   });
 });
 
@@ -86,7 +92,7 @@ describe("un libellé long garde l'identifiant et l'extension", () => {
   it("dans la coque native, le fichier écrit garde « .pdf » et l'identifiant", async () => {
     const nom = nomDeFichierDePiece(LONG.slice(0, 64), ID, "application/pdf");
     const { chemin } = await enregistrerUnFichier(pdf("un"), nom);
-    expect(chemin).toBe(`file:///docs/${nom}`);
+    expect(chemin).toBe(`Documents/${nom}`);
   });
 
   it("dans le navigateur, le lien de téléchargement garde « .pdf » et l'identifiant", async () => {

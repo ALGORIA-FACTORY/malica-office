@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   dansLaPeriodeMontree,
   dossierDeLaPiece,
+  etendueDesPeriodes,
   periodeMontree,
   typePourLeDossier,
   type Dossier,
@@ -125,5 +126,21 @@ describe("la période d'une carte dit vrai", () => {
 
   it("l'année la plus récente pour un dossier annuel", () => {
     expect(periodeMontree([piece("2025-06-30")], "annee", "2026-11")).toBe("2025");
+  });
+});
+
+describe("l'en-tête d'un dossier dit toute l'étendue de ses périodes", () => {
+  const nom = (cle: string, avecAnnee: boolean) => (avecAnnee ? `m${cle}` : `m${cle.slice(5)}`);
+  it("octobre et novembre : « Octobre – Novembre », pas la seule période ouverte", () => {
+    expect(etendueDesPeriodes(["2026-11", "2026-10"], false, nom)).toBe("m10 – m11");
+  });
+  it("une seule période : son nom", () => {
+    expect(etendueDesPeriodes(["2026-10"], false, nom)).toBe("m10");
+  });
+  it("à cheval sur deux années : l'année est nommée", () => {
+    expect(etendueDesPeriodes(["2026-01", "2025-12"], false, nom)).toBe("m2025-12 – m2026-01");
+  });
+  it("aucune pièce : rien", () => {
+    expect(etendueDesPeriodes([], false, nom)).toBe("");
   });
 });
