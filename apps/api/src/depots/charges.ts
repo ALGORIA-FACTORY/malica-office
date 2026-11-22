@@ -267,6 +267,44 @@ export const charges = {
                                order by z.created_at desc limit 1) x on true
           where q.tenant_id = $1 and q.source = 'cabinet'
             and q.document_kind <> 'facture_vente'
+         union all
+         /*
+          * UNE PIÈCE LUE SANS ARTICLES COMPTE QUAND MÊME (pilote, 22 novembre 2026) :
+          * « Vos charges » disait 0,000 en septembre au-dessus d'une facture d'achat
+          * de 150,000 HT, faute de lignes lues une par une. Son HT entre au total, dans
+          * la famille de repli du pack — « à classer » —, signé selon son type (un avoir
+          * retranche, ref.document_types.signe), au HT corrigé s'il l'a été.
+          */
+         select q.id, 0::smallint, coalesce(app.emetteur_dit(q.id), x.payload ->> 'issuer', ''),
+                null::numeric, null::text, null::text,
+                (t.signe * coalesce(ht.valeur, x.payload #>> '{totals,base_ht}')::numeric)::text,
+                coalesce((select y.normalisation ->> 'devise' from capture.analyses y
+                           where y.piece_id = q.id order by y.created_at desc limit 1),
+                         x.payload ->> 'currency'),
+                f.code, 'fallback',
+                to_char(coalesce((x.payload ->> 'document_date')::date, v.recue_le), 'YYYY-MM'),
+                coalesce((x.payload ->> 'document_date')::date, v.recue_le),
+                'totals.base_ht', null, null, null, 'totals.base_ht', 'lecture'
+           from pieces_qui_comptent_v q
+           join pieces_v v on v.id = q.id
+           join ref.document_types t on t.code = q.document_kind
+           join lateral (select z.payload from extractions_v z where z.piece_id = q.id
+                          order by z.created_at desc limit 1) x on true
+           left join lateral (select d.valeur from precisions_v d
+                               where d.piece_id = q.id and d.champ = 'totals.base_ht'
+                               order by d.decided_at desc limit 1) ht on true
+           join lateral (select r.code from ref_charge_familles_v r
+                          where r.pack_version_id = app.pack_de_la_piece(q.id) and r.is_fallback
+                            and r.valid_from <= coalesce((x.payload ->> 'document_date')::date,
+                                                         v.recue_le)
+                            and (r.valid_to is null
+                                 or r.valid_to > coalesce((x.payload ->> 'document_date')::date,
+                                                          v.recue_le))
+                          order by r.valid_from desc limit 1) f on true
+          where q.tenant_id = $1 and q.source = 'lecture'
+            and q.document_kind <> 'facture_vente'
+            and coalesce(ht.valeur, x.payload #>> '{totals,base_ht}') ~ '^-?[0-9]+([.][0-9]+)?$'
+            and not exists (select 1 from piece_articles_v pa where pa.piece_id = q.id)
        ) a
        where a.period >= $2 and a.period <= $3
        order by a.period desc, a.ordinal asc`,

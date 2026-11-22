@@ -362,6 +362,23 @@ describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
     }
   });
 
+  // Pilote, 22 novembre 2026 : « Vos charges » à 0,000 au-dessus d'un achat sans articles lus.
+  it("une pièce qui compte sans articles lus entre aux charges par son HT, à classer", async () => {
+    const id = await proposee((e) => ({ ...e, articles: [] }));
+    const lignes = (
+      (await pmeFait("charges.articles", pme, "2000-01", "2100-12")) as Array<{
+        pieceId: string;
+        totalHt: string;
+        familleSource: string;
+        source: string;
+      }>
+    ).filter((a) => a.pieceId === id);
+    assert.deepEqual(
+      lignes.map((a) => [a.source, Number(a.totalHt), a.familleSource]),
+      [["lecture", 1234.56, "fallback"]],
+    );
+  });
+
   it("les versions d'une pièce sont estimées à quelques lignes, pas mille", async () => {
     // Estimée à 1 000 lignes (le défaut d'une fonction qui rend un ensemble),
     // `app.versions_de_la_piece` faisait parcourir toutes les prises en charge

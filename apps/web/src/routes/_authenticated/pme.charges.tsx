@@ -324,7 +324,13 @@ function ChargesScreen() {
    */
   const lecturesRestantes = nombre(pme.forfait.ligne?.lectures_restantes);
   const lecturesDroit = nombre(pme.forfait.ligne?.lectures_droit);
-  const plafondLisible = lecturesRestantes !== null && lecturesDroit !== null && lecturesDroit > 0;
+  // Le plafond est celui du mois en cours : il ne dit rien d'un mois passé (pilote, 22 novembre
+  // 2026 : « vos charges de septembre seront incomplètes » sous un compteur de novembre).
+  const plafondLisible =
+    period === currentPeriod() &&
+    lecturesRestantes !== null &&
+    lecturesDroit !== null &&
+    lecturesDroit > 0;
 
   /*
    * ================================================== LA CLASSE OUVERTE, ET SON ÉCRAN

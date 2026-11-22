@@ -526,7 +526,13 @@ describe("le cabinet tranche les montants", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(auCabinet.ecritureIllisible, true);
     const [x] = (await extraits(id)) as Array<{ totals: { vat: string } } | undefined>;
     assert.equal(x?.totals.vat, "234.566", "la TVA du mois garde la lecture");
-    assert.deepEqual(await chargesDe(id), [], "les charges aussi : aucune ligne du cabinet");
+    // Les charges aussi gardent la lecture : aucune ligne du cabinet. Sans articles lus, la
+    // pièce compte son HT lu, à classer (22 novembre 2026).
+    assert.deepEqual(
+      await chargesDe(id),
+      [["lecture", 1234.56]],
+      "les charges aussi : la lecture, aucune ligne du cabinet",
+    );
   });
 
   // Seconde revue de #140, cas I : une immobilisation acquise gardait la lecture.
