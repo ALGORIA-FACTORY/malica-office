@@ -2975,11 +2975,18 @@ function PieceScreen() {
                 paragraphes={[{ texte: t("pme.piece.chaine.foot") }]}
               />
             </h2>
-            <span>
-              {t("pme.piece.chaine.pieces", {
-                count: nes.length + lesRattachees.length + (piece.remplace ? 2 : 1),
-              })}
-            </span>
+            {/*
+             * Le compte dit les documents LIÉS, pas la pièce elle-même : « 1 document » au-dessus de
+             * « Aucun reçu ni justificatif n'est encore rattaché » se contredisait (pilote, 22
+             * novembre 2026). Rien de lié, pas de compte.
+             */}
+            {nes.length + lesRattachees.length + (piece.remplace ? 1 : 0) > 0 ? (
+              <span>
+                {t("pme.piece.chaine.pieces", {
+                  count: nes.length + lesRattachees.length + (piece.remplace ? 1 : 0),
+                })}
+              </span>
+            ) : null}
           </div>
           <div className="f-carte">
             {/* La photo que celle-ci a remplacée : gardée, jamais effacée. */}

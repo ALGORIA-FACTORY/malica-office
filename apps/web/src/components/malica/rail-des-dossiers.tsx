@@ -17,7 +17,12 @@ import { Link } from "@tanstack/react-router";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
 import { useI18n } from "@/i18n";
-import { dansLaPeriodeMontree, dossierDeLaPiece, periodeMontree } from "@/lib/dossiers";
+import {
+  dossierDeLaPiece,
+  etendueDesPeriodes,
+  moisDeLaPiece,
+  periodeMontree,
+} from "@/lib/dossiers";
 import { statutDeLaPieceLue } from "@/lib/lecture";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
@@ -35,19 +40,43 @@ export function RailDesDossiers({ pieces }: { pieces: readonly PieceLue[] }) {
     // La période la plus récente qui a des pièces (`periodeMontree`) : le 1er
     // du mois, Achats et Ventes ne se disent plus vides sur un dossier plein.
     const montree = periodeMontree(duDossier, d.periode, periode);
-    const duMois = duDossier.filter((p) => dansLaPeriodeMontree(p, montree));
+    /*
+     * LA TUILE DIT TOUT LE DOSSIER (pilote, 22 novembre 2026) : « Septembre · 1 pièce » sur
+     * un dossier Achats qui en tenait quatre, de mars à septembre. Comme l'en-tête du
+     * dossier (#419), elle compte toutes ses pièces et nomme l'étendue de leurs périodes ;
+     * vide, la période en cours.
+     */
+    const periodes = [
+      ...new Set(
+        duDossier.map((p) => {
+          const m = moisDeLaPiece(p);
+          return d.periode === "mois" ? m : m.slice(0, 4);
+        }),
+      ),
+    ];
     // Un reçu ou un justificatif n'attend rien : il compte pour fait. Une
     // pièce est faite quand le cabinet l'a prise en charge — la règle de la
     // liste (`statutDeLaPieceLue`), sur les faits du suivi.
-    const faites = duMois.filter(
+    const faites = duDossier.filter(
       (p) => p.accompagne || statutDeLaPieceLue(p) === "prise_en_charge",
     ).length;
     return {
       ...d,
-      total: duMois.length,
+      total: duDossier.length,
       faites,
-      part: duMois.length === 0 ? 0 : Math.round((faites / duMois.length) * 100),
-      etiquette: d.periode === "mois" ? mois(montree) : montree,
+      part: duDossier.length === 0 ? 0 : Math.round((faites / duDossier.length) * 100),
+      etiquette:
+        periodes.length === 0
+          ? d.periode === "mois"
+            ? mois(montree)
+            : montree
+          : etendueDesPeriodes(periodes, d.periode !== "mois", (cle, avecAnnee) =>
+              d.periode === "mois"
+                ? avecAnnee
+                  ? `${mois(cle)} ${cle.slice(0, 4)}`
+                  : mois(cle)
+                : cle,
+            ),
     };
   });
 

@@ -42,8 +42,9 @@ import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod } from "@/hooks/use-tva";
 import { COMMERCE } from "@/capabilities/coque";
 import { useI18n } from "@/i18n";
-import { nombre } from "@/lib/forfait";
+import { nombre, utilisateursInclus } from "@/lib/forfait";
 import { jourOuInstant, montant, montantSigne } from "@/lib/lisible";
+import { echeancesParJour } from "@/lib/echeances-par-jour";
 import { montantDeLaPiece } from "@/lib/totaux-des-pieces";
 import { nomPourSaluer } from "@/lib/nom-de-la-personne";
 import { office } from "@/verticals/malica-office/composition";
@@ -465,14 +466,12 @@ function PmeHome() {
 
   // Les prochaines échéances non faites, la plus proche d'abord.
   const aujourdhui = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
-  const prochaines = (echeances.data ?? [])
-    .filter((e) => e.status !== "fait")
-    .map((e) => ({
-      ...e,
-      jours: Math.round((Date.parse(`${e.dueDate}T00:00:00Z`) - aujourdhui) / 86_400_000),
-    }))
-    .sort((x, y) => x.dueDate.localeCompare(y.dueDate))
-    .slice(0, RANGEE);
+  // Une ligne par jour : le jour et le nombre, pas la composition (22 novembre 2026).
+  const prochaines = echeancesParJour(
+    echeances.data ?? [],
+    new Date().toISOString().slice(0, 10),
+    RANGEE,
+  );
 
   /*
    * « EN ORDRE » NE SE DIT PLUS PAR-DESSUS UN RETARD (pilote, 22 novembre 2026) : la carte
@@ -813,12 +812,12 @@ function PmeHome() {
             <div className="rail">
               {prochaines.map((e) => (
                 <Link
-                  key={e.id}
+                  key={e.cle}
                   to="/pme/echeances"
                   className={e.jours < 0 ? "ech ret" : e.jours <= 7 ? "ech pro" : "ech"}
                 >
                   <span className="j">{jour(e.dueDate)}</span>
-                  <b>{e.label}</b>
+                  <b>{e.seule ?? t("pme.home.ech.groupe", { count: e.n })}</b>
                   {/* Plusieurs sociétés : l'échéance dit la sienne. */}
                   {societes.length > 1 ? (
                     <span>{pme.dossiers.find((d) => d.id === e.tenantId)?.name ?? ""}</span>
@@ -845,11 +844,17 @@ function PmeHome() {
         >
           <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : "—"}</b>
           <span>
+            {/*
+             * Les mêmes comptes que la bibliothèque et les Réglages (pilote, 22 novembre 2026) :
+             * l'accueil disait « 10 / 30 lectures » (consommées) quand la bibliothèque disait
+             * « 20 / 30 restantes », et « 0 / 0 utilisateurs » quand les Réglages disaient
+             * « 1 / 1 » — le titulaire compte (`utilisateursInclus`).
+             */}
             {t("pme.home.abo.ligne", {
-              lues: compte(f?.lectures_consommees),
+              reste: compte(f?.lectures_restantes),
               droit: compte(f?.lectures_droit),
-              occupes: compte(f?.sieges_occupes),
-              inclus: compte(f?.sieges_inclus),
+              occupes: compte(utilisateursInclus(f)?.occupes),
+              inclus: compte(utilisateursInclus(f)?.inclus),
             })}
           </span>
           <Chevron className="g ar" />
