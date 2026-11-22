@@ -479,8 +479,12 @@ function PmeHome() {
    * retard » et de quatre pièces « à exporter ». L'état compte aussi les échéances passées
    * et non faites, et ce qui reste à remettre au comptable.
    */
-  const enRetard = (echeances.data ?? []).filter(
-    (e) => e.status !== "fait" && Date.parse(`${e.dueDate}T00:00:00Z`) < aujourdhui,
+  // Compté en JOURS, comme l'écran des échéances (« 1 échéance dépassée ») : le 20 novembre
+  // et ses quatre déclarations sont une échéance, pas quatre.
+  const enRetard = echeancesParJour(
+    (echeances.data ?? []).filter((e) => Date.parse(`${e.dueDate}T00:00:00Z`) < aujourdhui),
+    new Date().toISOString().slice(0, 10),
+    Number.POSITIVE_INFINITY,
   ).length;
   const etat = etatDeLAccueil({ ...a, enRetard, aExporter: aExporter.length });
   const phrase =
