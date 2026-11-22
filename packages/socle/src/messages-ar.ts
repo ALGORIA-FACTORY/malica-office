@@ -106,7 +106,7 @@ export const ar: Dict = {
   "onboarding.subtitle":
     "شركتكم أو محاسبتكم. بياناتها لا يراها إلا أعضاؤها ومن تدعوهم. ستكونون أول عضو فيها.",
   "onboarding.kind": "الصنف",
-  "onboarding.kind.pme": "مؤسسة — أتولى محاسبتي",
+  "onboarding.kind.pme": "مؤسسة — شركتي",
   "onboarding.kind.cabinet": "المحاسبة — أمسك حسابات مؤسسات",
   "onboarding.name": "التسمية الاجتماعية",
   "plan.nct.empty": "لا حساب لهذا البحث.",

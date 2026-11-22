@@ -288,6 +288,45 @@ describe("le crayon corrige le pied de la facture", { skip: !BASE_CONFIGUREE }, 
     assert.equal(Number(ligne?.totalHt), 15000, "son HT entre au mois");
   });
 
+  /*
+   * Pilote, 22 novembre 2026 : MAP et le Phoenix de juin, jugés avant les règles du jour,
+   * restaient hors des charges — personne n'ouvrait les écrans du cabinet qui rejugent.
+   * L'écran des charges rejuge les jugements périmés d'une société qui tient ses livres.
+   */
+  it("sans comptabilité, un jugement périmé se rejuge à l'ouverture des charges", async () => {
+    const id = await lue();
+    await corrige(id, "totals.vat", "2850.000");
+    await corrige(id, "totals.ttc", "17851.000");
+    // Le dernier jugement redevient celui d'avant : périmé (règles d'autrefois), incohérent.
+    await admin.query(
+      `insert into capture.analyses (tenant_id, piece_id, extraction_id, pack_version_id,
+                                     normalisation, controles, verdict, motifs, regles, created_at)
+       select tenant_id, piece_id, extraction_id, pack_version_id,
+              jsonb_build_object('etat', 'incoherent'), controles, verdict, motifs,
+              'perime', clock_timestamp()
+         from capture.analyses where piece_id = $1 order by created_at desc limit 1`,
+      [id],
+    );
+    const compte = async () =>
+      (
+        await admin.query<{ n: number }>(
+          "select count(*)::int as n from pieces_qui_comptent_v where id = $1",
+          [id],
+        )
+      ).rows[0]!.n;
+    assert.equal(await compte(), 0, "périmé et incohérent, il ne compte pas");
+    const m = (
+      (await pmeFait("capture.dossier", id)) as {
+        extraction: { payload: { document_date: string } };
+      }
+    ).extraction.payload.document_date.slice(0, 7);
+    const lignes = (
+      (await pmeFait("charges.articles", societe, m, m)) as Array<{ pieceId: string }>
+    ).filter((a) => a.pieceId === id);
+    assert.equal(lignes.length, 1, "rejugé aux règles du jour, il entre aux charges");
+    assert.equal(await compte(), 1);
+  });
+
   // Pilote, 22 novembre 2026 : la fiche disait 179,500, la bibliothèque 178,900.
   it("le total corrigé vaut dans la liste comme sur la fiche", async () => {
     const id = await lue();

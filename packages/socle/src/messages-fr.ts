@@ -111,7 +111,7 @@ export const fr = {
   "onboarding.subtitle":
     "Votre société, ou votre comptabilité. Ses données ne sont visibles que de ses membres, et de ceux qu’elle invite. Vous en serez le premier membre.",
   "onboarding.kind": "Nature",
-  "onboarding.kind.pme": "PME — je tiens ma comptabilité",
+  "onboarding.kind.pme": "PME — ma société",
   "onboarding.kind.cabinet": "Comptabilité — je tiens les dossiers de PME",
   "onboarding.name": "Raison sociale",
   "plan.nct.empty": "Aucun compte pour cette recherche.",

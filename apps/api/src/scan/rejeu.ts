@@ -67,6 +67,18 @@ const DANS_LE_PERIMETRE = `
            and e.nature = 'piece'
            and (app.ecriture_vivante(e.id) or (e.status = 'proposee' and e.reverses_id is null)))`;
 
+/**
+ * Le dernier jugement `a` d'une pièce est-il à jour ? Sous les règles et les référentiels
+ * de mots du jour (`du_jour.version`, `versionDuJugementSql`), ou revérifié sous eux ; ET
+ * sur le cours et les réglages comptables du jour. Une seule écriture, pour l'ouverture
+ * d'une pièce et pour le rejeu des jugements périmés d'un dossier.
+ */
+const JUGEMENT_A_JOUR = `coalesce((a.regles = (select version from du_jour) or exists (
+              select 1 from capture.analyses_verifiees v
+               where v.analyse_id = a.id and v.regles = (select version from du_jour)))
+              and app.cours_du_jugement_a_jour(a.tenant_id, a.controles)
+              and app.reglages_du_jugement_a_jour(a.tenant_id, a.controles), false)`;
+
 /** Ce que le rejeu a fait — ou, en essai, ce qu'il aurait fait. */
 export interface BilanDuRejeu {
   /** Pièces rejugées (jugement recalculé), y compris celles qui n'ont pas changé. */
@@ -151,11 +163,7 @@ export async function rejugerALOuverture(db: Requete, pieceId: string): Promise<
   // a lus (`app.reglages_du_jugement_a_jour`).
   const { rows } = await db.query<{ a_jour: boolean; dans: boolean }>(
     `with du_jour as (select ${versionDuJugementSql("$2::text")} as version)
-     select coalesce((a.regles = (select version from du_jour) or exists (
-              select 1 from capture.analyses_verifiees v
-               where v.analyse_id = a.id and v.regles = (select version from du_jour)))
-              and app.cours_du_jugement_a_jour(a.tenant_id, a.controles)
-              and app.reglages_du_jugement_a_jour(a.tenant_id, a.controles), false) as a_jour,
+     select ${JUGEMENT_A_JOUR} as a_jour,
             exists (select 1 from capture.pieces p
                      where p.id = $1 and ${DANS_LE_PERIMETRE}) as dans
        from (select 1) un
@@ -238,4 +246,45 @@ export async function rejugerLesPieces(
 
   if (options.essai) await db.query("rollback to savepoint rejeu_essai");
   return bilan;
+}
+
+/**
+ * Rejuger les jugements PÉRIMÉS d'une société qui tient ses livres (pilote, 22 novembre
+ * 2026).
+ *
+ * Le rejeu à l'ouverture ne passe que par les écrans du cabinet (la proposition, la
+ * validation) : une société sans comptabilité ne les ouvre jamais. Ses pièces gardaient le
+ * jugement d'avant les règles du jour, et « Vos charges » restait à 0 sur une facture que
+ * les règles du jour tranchent (MAP, Phoenix de juin). Les écrans de la société qui lisent
+ * ces chiffres appellent donc ce rejeu : seules les pièces dont le dernier jugement est
+ * périmé sont rejugées, une page à la fois ; à jour, il ne coûte qu'une requête. Une société
+ * dont le cabinet tient les livres n'est pas concernée : son cabinet rejuge à l'ouverture.
+ */
+export async function rejugerLesPerimeesDuDossier(db: Requete, tenantId: string): Promise<number> {
+  const { rows: page } = await db.query<{ id: string }>(
+    `with du_jour as (select ${versionDuJugementSql("$2::text")} as version)
+     select p.id from capture.pieces p
+       join lateral (select y.id, y.regles, y.tenant_id, y.controles from capture.analyses y
+                      where y.piece_id = p.id order by y.created_at desc limit 1) a on true
+      where p.tenant_id = $1
+        and not app.livres_tenus_par_le_cabinet(p.tenant_id)
+        and ${DANS_LE_PERIMETRE}
+        and not ${JUGEMENT_A_JOUR}
+      order by p.id
+      limit $3`,
+    [tenantId, REGLES_DU_JUGEMENT, PIECES_PAR_PAGE],
+  );
+  let rejugees = 0;
+  for (const piece of page) {
+    await db.query("savepoint rejeu_perimee");
+    try {
+      await rejugerLaPiece(db, piece.id);
+      await db.query("release savepoint rejeu_perimee");
+      rejugees += 1;
+    } catch (e) {
+      await db.query("rollback to savepoint rejeu_perimee");
+      await consignerLEchec(db, tenantId, piece.id, e);
+    }
+  }
+  return rejugees;
 }

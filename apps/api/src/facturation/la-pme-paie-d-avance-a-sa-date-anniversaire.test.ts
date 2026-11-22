@@ -595,6 +595,68 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
     });
   });
 
+  // Payer d'abord, partout (22 novembre 2026) : sous la facturation immédiate, la montée par la
+  // porte du produit paie le complément du jour AVANT de s'ouvrir ; au paiement, la facture
+  // complémentaire s'émet et l'acompte s'y impute — elle ne reste pas due une seconde fois.
+  it("payer d'abord : le complément se paie, puis l'offre s'ouvre et la facture est soldée", async () => {
+    await aBlanc(async (db) => {
+      const s = await socle(db);
+      await db.query("select set_config('TimeZone', plateforme.fuseau_de_la_plateforme(), true)");
+      const { rows: j } = await db.query<{ jour: string }>("select current_date::text as jour");
+      await regler(db, s, "pme", true);
+      const p = await unePme(db, j[0]!.jour);
+      await db.query("set constraints all immediate");
+      await db.query("set constraints all deferred");
+
+      await enPersonne(db, p.titulaire);
+      const { rows: d } = await db.query<{ devis: { a_regler_ttc: number } }>(
+        "select public.montee_devis('team', $1) as devis",
+        [p.tenant],
+      );
+      const { rows: r } = await db.query<{
+        r: {
+          change: boolean;
+          paiement: { paiement_id: string; objet: string; montant_ttc: string };
+        };
+      }>("select public.forfait_demander('team', $1) as r", [p.tenant]);
+      await db.query("reset role");
+      assert.equal(r[0]!.r.change, false);
+      assert.equal(r[0]!.r.paiement.objet, "montee_demandee");
+      assert.equal(Number(r[0]!.r.paiement.montant_ttc), Number(d[0]!.devis.a_regler_ttc));
+      assert.deepEqual(
+        (await facturesDuTitulaire(db, p.licence)).map((x) => x.nature),
+        ["base"],
+        "rien n'est facturé avant le paiement",
+      );
+
+      await enPersonne(db, p.titulaire);
+      const id = r[0]!.r.paiement.paiement_id;
+      await db.query(
+        "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://x.tn', '{}', 'visa')",
+        [id],
+      );
+      await db.query("select public.paiement_inscrire($1, 'paye', 'clictopay', 'CTP-1')", [id]);
+      await db.query("reset role");
+      await db.query("set constraints all immediate");
+
+      const { rows: f } = await db.query<{ offre_code: string }>(
+        "select offre_code from facturation.forfait_courant_v where licence_id = $1",
+        [p.licence],
+      );
+      assert.equal(f[0]!.offre_code, "team", "payée, la montée s'ouvre");
+      const toutes = await facturesDuTitulaire(db, p.licence);
+      assert.deepEqual(
+        toutes.map((x) => x.nature),
+        ["base", "complement"],
+      );
+      const { rows: du } = await db.query<{ reste: string }>(
+        "select reste_du::text as reste from facturation.encours_v where facture_id = $1",
+        [toutes[1]!.id],
+      );
+      assert.equal(Number(du[0]!.reste), 0, "le complément est soldé par l'acompte payé d'abord");
+    });
+  });
+
   it("l'année commence à l'échéance suivante, et s'y facture une fois, d'avance", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);

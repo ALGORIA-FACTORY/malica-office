@@ -16,7 +16,15 @@ import { after, describe, it } from "node:test";
 
 import pg from "pg";
 
-import { decor, enPersonne, ouvrirLePerimetrePme, regler, type Decor } from "./decor-de-facture.ts";
+import {
+  decor,
+  enPersonne,
+  millimes,
+  ouvrirLePerimetrePme,
+  prix,
+  regler,
+  type Decor,
+} from "./decor-de-facture.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -146,6 +154,55 @@ describe("la montée se paie avant de s'ouvrir", { skip: !ADMIN }, () => {
       await db.query("set local session_replication_role = origin");
       await assert.rejects(demander(db, d, "team"), /refus\.forfait\.paiement_indisponible/);
       assert.equal(await offreCourante(db, d), "solo");
+    });
+  });
+
+  // Payer d'abord, partout (22 novembre 2026) : pendant l'année, le montant de l'année.
+  it("pendant l'année, la montée paie l'écart de l'année d'abord, puis s'ouvre", async () => {
+    await aBlanc(async (db) => {
+      const d = await decor(db, "solo");
+      await enPersonne(db, d.titulaire, () =>
+        db.query("select public.annuel_souscrire($1)", [d.tenant]),
+      );
+      const { rows: o } = await db.query<{ n: number }>(
+        "select (public.abonnement_reglage() ->> 'annuel_mois_offerts')::int as n",
+      );
+      const [solo, premium] = [await prix(db, "solo"), await prix(db, "premium")];
+      const r = await demander(db, d, "premium");
+      assert.equal(r.change, false);
+      assert.equal(r.paiement?.objet, "montee_demandee");
+      const duMois = millimes(((premium - solo) * d.joursRestants) / d.joursDuMois);
+      const deLAnnee = (premium - solo) * (12 - o[0]!.n);
+      const { rows: ht } = await db.query<{ ht: string }>(
+        "select montant_ht::text as ht from facturation.paiements_en_ligne where id = $1",
+        [r.paiement!.paiement_id],
+      );
+      assert.equal(Number(ht[0]!.ht), millimes(duMois + deLAnnee));
+      assert.equal(await offreCourante(db, d), "solo", "rien ne s'ouvre avant le paiement");
+      const { rows: m } = await db.query(
+        "select 1 from facturation.engagement_montees where licence_id = $1",
+        [d.licence],
+      );
+      assert.equal(m.length, 0, "le calcul de l'année est défait");
+
+      await regler(db, d, r.paiement!.paiement_id);
+      assert.equal(await offreCourante(db, d), "premium");
+      const annee = await enPersonne(db, d.titulaire, async () => {
+        const { rows } = await db.query<{ r: { en_cours: { offre: string } } }>(
+          "select public.mon_annuel($1) as r",
+          [d.tenant],
+        );
+        return rows[0]!.r.en_cours.offre;
+      });
+      assert.equal(annee, "premium", "l'année passe en Premium");
+      const relue = await enPersonne(db, d.titulaire, async () => {
+        const { rows } = await db.query<{ p: { paiement_id: string } | null }>(
+          "select public.paiement_montee_preparer($1) as p",
+          [d.tenant],
+        );
+        return rows[0]!.p;
+      });
+      assert.equal(relue?.paiement_id, r.paiement!.paiement_id, "elle ne se repaie pas");
     });
   });
 
