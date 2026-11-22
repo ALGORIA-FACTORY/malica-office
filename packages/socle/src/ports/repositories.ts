@@ -1422,6 +1422,11 @@ export interface PieceDossier {
    * SAISIE ne fait pas tenir la facture : l'écran la propose en un geste.
    * `null` sinon.
    */
+  /**
+   * La retenue à la source que le dernier jugement a retenue, et le dû avant elle
+   * (« Total TTC ») ; le TTC lu est alors le net à payer. `null` sans retenue.
+   */
+  retenue?: { montant: string; totalTtc: string } | null;
   baseProposee: string | null;
   /**
    * La pièce se lit dans l'ARCHIVE d'une comptabilité dont le mandat a pris fin

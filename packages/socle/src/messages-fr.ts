@@ -720,6 +720,9 @@ export const fr = {
   "pme.extract.date": "Date",
   "pme.extract.base": "Base HT",
   "pme.extract.vat": "TVA",
+  "pme.extract.retenue": "Retenue à la source",
+  "pme.extract.netAPayer": "Net à payer",
+  "pme.extract.totalAvantRetenue": "Total TTC",
   /*
    * Le droit de timbre de la facture du 4 octobre 2026 était lu, exact, et
    * invisible : 'other_charges' n'apparaissait qu'une fois dans l'écran, dans

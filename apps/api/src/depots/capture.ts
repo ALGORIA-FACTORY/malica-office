@@ -220,6 +220,25 @@ async function effacerPar(
   return true;
 }
 
+/**
+ * La retenue que le dernier jugement a retenue, et le dû avant elle, en décimales de la
+ * devise (`exposant`). `null` quand la pièce n'en déduit pas, ou que le jugement ne ferme pas.
+ */
+function retenueJugee(
+  juge: Record<string, unknown> | undefined,
+  exposant: unknown,
+): { montant: string; totalTtc: string } | null {
+  const mineure = juge?.["retenue_mineure"];
+  const du = juge?.["du_mineur"];
+  if (juge?.["etat"] !== "tranche" || mineure == null || du == null || exposant == null)
+    return null;
+  const e = Number(exposant);
+  return {
+    montant: depuisUniteMineure(Number(mineure), e),
+    totalTtc: depuisUniteMineure(Number(du), e),
+  };
+}
+
 /** Ce que rend `public.piece_qui_accompagne` (voir la migration `20261025223000`). */
 interface PieceQuiAccompagneBrute {
   genre: "recu" | "justificatif";
@@ -907,7 +926,11 @@ export const capture = {
       // que l'arithmétique prouve se dit « prouvé par le calcul », pas « lu ».
       db.query(
         `select a.normalisation ->> 'etat' as etat, a.normalisation -> 'fermes' as fermes,
-                a.normalisation ->> 'baseProposee' as base_proposee
+                a.normalisation ->> 'baseProposee' as base_proposee,
+                -- La retenue à la source que le jugement a retenue, et le dû avant elle
+                -- (« Total TTC » quand le TTC imprimé est le net à payer), en unités mineures.
+                a.normalisation -> 'montants' ->> 'retenue' as retenue_mineure,
+                a.normalisation -> 'montants' ->> 'ttc' as du_mineur
            from capture.analyses a
            join lateral (select id from capture.extractions x
                           where x.piece_id = a.piece_id order by x.created_at desc limit 1) e
@@ -1013,6 +1036,16 @@ export const capture = {
         Array.isArray((juge as Record<string, unknown>[])[0]?.["fermes"])
           ? ((juge as Record<string, unknown>[])[0]!["fermes"] as string[])
           : [],
+      /*
+       * La retenue à la source (pilote, 22 novembre 2026 : MAP, « RAS 14,280, net à payer
+       * 462,720 »). Le jugement la retient ; la fiche la montre avec le dû avant elle, et le
+       * TTC imprimé devient le net à payer. Les montants viennent du moteur (R3), en décimales
+       * de la devise de la pièce ; `null` sans retenue ou sans jugement qui ferme.
+       */
+      retenue: retenueJugee(
+        (juge as Record<string, unknown>[])[0],
+        (exposant as Record<string, unknown>[])[0]?.["exposant"],
+      ),
       // La base qu'un taux nul prouverait sans la saisie qui ne tient pas : un geste la prend.
       baseProposee:
         ((juge as Record<string, unknown>[])[0]?.["base_proposee"] as string | null | undefined) ??

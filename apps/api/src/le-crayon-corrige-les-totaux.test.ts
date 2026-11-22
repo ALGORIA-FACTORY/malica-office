@@ -297,6 +297,20 @@ describe("le crayon corrige le pied de la facture", { skip: !BASE_CONFIGUREE }, 
     );
   });
 
+  // Pilote, 22 novembre 2026 (MAP) : la retenue à la source se dit au crayon, et le net à payer suit.
+  it("la retenue se corrige au crayon : le TTC imprimé devient le net à payer", async () => {
+    const id = await lue();
+    await corrige(id, "totals.vat", "2850.000");
+    await corrige(id, "totals.ttc", "17851.000");
+    await corrige(id, "totals.withholding", "535.530");
+    const net = await corrige(id, "totals.ttc", "17315.470");
+    assert.equal(net.jugement.etat, "tranche", JSON.stringify(net.jugement));
+    const d = (await pmeFait("capture.dossier", id)) as {
+      retenue: { montant: string; totalTtc: string } | null;
+    };
+    assert.deepEqual(d.retenue, { montant: "535.530", totalTtc: "17851.000" });
+  });
+
   // « Les classer » (22 novembre 2026) : une charge « Non classée » se range dans une famille du pack.
   it("sans comptabilité, une charge se classe dans une famille du pack, et seulement du pack", async () => {
     const id = await lue();

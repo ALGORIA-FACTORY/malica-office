@@ -130,4 +130,29 @@ describe("le pied de « Ce que j'ai lu, ligne par ligne »", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText("pme.detail.nonLu")).toBeNull();
   });
+
+  // Pilote, 22 novembre 2026 (MAP) : la retenue à la source et le net à payer se montrent.
+  it("avec une retenue : le total TTC, la retenue, puis le net à payer, chacun à sa place", () => {
+    const corriger = vi.fn();
+    monter({
+      total: lu("totals.ttc", "Net à payer", "17 315,470"),
+      retenue: lu("totals.withholding", "Retenue à la source", "535,530"),
+      totalAvantRetenue: "17 851,000",
+      onCorriger: corriger,
+    });
+    expect(screen.getByText("pme.extract.totalAvantRetenue")).toBeTruthy();
+    expect(screen.getByText("17 851,000 TND")).toBeTruthy();
+    expect(screen.getByText("− 535,530")).toBeTruthy();
+    expect(screen.getByText("17 315,470 TND")).toBeTruthy();
+  });
+
+  it("sans retenue lue : la ligne se montre vide, avec son crayon pour la dire", () => {
+    const corriger = vi.fn();
+    monter({
+      retenue: lu("totals.withholding", "Retenue à la source", null, false),
+      onCorriger: corriger,
+    });
+    expect(screen.getByText("Retenue à la source")).toBeTruthy();
+    expect(screen.queryByText("pme.extract.totalAvantRetenue")).toBeNull();
+  });
 });
