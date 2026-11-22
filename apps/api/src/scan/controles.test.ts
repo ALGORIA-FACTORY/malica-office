@@ -1193,3 +1193,51 @@ describe("la TVA d'une voiture de tourisme", () => {
     assert.deepEqual(verdicts("Ramettes de papier"), []);
   });
 });
+
+/*
+ * Le dirigeant, 21 novembre 2026 : une note d'honoraires de MAP adressée à « ALGORYA
+ * FACTORY ». Une lettre de travers dans le nom ne fait pas une autre entreprise : le
+ * matricule décide, et le nom ne le contredit plus pour une coquille.
+ */
+describe("un nom mal orthographié reste le dossier", () => {
+  it("un achat adressé à « ALGORYA FACTORY », au bon matricule : conforme", () => {
+    const note = facture({
+      emetteur: { nom: "MAP", identifiantFiscal: "1234567B/B/M/000" },
+      destinataire: { nom: "ALGORYA FACTORY", identifiantFiscal: "1856324K/A/M/000" },
+    });
+    assert.equal(statut(note, "destinataire").statut, "conforme");
+    assert.equal(statut(note, "sens_de_la_piece").statut, "conforme");
+  });
+  it("une vente émise par « ALGORYA FACTORY », au bon matricule : pas de contradiction", () => {
+    const vente = facture({
+      documentKind: "facture_vente",
+      emetteur: { nom: "ALGORYA FACTORY SARL", identifiantFiscal: "1856324K/A/M/000" },
+      destinataire: { nom: "CLIENT SA", identifiantFiscal: "7654321C/C/M/000" },
+    });
+    assert.equal(statut(vente, "sens_de_la_piece").statut, "conforme");
+  });
+  it("sans matricule, le nom à une coquille près reconnaît encore le dossier", () => {
+    const vente = facture({
+      documentKind: "facture_vente",
+      emetteur: { nom: "ALGORYA FACTORY", identifiantFiscal: null },
+      destinataire: { nom: "CLIENT SA", identifiantFiscal: "7654321C/C/M/000" },
+    });
+    assert.equal(statut(vente, "sens_de_la_piece").statut, "conforme");
+  });
+  it("mais un autre nom reste un autre nom : la contradiction du 5 octobre tient", () => {
+    const vente = facture({
+      documentKind: "facture_vente",
+      emetteur: { nom: "CASA ELECT", identifiantFiscal: "1856324K/A/M/000" },
+      destinataire: { nom: "CLIENT SA", identifiantFiscal: "7654321C/C/M/000" },
+    });
+    assert.notEqual(statut(vente, "sens_de_la_piece").statut, "conforme");
+  });
+  it("et une coquille ne rapproche pas deux mots courts", () => {
+    const vente = facture({
+      documentKind: "facture_vente",
+      emetteur: { nom: "ALGO FACT", identifiantFiscal: null },
+      destinataire: { nom: "CLIENT SA", identifiantFiscal: "7654321C/C/M/000" },
+    });
+    assert.notEqual(statut(vente, "sens_de_la_piece").statut, "conforme");
+  });
+});

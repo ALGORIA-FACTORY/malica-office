@@ -695,7 +695,23 @@ function memeEntreprise(a: string | null, b: string | null): boolean {
   // reconnaît « ALGORIA FACTORY SARL », et « Factory » seul ne suffit pas.
   const [court, long] = ma.size <= mb.size ? [ma, mb] : [mb, ma];
   if (court.size < 2 && long.size >= 2) return false;
-  return [...court].every((m) => long.has(m));
+  return [...court].every((m) => long.has(m) || [...long].some((l) => aUneCoquillePres(m, l)));
+}
+
+/**
+ * Deux mots d'au moins cinq lettres qui ne diffèrent que d'UNE lettre (changée, ajoutée
+ * ou ôtée) sont le même mot mal écrit : « ALGORYA » est « ALGORIA » (note de MAP, 21
+ * novembre 2026). Une coquille ne faisait pas une autre entreprise, elle faisait une
+ * « contradiction » entre le matricule et le nom. Les mots courts restent exacts : entre
+ * « ALGO » et « ALTO », une lettre est déjà la moitié du mot.
+ */
+function aUneCoquillePres(a: string, b: string): boolean {
+  if (a.length < 5 || b.length < 5 || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i += 1;
+  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1);
+  const [lng, crt] = a.length > b.length ? [a, b] : [b, a];
+  return lng.slice(i + 1) === crt.slice(i);
 }
 
 /**

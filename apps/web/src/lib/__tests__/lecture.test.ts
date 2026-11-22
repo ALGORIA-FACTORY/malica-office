@@ -182,6 +182,16 @@ describe("l'état de l'accueil", () => {
     expect(etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0 })).toBe("en_ordre");
     expect(etatDeLAccueil({ avancement: 0.5, enAttente: 2, retournees: 0 })).toBe("a_envoyer");
     expect(etatDeLAccueil({ avancement: null, enAttente: 0, retournees: 0 })).toBe("vide");
+    // Pilote, 22 novembre 2026 : « novembre est bouclé » au-dessus de 4 échéances en retard.
+    expect(etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0, enRetard: 4 })).toBe(
+      "en_retard",
+    );
+    expect(etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0, aExporter: 4 })).toBe(
+      "a_exporter",
+    );
+    expect(
+      etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0, enRetard: 0, aExporter: 0 }),
+    ).toBe("en_ordre");
   });
 });
 
