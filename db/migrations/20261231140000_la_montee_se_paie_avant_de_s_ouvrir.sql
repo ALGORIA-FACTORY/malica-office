@@ -44,7 +44,10 @@ begin;
 create table facturation.montees_demandees (
   id          uuid primary key default gen_random_uuid(),
   licence_id  uuid not null references facturation.licences (id),
-  tenant_id   uuid references identity.organizations (id),
+  -- La société par laquelle la porte a trouvé la licence : l'argument de
+  -- `forfait_changer`, pas un cloisonnement. La ligne appartient à la licence,
+  -- comme le paiement en ligne.
+  par_societe uuid references identity.organizations (id),
   offre_code  text not null,
   le          date not null,
   demande_par uuid not null,
@@ -226,7 +229,7 @@ begin
   v_tva := (v_devis ->> 'a_regler_tva')::numeric;
   v_timbre := coalesce((v_devis ->> 'timbre')::numeric, 0);
 
-  insert into facturation.montees_demandees (licence_id, tenant_id, offre_code, le, demande_par)
+  insert into facturation.montees_demandees (licence_id, par_societe, offre_code, le, demande_par)
   values (v_licence, p_tenant, p_offre, v_le, auth.uid())
   returning id into v_dem;
 
@@ -271,7 +274,7 @@ begin
 
   perform set_config('request.jwt.claim.sub', d.demande_par::text, true);
   begin
-    perform public.forfait_changer(d.offre_code, d.tenant_id, d.le);
+    perform public.forfait_changer(d.offre_code, d.par_societe, d.le);
     select c.id into v_ouvert from facturation.forfait_courant_v c where c.licence_id = d.licence_id;
     insert into facturation.montees_ouvertes (montee_id, forfait_id) values (d.id, v_ouvert);
   exception when others then
