@@ -447,7 +447,7 @@ async function piecesLuesDe(
               h.precision_kind,
               -- Le côté d'un avoir dit par une personne, ou proposé par la PME au
               -- cabinet qui tient les livres (« à confirmer »).
-              h.precision_sens, h.sens_propose,
+              h.precision_sens, h.sens_propose, h.precision_ttc, h.precision_date,
               -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
               -- reste telle quelle), que la liste préfère au nom lu.
               h.emetteur_dit,
@@ -531,32 +531,8 @@ async function piecesLuesDe(
     `select code, exposant from ref.devises`,
   );
   const exposants = new Map(devises.map((d) => [d.code, Number(d.exposant)]));
-  /*
-   * CE QUE LA PERSONNE A CORRIGÉ VAUT DANS LA LISTE COMME SUR LA FICHE (pilote, 22
-   * novembre 2026). Le TTC d'une facture Phoenix, lu 178,900 et corrigé 179,500 : la
-   * fiche disait 179,500, la bibliothèque, le dossier et « Récemment lues » 178,900 —
-   * et le total du mois avec eux. La liste lit les mêmes précisions que la fiche
-   * (`precisions_v`, la dernière par champ), en une lecture pour toutes les pièces.
-   */
-  const ids = (rows as Record<string, unknown>[]).map((r) => r["id"] as string);
-  const { rows: dites } = ids.length
-    ? await db.query<{ piece_id: string; champ: string; valeur: string }>(
-        `select distinct on (piece_id, champ) piece_id, champ, valeur
-           from precisions_v
-          where piece_id = any($1::uuid[]) and champ in ('totals.ttc', 'document_date')
-          order by piece_id, champ, decided_at desc`,
-        [ids],
-      )
-    : { rows: [] };
-  const corrige = new Map(dites.map((d) => [`${d.piece_id}:${d.champ}`, d.valeur]));
   for (const r of rows as Record<string, unknown>[]) {
-    const id = r["id"] as string;
-    parSociete.get((r["tenant_id"] as string).toLowerCase())?.push(
-      versPieceLue(r, exposants, {
-        ttc: corrige.get(`${id}:totals.ttc`) ?? null,
-        date: corrige.get(`${id}:document_date`) ?? null,
-      }),
-    );
+    parSociete.get((r["tenant_id"] as string).toLowerCase())?.push(versPieceLue(r, exposants));
   }
   return tenantIds.map((tenantId) => ({
     tenantId,
@@ -569,11 +545,15 @@ function sensDeclare(type: unknown): "facture_achat" | "facture_vente" | null {
   return type === "facture_achat" || type === "facture_vente" ? type : null;
 }
 
-function versPieceLue(
-  r: Record<string, unknown>,
-  exposants: ReadonlyMap<string, number>,
-  dit: { ttc: string | null; date: string | null } = { ttc: null, date: null },
-) {
+function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string, number>) {
+  /*
+   * CE QUE LA PERSONNE A CORRIGÉ VAUT DANS LA LISTE COMME SUR LA FICHE (pilote, 22 novembre
+   * 2026) : le TTC et la date dits à la main, lus par `app.pieces_de_la_liste`.
+   */
+  const dit = {
+    ttc: (r["precision_ttc"] as string | null) ?? null,
+    date: (r["precision_date"] as string | null) ?? null,
+  };
   const lu = (r["payload"] ?? null) as {
     issuer?: string;
     document_date?: string;
