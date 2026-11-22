@@ -447,7 +447,7 @@ async function piecesLuesDe(
               h.precision_kind,
               -- Le côté d'un avoir dit par une personne, ou proposé par la PME au
               -- cabinet qui tient les livres (« à confirmer »).
-              h.precision_sens, h.sens_propose,
+              h.precision_sens, h.sens_propose, h.precision_ttc, h.precision_date,
               -- Le nom de l'émetteur corrigé par une personne (R7 : la lecture
               -- reste telle quelle), que la liste préfère au nom lu.
               h.emetteur_dit,
@@ -546,6 +546,14 @@ function sensDeclare(type: unknown): "facture_achat" | "facture_vente" | null {
 }
 
 function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string, number>) {
+  /*
+   * CE QUE LA PERSONNE A CORRIGÉ VAUT DANS LA LISTE COMME SUR LA FICHE (pilote, 22 novembre
+   * 2026) : le TTC et la date dits à la main, lus par `app.pieces_de_la_liste`.
+   */
+  const dit = {
+    ttc: (r["precision_ttc"] as string | null) ?? null,
+    date: (r["precision_date"] as string | null) ?? null,
+  };
   const lu = (r["payload"] ?? null) as {
     issuer?: string;
     document_date?: string;
@@ -567,7 +575,8 @@ function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string,
     comptabilite: Boolean(r["comptabilite"]),
     remiseLe: r["remise_le"] ? new Date(r["remise_le"] as string).toISOString() : null,
     emetteur: (r["emetteur_dit"] as string | null) ?? lu?.issuer ?? null,
-    dateDocument: cab?.dateEcriture ?? lu?.document_date ?? null,
+    // La date donnée à la main complète une date non lue, comme sur la fiche.
+    dateDocument: cab?.dateEcriture ?? dateDeLaPiece(lu?.document_date, dit.date),
     kind:
       cab?.documentKind ??
       // Le côté dit l'emporte sur le côté lu : la personne sait si elle a
@@ -580,7 +589,8 @@ function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string,
       // intention, la lecture la contredit quand elle sait — mais quand elle
       // ne dit rien, « Vérifier » rend ce que la personne a choisi (G6c).
       sensDeclare(r["document_kind"]),
-    total: cab?.ttc ?? lu?.totals?.ttc ?? null,
+    // Le TTC corrigé l'emporte sur le TTC lu, comme sur la fiche ; l'écriture du cabinet sur les deux.
+    total: cab?.ttc ?? dit.ttc ?? lu?.totals?.ttc ?? null,
     devise: cab?.devise ?? lu?.currency ?? null,
     decimales: exposants.get(cab?.devise ?? lu?.currency ?? "") ?? null,
     typeDeDocument: (r["document_kind"] as string | null) ?? null,
