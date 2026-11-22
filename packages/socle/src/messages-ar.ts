@@ -731,6 +731,7 @@ export const ar: Dict = {
   "pme.charges.answered": "تم تسجيل إجابتك وتبقى في السجل.",
   "pme.charges.answered.cabinet": "أجاب محاسبك. تبقى إجابته في السجل.",
   "pme.charges.disclaimer": "أُنبّه وأسأل، ولا أُغيّر أي قيد أبدًا.",
+  "pme.charges.estimation": "تقدير: هذه الأرقام مأخوذة من قراءة وثائقك، ولم يراجعها أي محاسب بعد.",
   "pme.home.card.charges": "مصاريفي",
   "pme.nav.home": "الشركة",
   "pme.tva.soldeNul": "رصيد الأداء على القيمة المضافة منعدم",

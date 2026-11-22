@@ -753,6 +753,8 @@ export const en: Dict = {
   "pme.charges.answered": "Your answer is recorded and kept in the log.",
   "pme.charges.answered.cabinet": "Your accountant answered. Their answer is kept in the log.",
   "pme.charges.disclaimer": "I flag and I ask; I never change an entry.",
+  "pme.charges.estimation":
+    "Estimate: these figures come from reading your documents; no accountant has reviewed them yet.",
   "pme.home.card.charges": "Your expenses",
   "pme.nav.home": "Company",
   "pme.tva.soldeNul": "Zero VAT balance",
