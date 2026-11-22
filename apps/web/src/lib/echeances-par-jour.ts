@@ -4,7 +4,8 @@
  * Le dirigeant, 22 novembre 2026 : « l'échéance doit être groupée par jour, je ne veux
  * pas la composition ». Le 20 novembre portait quatre lignes (TVA, timbre, TCL,
  * retenues) qui disaient la même chose : ce jour-là, il y a des déclarations à faire.
- * L'accueil dit le jour et le nombre ; l'écran des échéances garde le détail.
+ * L'accueil, les alertes et l'écran des échéances disent le jour et le nombre, jamais
+ * la liste (l'écran des échéances suit, même jour : « grouper aussi »).
  *
  * Pur : ni réseau ni écran. Plusieurs sociétés : un jour par société, chacune ses
  * échéances.
@@ -30,17 +31,27 @@ export interface JourDEcheances {
   jours: number;
 }
 
-/** Les jours d'échéances non faites, le plus proche d'abord, au plus `combien`. */
-export function echeancesParJour(
-  echeances: readonly EcheanceAPlat[],
+/** Un jour d'échéances, avec ce que l'écran des échéances en montre. */
+export interface JourDEcheancesLu<E extends EcheanceAPlat> extends JourDEcheances {
+  /** Toutes déposées ce jour-là : elles forment leur propre jour, « déposées ». */
+  faites: boolean;
+  /** La première du jour : sa date légale et son report valent pour le jour. */
+  premiere: E;
+}
+
+/**
+ * Toutes les échéances, une ligne par jour et par société, le plus proche d'abord.
+ * Celles déjà faites forment leur propre ligne du jour, à part de celles qui restent.
+ */
+export function regrouperParJour<E extends EcheanceAPlat>(
+  echeances: readonly E[],
   aujourdhui: string,
-  combien: number,
-): JourDEcheances[] {
+): Array<JourDEcheancesLu<E>> {
   const origine = Date.parse(`${aujourdhui}T00:00:00Z`);
-  const jours = new Map<string, JourDEcheances>();
+  const jours = new Map<string, JourDEcheancesLu<E>>();
   for (const e of echeances) {
-    if (e.status === "fait") continue;
-    const cle = `${e.dueDate}|${e.tenantId}`;
+    const faites = e.status === "fait";
+    const cle = `${e.dueDate}|${e.tenantId}|${faites ? "faites" : "a_faire"}`;
     const deja = jours.get(cle);
     if (deja) {
       deja.n += 1;
@@ -54,9 +65,26 @@ export function echeancesParJour(
       n: 1,
       seule: e.label,
       jours: Math.round((Date.parse(`${e.dueDate}T00:00:00Z`) - origine) / 86_400_000),
+      faites,
+      premiere: e,
     });
   }
-  return [...jours.values()]
-    .sort((x, y) => x.dueDate.localeCompare(y.dueDate) || x.tenantId.localeCompare(y.tenantId))
-    .slice(0, combien);
+  return [...jours.values()].sort(
+    (x, y) =>
+      x.dueDate.localeCompare(y.dueDate) ||
+      x.tenantId.localeCompare(y.tenantId) ||
+      Number(x.faites) - Number(y.faites),
+  );
+}
+
+/** Les jours d'échéances non faites, le plus proche d'abord, au plus `combien`. */
+export function echeancesParJour(
+  echeances: readonly EcheanceAPlat[],
+  aujourdhui: string,
+  combien: number,
+): JourDEcheances[] {
+  return regrouperParJour(
+    echeances.filter((e) => e.status !== "fait"),
+    aujourdhui,
+  ).slice(0, combien);
 }
