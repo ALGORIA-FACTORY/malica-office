@@ -110,7 +110,7 @@ export const en: Dict = {
   "onboarding.subtitle":
     "Your company, or your accounting firm. Its data is visible only to its members and to those it invites. You will be its first member.",
   "onboarding.kind": "Nature",
-  "onboarding.kind.pme": "Company — I keep my books",
+  "onboarding.kind.pme": "Company — my business",
   "onboarding.kind.cabinet": "Accounting — I keep companies' books",
   "onboarding.name": "Legal name",
   "plan.nct.empty": "No account for this search.",

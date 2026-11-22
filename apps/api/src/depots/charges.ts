@@ -10,6 +10,7 @@ import { sommeDecimale } from "@malica/socle/somme-decimale";
 
 import type { Requete } from "../db.ts";
 import { exposantDuPack } from "../scan/analyse.ts";
+import { rejugerLesPerimeesDuDossier } from "../scan/rejeu.ts";
 import { dec, decOuNul, enVigueur } from "./decimal.ts";
 import { conversionsDesPieces, montantConverti } from "./en-devise-du-dossier.ts";
 
@@ -242,6 +243,9 @@ export const charges = {
    * charge est une pièce qui compte et qui n'est pas une vente.
    */
   async articles(db: Requete, tenantId: string, fromPeriod: string, toPeriod: string) {
+    // Une société qui tient ses livres : ses jugements périmés se rejugent ici, sinon une
+    // facture que les règles du jour tranchent resterait hors de ses charges (`scan/rejeu.ts`).
+    await rejugerLesPerimeesDuDossier(db, tenantId);
     const { rows } = await db.query(
       `${CHARGES_LUES}
        select * from (
