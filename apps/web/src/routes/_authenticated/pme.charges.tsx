@@ -18,6 +18,7 @@ import { useMemo, useState } from "react";
 import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
 import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { currentPeriod } from "@/hooks/use-tva";
 import { UneSocieteALaFois } from "@/components/malica/societes-a-la-ligne";
 import { useI18n } from "@/i18n";
@@ -135,6 +136,9 @@ function ChargesScreen() {
   const { t, locale } = useI18n();
   const pme = usePme();
   const qc = useQueryClient();
+  // Sans comptabilité, les chiffres sont ceux de la lecture : une estimation (22 novembre 2026).
+  const cabinet = useMonCabinet(pme.tenantId);
+  const estimation = cabinet.isSuccess && cabinet.data === null;
   const [period, setPeriod] = useState(currentPeriod());
   const [openFamille, setOpenFamille] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -755,6 +759,7 @@ function ChargesScreen() {
           </p>
         ) : null}
 
+        {estimation ? <p className="foot">{t("pme.charges.estimation")}</p> : null}
         <p className="foot">{t("pme.charges.disclaimer")}</p>
       </div>
     </div>

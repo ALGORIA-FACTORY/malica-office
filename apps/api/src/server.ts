@@ -12,6 +12,7 @@ import { app } from "./app.ts";
 import { fermerLePool, fermerLePoolDuJournal } from "./db.ts";
 import { demarrerLaFacturation } from "./facturation/demarrer-la-facturation.ts";
 import { demarrerLaNuit } from "./malica/lecture/demarrer-la-nuit.ts";
+import { demarrerLesEcheancesQuiApprochent } from "./notifications/demarrer-les-echeances-qui-approchent.ts";
 import {
   arreterLeJournal,
   demarrerLeJournal,
@@ -57,6 +58,9 @@ demarrerLaNuit();
 
 // Les factures mensuelles : rien ne s'émet tant que la tour n'a pas ouvert l'émission.
 demarrerLaFacturation();
+
+// L'échéance qui approche : une alerte par société et par jour, une seule fois.
+demarrerLesEcheancesQuiApprochent();
 
 const port = Number(process.env["PORT"] ?? 3000);
 const serveur = app.listen(port, () => {

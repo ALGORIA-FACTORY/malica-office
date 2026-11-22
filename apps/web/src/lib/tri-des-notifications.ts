@@ -56,7 +56,8 @@ const DE_LA_COMPTABILITE: ReadonlySet<string> = new Set([
 ]);
 
 export function sourceDe(kind: string): "comptabilite" | "malica" | "autre" {
-  if (kind.startsWith("conseil.")) return "malica";
+  // Les conseils et l'échéance qui approche : c'est Malica qui parle.
+  if (kind.startsWith("conseil.") || kind.startsWith("echeance.")) return "malica";
   return DE_LA_COMPTABILITE.has(kind) ? "comptabilite" : "autre";
 }
 

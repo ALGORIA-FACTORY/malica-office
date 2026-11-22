@@ -45,6 +45,9 @@ const GENRES: Record<string, MessageKey> = {
   "piece.retournee_par_le_proprietaire": "notif.kind.piece.retournee_par_le_proprietaire",
   "piece.supprimee_par_le_proprietaire": "notif.kind.piece.supprimee_par_le_proprietaire",
   "piece.demande": "notif.kind.piece.demande",
+  // Une alerte par jour d'échéance, avec leur nombre — jamais la composition
+  // (décision du 22 novembre 2026).
+  "echeance.approche": "notif.kind.echeance.approche",
 };
 
 export function chaine(payload: Record<string, unknown>, cle: string): string | null {
@@ -89,6 +92,32 @@ export function detailDe(kind: string, payload: Record<string, unknown>): string
  * abonnement en charge » se lisait d'une offre déjà en cours (recette du
  * 11 novembre 2026) ; la base pose l'issue sur l'alerte (`tranchee`).
  */
+/**
+ * Ce que la phrase du genre attend en plus de sa clé. L'échéance qui approche
+ * dit son jour et le nombre de déclarations de ce jour, rien d'autre.
+ */
+export function variablesDuGenre(
+  kind: string,
+  payload: Record<string, unknown>,
+  locale: string,
+): Record<string, string | number> | undefined {
+  if (kind !== "echeance.approche") return undefined;
+  const iso = chaine(payload, "due_date");
+  const nombre = Number(payload["nombre"]);
+  const jour = iso ? new Date(`${iso}T12:00:00Z`) : null;
+  return {
+    count: Number.isFinite(nombre) && nombre > 0 ? nombre : 1,
+    date:
+      jour && !Number.isNaN(jour.getTime())
+        ? new Intl.DateTimeFormat(locale, {
+            day: "numeric",
+            month: "long",
+            timeZone: "UTC",
+          }).format(jour)
+        : "",
+  };
+}
+
 export function cleDuGenre(kind: string, payload: Record<string, unknown> = {}): MessageKey {
   if (kind === "piece.demande_tranchee") return phraseDeLaReponse(payload);
   if (kind === "acces.propose" && payload["tranchee"] === "actif")

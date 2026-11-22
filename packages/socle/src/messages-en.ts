@@ -200,6 +200,10 @@ export const en: Dict = {
   "onboarding.jurisdiction.required": "Choose a jurisdiction before continuing.",
   "onboarding.legalId": "Tax identification number (optional)",
   "onboarding.adresse": "Head office address (optional)",
+  "onboarding.comptabilite": "Your accountant's email (optional)",
+  "onboarding.comptabilite.help":
+    "They receive an invitation to keep your books as soon as the company is created. No accountant? Leave it empty: you can invite one later in Settings › Companies.",
+  "onboarding.comptabilite.reessayer": "Send the invitation again",
   "onboarding.mode": "Validation mode",
   "onboarding.mode.mandate": "With an accountant — they review and approve your entries",
   "onboarding.mode.autonome": "On your own — you approve yourself, and every approval is kept",
@@ -753,6 +757,8 @@ export const en: Dict = {
   "pme.charges.answered": "Your answer is recorded and kept in the log.",
   "pme.charges.answered.cabinet": "Your accountant answered. Their answer is kept in the log.",
   "pme.charges.disclaimer": "I flag and I ask; I never change an entry.",
+  "pme.charges.estimation":
+    "Estimate: these figures come from reading your documents; no accountant has reviewed them yet.",
   "pme.home.card.charges": "Your expenses",
   "pme.nav.home": "Company",
   "pme.tva.soldeNul": "Zero VAT balance",
@@ -2980,6 +2986,9 @@ export const en: Dict = {
   "notif.kind.piece.retournee_par_le_proprietaire": "Document returned by the owner",
   "notif.kind.piece.supprimee_par_le_proprietaire": "Document deleted by the owner",
   "notif.kind.piece.demande": "Request on a document",
+  "notif.kind.echeance.approche": "{count} deadlines on {date}",
+  "notif.kind.echeance.approche#one": "One deadline on {date}",
+  "notif.kind.echeance.approche#other": "{count} deadlines on {date}",
   "statut.cab.recue": "Received",
   "statut.cab.vue": "Seen",
   "statut.cab.corrigee": "Corrected",
@@ -5239,6 +5248,7 @@ export const en: Dict = {
   "refus.abonnement.couvert_par_la_licence":
     "This company is already covered by its owner's licence, which you pay.",
   "pme.notifs.voirEquipe": "See my team",
+  "pme.notifs.voirEcheances": "See my deadlines",
   "cab.cli.kicker": "Portfolio",
   "cab.cli.titre": "Clients",
   "cab.cli.panel":

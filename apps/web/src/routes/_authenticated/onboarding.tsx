@@ -8,6 +8,11 @@
  * qu'un pack est en vigueur, jamais parce qu'un code l'a écrite. La devise n'est pas
  * demandée : elle appartient au pack de la juridiction, pour ne pas tenir une comptabilité
  * dans une monnaie qui n'est pas la sienne. À la création, on retourne au choix d'espace.
+ *
+ * Une PME peut inviter sa comptabilité dès cet écran (décision du 22 novembre 2026) : l'e-mail
+ * est facultatif, et l'invitation part par le même envoi que Réglages › Sociétés, une fois la
+ * société créée. Si l'invitation échoue, la société reste créée : renvoyer le formulaire ne
+ * retente que l'invitation, jamais une seconde société.
  */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -56,6 +61,9 @@ function Onboarding() {
   const [mode, setMode] = useState<ValidationMode>("mandate");
   const [adresse, setAdresse] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
+  const [emailComptabilite, setEmailComptabilite] = useState("");
+  /** La société déjà créée par un envoi précédent dont seule l'invitation a échoué. */
+  const [creee, setCreee] = useState<string | null>(null);
 
   // Les juridictions viennent du référentiel : une option s'affiche parce qu'un
   // pack est en vigueur, jamais parce qu'un code l'a écrite. Le jour où un pack
@@ -79,20 +87,25 @@ function Onboarding() {
     setError(null);
     try {
       if (!choisie || !devise) throw new Error(t("onboarding.jurisdiction.required"));
-      await office().identity.createOrganization({
-        kind,
-        name: name.trim(),
-        legalId: legalId.trim() || null,
-        jurisdiction: choisie,
-        // La devise n'est pas demandée : elle appartient au pack de la
-        // juridiction. Laisser l'utilisateur en choisir une autre reviendrait à
-        // tenir une comptabilité tunisienne en euros.
-        currency: devise,
-        validationMode: mode,
-        // L'établissement principal porte la raison sociale ; ce qu'on tape ici
-        // est l'adresse du siège, et elle va sur la société (4.2).
-        adresse: adresse.trim() || null,
-      });
+      const tenantId =
+        creee ??
+        (await office().identity.createOrganization({
+          kind,
+          name: name.trim(),
+          legalId: legalId.trim() || null,
+          jurisdiction: choisie,
+          // La devise n'est pas demandée : elle appartient au pack de la
+          // juridiction. Laisser l'utilisateur en choisir une autre reviendrait à
+          // tenir une comptabilité tunisienne en euros.
+          currency: devise,
+          validationMode: mode,
+          // L'établissement principal porte la raison sociale ; ce qu'on tape ici
+          // est l'adresse du siège, et elle va sur la société (4.2).
+          adresse: adresse.trim() || null,
+        }));
+      setCreee(tenantId);
+      const invitee = kind === "pme" ? emailComptabilite.trim() : "";
+      if (invitee) await office().identity.inviterMaComptabilite(tenantId, invitee);
       await queryClient.invalidateQueries();
       await navigate({ to: "/office" });
     } catch (err) {
@@ -128,6 +141,7 @@ function Onboarding() {
                   key={k}
                   type="button"
                   onClick={() => setKind(k)}
+                  disabled={creee !== null}
                   aria-pressed={kind === k}
                   className={`bg-card p-4 text-start text-sm transition-colors ${
                     kind === k ? "bg-foreground text-background" : "hover:bg-accent"
@@ -138,6 +152,25 @@ function Onboarding() {
               ))}
             </div>
           </fieldset>
+
+          {kind === "pme" ? (
+            <label className="block lg:col-span-2">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("onboarding.comptabilite")}
+              </span>
+              <input
+                type="email"
+                value={emailComptabilite}
+                onChange={(e) => setEmailComptabilite(e.target.value)}
+                autoComplete="email"
+                inputMode="email"
+                className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
+              />
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {t("onboarding.comptabilite.help")}
+              </span>
+            </label>
+          ) : null}
 
           <label className="block">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -236,7 +269,11 @@ function Onboarding() {
             disabled={pending}
             className="w-full border border-foreground bg-foreground px-4 py-3 text-sm font-medium text-background transition-colors hover:bg-background hover:text-foreground disabled:opacity-50 lg:col-span-2 lg:justify-self-start lg:px-10"
           >
-            {pending ? t("auth.pending") : t("onboarding.submit")}
+            {pending
+              ? t("auth.pending")
+              : creee
+                ? t("onboarding.comptabilite.reessayer")
+                : t("onboarding.submit")}
           </button>
         </form>
       </main>

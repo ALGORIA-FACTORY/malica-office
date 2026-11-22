@@ -201,6 +201,10 @@ export const fr = {
   "onboarding.jurisdiction.required": "Choisissez une juridiction avant de continuer.",
   "onboarding.legalId": "Identifiant fiscal (facultatif)",
   "onboarding.adresse": "Adresse du siège (facultatif)",
+  "onboarding.comptabilite": "E-mail de votre comptabilité (facultatif)",
+  "onboarding.comptabilite.help":
+    "Elle reçoit une invitation à tenir votre comptabilité dès la création de la société. Sans comptabilité, laissez vide : vous pourrez l'inviter plus tard dans Réglages › Sociétés.",
+  "onboarding.comptabilite.reessayer": "Renvoyer l'invitation",
   "onboarding.mode": "Mode de validation",
   "onboarding.mode.mandate": "Avec une comptabilité — elle relit et valide vos écritures",
   "onboarding.mode.autonome": "Seul — vous validez vous-même, et chaque validation est gardée",
@@ -808,6 +812,8 @@ export const fr = {
   "pme.charges.answered": "Votre réponse est enregistrée et reste au journal.",
   "pme.charges.answered.cabinet": "Votre comptabilité a répondu. Sa réponse reste au journal.",
   "pme.charges.disclaimer": "Je signale et j'interroge ; je ne modifie jamais une écriture.",
+  "pme.charges.estimation":
+    "Estimation : ces chiffres viennent de la lecture de vos pièces ; aucun comptable ne les a encore repris.",
   "pme.home.card.charges": "Vos charges",
   "pme.nav.home": "Société",
   "pme.tva.soldeNul": "Solde TVA nul",
@@ -3075,6 +3081,9 @@ export const fr = {
   "notif.kind.piece.retournee_par_le_proprietaire": "Pièce retournée par le propriétaire",
   "notif.kind.piece.supprimee_par_le_proprietaire": "Pièce supprimée par le propriétaire",
   "notif.kind.piece.demande": "Demande sur une pièce",
+  "notif.kind.echeance.approche": "{count} échéances le {date}",
+  "notif.kind.echeance.approche#one": "Une échéance le {date}",
+  "notif.kind.echeance.approche#other": "{count} échéances le {date}",
   "statut.cab.recue": "Reçue",
   "statut.cab.vue": "Vue",
   "statut.cab.corrigee": "Corrigée",
@@ -5455,6 +5464,7 @@ export const fr = {
   "refus.abonnement.couvert_par_la_licence":
     "Cette société est déjà couverte par la licence de son dirigeant, que vous payez.",
   "pme.notifs.voirEquipe": "Voir mon équipe",
+  "pme.notifs.voirEcheances": "Voir mes échéances",
   "cab.cli.kicker": "Portefeuille",
   "cab.cli.titre": "Clients",
   "cab.cli.panel":
