@@ -2840,6 +2840,9 @@ export const ar: Dict = {
   "notif.kind.piece.retournee_par_le_proprietaire": "وثيقة أرجعها المالك",
   "notif.kind.piece.supprimee_par_le_proprietaire": "وثيقة حذفها المالك",
   "notif.kind.piece.demande": "طلب بخصوص وثيقة",
+  "notif.kind.echeance.approche": "آجال يوم {date}: {count}",
+  "notif.kind.echeance.approche#one": "أجل واحد يوم {date}",
+  "notif.kind.echeance.approche#other": "آجال يوم {date}: {count}",
   "statut.cab.recue": "واردة",
   "statut.cab.vue": "اطُّلع عليها",
   "statut.cab.corrigee": "مُصحَّحة",
@@ -5017,6 +5020,7 @@ export const ar: Dict = {
   "cab.cli.abo.licence.detail": "تدفعون هذه الرخصة لشركة أخرى له: لا شيء إضافي للدفع.",
   "refus.abonnement.couvert_par_la_licence": "هذه الشركة مغطّاة برخصة مسيّرها التي تدفعونها.",
   "pme.notifs.voirEquipe": "عرض فريقي",
+  "pme.notifs.voirEcheances": "عرض آجالي",
   "cab.cli.kicker": "المحفظة",
   "cab.cli.titre": "العملاء",
   "cab.cli.panel":
