@@ -16,7 +16,7 @@ import { after, describe, it } from "node:test";
 
 import pg from "pg";
 
-import { decor, enPersonne, regler, type Decor } from "./decor-de-facture.ts";
+import { decor, enPersonne, ouvrirLePerimetrePme, regler, type Decor } from "./decor-de-facture.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -128,6 +128,19 @@ describe("la montée se paie avant de s'ouvrir", { skip: !ADMIN }, () => {
   it("sans paiement possible, la montée est refusée et l'offre reste", async () => {
     await aBlanc(async (db) => {
       const d = await decor(db, "solo");
+      await db.query("set local session_replication_role = replica");
+      await db.query("delete from facturation.emetteurs");
+      await db.query("set local session_replication_role = origin");
+      await assert.rejects(demander(db, d, "team"), /refus\.forfait\.paiement_indisponible/);
+      assert.equal(await offreCourante(db, d), "solo");
+    });
+  });
+
+  // Pilote, 22 novembre 2026, v0.2.113 : sous la facturation immédiate, la montée passait sans paiement.
+  it("sous la facturation immédiate, sans paiement possible, la montée est refusée aussi", async () => {
+    await aBlanc(async (db) => {
+      const d = await decor(db, "solo");
+      await ouvrirLePerimetrePme(db, d);
       await db.query("set local session_replication_role = replica");
       await db.query("delete from facturation.emetteurs");
       await db.query("set local session_replication_role = origin");
