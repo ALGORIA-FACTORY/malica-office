@@ -254,6 +254,40 @@ describe("le crayon corrige le pied de la facture", { skip: !BASE_CONFIGUREE }, 
     );
   });
 
+  /*
+   * Pilote, 22 novembre 2026 : une société sans comptabilité ne voyait jamais ses charges, ses
+   * pièces restant « lues ». Décision du dirigeant : celle dont le jugement ferme compte, en
+   * estimation. La société de ce fichier est autonome : aucun cabinet ne tient ses livres.
+   */
+  it("sans comptabilité, une pièce qui tient compte aux charges, en estimation", async () => {
+    const id = await lue();
+    const mois = async () =>
+      (
+        (await pmeFait("capture.dossier", id)) as {
+          extraction: { payload: { document_date: string } };
+        }
+      ).extraction.payload.document_date.slice(0, 7);
+    const charges = async () => {
+      const m = await mois();
+      return (
+        (await pmeFait("charges.articles", societe, m, m)) as Array<{
+          pieceId: string;
+          totalHt: string;
+        }>
+      ).filter((a) => a.pieceId === id);
+    };
+    assert.deepEqual(await charges(), [], "lue de travers, elle ne tient pas : elle ne compte pas");
+    await corrige(id, "totals.vat", "2850.000");
+    await corrige(id, "totals.ttc", "17851.000");
+    const { rows } = await admin.query<{ estimation: boolean }>(
+      `select estimation from pieces_qui_comptent_v where id = $1`,
+      [id],
+    );
+    assert.equal(rows[0]?.estimation, true, "elle compte, marquée estimation");
+    const [ligne] = await charges();
+    assert.equal(Number(ligne?.totalHt), 15000, "son HT entre au mois");
+  });
+
   it("une correction suivante remplace la précédente sans la défaire : la dernière fait foi", async () => {
     const id = await lue();
     await corrige(id, "totals.vat", "2850.000");

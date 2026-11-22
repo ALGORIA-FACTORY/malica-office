@@ -805,6 +805,8 @@ export const fr = {
   "pme.charges.answered": "Votre réponse est enregistrée et reste au journal.",
   "pme.charges.answered.cabinet": "Votre comptabilité a répondu. Sa réponse reste au journal.",
   "pme.charges.disclaimer": "Je signale et j'interroge ; je ne modifie jamais une écriture.",
+  "pme.charges.estimation":
+    "Estimation : ces chiffres viennent de la lecture de vos pièces ; aucun comptable ne les a encore repris.",
   "pme.home.card.charges": "Vos charges",
   "pme.nav.home": "Société",
   "pme.tva.soldeNul": "Solde TVA nul",
