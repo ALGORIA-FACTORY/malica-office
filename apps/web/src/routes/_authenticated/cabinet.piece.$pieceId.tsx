@@ -53,7 +53,7 @@ import {
 } from "@/components/malica/office-ui";
 import { useLimiteDuMotif } from "@/hooks/use-limite-du-motif";
 import { useI18n, type MessageKey } from "@/i18n";
-import { dateEnChiffres, momentDeLEnvoi, montant, quantite } from "@/lib/lisible";
+import { dateEnChiffres, momentDeLEnvoi, montant, montantEtDevise, quantite } from "@/lib/lisible";
 import { reponsesAuDernierRetour } from "@/lib/retour-du-cabinet";
 import { saisieDecimale } from "@malica/socle/saisie-decimale";
 import { office } from "@/verticals/malica-office/composition";
@@ -1446,6 +1446,21 @@ function EcritureDuReglement({
     queryKey: ["reglement", paiementId, qualification],
     queryFn: () => office().office.propositionDeReglement(paiementId, qualification),
   });
+  /*
+   * La retenue que la facture IMPRIME, reconnue à un taux du référentiel
+   * (21 novembre 2026, note d'honoraires de MAP) : la qualification s'ouvre
+   * pré-remplie — code et assiette —, une fois. Le comptable la garde, la
+   * change ou la retire : elle ne vaut qu'une fois qualifiée par lui.
+   */
+  const lue = proposition.data?.ok ? proposition.data.retenueLue : null;
+  const [prerempli, setPrerempli] = useState(false);
+  useEffect(() => {
+    if (!lue || prerempli) return;
+    setPrerempli(true);
+    setCodes([lue.code]);
+    setAssietteIR(lue.assiette);
+    setDeclarer(true);
+  }, [lue, prerempli]);
   const inscrire = useMutation({
     // Proposer ET comptabiliser, une fois : l'écriture du règlement entre au
     // journal et au FEC, et redemander rend la même (ANO-006).
@@ -1508,6 +1523,13 @@ function EcritureDuReglement({
       {!r.inscrite && (r.retenue.cas === "a_confirmer" || (declarer && !qualification)) ? (
         <fieldset className="my-3 min-w-0 space-y-2 rounded-lg border border-border p-3">
           <legend className="px-1 text-[12px] font-medium">{t("cab.retenue.qualify")}</legend>
+          {r.retenueLue ? (
+            <p className="text-[11.5px] text-muted-foreground">
+              {t("cab.retenue.lueSurLaFacture", {
+                montant: montantEtDevise(montant(r.retenueLue.montant, locale), r.ecriture.devise),
+              })}
+            </p>
+          ) : null}
           <select
             aria-label={t("cab.retenue.withholding")}
             className="w-full border border-border bg-background p-2 text-[12px]"

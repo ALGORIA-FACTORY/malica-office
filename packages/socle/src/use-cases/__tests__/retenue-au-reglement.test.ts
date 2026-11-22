@@ -15,6 +15,7 @@ import { construireReglement, type EntreeReglement } from "../ecriture-de-reglem
 import {
   constaterLaRetenue,
   lireLaQualification,
+  reconnaitreLaRetenueImprimee,
   RetenueNonQualifiee,
 } from "../retenue-au-reglement.ts";
 
@@ -252,5 +253,77 @@ describe("la qualification reçue est relue", () => {
   });
   it("refuse un montant qui n'est pas un texte", () => {
     expect(() => lireLaQualification({ ...q, baseReglee: 2000 })).toThrow(RetenueNonQualifiee);
+  });
+});
+
+/*
+ * La note d'honoraires de MAP (21 novembre 2026) imprime sa retenue : 3 % de
+ * 476,000 = 14,280, déduite du net à payer. Le taux se reconnaît dans le
+ * référentiel, jamais ici : seul celui dont le calcul tombe sur le montant
+ * imprimé est retenu, et deux taux qui y tombent ne décident rien.
+ */
+describe("la retenue imprimée sur la facture se reconnaît au référentiel", () => {
+  const TAUX = [
+    {
+      code: "RAS_15",
+      taux: "0.015",
+      libelle: "1,5 %",
+      base: "ttc" as const,
+      famille: "ir" as const,
+    },
+    { code: "RAS_3", taux: "0.03", libelle: "3 %", base: "ttc" as const, famille: "ir" as const },
+    { code: "RAS_10", taux: "0.10", libelle: "10 %", base: "ttc" as const, famille: "ir" as const },
+    {
+      code: "TVA_25",
+      taux: "0.25",
+      libelle: "TVA 25 %",
+      base: "tva" as const,
+      famille: "tva" as const,
+    },
+  ];
+
+  it("14,280 sur 476,000 de TTC : le seul taux qui tombe juste est 3 %", () => {
+    expect(
+      reconnaitreLaRetenueImprimee(
+        { retenue: "14.280", ttc: "476.000", tva: "76.000", decimales: 3 },
+        TAUX,
+      ),
+    ).toEqual({ code: "RAS_3", assiette: "476.000" });
+  });
+
+  it("une retenue de TVA se reconnaît sur la TVA : 25 % de 76,000 = 19,000", () => {
+    expect(
+      reconnaitreLaRetenueImprimee(
+        { retenue: "19.000", ttc: "476.000", tva: "76.000", decimales: 3 },
+        TAUX,
+      ),
+    ).toEqual({ code: "TVA_25", assiette: "76.000" });
+  });
+
+  it("un montant qu'aucun taux ne donne : rien n'est reconnu", () => {
+    expect(
+      reconnaitreLaRetenueImprimee(
+        { retenue: "14.000", ttc: "476.000", tva: "76.000", decimales: 3 },
+        TAUX,
+      ),
+    ).toBeNull();
+  });
+
+  it("deux taux qui tombent sur le même montant : rien n'est décidé", () => {
+    expect(
+      reconnaitreLaRetenueImprimee(
+        { retenue: "15.000", ttc: "500.000", tva: "50.000", decimales: 3 },
+        [
+          ...TAUX,
+          {
+            code: "RAS_30_TVA",
+            taux: "0.30",
+            libelle: "30 %",
+            base: "tva" as const,
+            famille: "tva" as const,
+          },
+        ],
+      ),
+    ).toBeNull();
   });
 });

@@ -53,7 +53,7 @@ import {
   motifDeLEtat,
   motifDeRefusConnu,
 } from "@/lib/champ-lisible";
-import { jourEtMois, momentDeLEnvoi, montant, quantite } from "@/lib/lisible";
+import { jourEtMois, momentDeLEnvoi, montant, montantEtDevise, quantite } from "@/lib/lisible";
 import { pieceSuivanteATransmettre } from "@/lib/envoi";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation, EnvoiDUnePiece, GesteDeRetour } from "@malica/socle/ports/repositories";
@@ -1546,6 +1546,31 @@ function PieceScreen() {
                 onVoirLaSource={voirLaSource}
                 onCorriger={ouvrirLeCrayon}
               />
+              {/*
+               * Code de TVA à taux nul, base saisie qui ne tient pas : le moteur
+               * propose la base que le total prouve (TTC − droits). Un geste la
+               * prend ; la saisie n'est jamais remplacée sans lui.
+               */}
+              {dossier.data.baseProposee && ouvrirLeCrayon ? (
+                <button
+                  type="button"
+                  disabled={corrigerUnChamp.isPending}
+                  onClick={() =>
+                    corrigerUnChamp.mutate({
+                      champ: "totals.base_ht",
+                      valeur: dossier.data.baseProposee!,
+                    })
+                  }
+                  className="mt-3 h-10 w-full rounded-full border border-border text-[13px] font-medium disabled:opacity-40"
+                >
+                  {t("pme.crayon.baseProposee", {
+                    montant: montantEtDevise(
+                      lisible(dossier.data.baseProposee) ?? "",
+                      deviseDeLaPiece,
+                    ),
+                  })}
+                </button>
+              ) : null}
             </div>
           )}
           <p className="mt-4 text-[11.5px] leading-[1.5] text-muted-foreground">

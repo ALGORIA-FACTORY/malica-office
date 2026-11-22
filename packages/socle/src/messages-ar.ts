@@ -578,6 +578,7 @@ export const ar: Dict = {
   "pme.piece.retour": "وثائقك",
   "pme.piece.voir": "عرض الفاتورة",
   "pme.detail.voir": "عرض التفصيل",
+  "pme.crayon.baseProposee": "الأساس = {montant}؟",
   "pme.detail.titre": "ما قرأتُه، سطرًا سطرًا",
   "pme.detail.lignesAVerifier": "أسطر مقروءة، للتحقق",
   "pme.detail.lignesAVerifierAide":
