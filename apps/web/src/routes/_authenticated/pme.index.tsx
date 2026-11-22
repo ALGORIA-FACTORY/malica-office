@@ -44,6 +44,7 @@ import { COMMERCE } from "@/capabilities/coque";
 import { useI18n } from "@/i18n";
 import { nombre } from "@/lib/forfait";
 import { jourOuInstant, montant, montantSigne } from "@/lib/lisible";
+import { montantDeLaPiece } from "@/lib/totaux-des-pieces";
 import { nomPourSaluer } from "@/lib/nom-de-la-personne";
 import { office } from "@/verticals/malica-office/composition";
 import { usePiecesLues } from "@/hooks/use-pieces-lues";
@@ -649,7 +650,7 @@ function PmeHome() {
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
-                  {p.total ? <em>{montant(p.total, locale)}</em> : null}
+                  {p.total ? <em>{montant(montantDeLaPiece(p, sept.types), locale)}</em> : null}
                 </Link>
               ))}
             </div>
@@ -775,7 +776,9 @@ function PmeHome() {
                   <span className="bd">
                     <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>
                     <span>
-                      {p.total ? `${montant(p.total, locale)} ${p.devise ?? a.devise}` : "—"}
+                      {p.total
+                        ? `${montant(montantDeLaPiece(p, sept.types), locale)} ${p.devise ?? a.devise}`
+                        : "—"}
                     </span>
                   </span>
                 </Link>

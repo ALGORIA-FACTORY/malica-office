@@ -2719,6 +2719,10 @@ export const en: Dict = {
   "refus.precision.engagee":
     "A committed document can no longer be specified: it is corrected by an entry.",
   "refus.precision.type_non_propose": "This document type is not offered: {type}.",
+  "refus.precision.sens_inconnu":
+    "This side does not exist: {sens}. A document is a purchase or a sale.",
+  "refus.precision.sens_sans_objet":
+    "This document's type already says whether it is a purchase or a sale.",
   "refus.precision.date_illisible": "This date cannot be read: {date}.",
   "refus.precision.date_a_venir": "A future date cannot be set: {date}.",
   "refus.precision.nom_vide": "The name cannot be empty.",
@@ -4610,6 +4614,7 @@ export const en: Dict = {
   "pme.compta.rienTransmis": "Nothing sent yet.",
   "pme.compta.mandatActif": "Active mandate",
   "pme.type.plutot": "{porte} · it is rather",
+  "pme.piece.sens.aConfirmer": "{dossier} · to be confirmed by the firm",
   "pme.reglages.sommaire.avecCompta": "{count} with an accountant",
   "pme.reglages.sommaire.avecCompta#one": "{count} with an accountant",
   "pme.reglages.sommaire.avecCompta#other": "{count} with accountants",

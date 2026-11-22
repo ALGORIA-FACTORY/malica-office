@@ -37,7 +37,7 @@ import { LectureLaPlusBasse } from "@/components/malica/lecture-la-plus-basse";
 import { nombre } from "@/lib/forfait";
 import { jourOuInstant, momentDeLEnvoi, montant } from "@/lib/lisible";
 import { cn } from "@/lib/utils";
-import { sommeDecimale } from "@malica/socle/somme-decimale";
+import { montantDeLaPiece, totauxParDevise } from "@/lib/totaux-des-pieces";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 import { clePiecesLues, usePiecesLues } from "@/hooks/use-pieces-lues";
 import { usePiecesDesSocietes } from "@/hooks/use-pieces-des-societes";
@@ -334,18 +334,21 @@ function Bibliotheque() {
    */
   const sommes = (ps: readonly PieceLue[]): ReactNode => {
     const connus = ps.filter((p) => p.total !== null && !p.accompagne);
-    const achats = connus.filter((p) => p.kind !== "facture_vente").map((p) => p.total!);
-    const ventes = connus.filter((p) => p.kind === "facture_vente").map((p) => p.total!);
+    // Un avoir retranche ; chaque devise a son total, à ses décimales (22 novembre 2026).
+    const ecrire = (groupe: readonly PieceLue[]) =>
+      totauxParDevise(groupe, sept.types)
+        .map((x) => `${montant(x.total, locale)}${x.devise ? `\u00A0${x.devise}` : ""}`)
+        .join(" · ");
+    const achats = connus.filter((p) => p.kind !== "facture_vente");
+    const ventes = connus.filter((p) => p.kind === "facture_vente");
     if (achats.length === 0 && ventes.length === 0) return "—";
     return (
       <>
-        {achats.length > 0
-          ? `${t("pme.doc.type.achats")} ${montant(sommeDecimale(achats), locale)}`
-          : null}
+        {achats.length > 0 ? `${t("pme.doc.type.achats")} ${ecrire(achats)}` : null}
         {achats.length > 0 && ventes.length > 0 ? " · " : null}
         {ventes.length > 0 ? (
           <u>
-            {t("pme.doc.type.ventes")} {montant(sommeDecimale(ventes), locale)}
+            {t("pme.doc.type.ventes")} {ecrire(ventes)}
           </u>
         ) : null}
       </>
@@ -549,7 +552,9 @@ function Bibliotheque() {
                         </span>
                         {/* Sans montant : « — », jamais « 0,000 », qui serait un fait comptable. */}
                         <span className={cn("vl", p.kind === "facture_vente" && "rec")}>
-                          {p.total === null ? "—" : montant(p.total, locale)}
+                          {p.total === null
+                            ? "—"
+                            : montant(montantDeLaPiece(p, sept.types), locale)}
                         </span>
                       </span>
                       <span className="mt">

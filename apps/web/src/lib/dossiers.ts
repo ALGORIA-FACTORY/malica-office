@@ -28,6 +28,8 @@ export interface TypeRange {
   code: string;
   dossier: string;
   dossierSiVente: string | null;
+  /** Le signe de ses montants dans un total : -1 retranche (un avoir). */
+  signe?: 1 | -1;
 }
 
 type PieceTypee = Pick<PieceLue, "typeDeDocument" | "kind">;

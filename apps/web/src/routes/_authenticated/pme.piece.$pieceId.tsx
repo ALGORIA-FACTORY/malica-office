@@ -54,6 +54,7 @@ import {
   motifDeRefusConnu,
 } from "@/lib/champ-lisible";
 import { jourEtMois, momentDeLEnvoi, montant, montantEtDevise, quantite } from "@/lib/lisible";
+import { montantDeLaPiece } from "@/lib/totaux-des-pieces";
 import { pieceSuivanteATransmettre } from "@/lib/envoi";
 import { office } from "@/verticals/malica-office/composition";
 import type { Citation, EnvoiDUnePiece, GesteDeRetour } from "@malica/socle/ports/repositories";
@@ -509,7 +510,12 @@ function PieceScreen() {
       dossierDeLaPiece({ typeDeDocument: code, kind: vente ? "facture_vente" : null }, sept.types),
     );
     const type = nomDuType(code);
-    return [d?.libelle, type].filter(Boolean).join(" · ") || null;
+    // Un côté proposé au cabinet le dit : « Ventes · à confirmer par le cabinet ».
+    const dossierDit =
+      d?.libelle && coteAConfirmer
+        ? t("pme.piece.sens.aConfirmer", { dossier: d.libelle })
+        : d?.libelle;
+    return [dossierDit, type].filter(Boolean).join(" · ") || null;
   };
 
   const invalidate = async () => {
@@ -613,8 +619,27 @@ function PieceScreen() {
    * refuse (29 octobre 2026).
    */
   const preciser = useMutation({
-    mutationFn: async (valeur: string) => {
-      await office().capture.preciser(pieceId, "document_kind", valeur);
+    mutationFn: async ({
+      valeur,
+      sens,
+    }: {
+      valeur: string;
+      /** Le côté d'un type qui ne le fixe pas (un avoir) : la porte touchée le dit. */
+      sens?: "facture_achat" | "facture_vente";
+    }) => {
+      if (valeur !== piece?.documentKind) {
+        await office().capture.preciser(pieceId, "document_kind", valeur);
+      }
+      /*
+       * « Ventes → Avoir » est un avoir sur vente (22 novembre 2026). Le côté
+       * s'écrit à part, et seulement pour un type rangé selon le côté. Quand le
+       * cabinet tient les livres, la base l'inscrit comme une proposition « à
+       * confirmer » : le comptable tranche, rien ne bloque.
+       */
+      const rangeSelonLeCote = sept.types.find((x) => x.code === valeur)?.dossierSiVente;
+      if (sens && rangeSelonLeCote && sens !== sensDeLaPiece) {
+        await office().capture.preciser(pieceId, "sens", sens);
+      }
       // Le jugement suit la réponse : sans nouvelle analyse, le verdict
       // d'avant (« sens à confirmer ») resterait affiché.
       await office().capture.analyser(pieceId);
@@ -1175,7 +1200,11 @@ function PieceScreen() {
         ].flatMap((m) => (m.valeur === null ? [] : [{ libelle: m.libelle, valeur: m.valeur }]))
       : [];
   // Le sens, la date et la devise aussi : ceux de l'écriture, quand elle fait foi.
-  const sensDeLaPiece = duCabinet?.documentKind ?? payload?.document_kind;
+  // Le côté dit (ou proposé au cabinet) l'emporte sur le côté lu (22 novembre 2026).
+  const coteDit = dossier.data?.precisions["sens"] ?? null;
+  const coteAConfirmer = coteDit ? null : (dossier.data?.precisions["sens_propose"] ?? null);
+  const sensDeLaPiece =
+    duCabinet?.documentKind ?? coteDit ?? coteAConfirmer ?? payload?.document_kind;
   const dateDeLaPiece = duCabinet?.dateEcriture ?? payload?.document_date;
   const deviseDeLaPiece = duCabinet?.devise ?? payload?.currency ?? pme.currency;
 
@@ -2388,8 +2417,10 @@ function PieceScreen() {
           actuel={{ typeDeDocument: piece.documentKind, kind: vente ? "facture_vente" : null }}
           sensAuCabinet={cabinet.data?.tientLesLivres ?? false}
           mode="correction"
-          onRepondre={(code) =>
-            code === piece.documentKind ? setCorrigerType(false) : preciser.mutate(code)
+          onRepondre={(code, sens) =>
+            code === piece.documentKind && (!sens || sens === sensDeLaPiece)
+              ? setCorrigerType(false)
+              : preciser.mutate({ valeur: code, ...(sens ? { sens } : {}) })
           }
           onAnnuler={() => setCorrigerType(false)}
         />
@@ -2403,7 +2434,13 @@ function PieceScreen() {
           valeurs={{ ttc: totaux?.ttc, base_ht: totaux?.base_ht, tva: totaux?.vat }}
         />
         <div className={vente ? "amt vent" : "amt"}>
-          {lisible(totaux?.ttc) ?? "—"}{" "}
+          {/* Un avoir retranche : son total se lit en négatif (22 novembre 2026). */}
+          {lisible(
+            montantDeLaPiece(
+              { total: totaux?.ttc ?? null, devise: null, typeDeDocument: piece.documentKind },
+              sept.types,
+            ),
+          ) ?? "—"}{" "}
           <u>
             {devise} {t("pme.extract.ttc")}
           </u>

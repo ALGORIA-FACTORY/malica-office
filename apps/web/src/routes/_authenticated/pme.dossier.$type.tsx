@@ -31,7 +31,7 @@ import { ParTranches } from "@/components/malica/par-tranches";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { currentPeriod } from "@/hooks/use-tva";
 import { dossierDeLaPiece, moisDeLaPiece, periodeMontree } from "@/lib/dossiers";
-import { sommeDecimale } from "@malica/socle/somme-decimale";
+import { montantDeLaPiece, totauxParDevise } from "@/lib/totaux-des-pieces";
 import { useRevenir } from "@/hooks/use-revenir";
 
 export const Route = createFileRoute("/_authenticated/pme/dossier/$type")({
@@ -185,9 +185,16 @@ function Dossier() {
         }).format(new Date(`${cle}-01T00:00:00Z`));
   const etiquette = deroulee ? nomDePeriode(deroulee, false) : "";
 
+  // Un avoir retranche, et chaque devise a son total, à ses décimales (22 novembre 2026).
   const total = (ps: readonly PieceLue[]) => {
-    const connus = ps.map((p) => p.total).filter((v): v is string => v !== null);
-    return `${libelle} ${connus.length === 0 ? "—" : montant(sommeDecimale(connus), locale)}`;
+    const parDevise = totauxParDevise(ps, sept.types);
+    return `${libelle} ${
+      parDevise.length === 0
+        ? "—"
+        : parDevise
+            .map((x) => `${montant(x.total, locale)}${x.devise ? `\u00A0${x.devise}` : ""}`)
+            .join(" · ")
+    }`;
   };
   const typesDe = (ps: readonly PieceLue[]) =>
     [
@@ -338,7 +345,9 @@ function Dossier() {
                                     .join(" · ")}
                                 </span>
                               </span>
-                              {p.total ? <em>{montant(p.total, locale)}</em> : null}
+                              {p.total ? (
+                                <em>{montant(montantDeLaPiece(p, sept.types), locale)}</em>
+                              ) : null}
                             </Link>
                           );
                         }}

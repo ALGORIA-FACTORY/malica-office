@@ -129,7 +129,8 @@ async function preparer(db: Requete, demande: Demande): Promise<Plan> {
     throw Object.assign(new Error("réglage des limites d'export absent"), { code: "22023" });
 
   // Le contenu technique et le dossier de chaque pièce : le dossier est celui de
-  // son type, ou celui de la vente quand la lecture a lu une vente (`ref.document_types`).
+  // son type, ou celui de la vente quand la pièce est une vente — dite par une
+  // personne, sinon lue (`ref.document_types`).
   const { rows: details } = await db.query<{
     id: string;
     content_type: string | null;
@@ -137,13 +138,18 @@ async function preparer(db: Requete, demande: Demande): Promise<Plan> {
   }>(
     `select p.id, p.content_type,
             coalesce(case when dt.dossier_si_vente is not null
-                           and x.payload ->> 'document_kind' = 'facture_vente'
+                           and coalesce(c.valeur, x.payload ->> 'document_kind') = 'facture_vente'
                           then dt.dossier_si_vente end, dt.dossier) as dossier
        from pieces_v p
        left join ref.document_types dt on dt.code = p.document_kind
        left join lateral (select payload from extractions_v x
                            where x.piece_id = p.id
                            order by created_at desc, id desc limit 1) x on true
+       -- Le côté dit, ou proposé au cabinet, l'emporte sur le côté lu (22 novembre 2026),
+       -- comme dans la liste.
+       left join lateral (select q.valeur from precisions_v q
+                           where q.piece_id = p.id and q.champ in ('sens', 'sens_propose')
+                           order by (q.champ = 'sens') desc, q.decided_at desc limit 1) c on true
       where p.id = any($1::uuid[])`,
     [pieces],
   );
