@@ -348,14 +348,7 @@ function PmeHome() {
    * au-dessus de « Tout est en ordre. octobre est bouclé. » — l'une comptait
    * les retours, l'autre seulement les pièces à envoyer.
    */
-  const etat = etatDeLAccueil(a);
   const attendent = t("pme.home.voix.attendent", { count: a.enAttente, mois: moisCourant });
-  const phrase =
-    etat === "vide"
-      ? t("pme.home.voix.rien")
-      : etat === "en_ordre"
-        ? t("pme.home.voix.enOrdre", { mois: moisCourant })
-        : attendent;
 
   /*
    * L'écart avec le mois précédent — la seule phrase de cet écran qui compare.
@@ -394,11 +387,6 @@ function PmeHome() {
    * Le dernier cas couvre aussi le dossier vide : le geste proposé est celui
    * qui fait exister le produit, pas un lien vers une liste sans lignes.
    */
-  const aRegler = etat === "a_regler";
-  const aVerifier = a.enAttente > 0;
-  const titreHero = aRegler ? attendCabinet : phrase;
-  // Sous un retour, ce qui reste à envoyer s'il y en a ; jamais « en ordre ».
-  const sousHero = aRegler && aVerifier ? attendent : ecartPhrase;
 
   /*
    * ============================================== LES RANGÉES, LUES DANS LA BASE
@@ -485,6 +473,32 @@ function PmeHome() {
     }))
     .sort((x, y) => x.dueDate.localeCompare(y.dueDate))
     .slice(0, RANGEE);
+
+  /*
+   * « EN ORDRE » NE SE DIT PLUS PAR-DESSUS UN RETARD (pilote, 22 novembre 2026) : la carte
+   * disait « Tout est en ordre : novembre est bouclé » au-dessus de quatre échéances « En
+   * retard » et de quatre pièces « à exporter ». L'état compte aussi les échéances passées
+   * et non faites, et ce qui reste à remettre au comptable.
+   */
+  const enRetard = (echeances.data ?? []).filter(
+    (e) => e.status !== "fait" && Date.parse(`${e.dueDate}T00:00:00Z`) < aujourdhui,
+  ).length;
+  const etat = etatDeLAccueil({ ...a, enRetard, aExporter: aExporter.length });
+  const phrase =
+    etat === "vide"
+      ? t("pme.home.voix.rien")
+      : etat === "en_ordre"
+        ? t("pme.home.voix.enOrdre", { mois: moisCourant })
+        : etat === "en_retard"
+          ? t("pme.home.voix.enRetard", { count: enRetard })
+          : etat === "a_exporter"
+            ? t("pme.home.voix.aExporter", { count: aExporter.length })
+            : attendent;
+  const aRegler = etat === "a_regler";
+  const aVerifier = a.enAttente > 0;
+  const titreHero = aRegler ? attendCabinet : phrase;
+  // Sous un retour, ce qui reste à envoyer s'il y en a ; jamais « en ordre ».
+  const sousHero = aRegler && aVerifier ? attendent : ecartPhrase;
 
   return (
     /*

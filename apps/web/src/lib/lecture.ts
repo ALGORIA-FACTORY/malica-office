@@ -217,9 +217,16 @@ export function etatDeLAccueil(a: {
   avancement: number | null;
   enAttente: number;
   retournees: number;
-}): "vide" | "a_regler" | "a_envoyer" | "en_ordre" {
+  /** Les échéances passées et non faites (22 novembre 2026). */
+  enRetard?: number;
+  /** Les pièces d'une société sans comptabilité qu'aucun export n'a remises. */
+  aExporter?: number;
+}): "vide" | "a_regler" | "a_envoyer" | "en_retard" | "a_exporter" | "en_ordre" {
   if (a.avancement === null) return "vide";
   if (a.retournees > 0) return "a_regler";
   if (a.enAttente > 0) return "a_envoyer";
+  // « En ordre » ne se dit pas par-dessus une échéance dépassée ni des pièces à remettre.
+  if ((a.enRetard ?? 0) > 0) return "en_retard";
+  if ((a.aExporter ?? 0) > 0) return "a_exporter";
   return "en_ordre";
 }
