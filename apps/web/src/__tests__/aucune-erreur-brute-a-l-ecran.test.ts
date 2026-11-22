@@ -140,7 +140,7 @@ describe("aucune erreur brute à l'écran", () => {
     expect(brutsAffichables("<p>{err.stack}</p>")).toHaveLength(1);
     expect(brutsAffichables('t(k, { raison: e.derniereErreur ?? "" })')).toHaveLength(1);
     // Ce qui compare ou traduit ne rend rien.
-    expect(brutsAffichables('if (e.message === "paiement.deja_solde") return;')).toEqual([]);
+    expect(brutsAffichables('if (e.message === "refus.paiement.deja_solde") return;')).toEqual([]);
     expect(brutsAffichables('e.message.startsWith("cab.biblio.")')).toEqual([]);
     expect(brutsAffichables("lireUnRefus(e.message)")).toEqual([]);
     expect(brutsAffichables('direUnRefus(e.derniereErreur ?? "")')).toEqual([]);
