@@ -23,7 +23,8 @@ import pg from "pg";
 
 import type { MonAcces, PieceLue, PlaceComptable } from "@malica/socle/ports/repositories";
 
-import { creerCompte, type Utilisateur } from "./auth.ts";
+import { type Utilisateur } from "./auth.ts";
+import { compteDEssai } from "./compte-d-essai.ts";
 import { BASE_CONFIGUREE, monterUneSociete, type SocieteDEssai } from "./circuit-d-essai.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
@@ -123,7 +124,7 @@ describe("le comptable interne tient les livres", { skip: !BASE_CONFIGUREE }, ()
 
   before(async () => {
     const compte = async (qui: string, prenom: string) => {
-      const u = await creerCompte(`${marque}-${qui}@essai.local`, MOT_DE_PASSE);
+      const u = await compteDEssai(`${marque}-${qui}@essai.local`, MOT_DE_PASSE);
       assert.ok(u, qui);
       await sousIdentiteDuServeur(u.id, (db) => identite.ecrireMonProfil(db, prenom, "Essai"));
       return u;

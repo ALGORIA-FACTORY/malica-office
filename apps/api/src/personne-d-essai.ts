@@ -16,8 +16,10 @@ export async function personnesDEssai(
   ...ids: string[]
 ): Promise<void> {
   await db.query(
-    `insert into auth.users (id, email)
-     select id, 'essai-' || id || '@essai.local' from unnest($1::uuid[]) as id
+    // Une personne d'essai a une adresse prouvée : les épreuves qui l'invitent
+    // éprouvent l'invitation, pas la confirmation (`auth.confirmations_adresse`).
+    `insert into auth.users (id, email, adresse_confirmee_le)
+     select id, 'essai-' || id || '@essai.local', now() from unnest($1::uuid[]) as id
      on conflict (id) do nothing`,
     [ids],
   );

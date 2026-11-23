@@ -94,6 +94,16 @@ export const ar: Dict = {
   "auth.forgot.sent":
     "إذا كان هناك حساب بهذا العنوان، فقد أُرسل إليه رابط الآن. الرابط صالح لمدة ساعة.",
   "auth.reset.title": "كلمة مرور جديدة",
+  "adresse.titre": "عنوان بانتظار التأكيد",
+  "adresse.texte":
+    "أُرسل للتو رابط تأكيد إلى عنوان حسابكم. ما لم يُؤكَّد، لا تُفتح هنا أي دعوة من مكتب أو شركة. رابط الدعوة المستلمة بالبريد يؤكّده أيضًا.",
+  "adresse.renvoyer": "إعادة إرسال الرابط",
+  "adresse.renvoye": "أُعيد إرسال الرابط. تحقّقوا أيضًا من البريد غير المرغوب فيه.",
+  "adresse.page.titre": "تأكيد العنوان",
+  "adresse.page.confirmee": "تم تأكيد عنوانكم. يمكن لدعواتكم أن تُفتح الآن.",
+  "adresse.page.expiree":
+    "انتهت صلاحية هذا الرابط أو سبق استخدامه. سجّلوا الدخول لتلقّي رابط جديد.",
+  "adresse.page.continuer": "المتابعة إلى Malica Office",
   "auth.reset.new": "كلمة المرور الجديدة",
   "auth.reset.confirm": "تأكيد كلمة المرور",
   "auth.reset.submit": "حفظ والدخول",
@@ -4211,6 +4221,11 @@ export const ar: Dict = {
   "pme.payer.securise": "دفع آمن عبر {prestataire}",
   "pme.payer.rienARegler": "لم يعد هذا الدفع مستحقًا.",
   "refus.paiement.moyen_indisponible": "وسيلة الدفع هذه غير متاحة.",
+  "refus.paiement.prestataire_indisponible":
+    "خدمة الدفع لا تستجيب حاليًا. لم يضِع دفعك: أعد المحاولة بعد بضع دقائق.",
+  "refus.paiement.hote_non_autorise": "هذا العنوان لا يخص مزوّد الدفع هذا.",
+  "refus.paiement.montant_different":
+    "المبلغ الذي أكّده المزوّد ليس مبلغ الدفع: لم تتم أي تسوية، وتم إعلام فريق ALGORIA.",
   "pme.reglages.paiement.facture": "الفاتورة {numero}",
   "pme.reglages.factures.titre": "فواتيركم",
   "pme.reglages.factures.reste": "المتبقي للدفع: {montant} {devise} شامل الأداء",

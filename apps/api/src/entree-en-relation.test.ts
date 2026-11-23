@@ -14,7 +14,8 @@ import assert from "node:assert/strict";
 import pg from "pg";
 import { after, before, describe, it } from "node:test";
 
-import { creerCompte, type Utilisateur } from "./auth.ts";
+import { type Utilisateur } from "./auth.ts";
+import { compteDEssai } from "./compte-d-essai.ts";
 import { fermerLePool, sousIdentite } from "./db.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
@@ -70,10 +71,10 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
 
   before(async () => {
     const [e, c, i, a] = await Promise.all([
-      creerCompte(`expert-${marque}@essai.local`, MDP),
-      creerCompte(emailContact, MDP),
-      creerCompte(`intrus-${marque}@essai.local`, MDP),
-      creerCompte(`autre-${marque}@essai.local`, MDP),
+      compteDEssai(`expert-${marque}@essai.local`, MDP),
+      compteDEssai(emailContact, MDP),
+      compteDEssai(`intrus-${marque}@essai.local`, MDP),
+      compteDEssai(`autre-${marque}@essai.local`, MDP),
     ]);
     assert.ok(e && c && i && a, "les comptes doivent être créés");
     [expert, contact, intrus, autre] = [e, c, i, a];
@@ -408,7 +409,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
   });
 
   it("le nom tapé à l'inscription devient le profil du compte (recette du 8 novembre 2026)", async () => {
-    const nomme = await creerCompte(`nomme-${marque}@essai.local`, MDP, "Leila Ben Salah");
+    const nomme = await compteDEssai(`nomme-${marque}@essai.local`, MDP, "Leila Ben Salah");
     assert.ok(nomme);
     const profil = (await rpc(nomme, "identite", "monProfil")) as {
       display_name: string | null;
@@ -416,7 +417,7 @@ describe("l'entrée en relation", { skip: !BASE_CONFIGUREE }, () => {
     assert.equal(profil?.display_name, "Leila Ben Salah");
 
     // Sans nom, rien n'est inventé : le profil naîtra quand la personne l'écrira.
-    const anonyme = await creerCompte(`anonyme-${marque}@essai.local`, MDP);
+    const anonyme = await compteDEssai(`anonyme-${marque}@essai.local`, MDP);
     assert.ok(anonyme);
     assert.equal(await rpc(anonyme, "identite", "monProfil"), null);
   });

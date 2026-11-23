@@ -19,6 +19,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
+import { AdresseAConfirmer } from "@/components/malica/AdresseAConfirmer";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 import type { OrgKind } from "@malica/socle/ports/repositories";
@@ -133,6 +134,8 @@ function Onboarding() {
       <main className="w-full px-4 py-8 sm:px-6 lg:px-9 lg:py-12">
         <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{t("onboarding.subtitle")}</p>
+        {/* Invité par un cabinet ou une société ? L'invitation attend l'adresse confirmée. */}
+        <AdresseAConfirmer />
 
         <form onSubmit={onSubmit} className="mt-8 grid items-start gap-6 lg:grid-cols-2">
           <fieldset className="lg:col-span-2">

@@ -99,6 +99,17 @@ export const fr = {
   "auth.forgot.sent":
     "Si un accès existe pour cette adresse, un lien vient de lui être envoyé. Il vaut une heure.",
   "auth.reset.title": "Nouveau mot de passe",
+  "adresse.titre": "Adresse à confirmer",
+  "adresse.texte":
+    "Un lien de confirmation vient de partir à l'adresse de votre compte. Tant qu'elle n'est pas confirmée, aucune invitation d'un cabinet ou d'une société ne s'ouvre ici. Le lien d'une invitation reçue par courriel la confirme aussi.",
+  "adresse.renvoyer": "Renvoyer le lien",
+  "adresse.renvoye": "Lien renvoyé. Regardez aussi les courriers indésirables.",
+  "adresse.page.titre": "Confirmer l'adresse",
+  "adresse.page.confirmee":
+    "Votre adresse est confirmée. Vos invitations peuvent maintenant s'ouvrir.",
+  "adresse.page.expiree":
+    "Ce lien est expiré ou a déjà servi. Connectez-vous pour en recevoir un nouveau.",
+  "adresse.page.continuer": "Continuer vers Malica Office",
   "auth.reset.new": "Nouveau mot de passe",
   "auth.reset.confirm": "Confirmer le mot de passe",
   "auth.reset.submit": "Enregistrer et entrer",
@@ -4514,6 +4525,12 @@ export const fr = {
   "pme.payer.securise": "Paiement sécurisé par {prestataire}",
   "pme.payer.rienARegler": "Ce paiement n'est plus à régler.",
   "refus.paiement.moyen_indisponible": "Ce moyen de paiement n'est pas disponible.",
+  "refus.paiement.prestataire_indisponible":
+    "Le service de paiement ne répond pas pour l'instant. Votre paiement n'a pas été perdu : réessayez dans quelques minutes.",
+  "refus.paiement.hote_non_autorise":
+    "Cette adresse n'appartient pas à ce prestataire de paiement.",
+  "refus.paiement.montant_different":
+    "Le montant confirmé par le prestataire n'est pas celui du paiement : rien n'a été réglé, l'équipe ALGORIA est prévenue.",
   "pme.reglages.paiement.facture": "Facture {numero}",
   "pme.reglages.factures.titre": "Vos factures",
   "pme.reglages.factures.reste": "Reste à payer : {montant} {devise} TTC",

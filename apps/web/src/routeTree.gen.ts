@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConfidentialiteRouteImport } from './routes/confidentialite'
+import { Route as ConfirmerAdresseRouteImport } from './routes/confirmer-adresse'
 import { Route as InvitationRouteImport } from './routes/invitation'
 import { Route as ReinitialiserRouteImport } from './routes/reinitialiser'
 import { Route as AuthenticatedCabinetRouteImport } from './routes/_authenticated/cabinet'
@@ -91,6 +92,11 @@ const AuthRoute = AuthRouteImport.update({
 const ConfidentialiteRoute = ConfidentialiteRouteImport.update({
   id: '/confidentialite',
   path: '/confidentialite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmerAdresseRoute = ConfirmerAdresseRouteImport.update({
+  id: '/confirmer-adresse',
+  path: '/confirmer-adresse',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvitationRoute = InvitationRouteImport.update({
@@ -437,6 +443,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/confidentialite': typeof ConfidentialiteRoute
+  '/confirmer-adresse': typeof ConfirmerAdresseRoute
   '/invitation': typeof InvitationRoute
   '/reinitialiser': typeof ReinitialiserRoute
   '/cabinet': typeof AuthenticatedCabinetRouteWithChildren
@@ -480,7 +487,6 @@ export interface FileRoutesByFullPath {
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/pme/societe-en-plus': typeof AuthenticatedPmeSocieteEnPlusRoute
   '/pme/societes': typeof AuthenticatedPmeSocietesRoute
-
   '/pme/suite': typeof AuthenticatedPmeSuiteRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/tour/$section': typeof AuthenticatedTourSectionRoute
@@ -503,6 +509,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/confidentialite': typeof ConfidentialiteRoute
+  '/confirmer-adresse': typeof ConfirmerAdresseRoute
   '/invitation': typeof InvitationRoute
   '/reinitialiser': typeof ReinitialiserRoute
   '/mon-espace': typeof AuthenticatedMonEspaceRoute
@@ -543,7 +550,6 @@ export interface FileRoutesByTo {
   '/pme/regler': typeof AuthenticatedPmeReglerRoute
   '/pme/societe-en-plus': typeof AuthenticatedPmeSocieteEnPlusRoute
   '/pme/societes': typeof AuthenticatedPmeSocietesRoute
-
   '/pme/suite': typeof AuthenticatedPmeSuiteRoute
   '/pme/tva': typeof AuthenticatedPmeTvaRoute
   '/tour/$section': typeof AuthenticatedTourSectionRoute
@@ -568,6 +574,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/confidentialite': typeof ConfidentialiteRoute
+  '/confirmer-adresse': typeof ConfirmerAdresseRoute
   '/invitation': typeof InvitationRoute
   '/reinitialiser': typeof ReinitialiserRoute
   '/_authenticated/cabinet': typeof AuthenticatedCabinetRouteWithChildren
@@ -635,6 +642,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/confidentialite'
+    | '/confirmer-adresse'
     | '/invitation'
     | '/reinitialiser'
     | '/cabinet'
@@ -700,6 +708,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/confidentialite'
+    | '/confirmer-adresse'
     | '/invitation'
     | '/reinitialiser'
     | '/mon-espace'
@@ -763,6 +772,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/confidentialite'
+    | '/confirmer-adresse'
     | '/invitation'
     | '/reinitialiser'
     | '/_authenticated/cabinet'
@@ -830,6 +840,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConfidentialiteRoute: typeof ConfidentialiteRoute
+  ConfirmerAdresseRoute: typeof ConfirmerAdresseRoute
   InvitationRoute: typeof InvitationRoute
   ReinitialiserRoute: typeof ReinitialiserRoute
 }
@@ -862,6 +873,13 @@ declare module '@tanstack/react-router' {
       path: '/confidentialite'
       fullPath: '/confidentialite'
       preLoaderRoute: typeof ConfidentialiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirmer-adresse': {
+      id: '/confirmer-adresse'
+      path: '/confirmer-adresse'
+      fullPath: '/confirmer-adresse'
+      preLoaderRoute: typeof ConfirmerAdresseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invitation': {
@@ -1452,6 +1470,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ConfidentialiteRoute: ConfidentialiteRoute,
+  ConfirmerAdresseRoute: ConfirmerAdresseRoute,
   InvitationRoute: InvitationRoute,
   ReinitialiserRoute: ReinitialiserRoute,
 }
