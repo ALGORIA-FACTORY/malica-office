@@ -2240,12 +2240,16 @@
 [data-surface="pme"] [data-ecran="capture"] .c-titre{margin:.75rem 0 0;font-size:1.875rem;line-height:1.1;font-weight:800;letter-spacing:-.03em; text-wrap:balance}
 [data-surface="pme"] [data-ecran="capture"] .c-tete{display:flex;align-items:flex-end;gap:.25rem}
 [data-surface="pme"] [data-ecran="capture"] .c-sous{margin:.375rem 0 0;font-size:.9375rem;line-height:1.4;color:var(--t2)}
-[data-surface="pme"] [data-ecran="capture"] .c-photo{margin-top:1.25rem;min-height:180px;border:0;border-radius:24px;background:var(--acc); color:var(--on-acc);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem; font-family:inherit;font-size:1.25rem;font-weight:700;cursor:pointer}
-[data-surface="pme"] [data-ecran="capture"] .c-photo svg{width:48px;height:48px;stroke-width:1.8}
-[data-surface="pme"] [data-ecran="capture"] .c-deux{margin-top:.75rem;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
-[data-surface="pme"] [data-ecran="capture"] .c-deux button{min-height:96px;border:0;border-radius:20px;background:var(--s1);color:var(--tx); display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;font-family:inherit; font-size:.9375rem;font-weight:600;cursor:pointer;padding:.75rem;text-align:center}
-[data-surface="pme"] [data-ecran="capture"] .c-deux svg{width:26px;height:26px;stroke-width:1.8}
-[data-surface="pme"] [data-ecran="capture"] .c-photo:disabled, [data-surface="pme"] [data-ecran="capture"] .c-deux button:disabled{opacity:.45;cursor:default}
+/* Les trois sources (`SourcesDeCapture`) : la peau suit le composant, pas l'écran —
+ * « Ajouter des pièces » et la carte fiscale (`pme.fiche`) portent le même dessin
+ * (23 novembre 2026). `--s1` est posé par les deux écrans, au même gris. */
+[data-surface="pme"] .c-sources{display:flex;flex-direction:column}
+[data-surface="pme"] .c-sources .c-photo{margin-top:1.25rem;min-height:180px;border:0;border-radius:24px;background:var(--acc); color:var(--on-acc);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem; font-family:inherit;font-size:1.25rem;font-weight:700;cursor:pointer}
+[data-surface="pme"] .c-sources .c-photo svg{width:48px;height:48px;stroke-width:1.8}
+[data-surface="pme"] .c-sources .c-deux{margin-top:.75rem;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+[data-surface="pme"] .c-sources .c-deux button{min-height:96px;border:0;border-radius:20px;background:var(--s1);color:var(--tx); display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;font-family:inherit; font-size:.9375rem;font-weight:600;cursor:pointer;padding:.75rem;text-align:center}
+[data-surface="pme"] .c-sources .c-deux svg{width:26px;height:26px;stroke-width:1.8}
+[data-surface="pme"] .c-sources .c-photo:disabled, [data-surface="pme"] .c-sources .c-deux button:disabled{opacity:.45;cursor:default}
 [data-surface="pme"] [data-ecran="capture"] .vg .apercu{width:100%;height:100%}
 [data-surface="pme"] [data-ecran="capture"] .c-carte{margin-top:1rem;min-height:150px;border:2px solid transparent;border-radius:24px; background:var(--s1);color:var(--tx);display:grid;align-content:space-between;justify-items:start;gap:.25rem; padding:1.25rem;font-family:inherit;text-align:start;cursor:pointer}
 [data-surface="pme"] [data-ecran="capture"] .c-carte.acc{border-color:var(--acc)}

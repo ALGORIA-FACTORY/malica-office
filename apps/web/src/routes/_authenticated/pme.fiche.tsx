@@ -12,22 +12,19 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useEffect, useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
-import { files } from "@/capabilities/files";
-import { usePme } from "@/components/malica/pme-context";
-import { useSuperposition } from "@/hooks/use-superposition";
+import { FichierNonPdf, files } from "@/capabilities/files";
+import { usePme, type CaptureKind } from "@/components/malica/pme-context";
+import { SourcesDeCapture } from "@/components/malica/sources-de-capture";
+import { usePriseDeVue } from "@/hooks/use-prise-de-vue";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
 import type { RegimeDisponible } from "@malica/socle/ports/repositories";
 import { useRevenir } from "@/hooks/use-revenir";
-
-const CameraScanner = lazy(() =>
-  import("@/components/malica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
-);
 
 export const Route = createFileRoute("/_authenticated/pme/fiche")({
   head: () => ({
@@ -127,12 +124,17 @@ const OU = "routes/_authenticated/pme.fiche";
  *    1,0625 rem — un formulaire en titres. On groupe donc par décision : le
  *    régime, la société, l'exercice, l'arrêt.
  *
- * 4. LE POIDS DES DEUX ACTIONS. Photographier AIDE à remplir : c'est le
- *    bouton léger, `.pan .b button.sec`. Enregistrer ENGAGE : c'est `.go .pr`,
- *    le bouton d'engagement de la famille — celui par lequel `arr` crée la
- *    société. Le poids porte le sens. `.go .sc2` reste inemployé : aucune
- *    seconde action de bas de page n'est vraie ici, et `.top .bk` fait déjà
- *    le retour. On ne fabrique pas un bouton pour remplir une primitive.
+ * 4. LE POIDS DES DEUX ACTIONS. Enregistrer ENGAGE : c'est `.go .pr`, le
+ *    bouton d'engagement de la famille — celui par lequel `arr` crée la
+ *    société. `.go .sc2` reste inemployé : aucune seconde action de bas de
+ *    page n'est vraie ici, et `.top .bk` fait déjà le retour. On ne fabrique
+ *    pas un bouton pour remplir une primitive.
+ *
+ *    Photographier AIDE à remplir. Ce fut le bouton léger `.pan .b
+ *    button.sec`, ouvrant un autre écran de caméra que les pièces ; depuis le
+ *    23 novembre 2026 (« je veux tous comme 2 »), ce sont les trois sources
+ *    d'« Ajouter des pièces » (`SourcesDeCapture`), à l'identique : une seule
+ *    capture dans le produit, et la carte se prend comme une pièce.
  *
  * ============================================ LES TROIS TROUS, ET CE QU'ILS ÉTAIENT
  *
@@ -172,11 +174,6 @@ function FicheFiscale() {
   const navigate = useNavigate();
   const revenir = useRevenir();
 
-  const [scanne, setScanne] = useState(false);
-  useSuperposition(
-    scanne,
-    useCallback(() => setScanne(false), []),
-  );
   const [erreur, setErreur] = useState<string | null>(null);
   const [luDeLaCarte, setLuDeLaCarte] = useState<Set<string>>(new Set());
 
@@ -282,6 +279,46 @@ function FicheFiscale() {
     },
     onError: (e: unknown) => setErreur(texteDeLErreur(e, OU, t("common.error"))),
   });
+
+  /*
+   * ======================================== LA CARTE SE PREND COMME UNE PIÈCE
+   *
+   * 23 novembre 2026, sur Android : la carte ouvrait l'ancien écran de cadrage
+   * (« Cadrez la facture entière dans l'écran »), quand les pièces ouvraient
+   * le scanner de l'appareil. « Je veux tous comme 2. » La carte emploie donc
+   * les mêmes sources que « Ajouter des pièces » (`SourcesDeCapture`), la
+   * même caméra (`usePriseDeVue`) et les mêmes sélecteurs (`files.choisir`).
+   *
+   * Ce qui ne change pas : l'image obtenue part à `lecture`, la même lecture
+   * qu'avant, qui remplit sans enregistrer et marque ce qu'elle a lu.
+   */
+  const importer = useMutation({
+    // Une carte se lit sur une face : un seul fichier, le premier.
+    mutationFn: async (moyen: CaptureKind) => (await files.choisir(moyen, false))[0] ?? null,
+    onSuccess: (pris) => {
+      if (pris) lecture.mutate(pris.blob);
+    },
+    onError: (e: unknown) =>
+      setErreur(
+        e instanceof FichierNonPdf
+          ? t("pme.file.pasUnPdf", { noms: e.noms.join(", ") })
+          : texteDeLErreur(e, OU, t("common.error")),
+      ),
+  });
+  const prise = usePriseDeVue({
+    // Une carte tient sur une face : le scanner de l'appareil s'arrête à une page.
+    pagesMax: 1,
+    surPages: (pages) => {
+      if (pages[0]) lecture.mutate(pages[0]);
+    },
+    /*
+     * Le repli DOIT photographier : sur un téléphone en HTTP, là où notre
+     * cadrage est refusé, c'est le seul chemin. L'appareil photo natif donne
+     * la même image, et la lecture qui suit est identique.
+     */
+    surRepli: () => importer.mutate("photo"),
+  });
+  const occupe = lecture.isPending || importer.isPending;
 
   const enregistrement = useMutation({
     mutationFn: () =>
@@ -404,21 +441,17 @@ function FicheFiscale() {
         </div>
         <div className="pan">
           <p>{t("pme.fiche.panCarte")}</p>
-          <div className="b">
-            {/*
-             * Le bouton léger : photographier AIDE à remplir, il n'engage
-             * rien. L'engagement est en bas, en `.go .pr`.
-             */}
-            <button
-              type="button"
-              className="sec"
-              disabled={lecture.isPending}
-              onClick={() => setScanne(true)}
-            >
-              {lecture.isPending ? t("fiche.lecture") : t("fiche.photographier")}
-            </button>
-          </div>
+          {lecture.isPending ? <p role="status">{t("fiche.lecture")}</p> : null}
         </div>
+        {/*
+         * Les trois sources d'« Ajouter des pièces », à l'identique. Elles AIDENT
+         * à remplir, elles n'engagent rien : l'engagement reste en bas, en `.go .pr`.
+         */}
+        <SourcesDeCapture
+          occupe={occupe}
+          onPhotographier={prise.photographier}
+          onImporter={importer.mutate}
+        />
 
         {luDeLaCarte.size > 0 ? (
           <div className="mur">
@@ -589,35 +622,7 @@ function FicheFiscale() {
         <p className="foot">{t("pme.fiche.regleSaisie")}</p>
       </div>
 
-      {scanne ? (
-        <Suspense fallback={null}>
-          <CameraScanner
-            onCancel={() => setScanne(false)}
-            /*
-             * Le repli DOIT photographier.
-             *
-             * Il fermait seulement l'obturateur : sur un téléphone en HTTP — là
-             * où le cadrage assisté est refusé et où ce bouton est justement le
-             * seul chemin — on tapait dans le vide.
-             *
-             * L'appareil photo natif donne la même image, et la lecture qui suit
-             * est identique.
-             */
-            onFallback={() => {
-              setScanne(false);
-              void files.takePhoto().then(([pris]) => {
-                // Une carte tient sur une face : une photo, la première.
-                if (pris) lecture.mutate(pris.blob);
-              });
-            }}
-            onDone={(pages) => {
-              setScanne(false);
-              // Une carte tient sur une face : on lit la première prise.
-              if (pages[0]) lecture.mutate(pages[0]);
-            }}
-          />
-        </Suspense>
-      ) : null}
+      {prise.ecran}
     </div>
   );
 }
