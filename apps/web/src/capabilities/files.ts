@@ -63,8 +63,8 @@ async function estUnPdf(blob: Blob): Promise<boolean> {
   return String.fromCharCode(...new Uint8Array(octets)).includes("%PDF");
 }
 
-async function pickPdfs(): Promise<PickedFile[]> {
-  const choisis = await pick(PDF_ACCEPT, false, true);
+async function pickPdfs(plusieurs = true): Promise<PickedFile[]> {
+  const choisis = await pick(PDF_ACCEPT, false, plusieurs);
   const refuses: string[] = [];
   for (const f of choisis) if (!(await estUnPdf(f.blob))) refuses.push(f.name);
   if (refuses.length > 0) throw new FichierNonPdf(refuses);
@@ -143,6 +143,21 @@ async function scan(accept: string, capture: boolean, plusieurs = false): Promis
 }
 
 /**
+ * Un geste de capture : la photo (toujours une), des images, des PDF.
+ *
+ * Les pièces et la carte d'identification fiscale passent par ce même
+ * aiguillage (23 novembre 2026, « je veux tous comme 2 ») : un seul endroit
+ * sait quel sélecteur ouvre quel moyen. `plusieurs = false` borne le sélecteur
+ * à un fichier — une carte se lit sur une face, et en accepter dix serait en
+ * ignorer neuf en silence.
+ */
+function choisir(moyen: "photo" | "images" | "pdf", plusieurs = true): Promise<PickedFile[]> {
+  if (moyen === "pdf") return pickPdfs(plusieurs);
+  if (moyen === "images") return scan(IMAGE_ACCEPT, false, plusieurs);
+  return scan(IMAGE_ACCEPT, true);
+}
+
+/**
  * Plusieurs pages, un seul PDF compact : la pièce reste une pièce.
  */
 async function scanPages(
@@ -167,8 +182,11 @@ export const files = {
   scannerDeLAppareil: numeriseurDeLAppareil,
   /** Une photo : on n'en prend pas deux à la fois. */
   takePhoto: () => scan(IMAGE_ACCEPT, true),
-  /** Plusieurs images d'un coup — autant de pièces, chacune cadrée. */
-  pickImages: () => scan(IMAGE_ACCEPT, false, true),
+  /**
+   * Le moyen choisi à l'écran : des images (autant de pièces, chacune
+   * cadrée), des PDF, ou une photo.
+   */
+  choisir,
   /** Plusieurs PDF d'un coup : c'est le cas du rattrapage d'un mois. */
   pickPdfs,
   /** Plusieurs PAGES d'UNE pièce — à ne pas confondre avec ce qui précède. */
