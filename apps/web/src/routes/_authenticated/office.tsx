@@ -103,6 +103,13 @@ function OfficeHome() {
      * premier écran ») : c'est là que se donne l'e-mail de sa comptabilité. Celui qui a reçu
      * une invitation reste ici pour la lire.
      */
+    /*
+     * Pilote, 23 novembre 2026 : la société venait d'être créée, l'écran revenait à la
+     * création. La liste en cache (vide) répondait avant la relecture ; un second envoi
+     * se heurtait alors à « une seule société ». On ne renvoie à la création que sur
+     * une liste relue, jamais sur une liste en cache en train de se relire.
+     */
+    if (orgsQuery.isFetching || invitations.isFetching) return;
     if (
       pmeOrgs.length === 0 &&
       cabinetOrgs.length === 0 &&
@@ -116,11 +123,13 @@ function OfficeHome() {
     if (cabinetOrgs.length > 0 && pmeOrgs.length === 0) void navigate({ to: "/cabinet" });
   }, [
     orgsQuery.isPending,
+    orgsQuery.isFetching,
     plateforme.isPending,
     operateur,
     pmeOrgs.length,
     cabinetOrgs.length,
     invitations.isFetched,
+    invitations.isFetching,
     invitations.data,
     navigate,
   ]);
