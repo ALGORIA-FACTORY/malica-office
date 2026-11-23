@@ -13,6 +13,7 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { SocietesALaLigne } from "@/components/malica/societes-a-la-ligne";
+import { SourcesDeCapture } from "@/components/malica/sources-de-capture";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
 import { texteDeLErreur, vientDeNous } from "@/lib/erreur-lisible";
@@ -138,14 +139,12 @@ const PAS: Record<number, MessageKey> = {
 const G = {
   back: "M14.5 5.5L8 12l6.5 6.5",
   x: "M6 6l12 12M18 6L6 18",
-  gal: "M3.5 5.5h17v13h-17zM8.5 10a1.4 1.4 0 1 0 0-.1M4 16.5l4.5-4 4 3.5 3-2.5 4.5 4",
   cab: "M9 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6M16.5 7.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8M3.5 19.5a5.5 5.5 0 0 1 11 0M14.5 19.5a4.5 4.5 0 0 1 6.5-3.4",
   bib: "M5 4.5h5v15H5zM12 4.5h3.2l3.8 15H16z",
   prive: "M5 10.5h14v10H5zM8 10.5V7.5a4 4 0 0 1 8 0v3",
   ok: "M4.5 12.5l4.5 4.5 10-10",
   horl: "M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17M12 7v5.2l3.2 2",
   pay: "M2.5 6.5h19v11h-19zM12 9.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2",
-  fat: "M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21zM9.5 9.5l2 2 3.5-3.5M9 15h6",
 } as const;
 
 function Icone({ d }: { d: string }) {
@@ -1129,28 +1128,12 @@ function PmeCapturer() {
                 <h1 className="c-titre">{t("pme.capture.ajouter.titre")}</h1>
               </>
             ) : null}
-            <button
-              type="button"
-              className="c-photo"
-              disabled={pme.capturing}
-              onClick={pme.ouvrirScanner}
-            >
-              <svg viewBox="0 0 24 24" className="g" aria-hidden>
-                <path d="M4 8h3l2-2.5h6L17 8h3v11H4z" />
-                <circle cx="12" cy="13" r="3.5" />
-              </svg>
-              <span>{t("pme.capture.photo")}</span>
-            </button>
-            <div className="c-deux">
-              <button type="button" disabled={pme.capturing} onClick={() => pme.capture("images")}>
-                <Icone d={G.gal} />
-                <span>{t("pme.capture.galerie")}</span>
-              </button>
-              <button type="button" disabled={pme.capturing} onClick={() => pme.capture("pdf")}>
-                <Icone d={G.fat} />
-                <span>{t("pme.doc.importer")}</span>
-              </button>
-            </div>
+            {/* Les trois sources : le même dessin que la carte fiscale (`pme.fiche`). */}
+            <SourcesDeCapture
+              occupe={pme.capturing}
+              onPhotographier={pme.ouvrirScanner}
+              onImporter={pme.capture}
+            />
             {pme.capturing ? <p className="c-sous">{t("pme.capture.preparation")}</p> : null}
 
             {/* La bande : ce qui est entré, avec sa vraie page, et le petit menu

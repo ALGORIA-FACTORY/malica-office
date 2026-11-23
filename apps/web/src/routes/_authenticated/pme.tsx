@@ -9,7 +9,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { CalendarClock, Home as HomeIcon, Library, Lock, Plus, Settings } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CIBLE_COQUE } from "@/capabilities/coque";
 import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
@@ -28,7 +28,7 @@ import { QuestionDuType } from "@/components/malica/question-du-type";
 import { SurfacePme } from "@/components/malica/surface-pme";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { useCatalogueDesOffres } from "@/hooks/use-offres";
-import { useSuperposition } from "@/hooks/use-superposition";
+import { usePriseDeVue } from "@/hooks/use-prise-de-vue";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleHorsArbre } from "@/i18n/dictionnaires";
 import { ouverturesDuForfait } from "@/lib/forfait";
@@ -52,15 +52,6 @@ import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useCoteDuPlus } from "@/hooks/use-cote-du-plus";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { lireLotDeCapture, suiteDuPassage } from "@/lib/lot-de-capture";
-
-/*
- * Le cadrage du navigateur — détection, redressement, et un modèle qui se
- * télécharge — n'est chargé que si on l'ouvre. Dans la coque, il ne l'est
- * jamais : le scanner de l'appareil prend sa place.
- */
-const CameraScanner = lazy(() =>
-  import("@/components/malica/CameraScanner").then((m) => ({ default: m.CameraScanner })),
-);
 
 /**
  * L'en-tête se rend avant que la langue de la personne soit connue : il se lit
@@ -119,7 +110,6 @@ function PmeLayout() {
   });
   const { parCode: dossierParCode } = useDossiers();
   const [captureError, setCaptureError] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
   // Un nouvel ajout réinitialise aussi les étapes d'un parcours déjà ouvert.
   // Les pièces déposées et la file durable ne vivent pas dans cet état de vue.
   const [numeroAjout, setNumeroAjout] = useState(0);
@@ -326,9 +316,7 @@ function PmeLayout() {
         const une = await files.scanPages(input.pages, { dejaCadree: input.dejaCadrees === true });
         return une ? [une] : [];
       }
-      if (input === "pdf") return files.pickPdfs();
-      if (input === "images") return files.pickImages();
-      return files.takePhoto();
+      return files.choisir(input);
     },
     onSuccess: (choisis) => {
       setCaptureError(null);
@@ -557,37 +545,21 @@ function PmeLayout() {
    * coûtent aucun téléchargement. Notre cadrage reste la voie du navigateur :
    * l'aperçu, un poste de bureau, une démonstration.
    *
-   * Les deux rendent la même chose — des pages redressées — donc la suite est
-   * identique. Un abandon ne rend rien, et ce n'est pas une panne.
+   * L'aiguillage vit dans `usePriseDeVue`, partagé avec la carte
+   * d'identification fiscale (`pme.fiche`) : une seule caméra pour tout le
+   * produit. Un abandon ne rend rien, et ce n'est pas une panne — mais il
+   * efface la pièce à remplacer ou à joindre.
    */
-  const ouvrirCapture = useCallback(() => {
-    const natif = files.scannerDeLAppareil();
-    if (!natif) {
-      setScanning(true);
-      return;
-    }
-    void (async () => {
-      let pages: Blob[];
-      try {
-        pages = await natif.capturer();
-      } catch {
-        /*
-         * Un téléphone sans scanner (pas de services Google, un émulateur)
-         * rejette ici « Document scanner is not supported ». L'erreur filait
-         * sans être prise, et le bouton ne faisait rien. Notre cadrage prend
-         * le relais : la personne photographie quand même.
-         */
-        setScanning(true);
-        return;
-      }
-      // Déjà cadrées par l'appareil : on ne refait pas le travail.
-      if (pages.length > 0) choisir.mutate({ pages, dejaCadrees: true });
-      else {
-        aRemplacer.current = null;
-        aJoindre.current = null;
-      }
-    })();
-  }, [choisir]);
+  const prise = usePriseDeVue({
+    // Déjà cadrées par l'appareil : on ne refait pas le travail.
+    surPages: (pages, dejaCadrees) => choisir.mutate({ pages, dejaCadrees }),
+    surRepli: () => choisir.mutate("photo"),
+    surAbandon: () => {
+      aRemplacer.current = null;
+      aJoindre.current = null;
+    },
+  });
+  const ouvrirCapture = prise.photographier;
 
   /** Une photo sans lien : jamais le remplacement d'une pièce ouverte avant. */
   const ouvrirScanner = useCallback(() => {
@@ -610,15 +582,6 @@ function PmeLayout() {
     },
     [ouvrirCapture, choisir],
   );
-  /** Le scanner fermé sans photo : rien n'est remplacé. */
-  const abandonnerLeScanner = useCallback(() => {
-    aRemplacer.current = null;
-    aJoindre.current = null;
-    setScanning(false);
-  }, []);
-
-  // Le scanner de la page se ferme au bouton retour, avant de reculer.
-  useSuperposition(scanning, abandonnerLeScanner);
 
   /*
    * L'initiale de la barre vient du compte ouvert — `beforeLoad` de
@@ -970,21 +933,7 @@ function PmeLayout() {
           </div>
         ) : null}
 
-        {scanning ? (
-          <Suspense fallback={null}>
-            <CameraScanner
-              onCancel={abandonnerLeScanner}
-              onFallback={() => {
-                setScanning(false);
-                choisir.mutate("photo");
-              }}
-              onDone={(pages) => {
-                setScanning(false);
-                if (pages.length > 0) choisir.mutate({ pages });
-              }}
-            />
-          </Suspense>
-        ) : null}
+        {prise.ecran}
       </div>
     </SurfacePme>
   );

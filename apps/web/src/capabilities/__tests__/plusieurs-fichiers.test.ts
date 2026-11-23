@@ -109,3 +109,37 @@ describe("choisir des fichiers", () => {
     expect(await promesse).toEqual([]);
   });
 });
+
+describe("files.choisir : l'aiguillage des trois sources", () => {
+  it("les pièces : images et PDF en plusieurs, la photo seule et à l'appareil", async () => {
+    const attendus = [
+      ["images", "image/*", true, null],
+      ["pdf", "application/pdf", true, null],
+      ["photo", "image/*", false, "environment"],
+    ] as const;
+    for (const [moyen, accept, multiple, capture] of attendus) {
+      const promesse = files.choisir(moyen);
+      expect(derniere!.accept).toBe(accept);
+      expect(derniere!.multiple).toBe(multiple);
+      expect(derniere!.getAttribute("capture")).toBe(capture);
+      derniere!.oncancel?.(new Event("cancel"));
+      expect(await promesse).toEqual([]);
+    }
+  });
+
+  it("la carte fiscale : un seul fichier — en accepter dix serait en ignorer neuf", async () => {
+    for (const moyen of ["images", "pdf"] as const) {
+      const promesse = files.choisir(moyen, false);
+      expect(derniere!.multiple).toBe(false);
+      derniere!.oncancel?.(new Event("cancel"));
+      expect(await promesse).toEqual([]);
+    }
+  });
+
+  it("un PDF choisi seul est encore vérifié à ses premiers octets", async () => {
+    const promesse = files.choisir("pdf", false);
+    choisit(derniere!, "carte.pdf");
+    const [pris] = await promesse;
+    expect(pris?.name).toBe("carte.pdf");
+  });
+});
