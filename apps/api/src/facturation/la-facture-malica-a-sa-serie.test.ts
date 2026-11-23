@@ -289,11 +289,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
 
       // Les réglages ne se réécrivent pas (R7).
       await enAdmin(db);
-      await refuse(
-        db,
-        () => db.query("update plateforme.reglages_factures set serie = 'X'"),
-        /R7/,
-      );
+      await refuse(db, () => db.query("update plateforme.reglages_factures set serie = 'X'"), /R7/);
       // La série nouvelle numérote la facture suivante.
       const f = await facturer(db, s, p);
       assert.match(f.numero, new RegExp(`^MO-TN-I12-${ANNEE}-\\d{6}$`));
@@ -346,11 +342,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
       const autre = await unePme(db, "Autre PME");
       for (const qui of [s.intrus, autre.titulaire]) {
         await enPersonne(db, qui);
-        await refuse(
-          db,
-          () => facturation.factureDetail(db, f.id),
-          /refus\.introuvable\.facture/,
-        );
+        await refuse(db, () => facturation.factureDetail(db, f.id), /refus\.introuvable\.facture/);
         await refuse(
           db,
           () => db.query("select facturation.entete_de_facture($1)", [f.id]),

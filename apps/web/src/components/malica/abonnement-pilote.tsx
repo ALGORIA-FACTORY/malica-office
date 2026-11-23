@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { usePme } from "@/components/malica/pme-context";
 import { usePrix } from "@/hooks/use-decimales";
 import { useRelireLAbonnement } from "@/hooks/use-relire-l-abonnement";
+import { useTelechargerLaFacture } from "@/hooks/use-telecharger-la-facture";
 import { useRetourDuPrestataire } from "@/hooks/use-paiement-en-ligne";
 import {
   libelleDOffre,
@@ -1102,6 +1103,9 @@ export function ARegler() {
  * la page de choix du moyen, comme tout paiement en ligne.
  *
  * Web et PWA seulement : ce bloc est rendu sous `COMMERCE`.
+ *
+ * Chaque facture se télécharge en PDF (23 novembre 2026) : la même mise en page que la tour,
+ * depuis la même lecture, sous la RLS du titulaire (`useTelechargerLaFacture`).
  */
 export function MesFactures() {
   const { t, locale } = useI18n();
@@ -1109,6 +1113,7 @@ export function MesFactures() {
   const qc = useQueryClient();
   const principal = useEstPrincipal();
   const [erreur, setErreur] = useState<string | null>(null);
+  const { telecharger, erreur: erreurDuPdf } = useTelechargerLaFacture();
   const factures = useQuery({
     queryKey: ["mes-factures"],
     queryFn: () => office().facturation.mesFactures(),
@@ -1163,12 +1168,27 @@ export function MesFactures() {
                 {montantEtDevise(montant(f.montant_ttc, locale), f.devise)}
               </span>
             )}
+            <button
+              type="button"
+              className="btn btn-sec"
+              aria-label={t("pme.reglages.factures.telecharger", { numero: f.numero })}
+              title={t("pme.reglages.factures.telecharger", { numero: f.numero })}
+              disabled={telecharger.isPending}
+              onClick={() => telecharger.mutate({ factureId: f.facture_id })}
+            >
+              {t("pme.reglages.factures.pdf")}
+            </button>
           </div>
         );
       })}
-      {erreur ? (
+      {erreur || erreurDuPdf ? (
         <p className="warn" role="alert">
-          {erreur}
+          {erreur ?? erreurDuPdf}
+        </p>
+      ) : null}
+      {telecharger.data ? (
+        <p className="mt" aria-live="polite">
+          {t("pme.reglages.factures.enregistree", { chemin: telecharger.data })}
         </p>
       ) : null}
     </div>

@@ -231,7 +231,12 @@ const AR_CENTAINES = [
 const AR_ET = " و";
 
 /** Les grands nombres, eux-mêmes comptés. */
-const AR_MILLE: FormesDuNom = { singulier: "ألف", duel: "ألفان", pluriel: "آلاف", accusatif: "ألفا" };
+const AR_MILLE: FormesDuNom = {
+  singulier: "ألف",
+  duel: "ألفان",
+  pluriel: "آلاف",
+  accusatif: "ألفا",
+};
 const AR_MILLION: FormesDuNom = {
   singulier: "مليون",
   duel: "مليونان",
@@ -328,7 +333,8 @@ export function ecrireLeMontantEnLettres(
   noms: NomsDeLaDevise,
 ): string {
   const m = /^(\d+)(?:\.(\d+))?$/.exec(montant.trim());
-  if (!m || !Number.isInteger(exposant) || exposant < 0) throw new Error("lettres.montant_invalide");
+  if (!m || !Number.isInteger(exposant) || exposant < 0)
+    throw new Error("lettres.montant_invalide");
   const fraction = m[2] ?? "";
   if (fraction.replace(/0+$/, "").length > exposant) throw new Error("lettres.montant_invalide");
   const majeures = BigInt(m[1]!);
@@ -337,5 +343,7 @@ export function ecrireLeMontantEnLettres(
 
   if (majeures === 0n && mineures > 0n) return compte(mineures, noms.mineure, langue);
   const tete = compte(majeures, noms.majeure, langue);
-  return mineures > 0n ? `${tete}${LIAISON[langue]}${compte(mineures, noms.mineure, langue)}` : tete;
+  return mineures > 0n
+    ? `${tete}${LIAISON[langue]}${compte(mineures, noms.mineure, langue)}`
+    : tete;
 }

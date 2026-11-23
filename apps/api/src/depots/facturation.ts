@@ -649,10 +649,9 @@ export const facturation = {
     );
     const facture = rows[0];
     if (!facture) throw new Error("refus.introuvable.facture");
-    const entete = await db.query<{ e: unknown }>(
-      "select facturation.entete_de_facture($1) as e",
-      [factureId],
-    );
+    const entete = await db.query<{ e: unknown }>("select facturation.entete_de_facture($1) as e", [
+      factureId,
+    ]);
     return { ...facture, entete: entete.rows[0]!.e };
   },
 

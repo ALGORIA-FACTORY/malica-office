@@ -48,6 +48,9 @@ const GENRES: Record<string, MessageKey> = {
   // Une alerte par jour d'échéance, avec leur nombre — jamais la composition
   // (décision du 22 novembre 2026).
   "echeance.approche": "notif.kind.echeance.approche",
+  // La facture d'abonnement émise par Malica Office (23 novembre 2026) : elle mène à
+  // l'abonnement, où elle se télécharge.
+  "facture.emise.pme": "notif.kind.facture.emise.pme",
 };
 
 export function chaine(payload: Record<string, unknown>, cle: string): string | null {
@@ -138,7 +141,8 @@ export function gesteDeLaQuestion(
   const ouverte = payload["tranchee"] === undefined;
   if (kind === "acces.propose" || kind === "acces.descente_demandee")
     return ouverte ? "proposition" : "abonnement";
-  if (kind === "acces.monte" || kind === "acces.arrete") return "abonnement";
+  if (kind === "acces.monte" || kind === "acces.arrete" || kind === "facture.emise.pme")
+    return "abonnement";
   if (kind === "mandat.propose") return ouverte ? "mandat" : null;
   return null;
 }
@@ -170,8 +174,9 @@ export function attendUnGeste(n: { kind: string; readAt: string | null }): boole
  * Dans l'application installée depuis un store, rien ne parle d'abonnement
  * (décisions des 20 et 22 octobre, rappelées le 7 novembre 2026) : les
  * alertes `acces.*` — « votre comptabilité prend votre abonnement en charge »
- * — ne s'y montrent pas, ni à la cloche ni à l'écran.
+ * — ne s'y montrent pas, ni à la cloche ni à l'écran. La facture d'abonnement
+ * (`facture.emise.pme`, 23 novembre 2026) non plus : elle mène à l'abonnement.
  */
 export function seMontreIci(kind: string, coque: boolean): boolean {
-  return !(coque && kind.startsWith("acces."));
+  return !(coque && (kind.startsWith("acces.") || kind === "facture.emise.pme"));
 }
