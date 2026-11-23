@@ -34,7 +34,7 @@ import { useSuperposition } from "@/hooks/use-superposition";
 import { plier } from "@/lib/mes-societes";
 import { SocietesALaLigne } from "@/components/malica/societes-a-la-ligne";
 import { useI18n, LOCALES, LOCALE_NAMES, type MessageKey } from "@/i18n";
-import { direUnRefus, texteDeLErreur } from "@/lib/erreur-lisible";
+import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres, quantite } from "@/lib/lisible";
 import { nombre as entier, ouverturesDuForfait, utilisateursInclus } from "@/lib/forfait";
 import { identitePourAffichage } from "@/lib/nom-de-la-personne";
@@ -763,7 +763,6 @@ function PmeReglages() {
             </h2>
           </div>
           <Signalement />
-          <PannesConstatees />
 
           <div className="sec">
             <h2>{t("pme.reglages.version")}</h2>
@@ -1704,99 +1703,6 @@ function Versions() {
         </>
       ) : null}
     </p>
-  );
-}
-
-/*
- * ============================ CE QUE L'APPLICATION A CONSTATÉ TOUTE SEULE
- *
- * Le complément du signalement, et son contraire : là, c'est la personne qui
- * raconte ; ici, c'est l'application qui dit ce qui a échoué sans qu'on le lui
- * demande.
- *
- * 13 octobre 2026 : « Générer le reçu » ne faisait rien, et la raison était
- * perdue — message hors écran, journal limité au développement. Elle est
- * désormais en base, et elle se relit ICI : une trace que seul un accès à la
- * base permettrait de consulter retomberait exactement dans le défaut qu'elle
- * corrige.
- */
-function PannesConstatees() {
-  const { t, locale } = useI18n();
-  const pme = usePme();
-  /*
-   * Le dirigeant, 22 novembre 2026 : « cette partie ne doit pas être visible pour le
-   * client ». Le journal technique (écran, clés, identifiants, version) est l'outil des
-   * opérateurs d'ALGORIA, qui le relisent aussi par la tour et le déploiement. Le client
-   * garde « Signaler un problème » ; ses refus, eux, lui sont dits au moment du geste.
-   */
-  const plateforme = useQuery({
-    queryKey: ["tour-suis-je"],
-    queryFn: () => office().tour.suisJePlateforme(),
-    retry: false,
-  });
-  const operateur = plateforme.data === true;
-  const pannes = useQuery({
-    queryKey: ["pannes", pme.tenantId],
-    queryFn: () => office().journal.dernieres(pme.tenantId, 20),
-    enabled: operateur,
-  });
-  const qc = useQueryClient();
-  /*
-   * « Tout est réglé » (1er novembre 2026) : une marque datée, rien n'est
-   * effacé — le journal est en ajout seul (R7). La liste ne montre plus que
-   * ce qui arrivera ensuite, et disparaît d'ici tant que rien n'échoue.
-   */
-  const regler = useMutation({
-    mutationFn: () => office().journal.regler(pme.tenantId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pannes", pme.tenantId] }),
-  });
-
-  if (!operateur || (pannes.data ?? []).length === 0) return null;
-
-  return (
-    <>
-      <div className="sec">
-        <h2>
-          {t("pme.reglages.pannes")}
-          <Aide
-            titre={t("pme.reglages.pannes")}
-            paragraphes={[{ texte: t("pme.reglages.pannes.sous") }]}
-          />
-        </h2>
-      </div>
-      <div className="rows">
-        {(pannes.data ?? []).map((p) => (
-          <div key={p.id} className="rw">
-            <span className="bd">
-              <b>{direUnRefus(p.message)}</b>
-              <span>
-                {p.ou}
-                {p.version ? ` · ${p.version}` : ""}
-              </span>
-            </span>
-            <span className="vl">
-              {new Intl.DateTimeFormat(locale, {
-                day: "2-digit",
-                month: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(new Date(p.at))}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-2 flex justify-end">
-        <button
-          type="button"
-          className="btn"
-          style={{ width: "auto" }}
-          disabled={regler.isPending}
-          onClick={() => regler.mutate()}
-        >
-          {t("pme.reglages.pannes.regler")}
-        </button>
-      </div>
-    </>
   );
 }
 

@@ -111,7 +111,43 @@ const gestes = vi.hoisted(() => ({
   suspendre: vi.fn(async () => ({})),
   reprendre: vi.fn(async () => ({})),
   accorderLectures: vi.fn(async () => ({})),
+  reglerLesPannes: vi.fn(async () => ({ le: "2026-11-23T12:00:00.000Z" })),
 }));
+const PANNES = vi.hoisted(() => [
+  {
+    source: "dossier",
+    id: "p-2",
+    tenant_id: "pme-1",
+    societe: "Atelier Samia",
+    ou: "routes/pme.piece",
+    message: "lecture impossible",
+    version: "0.2.119",
+    plateforme: "Android 15",
+    at: "2026-11-23T11:00:00.000Z",
+  },
+  {
+    source: "dossier",
+    id: "p-1",
+    tenant_id: "pme-1",
+    societe: "Atelier Samia",
+    ou: "routes/pme.charges",
+    message: "classement refusé",
+    version: "0.2.119",
+    plateforme: null,
+    at: "2026-11-23T10:00:00.000Z",
+  },
+  {
+    source: "personne",
+    id: "s-1",
+    tenant_id: null,
+    societe: null,
+    ou: "/pme/reglages",
+    message: "le bouton ne répond pas",
+    version: "web/0.2.119",
+    plateforme: null,
+    at: "2026-11-23T09:00:00.000Z",
+  },
+]);
 
 vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({
@@ -122,6 +158,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
       },
       clients: async () => donnees.clients,
       interventions: async () => [],
+      pannes: async () => PANNES,
       ...gestes,
     },
     identity: { listMyOrganizations: async () => [{ id: "org-1", kind: "pme", name: "PME" }] },
@@ -135,6 +172,7 @@ import { Route as Coquille } from "../routes/_authenticated/tour";
 import { Route as Cabinets } from "../routes/_authenticated/tour.cabinets.index";
 import { Route as Pme } from "../routes/_authenticated/tour.pme";
 import { Route as MonEspace } from "../routes/_authenticated/mon-espace";
+import { LeJournalDesPannes } from "@/components/malica/tour/journal-des-pannes";
 
 const ecran = (r: unknown) => (r as { options: { component: ComponentType } }).options.component;
 
@@ -319,5 +357,21 @@ describe("Tour › PME et leurs abonnements", () => {
     await waitFor(() =>
       expect(gestes.accorderLectures).toHaveBeenCalledWith("lic-p4", 50, "2026-11", "Rattrapage"),
     );
+  });
+});
+
+// Le dirigeant, 23 novembre 2026 : le journal des pannes se lit dans la tour, pour tous.
+describe("Tour › Journal des pannes", () => {
+  it("montre les pannes de tous, d'un dossier ou non, et règle un dossier en un geste", async () => {
+    monter(LeJournalDesPannes);
+    expect(await screen.findByText("lecture impossible")).toBeTruthy();
+    expect(screen.getByText("classement refusé")).toBeTruthy();
+    expect(screen.getByText("le bouton ne répond pas")).toBeTruthy();
+    expect(screen.getByText(/tour\.pannes\.horsDossier/)).toBeTruthy();
+    // Un seul « tout est réglé » par dossier, et aucun hors dossier.
+    const regler = screen.getAllByRole("button", { name: /tour\.pannes\.regler/ });
+    expect(regler).toHaveLength(1);
+    fireEvent.click(regler[0]!);
+    await waitFor(() => expect(gestes.reglerLesPannes).toHaveBeenCalledWith("pme-1"));
   });
 });

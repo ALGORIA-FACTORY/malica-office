@@ -17,6 +17,7 @@ import { z } from "zod";
 import type {
   CabinetDeLaTour,
   InterventionDeLaTour,
+  PanneDeLaTour,
   PmeDeLaTour,
 } from "@malica/socle/ports/repositories";
 
@@ -176,6 +177,42 @@ export const tour = {
       [saisie(Id, licenceId), saisie(Lectures, nombre), saisie(Motif, motif), saisie(Mois, mois)],
     );
     return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Le journal des pannes de tous les utilisateurs, du plus récent (le dirigeant, 23 novembre
+   * 2026 : « sur la tour uniquement »). Deux sources : les pannes consignées dans un dossier
+   * (`audit.journal_client`), après la dernière marque « tout est réglé » de ce dossier, et
+   * les traces hors dossier (`app.signalements` : panne, plantage, signalement d'une
+   * personne). La base ne les rend qu'à l'opérateur (RLS, `app.is_platform()`).
+   */
+  async pannes(db: Requete): Promise<PanneDeLaTour[]> {
+    const { rows } = await db.query<Omit<PanneDeLaTour, "at"> & { at: Date }>(
+      `select x.source, x.id, x.tenant_id, x.societe, x.ou, x.message, x.version, x.plateforme, x.at
+         from (select 'dossier'::text as source, j.id, j.tenant_id, o.name as societe, j.ou,
+                      j.message, j.version, j.plateforme, j.at
+                 from public.journal_client_v j
+                 left join identity.organizations o on o.id = j.tenant_id
+                where j.at > coalesce((select max(r.at) from public.journal_client_reglements_v r
+                                        where r.tenant_id = j.tenant_id), '-infinity')
+               union all
+               select s.origine, s.id, s.tenant_id, o.name, coalesce(s.ou, 'inconnu'),
+                      s.message, s.version_client, s.appareil, s.cree_le
+                 from app.signalements s
+                 left join identity.organizations o on o.id = s.tenant_id) x
+        where (select app.is_platform())
+        order by x.at desc, x.id
+        limit 200`,
+    );
+    return rows.map((r) => ({ ...r, at: r.at.toISOString() }));
+  },
+
+  /** « Tout est réglé » sur le journal d'un dossier, depuis la tour : une marque datée (R7). */
+  async reglerLesPannes(db: Requete, tenantId: string): Promise<{ le: string }> {
+    const { rows } = await db.query<{ le: Date }>(`select public.journal_client_regler($1) as le`, [
+      saisie(Id, tenantId),
+    ]);
+    return { le: rows[0]!.le.toISOString() };
   },
 
   /** Vrai pour un opérateur de la plateforme : l'écran de la tour ne s'affiche qu'à lui. */

@@ -272,9 +272,7 @@
   "journal": [
     "consigner",
     "consignerHorsDossier",
-    "dernieres",
-    "etapes",
-    "regler"
+    "etapes"
   ],
   "journalDuJour": [
     "exporter",
@@ -410,6 +408,7 @@
     "interventions",
     "licences",
     "membresDeLOrganisation",
+    "pannes",
     "poserJourFerie",
     "prestatairesDePaiement",
     "publierConsigneDeLAssistant",
@@ -430,6 +429,7 @@
     "reglerFacturationAuto",
     "reglerFonction",
     "reglerIa",
+    "reglerLesPannes",
     "reglerPaiement",
     "reglerPlafondDeLAssistant",
     "reglerRelances",
