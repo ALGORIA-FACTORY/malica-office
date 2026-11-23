@@ -1,7 +1,5 @@
 {
-  "acces": [
-    "monAcces"
-  ],
+  "acces": ["monAcces"],
   "banque": [
     "audit",
     "bookLines",
@@ -126,12 +124,7 @@
     "rechercher",
     "rechercherHybride"
   ],
-  "exports": [
-    "estimer",
-    "exercices",
-    "generer",
-    "historique"
-  ],
+  "exports": ["estimer", "exercices", "generer", "historique"],
   "fabrique": [
     "codesDuReferentiel",
     "contexteDeDesignation",
@@ -157,6 +150,7 @@
     "changerForfait",
     "changerOffreAbonnement",
     "descentePourMoi",
+    "factureDetail",
     "facturesDuCabinet",
     "fichesDesSocietes",
     "inviterComptableInterne",
@@ -263,21 +257,9 @@
     "sortir",
     "updateAsset"
   ],
-  "integrations": [
-    "cles",
-    "creerCle",
-    "etat",
-    "revoquerCle"
-  ],
-  "journal": [
-    "consigner",
-    "consignerHorsDossier",
-    "etapes"
-  ],
-  "journalDuJour": [
-    "exporter",
-    "lire"
-  ],
+  "integrations": ["cles", "creerCle", "etat", "revoquerCle"],
+  "journal": ["consigner", "consignerHorsDossier", "etapes"],
+  "journalDuJour": ["exporter", "lire"],
   "office": [
     "book",
     "bookedExtracts",
@@ -347,9 +329,7 @@
     "taxRates",
     "typesDeDocument"
   ],
-  "signalements": [
-    "deposer"
-  ],
+  "signalements": ["deposer"],
   "stocks": [
     "addMouvement",
     "categories",
@@ -403,6 +383,7 @@
     "designation",
     "designerEmetteur",
     "emetteur",
+    "facturesEmises",
     "fonctions",
     "grilleEnVigueur",
     "interventions",
@@ -417,6 +398,7 @@
     "publierReport",
     "reglageAbonnement",
     "reglageFacturationAuto",
+    "reglageFactures",
     "reglageIa",
     "reglagePaiement",
     "reglageRelances",
@@ -427,6 +409,7 @@
     "reglerConseilCite",
     "reglerDesignation",
     "reglerFacturationAuto",
+    "reglerFactures",
     "reglerFonction",
     "reglerIa",
     "reglerLesPannes",
@@ -437,6 +420,7 @@
     "reglerRelectureNuit",
     "relectureDeLAssistant",
     "relecturesDeNuit",
+    "renvoyerFacture",
     "reprendre",
     "retirerAccesTotal",
     "retirerJourFerie",

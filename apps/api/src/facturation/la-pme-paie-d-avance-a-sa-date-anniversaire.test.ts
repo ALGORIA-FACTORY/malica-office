@@ -489,14 +489,14 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
 
       await regler(db, s, "pme", true);
       const { rows: avant } = await db.query<{ n: string }>(
-        "select last_value::text as n from facturation.numero_facture_seq",
+        "select coalesce(sum(dernier), 0)::text as n from facturation.compteurs_factures",
       );
       const troisieme = await passer(db, "2026-11-20");
       assert.equal(troisieme.pme?.etat, "passee");
       assert.equal(troisieme.pme?.emises, 0);
       assert.ok((troisieme.pme?.deja_emises ?? 0) >= 1);
       const { rows: apres } = await db.query<{ n: string }>(
-        "select last_value::text as n from facturation.numero_facture_seq",
+        "select coalesce(sum(dernier), 0)::text as n from facturation.compteurs_factures",
       );
       assert.equal(apres[0]!.n, avant[0]!.n);
       assert.equal((await facturesDuTitulaire(db, p.licence)).length, 1);

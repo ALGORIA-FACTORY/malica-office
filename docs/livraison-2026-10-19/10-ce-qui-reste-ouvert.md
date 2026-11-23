@@ -1039,3 +1039,20 @@ Corrigé ici, **côté épreuves seulement** : la transaction d'essai prend le f
 déjà dans sa propre transaction), `current_date` y est partout le jour de la plateforme. **Reste ouvert, à trancher** :
 faire de même pour les sessions de l'API (`sousClaims`, `apps/api/src/db.ts` : `set_config('TimeZone', fuseau de la
 plateforme, true)` au début de chaque transaction) — un changement transverse que ce correctif ne prend pas.
+
+### Les factures de Malica Office, série MO-TN-I11 (23 novembre 2026)
+
+Livré par `20261231200000_la_facture_malica_a_sa_serie` et `20261231210000_la_facture_malica_se_lit_et_se_renvoie`.
+Tranché par défaut, à confirmer par le dirigeant :
+
+- **L'année du numéro** est celle du jour d'émission de la facture ; **la série** est celle en vigueur le jour où le
+  numéro se tire. Un rattrapage tiré le 2 janvier pour le 31 décembre prend un numéro de l'année écoulée.
+- **La facture réimprimée porte les coordonnées bancaires, l'adresse et les conditions EN VIGUEUR au jour de
+  l'impression** (le client paie sur le compte du jour) ; l'émetteur (nom, matricule) reste celui du jour d'émission.
+  Conséquence pour les factures du 23 novembre : il suffit de saisir la banque à la tour, valable dès le jour de la
+  saisie, pour qu'elles l'impriment.
+- **Le renvoi** d'un courriel de facture vaut une fois par facture et par fenêtre du moteur (24 heures).
+- **Le juridique n'est pas vérifié ici** : mentions obligatoires d'une facture tunisienne hors El Fatoora (forme du
+  numéro, mentions du RNE, du timbre), à faire relire par l'expert-comptable avant la première facture envoyée.
+- **Hors périmètre** : les factures `ALG-…` déjà émises gardent leur numéro (R7) ; leur PDF sort sous le nouveau
+  modèle, avec leur numéro d'origine.

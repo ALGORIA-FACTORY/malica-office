@@ -29,6 +29,8 @@ describe("ce qu'une notification dit, et ce qu'elle demande", () => {
     expect(seMontreIci("acces.accepte", true)).toBe(false);
     expect(seMontreIci("acces.propose", false)).toBe(true);
     expect(seMontreIci("piece.retournee", true)).toBe(true);
+    expect(seMontreIci("facture.emise.pme", true)).toBe(false);
+    expect(seMontreIci("facture.emise.pme", false)).toBe(true);
   });
 
   it("un genre inconnu a sa phrase par défaut", () => {
@@ -50,6 +52,7 @@ describe("ce qu'une notification dit, et ce qu'elle demande", () => {
     // Une simple information : l'offre a été montée, ou arrêtée.
     expect(gesteDeLaQuestion("acces.monte", {})).toBe("abonnement");
     expect(gesteDeLaQuestion("acces.arrete", {})).toBe("abonnement");
+    expect(gesteDeLaQuestion("facture.emise.pme", {})).toBe("abonnement");
     expect(gesteDeLaQuestion("mandat.propose", {})).toBe("mandat");
     expect(gesteDeLaQuestion("mandat.propose", { tranchee: "actif" })).toBeNull();
     expect(gesteDeLaQuestion("piece.retournee", {})).toBeNull();

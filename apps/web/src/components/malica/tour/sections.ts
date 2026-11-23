@@ -13,6 +13,7 @@ import {
   CalendarDays,
   CreditCard,
   FileSignature,
+  FileText,
   Gauge,
   KeyRound,
   LayoutGrid,
@@ -46,6 +47,7 @@ import { LaChaineDeDesignation } from "./chaine-de-designation";
 import { LaConsigneDuConseil, LeReglageDuConseil } from "./conseil-cite";
 import { DesignerLEmetteur } from "./emetteur";
 import { LaFacturationAutomatique } from "./facturation-automatique";
+import { LesFacturesEmises, ReglerLesFactures } from "./factures";
 import { LesFonctionsDuProduit } from "./fonctions";
 import { LaGrille } from "./grille";
 import { LeJournalDesPannes } from "./journal-des-pannes";
@@ -71,6 +73,11 @@ export const SECTIONS = {
     libelle: "tour.menu.facturation",
     icone: Receipt,
     cartes: [LaFacturationAutomatique],
+  },
+  factures: {
+    libelle: "tour.menu.factures",
+    icone: FileText,
+    cartes: [ReglerLesFactures, LesFacturesEmises],
   },
   fonctions: {
     libelle: "tour.menu.fonctions",
@@ -147,6 +154,7 @@ export const MENU: ReadonlyArray<{ cle: string; libelle: MessageKey; entrees: En
         "paiement",
         "emetteur",
         "facturation",
+        "factures",
         "fonctions",
         "relances",
         "calendrier",
