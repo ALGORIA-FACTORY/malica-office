@@ -550,8 +550,41 @@ async function piecesLuesDe(
     `select code, exposant from ref.devises`,
   );
   const exposants = new Map(devises.map((d) => [d.code, Number(d.exposant)]));
+  /*
+   * LA RETENUE À LA SOURCE NE CHANGE PAS LE MONTANT DE LA FACTURE (pilote, 23 novembre 2026).
+   *
+   * Quand le dernier jugement de la dernière lecture tranche une retenue, le TTC imprimé (ou
+   * corrigé au crayon) est le net à payer : la liste rend le TTC avant retenue, comme l'en-tête
+   * de la fiche (`retenueJugee`). Une requête pour toute la liste, par l'index des analyses.
+   */
+  const ids = (rows as Record<string, unknown>[]).map((r) => r["id"] as string);
+  const { rows: juges } = ids.length
+    ? await db.query(
+        `select j.piece_id, j.etat, j.retenue_mineure, j.du_mineur
+           from unnest($1::uuid[]) t(id)
+           cross join lateral (
+             select a.piece_id, a.normalisation ->> 'etat' as etat,
+                    a.normalisation -> 'montants' ->> 'retenue' as retenue_mineure,
+                    a.normalisation -> 'montants' ->> 'ttc' as du_mineur
+               from capture.analyses a
+               join lateral (select id from capture.extractions x
+                              where x.piece_id = a.piece_id order by x.created_at desc limit 1) e
+                 on e.id = a.extraction_id
+              where a.piece_id = t.id
+              order by a.created_at desc limit 1
+           ) j
+          where j.retenue_mineure is not null`,
+        [ids],
+      )
+    : { rows: [] };
+  const jugesParPiece = new Map(
+    (juges as Record<string, unknown>[]).map((j) => [String(j["piece_id"]).toLowerCase(), j]),
+  );
   for (const r of rows as Record<string, unknown>[]) {
-    parSociete.get((r["tenant_id"] as string).toLowerCase())?.push(versPieceLue(r, exposants));
+    const juge = jugesParPiece.get(String(r["id"]).toLowerCase());
+    parSociete
+      .get((r["tenant_id"] as string).toLowerCase())
+      ?.push(versPieceLue(r, exposants, juge));
   }
   return tenantIds.map((tenantId) => ({
     tenantId,
@@ -564,7 +597,11 @@ function sensDeclare(type: unknown): "facture_achat" | "facture_vente" | null {
   return type === "facture_achat" || type === "facture_vente" ? type : null;
 }
 
-function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string, number>) {
+function versPieceLue(
+  r: Record<string, unknown>,
+  exposants: ReadonlyMap<string, number>,
+  juge?: Record<string, unknown>,
+) {
   /*
    * CE QUE LA PERSONNE A CORRIGÉ VAUT DANS LA LISTE COMME SUR LA FICHE (pilote, 22 novembre
    * 2026) : le TTC et la date dits à la main, lus par `app.pieces_de_la_liste`.
@@ -609,7 +646,13 @@ function versPieceLue(r: Record<string, unknown>, exposants: ReadonlyMap<string,
       // ne dit rien, « Vérifier » rend ce que la personne a choisi (G6c).
       sensDeclare(r["document_kind"]),
     // Le TTC corrigé l'emporte sur le TTC lu, comme sur la fiche ; l'écriture du cabinet sur les deux.
-    total: cab?.ttc ?? dit.ttc ?? lu?.totals?.ttc ?? null,
+    // Une retenue tranchée : le TTC avant elle, pas le net à payer.
+    total:
+      cab?.ttc ??
+      retenueJugee(juge, exposants.get(lu?.currency ?? ""))?.totalTtc ??
+      dit.ttc ??
+      lu?.totals?.ttc ??
+      null,
     devise: cab?.devise ?? lu?.currency ?? null,
     decimales: exposants.get(cab?.devise ?? lu?.currency ?? "") ?? null,
     typeDeDocument: (r["document_kind"] as string | null) ?? null,
