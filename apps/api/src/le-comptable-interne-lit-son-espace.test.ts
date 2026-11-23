@@ -20,7 +20,8 @@ import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
-import { creerCompte, type Utilisateur } from "./auth.ts";
+import { type Utilisateur } from "./auth.ts";
+import { compteDEssai } from "./compte-d-essai.ts";
 import { BASE_CONFIGUREE } from "./circuit-d-essai.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
@@ -63,7 +64,7 @@ describe("le comptable interne ouvre l'espace de sa société", { skip: !BASE_CO
 
   before(async () => {
     const compte = async (qui: string, prenom: string) => {
-      const u = await creerCompte(`${marque}-${qui}@essai.local`, MOT_DE_PASSE);
+      const u = await compteDEssai(`${marque}-${qui}@essai.local`, MOT_DE_PASSE);
       assert.ok(u, qui);
       await sousIdentiteDuServeur(u.id, (db) => identite.ecrireMonProfil(db, prenom, "Essai"));
       return u;

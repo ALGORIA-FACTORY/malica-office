@@ -27,7 +27,43 @@
  * facture du mois suit.
  */
 
-type EtatChezLePrestataire = "paye" | "refuse" | "en_attente";
+import { DELAI_APPEL_PRESTATAIRE_MS } from "../delais.ts";
+
+/**
+ * `anomalie` : le prestataire dit « payé », mais pas pour ce paiement ni pour ce
+ * montant (audit du 23 novembre 2026, B1). Rien ne se solde ; la réponse est
+ * signalée à la tour.
+ */
+type EtatChezLePrestataire = "paye" | "refuse" | "en_attente" | "anomalie";
+
+/** Ce que le prestataire doit confirmer pour qu'un « payé » compte. */
+interface Attendu {
+  /** L'identifiant du paiement, rendu tel quel par le prestataire. */
+  paiementId: string;
+  /** Le montant TTC dans la plus petite unité de la devise (le millime du dinar). */
+  unites: number;
+}
+
+/**
+ * Ce que l'adaptateur rend de sa lecture. `unites_encaissees` est ce que le
+ * prestataire dit avoir encaissé, en unités de la devise ; la base refuse un
+ * « payé » dont ce montant n'est pas celui du paiement.
+ */
+interface Constat {
+  etat: EtatChezLePrestataire;
+  detail: Record<string, unknown> & { unites_encaissees: number | null };
+}
+
+/** Un entier positif lu dans une réponse (nombre ou chaîne), ou `null`. */
+function entier(v: unknown): number | null {
+  const n = typeof v === "string" && /^[0-9]+$/.test(v) ? Number(v) : v;
+  return typeof n === "number" && Number.isSafeInteger(n) && n >= 0 ? n : null;
+}
+
+/** Le numéro de commande d'un paiement chez un prestataire limité à 32 caractères. */
+function numeroDeCommande(paiementId: string): string {
+  return paiementId.replace(/-/g, "").slice(0, 32);
+}
 
 interface DemandeDeLien {
   paiementId: string;
@@ -37,6 +73,8 @@ interface DemandeDeLien {
   devise: string;
   libelle: string;
   retour: string;
+  /** L'adresse où le prestataire notifie un état final, s'il sait le faire. */
+  notification?: string;
 }
 
 export interface Prestataire {
@@ -45,9 +83,7 @@ export interface Prestataire {
   /** Vrai pour un adaptateur dont l'écran de l'application tient lieu de page de carte. */
   simule: boolean;
   creerLien(d: DemandeDeLien): Promise<{ reference: string; lien: string }>;
-  etat(
-    reference: string,
-  ): Promise<{ etat: EtatChezLePrestataire; detail: Record<string, unknown> }>;
+  etat(reference: string, attendu: Attendu): Promise<Constat>;
 }
 
 /** ClicToPay (SMT) : `register.do` crée la commande, `getOrderStatusExtended.do` la lit. */
@@ -66,7 +102,7 @@ export function clictopay(
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
       body: corps.toString(),
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(DELAI_APPEL_PRESTATAIRE_MS),
     });
     if (!r.ok) throw new Error(`clictopay ${operation} : HTTP ${r.status}`);
     return (await r.json()) as Record<string, unknown>;
@@ -79,7 +115,7 @@ export function clictopay(
       const r = await appel("register.do", {
         // Le numéro de commande est l'identifiant du paiement : unique par
         // construction, et relisible des deux côtés.
-        orderNumber: d.paiementId.replace(/-/g, "").slice(0, 32),
+        orderNumber: numeroDeCommande(d.paiementId),
         amount: String(d.unites),
         currency: d.devise,
         language: config.langue,
@@ -94,20 +130,33 @@ export function clictopay(
       }
       return { reference, lien };
     },
-    async etat(reference) {
+    async etat(reference, attendu) {
       const r = await appel("getOrderStatusExtended.do", {
         orderId: reference,
         language: config.langue,
       });
       const statut = Number(r["orderStatus"] ?? r["OrderStatus"]);
-      // 2 : commande payée. 3, 4, 6 : annulée ou remboursée. Le reste attend.
+      const unites = entier(r["amount"]);
+      const commande = typeof r["orderNumber"] === "string" ? r["orderNumber"] : null;
+      // 2 : commande payée — pour CE paiement et CE montant, sinon c'est une
+      // anomalie. 3, 4, 6 : annulée ou remboursée. Le reste attend.
       const etat: EtatChezLePrestataire =
         statut === 2
-          ? "paye"
+          ? unites === attendu.unites && commande === numeroDeCommande(attendu.paiementId)
+            ? "paye"
+            : "anomalie"
           : statut === 3 || statut === 4 || statut === 6
             ? "refuse"
             : "en_attente";
-      return { etat, detail: { orderStatus: statut, errorCode: r["errorCode"] ?? null } };
+      return {
+        etat,
+        detail: {
+          orderStatus: statut,
+          errorCode: r["errorCode"] ?? null,
+          orderNumber: commande,
+          unites_encaissees: unites,
+        },
+      };
     },
   };
 }
@@ -142,8 +191,11 @@ export function flouci(
           fail_link: d.retour,
           // L'identifiant du paiement : Flouci le rend tel quel à la vérification.
           developer_tracking_id: d.paiementId,
+          // La notification signée (v2) : un paiement se constate même si le
+          // client ne revient pas sur Malica.
+          ...(d.notification ? { webhook: d.notification, webhook_version: 2 } : {}),
         }),
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(DELAI_APPEL_PRESTATAIRE_MS),
       });
       if (!r.ok) throw new Error(`flouci generate_payment : HTTP ${r.status}`);
       const corps = (await r.json()) as { result?: Record<string, unknown> };
@@ -153,26 +205,37 @@ export function flouci(
       if (res["success"] !== true || !reference || !lien) {
         throw new Error(`flouci generate_payment : ${String(res["message"] ?? res["status"])}`);
       }
+      // Flouci rend l'identifiant qu'on lui a confié : un autre est une réponse
+      // qui ne concerne pas ce paiement.
+      if (res["developer_tracking_id"] != null && res["developer_tracking_id"] !== d.paiementId) {
+        throw new Error("flouci generate_payment : identifiant de suivi différent");
+      }
       return { reference, lien };
     },
-    async etat(reference) {
+    async etat(reference, attendu) {
       const r = await fetchImpl(`${base}/api/v2/verify_payment/${encodeURIComponent(reference)}`, {
         method: "GET",
         headers: entetes,
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(DELAI_APPEL_PRESTATAIRE_MS),
       });
       if (!r.ok) throw new Error(`flouci verify_payment : HTTP ${r.status}`);
       const corps = (await r.json()) as { success?: unknown; result?: Record<string, unknown> };
       const res = corps.result ?? {};
       const statut = typeof res["status"] === "string" ? res["status"] : null;
+      const unites = entier(res["amount"]);
+      const suivi =
+        typeof res["developer_tracking_id"] === "string" ? res["developer_tracking_id"] : null;
       // Le contenu ne se lit que si `success` est vrai (consigne de Flouci).
-      // SUCCESS : payé. FAILURE, EXPIRED, SYSTEM_FAILURE : la session est
-      // close sans argent. PENDING, PREAUTH_SUCCESS : on attend.
+      // SUCCESS : payé — pour CE paiement et CE montant, sinon c'est une
+      // anomalie. FAILURE, EXPIRED, SYSTEM_FAILURE : la session est close sans
+      // argent. PENDING, PREAUTH_SUCCESS : on attend.
       const etat: EtatChezLePrestataire =
         corps.success !== true
           ? "en_attente"
           : statut === "SUCCESS"
-            ? "paye"
+            ? unites === attendu.unites && suivi === attendu.paiementId
+              ? "paye"
+              : "anomalie"
             : statut === "FAILURE" || statut === "EXPIRED" || statut === "SYSTEM_FAILURE"
               ? "refuse"
               : "en_attente";
@@ -181,8 +244,9 @@ export function flouci(
         detail: {
           status: statut,
           type: res["type"] ?? null,
-          amount: res["amount"] ?? null,
-          developer_tracking_id: res["developer_tracking_id"] ?? null,
+          developer_tracking_id: suivi,
+          settlement_status: res["settlement_status"] ?? null,
+          unites_encaissees: unites,
         },
       };
     },
@@ -205,7 +269,7 @@ function simulateur(code: string): Prestataire {
       return { reference: `sim-${d.paiementId}`, lien: lien.toString() };
     },
     async etat() {
-      return { etat: "en_attente", detail: {} };
+      return { etat: "en_attente", detail: { unites_encaissees: null } };
     },
   };
 }
@@ -218,6 +282,8 @@ export interface ReglagePaiement {
   adaptateur: string | null;
   ouvre_le_paiement: boolean;
   langue: string | null;
+  /** Les hôtes où l'API de ce prestataire peut être jointe (`facturation.hotes_par_prestataire`). */
+  hotes_api: readonly string[];
 }
 
 type Env = Record<string, string | undefined>;
@@ -236,9 +302,16 @@ export const ADAPTATEURS: Readonly<
     }
   >
 > = {
+  // Le simulateur ne fait entrer aucun argent : il n'existe que là où on l'a
+  // voulu — hors production, ou sur un serveur de recette qui le déclare
+  // (`PAIEMENT_SIMULATEUR=oui`, posé par le déploiement du staging seul). Sur le
+  // pilote ou la production, la tour peut le choisir : le paiement en ligne reste
+  // fermé (audit du 23 novembre 2026, B3).
   simulateur: {
-    pret: () => true,
-    creer: (r) => simulateur(r.prestataire),
+    pret: (env) => env["NODE_ENV"] !== "production" || env["PAIEMENT_SIMULATEUR"] === "oui",
+    creer(r, env) {
+      return this.pret(env) ? simulateur(r.prestataire) : null;
+    },
   },
   clictopay: {
     pret: (env) =>
@@ -304,6 +377,37 @@ export function adresseDeRetour(
   return adresse.toString();
 }
 
+/**
+ * L'adresse de l'API est-elle sur un hôte de ce prestataire ? Les clés marchandes
+ * ne partent nulle part ailleurs (audit du 23 novembre 2026, B5) — la base le
+ * refuse déjà au réglage ; l'API le redit avant chaque envoi.
+ */
+export function hoteAutorise(url: string, hotes: readonly string[]): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && hotes.includes(u.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * L'adaptateur d'un prestataire désigné (le réglage en vigueur, ou celui qui a
+ * créé un lien encore ouvert), ou `null` : adaptateur inconnu, secrets absents,
+ * ou adresse d'API hors de ses hôtes.
+ */
+export function adaptateurDe(
+  reglage: Omit<ReglagePaiement, "url_retour" | "ouvre_le_paiement">,
+  env: Env = process.env,
+  fetchImpl: typeof fetch = fetch,
+): Prestataire | null {
+  const fabrique = reglage.adaptateur ? ADAPTATEURS[reglage.adaptateur] : undefined;
+  if (!fabrique) return null;
+  const url = reglage.url_api?.trim();
+  if (url && !hoteAutorise(url, reglage.hotes_api)) return null;
+  return fabrique.creer({ ...reglage, url_retour: null, ouvre_le_paiement: true }, env, fetchImpl);
+}
+
 /** Le prestataire que la tour a ouvert, ou `null` quand le paiement en ligne est fermé. */
 export function prestataireDuReglage(
   reglage: ReglagePaiement,
@@ -312,6 +416,7 @@ export function prestataireDuReglage(
 ): { prestataire: Prestataire; urlPublique: string } | null {
   const urlPublique = reglage.url_retour?.trim().replace(/\/+$/, "");
   if (!reglage.ouvre_le_paiement || !reglage.adaptateur || !urlPublique) return null;
-  const prestataire = ADAPTATEURS[reglage.adaptateur]?.creer(reglage, env, fetchImpl) ?? null;
+  if (!urlPublique.startsWith("https://")) return null;
+  const prestataire = adaptateurDe(reglage, env, fetchImpl);
   return prestataire ? { prestataire, urlPublique } : null;
 }

@@ -21,6 +21,8 @@
 import pg from "pg";
 import type { PoolClient } from "pg";
 
+import { ATTENTE_MAX_EN_TRANSACTION_MS } from "./delais.ts";
+
 /*
  * ============================================ UNE DATE EST UNE DATE
  *
@@ -45,7 +47,7 @@ export type Requete = PoolClient;
 const pool = new Pool({
   connectionString: url(),
   statement_timeout: 30_000,
-  idle_in_transaction_session_timeout: 10_000,
+  idle_in_transaction_session_timeout: ATTENTE_MAX_EN_TRANSACTION_MS,
   /*
    * Pas de compilation à la volée (JIT). Les politiques RLS appellent des
    * fonctions, dont le coût estimé (100 par appel et par ligne) fait passer

@@ -19,7 +19,7 @@ import {
   reinitialiser,
   verifierCompte,
 } from "./auth.ts";
-import { courrielReinitialisation } from "./courriel/reinitialisation.ts";
+import { courrielReinitialisation } from "./courriel/liens-du-compte.ts";
 import { libellesDEssai } from "./courriel/libelles-d-essai.ts";
 import { fermerLePool } from "./db.ts";
 

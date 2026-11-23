@@ -12,6 +12,7 @@ import { after, before, describe, it } from "node:test";
 import pg from "pg";
 
 import { creerCompte, type Utilisateur } from "./auth.ts";
+import { compteDEssai } from "./compte-d-essai.ts";
 import { fermerLePool, sousIdentiteDuServeur } from "./db.ts";
 import { identite } from "./depots/identite.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
@@ -46,10 +47,10 @@ describe("la Tour confie et archive une organisation", { skip: !BASE_CONFIGUREE 
 
   before(async () => {
     const mdp = "MotDePasseTresLong2026!";
-    plateforme = (await creerCompte(`p-${marque}@essai.local`, mdp))!;
-    dirigeant = (await creerCompte(`d-${marque}@essai.local`, mdp))!;
-    intrus = (await creerCompte(`i-${marque}@essai.local`, mdp))!;
-    expert = (await creerCompte(`e-${marque}@essai.local`, mdp))!;
+    plateforme = (await compteDEssai(`p-${marque}@essai.local`, mdp))!;
+    dirigeant = (await compteDEssai(`d-${marque}@essai.local`, mdp))!;
+    intrus = (await compteDEssai(`i-${marque}@essai.local`, mdp))!;
+    expert = (await compteDEssai(`e-${marque}@essai.local`, mdp))!;
     assert.ok(plateforme && dirigeant && intrus && expert);
     await admin.query(`insert into app.platform_operators (user_id, note) values ($1, $2)`, [
       plateforme.id,
@@ -70,6 +71,16 @@ describe("la Tour confie et archive une organisation", { skip: !BASE_CONFIGUREE 
       await admin.end();
       await fermerLePool();
     }
+  });
+
+  it("une adresse seulement déclarée ne reçoit pas de société (contre-audit du 23 novembre 2026)", async () => {
+    const declaree = await creerCompte(`declaree-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(declaree);
+    const org = await orgSansMembre(matriculeDEssai());
+    await assert.rejects(
+      fait(plateforme, "tour.confierOrganisation", org, declaree.email),
+      /refus\.compte\.adresse_non_confirmee/,
+    );
   });
 
   it("une société sans membre reçoit son premier dirigeant, et sa licence", async () => {

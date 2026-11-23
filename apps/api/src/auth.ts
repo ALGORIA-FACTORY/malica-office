@@ -463,6 +463,89 @@ export async function reinitialiser(
   });
 }
 
+/**
+ * La confirmation de l'adresse d'un compte (audit du 23 novembre 2026, B4).
+ *
+ * Une adresse déclarée n'ouvre aucune invitation : seule une adresse PROUVÉE le
+ * fait (`app.mon_email()`). Le lien part à l'inscription, et à la demande ; il
+ * vaut trois jours, une seule fois, et seule son empreinte est gardée. C'est la
+ * seule preuve : le lien d'une invitation n'en est pas une (celui qui invite le
+ * reçoit aussi).
+ */
+const DUREE_CONFIRMATION_MS = 3 * 24 * 60 * 60 * 1000;
+
+/** `null` si le compte est inconnu ou déjà confirmé : il n'y a rien à envoyer. */
+export async function demanderConfirmationAdresse(userId: string): Promise<{
+  email: string;
+  secret: string;
+  expireLe: Date;
+  locale: string;
+  libelles: Record<string, string>;
+} | null> {
+  const secret = nouveauSecret();
+  const expireLe = new Date(Date.now() + DUREE_CONFIRMATION_MS);
+  return horsRlsAuthentificationSeule(async (db) => {
+    const { rows } = await db.query<{
+      email: string;
+      locale: string;
+      libelles: Record<string, string>;
+    }>(
+      `with posee as (
+         insert into auth.confirmations_adresse (user_id, empreinte, expire_le)
+         select u.id, $2, $3 from auth.users u
+          where u.id = $1 and u.adresse_confirmee_le is null
+         returning user_id)
+       select u.email::text as email, x.locale, notif.libelles_du_courriel(x.locale) as libelles
+         from posee p
+         join auth.users u on u.id = p.user_id
+        cross join lateral (select notif.langue_de_la_personne(p.user_id) as locale) x`,
+      [userId, empreinteDe(secret), expireLe],
+    );
+    const ligne = rows[0];
+    return ligne
+      ? { email: ligne.email, secret, expireLe, locale: ligne.locale, libelles: ligne.libelles }
+      : null;
+  });
+}
+
+/**
+ * Confirme l'adresse contre un secret valide. Faux si le secret est inconnu,
+ * expiré ou déjà utilisé — sans dire lequel.
+ */
+export async function confirmerAdresse(secret: string): Promise<boolean> {
+  return horsRlsAuthentificationSeule(async (db) => {
+    const { rows } = await db.query<{ user_id: string; expire_le: Date; utilise_le: Date | null }>(
+      `select c.user_id, c.expire_le, c.utilise_le
+         from auth.confirmations_adresse c
+        where c.empreinte = $1
+        for update`,
+      [empreinteDe(secret)],
+    );
+    const demande = rows[0];
+    if (!demande || demande.utilise_le || demande.expire_le.getTime() < Date.now()) return false;
+    await db.query(
+      `update auth.users set adresse_confirmee_le = coalesce(adresse_confirmee_le, now())
+        where id = $1`,
+      [demande.user_id],
+    );
+    await db.query(
+      `update auth.confirmations_adresse set utilise_le = now()
+        where user_id = $1 and utilise_le is null`,
+      [demande.user_id],
+    );
+    return true;
+  });
+}
+
+/** L'adresse du compte est-elle prouvée ? */
+export async function adresseConfirmee(userId: string): Promise<boolean> {
+  const { rows } = await horsRlsAuthentificationEnUneRequete<{ ok: boolean }>(
+    `select adresse_confirmee_le is not null as ok from auth.users where id = $1`,
+    [userId],
+  );
+  return rows[0]?.ok ?? false;
+}
+
 /** Révoque un jeton — la déconnexion. Un jeton inconnu ou déjà révoqué ne dit rien. */
 export async function revoquerJetonDeRafraichissement(secret: string): Promise<void> {
   await horsRlsAuthentificationSeule((db) =>

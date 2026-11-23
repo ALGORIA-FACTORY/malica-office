@@ -78,6 +78,10 @@ test("la CSP du site est un défaut : elle n'écrase pas celle que l'API pose (S
     csp[0].startsWith("?Content-Security-Policy "),
     "« ?Content-Security-Policy » : posée seulement si l'API n'en a pas posé",
   );
+  // Audit du 23 novembre 2026 : un script injecté ne charge ni n'envoie rien ailleurs.
+  assert.match(csp[0], /script-src 'self'/);
+  assert.match(csp[0], /connect-src 'self'/);
+  assert.doesNotMatch(csp[0], /unsafe-eval/);
 });
 
 test("l'écran de connexion /auth reste au site, ses sous-chemins vont à l'API", () => {

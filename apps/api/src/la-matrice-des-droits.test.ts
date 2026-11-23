@@ -18,7 +18,7 @@ import { after, before, describe, it } from "node:test";
 import type { MonAcces, PieceLue } from "@malica/socle/ports/repositories";
 import { statutCabinet, statutDuCircuit, type SuiviDEnvoi } from "@malica/socle/statut-d-envoi";
 
-import { creerCompte } from "./auth.ts";
+import { compteDEssai } from "./compte-d-essai.ts";
 import {
   BASE_CONFIGUREE,
   monterUneSociete,
@@ -963,7 +963,7 @@ describe("la matrice des droits", { skip: !BASE_CONFIGUREE }, () => {
    * éprouvé de bout en bout par `le-comptable-interne-tient-les-livres`.
    */
   it("12 · Le comptable interne — voit la société et ses écritures, jamais le Privé ; sous mandat externe, ne prépare ni ne valide", async () => {
-    const u = await creerCompte(
+    const u = await compteDEssai(
       `matrice-comptable-${Date.now()}@essai.local`,
       "MotDePasseTresLong2026!",
     );

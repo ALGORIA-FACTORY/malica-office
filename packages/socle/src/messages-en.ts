@@ -98,6 +98,16 @@ export const en: Dict = {
   "auth.forgot.sent":
     "If an account exists for this address, a link has just been sent to it. It is valid for one hour.",
   "auth.reset.title": "New password",
+  "adresse.titre": "Address to confirm",
+  "adresse.texte":
+    "A confirmation link has just been sent to your account's address. Until it is confirmed, no invitation from a firm or a company opens here.",
+  "adresse.renvoyer": "Resend the link",
+  "adresse.renvoye": "Link sent again. Check your spam folder too.",
+  "adresse.page.titre": "Confirm the address",
+  "adresse.page.confirmee": "Your address is confirmed. Your invitations can now open.",
+  "adresse.page.expiree":
+    "This link has expired or has already been used. Sign in to receive a new one.",
+  "adresse.page.continuer": "Continue to Malica Office",
   "auth.reset.new": "New password",
   "auth.reset.confirm": "Confirm password",
   "auth.reset.submit": "Save and sign in",
@@ -4436,6 +4446,13 @@ export const en: Dict = {
   "pme.payer.securise": "Secure payment by {prestataire}",
   "pme.payer.rienARegler": "This payment is no longer due.",
   "refus.paiement.moyen_indisponible": "This payment method is not available.",
+  "refus.compte.adresse_non_confirmee":
+    "This account's address is not confirmed yet: the person must first open the link received by email.",
+  "refus.paiement.prestataire_indisponible":
+    "The payment service is not responding right now. Your payment has not been lost: try again in a few minutes.",
+  "refus.paiement.hote_non_autorise": "This address does not belong to this payment provider.",
+  "refus.paiement.montant_different":
+    "The amount confirmed by the provider is not the payment amount: nothing was settled, and the ALGORIA team has been notified.",
   "pme.reglages.paiement.facture": "Invoice {numero}",
   "pme.reglages.factures.titre": "Your invoices",
   "pme.reglages.factures.reste": "Left to pay: {montant} {devise} incl. VAT",

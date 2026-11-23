@@ -15,13 +15,9 @@
  * partout. Le fichier se lit depuis la racine du dépôt et non le dossier
  * courant : l'outil se lance d'où l'on veut.
  */
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import pg from "pg";
 
-const RACINE = fileURLToPath(new URL("..", import.meta.url));
+import { urlDAdministration } from "./base-d-administration.mjs";
 
 const args = process.argv.slice(2);
 const iBase = args.indexOf("--base");
@@ -37,16 +33,7 @@ if (!email) {
   process.exit(1);
 }
 
-function duFichier() {
-  try {
-    const env = readFileSync(join(RACINE, "apps", "api", ".env"), "utf8");
-    return /^DATABASE_URL_ADMIN=(.*)$/m.exec(env)?.[1]?.trim().replace(/^"|"$/g, "");
-  } catch {
-    return undefined;
-  }
-}
-
-const url = base || process.env["DATABASE_URL_ADMIN"]?.trim() || duFichier();
+const url = urlDAdministration(base);
 if (!url) {
   console.error("aucune base : passez --base <url>, DATABASE_URL_ADMIN, ou apps/api/.env");
   process.exit(1);

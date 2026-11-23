@@ -198,6 +198,13 @@ principal() {
       # 16 novembre 2026 : les comptes marchands du paiement en ligne.
       BREVO_API_KEY | ANTHROPIC_API_KEY | DEEPSEEK_API_KEY | QWEN_API_KEY) ;;
       CLICTOPAY_UTILISATEUR | CLICTOPAY_MOT_DE_PASSE | FLOUCI_CLE_PUBLIQUE | FLOUCI_CLE_PRIVEE) ;;
+      # 23 novembre 2026 : le simulateur de paiement, « oui » sur le staging seul.
+      PAIEMENT_SIMULATEUR)
+        [[ "$valeur" == "oui" || "$valeur" == "non" ]] || {
+          echo "KO : PAIEMENT_SIMULATEUR vaut oui ou non, ignoré" >&2
+          continue
+        }
+        ;;
       DOMAINE | DOMAINE_ALIAS)
         [ -z "$valeur" ] || [[ "$valeur" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || {
           echo "KO : $nom n'est pas un nom d'hôte, ignoré" >&2
@@ -207,9 +214,14 @@ principal() {
       *) continue ;;
       esac
       [ -n "$valeur" ] || continue
-      [[ "$valeur" =~ ^[A-Za-z0-9._-]+$ ]] || {
-        echo "KO : $nom porte des caractères inattendus, ignoré" >&2
-        continue
+      # 23 novembre 2026 (audit, M3) : un secret refusé ARRÊTE le déploiement.
+      # L'ignorer laissait partir une version dont l'adaptateur de paiement
+      # restait fermé sans que personne ne le voie. Le jeu admis couvre le
+      # base64 (`+`, `/`, `=`) ; `|`, `&` et `\` restent exclus : ils
+      # casseraient la substitution `sed` ci-dessous.
+      [[ "$valeur" =~ ^[A-Za-z0-9._+/=-]+$ ]] || {
+        echo "KO : $nom porte des caractères inattendus : déploiement arrêté" >&2
+        exit 3
       }
       if grep -q "^$nom=" "$ENV"; then
         sed -i -E "s|^$nom=.*|$nom=$valeur|" "$ENV"

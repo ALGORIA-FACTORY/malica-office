@@ -189,5 +189,27 @@ export function creerAuthHttp(): AuthPort {
       if (!reponse.ok) throw new EchecAuth("reseau", "réinitialisation impossible");
       return retenir(reponse);
     },
+
+    async adresseConfirmee(): Promise<boolean> {
+      const reponse = await appeler("/auth/adresse", { methode: "GET" });
+      if (!reponse.ok) throw new EchecAuth("reseau", "lecture impossible");
+      const corps = (await reponse.json()) as { confirmee?: unknown };
+      return corps.confirmee === true;
+    },
+
+    async confirmerAdresse(secret: string): Promise<void> {
+      const reponse = await appeler("/auth/adresse/confirmer", {
+        methode: "POST",
+        corps: { secret },
+      });
+      if (reponse.status === 410) throw new EchecAuth("lien_expire", "lien expiré");
+      if (reponse.status === 400) throw new EchecAuth("saisie", "saisie invalide");
+      if (!reponse.ok) throw new EchecAuth("reseau", "confirmation impossible");
+    },
+
+    async renvoyerConfirmation(): Promise<void> {
+      const reponse = await appeler("/auth/adresse/renvoyer", { methode: "POST" });
+      if (!reponse.ok) throw new EchecAuth("reseau", "demande impossible");
+    },
   };
 }

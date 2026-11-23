@@ -32,7 +32,14 @@
 // connectent. Les deux lisent donc la même déclaration, dans le socle des
 // épreuves : deux copies d'un mot de passe, c'est une copie qu'on oubliera de
 // changer.
-import { COMPTE_DEV, SECOND_EXPERT_DEV } from "../../outils/epreuves/socle.mjs";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+import {
+  COMPTE_DEV,
+  SECOND_EXPERT_DEV,
+  estUneInstanceLocale,
+} from "../../outils/epreuves/socle.mjs";
 
 const API = process.env["MALICA_API_URL"] ?? "http://localhost:3000";
 const EMAIL = COMPTE_DEV.email;
@@ -149,6 +156,16 @@ async function ouvrirSession(compte = COMPTE_DEV, nom = "Développeur") {
   });
   if (inscription.ok) {
     console.log(`  compte créé      ${compte.email}`);
+    // Une adresse seulement déclarée n'ouvre aucune invitation (audit du
+    // 23 novembre 2026) ; sur l'instance du poste, personne ne reçoit le lien.
+    if (estUneInstanceLocale(API)) {
+      const prouvee = spawnSync(
+        process.execPath,
+        [fileURLToPath(new URL("../../outils/adresse-d-essai.mjs", import.meta.url)), compte.email],
+        { stdio: "inherit" },
+      );
+      if (prouvee.status !== 0) throw new Error(`adresse non prouvée : ${compte.email}`);
+    }
     return;
   }
   // 409 : le compte existe déjà, c'est le cas normal d'une seconde exécution.

@@ -21,7 +21,7 @@
     "dictionary-en": "4.0.0",
     "dictionary-fr": "3.0.0",
     "dotenv": "16.4.7",
-    "express": "4.21.2",
+    "express": "4.22.3",
     "express-rate-limit": "8.7.0",
     "fflate": "0.8.3",
     "jsonwebtoken": "9.0.2",

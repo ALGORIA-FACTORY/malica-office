@@ -19,7 +19,8 @@ import { after, before, describe, it } from "node:test";
 
 import type pg from "pg";
 
-import { creerCompte, type Utilisateur } from "./auth.ts";
+import { type Utilisateur } from "./auth.ts";
+import { compteDEssai } from "./compte-d-essai.ts";
 import { BASE_CONFIGUREE, monterUneSociete, type SocieteDEssai } from "./circuit-d-essai.ts";
 import { fermerLePool } from "./db.ts";
 import { executerRpc } from "./rpc.ts";
@@ -40,10 +41,10 @@ describe("l'accès total ouvre tout, sans prendre de place", { skip: !BASE_CONFI
   before(async () => {
     s = await monterUneSociete(marque);
     const mdp = "MotDePasseTresLong2026!";
-    wb = (await creerCompte(`wb-${marque}@essai.local`, mdp))!;
-    op = (await creerCompte(`op-${marque}@essai.local`, mdp))!;
-    intrus = (await creerCompte(`i-${marque}@essai.local`, mdp))!;
-    simple = (await creerCompte(`s-${marque}@essai.local`, mdp))!;
+    wb = (await compteDEssai(`wb-${marque}@essai.local`, mdp))!;
+    op = (await compteDEssai(`op-${marque}@essai.local`, mdp))!;
+    intrus = (await compteDEssai(`i-${marque}@essai.local`, mdp))!;
+    simple = (await compteDEssai(`s-${marque}@essai.local`, mdp))!;
     assert.ok(wb && op && intrus && simple);
     await s.admin.query(
       `insert into app.platform_operators (user_id, note)

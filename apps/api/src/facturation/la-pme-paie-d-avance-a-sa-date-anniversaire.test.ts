@@ -632,10 +632,13 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       await enPersonne(db, p.titulaire);
       const id = r[0]!.r.paiement.paiement_id;
       await db.query(
-        "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://x.tn', '{}', 'visa')",
+        "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa')",
         [id],
       );
-      await db.query("select public.paiement_inscrire($1, 'paye', 'clictopay', 'CTP-1')", [id]);
+      await db.query(
+        "select public.paiement_inscrire($1, 'paye', 'clictopay', 'REF-0', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
+        [id],
+      );
       await db.query("reset role");
       await db.query("set constraints all immediate");
 
@@ -654,6 +657,39 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
         [toutes[1]!.id],
       );
       assert.equal(Number(du[0]!.reste), 0, "le complément est soldé par l'acompte payé d'abord");
+    });
+  });
+
+  it("un « payé » du simulateur n'ouvre pas la montée : aucun argent n'est entré", async () => {
+    await aBlanc(async (db) => {
+      const s = await socle(db);
+      await db.query("select set_config('TimeZone', plateforme.fuseau_de_la_plateforme(), true)");
+      const { rows: j } = await db.query<{ jour: string }>("select current_date::text as jour");
+      await regler(db, s, "pme", true);
+      const p = await unePme(db, j[0]!.jour);
+      await db.query("set constraints all immediate");
+      await db.query("set constraints all deferred");
+
+      await enPersonne(db, p.titulaire);
+      const { rows: r } = await db.query<{ r: { paiement: { paiement_id: string } } }>(
+        "select public.forfait_demander('team', $1) as r",
+        [p.tenant],
+      );
+      const id = r[0]!.r.paiement.paiement_id;
+      await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
+      await db.query(
+        "select public.paiement_inscrire($1, 'lien_cree', 'simulateur', 'sim-1', 'https://staging.exemple.tn/?simulateur=1', '{}', 'visa')",
+        [id],
+      );
+      await db.query("select public.paiement_inscrire($1, 'paye', 'simulateur', 'sim-1')", [id]);
+      await db.query("reset role");
+      await db.query("set constraints all immediate");
+
+      const { rows: f } = await db.query<{ offre_code: string }>(
+        "select offre_code from facturation.forfait_courant_v where licence_id = $1",
+        [p.licence],
+      );
+      assert.notEqual(f[0]!.offre_code, "team", "l'offre supérieure ne s'ouvre pas sans argent");
     });
   });
 

@@ -20,6 +20,7 @@
 		path /rpc /rpc/* /moi /moi/* /sante /sante/* /pieces /pieces/*
 		path /journal-atelier /journal-atelier/* /malica/* /auth/* /exports/*
 		path /impressions /impressions/*
+		path /notifications-de-paiement/*
 	}
 
 	# Une lecture par Malica peut durer des minutes.
@@ -36,9 +37,13 @@
 	}
 
 	# Campagne du 21 octobre 2026 (ANO-027) : ni X-Frame-Options ni CSP. La
-	# politique ci-dessous ne touche pas aux scripts (le rendu serveur en pose
-	# en ligne) : elle interdit d'encadrer l'application, d'y changer la base
+	# politique ci-dessous interdit d'encadrer l'application, d'y changer la base
 	# des liens, d'y charger un objet, et d'envoyer un formulaire ailleurs.
+	#
+	# Audit du 23 novembre 2026 : un script injecté ne charge rien d'ailleurs
+	# (`script-src 'self'`) et n'envoie rien ailleurs (`connect-src 'self'`) —
+	# page et API partagent l'origine. Le rendu serveur pose ses scripts en
+	# ligne : `'unsafe-inline'` reste, jusqu'à un nonce par réponse.
 	#
 	# `?` : la politique n'est qu'un défaut. Les octets d'une pièce ou d'un
 	# export portent la leur, posée par l'API (`sandbox; default-src 'none'`,
@@ -49,7 +54,7 @@
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
 		X-Frame-Options DENY
-		?Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
+		?Content-Security-Policy "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' blob: data:; worker-src 'self' blob:"
 		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()"
 		-Server
 	}

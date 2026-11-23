@@ -5,12 +5,14 @@
  *
  * Un cabinet invite une adresse. Quand cette adresse se connecte, elle
  * trouve ici l'invitation, avec le rôle réservé, et rejoint le cabinet d'un
- * geste — ou décline. Pas de lien, pas de courriel : le compte est la preuve.
+ * geste — ou décline. Le compte est la preuve, une fois son adresse confirmée par le lien
+ * de confirmation (audit du 23 novembre 2026).
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { AdresseAConfirmer } from "@/components/malica/AdresseAConfirmer";
 import { useI18n } from "@/i18n";
 import type { MessageKey } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -83,7 +85,8 @@ export function InvitationsPourMoi() {
   });
 
   const liste = invitations.data ?? [];
-  if (liste.length === 0 && !message && !erreur) return null;
+  // Une adresse encore déclarée ne voit aucune invitation : on dit pourquoi.
+  if (liste.length === 0 && !message && !erreur) return <AdresseAConfirmer />;
 
   const dateLisible = (iso: string) =>
     new Intl.DateTimeFormat(locale, { day: "2-digit", month: "long", year: "numeric" }).format(

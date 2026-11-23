@@ -16,7 +16,8 @@ import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
-import { creerCompte, type Utilisateur } from "../auth.ts";
+import { type Utilisateur } from "../auth.ts";
+import { compteDEssai } from "../compte-d-essai.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { facturation } from "../depots/facturation.ts";
 import { identite } from "../depots/identite.ts";
@@ -79,8 +80,8 @@ describe("la page Clients unique de la comptabilité", { skip: !BASE_CONFIGUREE 
   };
 
   before(async () => {
-    const e = await creerCompte(`expert-${marque}@essai.local`, "MotDePasseTresLong2026!");
-    const d = await creerCompte(`dirigeant-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    const e = await compteDEssai(`expert-${marque}@essai.local`, "MotDePasseTresLong2026!");
+    const d = await compteDEssai(`dirigeant-${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(e && d);
     expert = e;
     dirigeant = d;

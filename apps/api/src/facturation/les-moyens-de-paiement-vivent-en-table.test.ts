@@ -102,7 +102,7 @@ async function unPaiement(db: pg.PoolClient) {
 
 const lien = (db: pg.PoolClient, paiement: string, prestataire: string, moyen: string | null) =>
   db.query(
-    `select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-1', 'https://x.tn/pay', '{}', $3)`,
+    `select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-1', 'https://test.clictopay.com/pay/REF-1', '{}', $3)`,
     [paiement, prestataire, moyen],
   );
 
@@ -206,9 +206,10 @@ describe("les moyens de paiement vivent en table", { skip: !ADMIN }, () => {
       const d = await unPaiement(db);
       await sous(db, d.principal, async () => {
         await lien(db, d.paiement, "clictopay", "mastercard");
-        await db.query("select public.paiement_inscrire($1, 'paye', 'clictopay', 'REF-1')", [
-          d.paiement,
-        ]);
+        await db.query(
+          "select public.paiement_inscrire($1, 'paye', 'clictopay', 'REF-1', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
+          [d.paiement],
+        );
       });
       const periode = await db.query<{ p: string }>(
         "select to_char(date_trunc('month', current_date), 'YYYY-MM-DD') as p",
@@ -238,10 +239,10 @@ describe("les moyens de paiement vivent en table", { skip: !ADMIN }, () => {
     await aBlanc(async (db) => {
       const d = await unPaiement(db);
       const paye = (prestataire: string) =>
-        db.query("select public.paiement_inscrire($1, 'paye', $2, 'REF-1')", [
-          d.paiement,
-          prestataire,
-        ]);
+        db.query(
+          "select public.paiement_inscrire($1, 'paye', $2, 'REF-1', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
+          [d.paiement, prestataire],
+        );
       await assert.rejects(
         sous(db, d.principal, () => paye("clictopay")),
         /paiement\.prestataire_du_lien/,

@@ -164,6 +164,10 @@ services:
       CLICTOPAY_MOT_DE_PASSE: ${CLICTOPAY_MOT_DE_PASSE:-}
       FLOUCI_CLE_PUBLIQUE: ${FLOUCI_CLE_PUBLIQUE:-}
       FLOUCI_CLE_PRIVEE: ${FLOUCI_CLE_PRIVEE:-}
+      # Le simulateur de paiement (aucun argent n'entre) n'existe que sur le
+      # serveur de recette qui le déclare : le déploiement du staging pose
+      # « oui », celui du pilote et de la production « non ».
+      PAIEMENT_SIMULATEUR: ${PAIEMENT_SIMULATEUR:-non}
       MALICA_COURRIEL_EXPEDITEUR: ${MALICA_COURRIEL_EXPEDITEUR:-hello@algoria-factory.com}
       MALICA_COURRIEL_NOM: ${MALICA_COURRIEL_NOM:-Malica Office}
       MALICA_URL_PUBLIQUE: https://${DOMAINE}

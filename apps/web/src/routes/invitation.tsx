@@ -15,6 +15,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { CadreConnexion } from "@/components/malica/cadre-connexion";
+import { AdresseAConfirmer } from "@/components/malica/AdresseAConfirmer";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { office } from "@/verticals/malica-office/composition";
@@ -263,6 +264,8 @@ function Invitation() {
           </h1>
         </div>
         {corps}
+        {/* L'invitation attend l'adresse confirmée (audit du 23 novembre 2026). */}
+        {compte.data ? <AdresseAConfirmer /> : null}
       </div>
     </CadreConnexion>
   );

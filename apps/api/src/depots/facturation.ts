@@ -21,10 +21,13 @@ import type { Requete } from "../db.ts";
 import { enUnitesExactes } from "@malica/socle/somme-decimale";
 
 import {
+  adaptateurDe,
   adresseDeRetour,
   prestataireDuReglage,
+  type Prestataire,
   type ReglagePaiement,
 } from "../paiement/prestataires.ts";
+import { adresseDeNotification } from "../paiement/notification-flouci.ts";
 import { idsDeSocietes } from "./societes.ts";
 
 /** Un paiement en ligne, tel que `facturation.paiements_en_ligne_v` le rend. */
@@ -60,7 +63,10 @@ const COLONNES_PAIEMENT = `paiement_id, objet, libelle, montant_ht, montant_tva,
 async function reglageEnVigueur(db: Requete): Promise<ReglagePaiement | null> {
   const { rows } = await db.query<ReglagePaiement>(
     `select r ->> 'prestataire' as prestataire, r ->> 'url_api' as url_api,
-            r ->> 'url_retour' as url_retour, p.adaptateur, p.ouvre_le_paiement, p.langue
+            r ->> 'url_retour' as url_retour, p.adaptateur, p.ouvre_le_paiement, p.langue,
+            coalesce((select array_agg(h.hote order by h.hote)
+                        from facturation.hotes_par_prestataire h
+                       where h.prestataire = p.code and h.usage = 'api'), '{}') as hotes_api
        from public.paiement_reglage() r
        join facturation.prestataires_paiement p on p.code = r ->> 'prestataire'`,
   );
@@ -83,6 +89,152 @@ async function lirePaiement(db: Requete, paiementId: string): Promise<PaiementLu
 }
 
 /**
+ * Un appel au prestataire qui échoue (réseau, délai, réponse illisible) ne
+ * renvoie jamais son texte brut au client : la panne se journalise côté serveur
+ * — le nom et le message de l'erreur, jamais les en-têtes —, et l'écran reçoit
+ * une clé.
+ */
+async function chezLePrestataire<T>(code: string, appel: () => Promise<T>): Promise<T> {
+  try {
+    return await appel();
+  } catch (e) {
+    const err = e as Error;
+    console.error(`[paiement] ${code} : ${err.name} ${err.message}`);
+    throw new Error("refus.paiement.prestataire_indisponible");
+  }
+}
+
+/**
+ * Verrouiller le paiement pour la durée de la transaction : deux onglets, un
+ * double clic, deux retours concurrents passent l'un après l'autre, et voient
+ * ce que le premier a inscrit (audit du 23 novembre 2026, B2).
+ */
+async function verrouiller(db: Requete, paiementId: string): Promise<void> {
+  try {
+    await db.query(`select public.paiement_verrouiller($1)`, [paiementId]);
+  } catch (e) {
+    if ((e as Error).message === "refus.introuvable.paiement")
+      throw new Error("paiement.introuvable");
+    throw e;
+  }
+}
+
+interface LienOuvert {
+  prestataire: string;
+  reference: string;
+  dernier: boolean;
+  adaptateur: string | null;
+  url_api: string | null;
+  langue: string | null;
+  unites_attendues: string;
+  fait_entrer_argent: boolean;
+}
+
+/**
+ * Interroger CHAQUE lien encore ouvert de ce paiement, chez le prestataire qui l'a
+ * créé — même si la tour en a ouvert un autre depuis, même s'il n'est pas le
+ * dernier. Un client peut payer sur une page restée ouverte dans un autre onglet :
+ * son argent est entré, il doit être constaté (audit du 23 novembre 2026, B2).
+ *
+ * Un « payé » s'inscrit dès qu'il est trouvé. Un « refusé » ne s'inscrit que pour
+ * le dernier lien — un ancien lien expiré ne ferme pas une page encore ouverte.
+ * Une réponse incohérente (`anomalie` : un autre montant, un autre paiement) ne
+ * solde rien et se signale à la tour.
+ *
+ * Rend le paiement s'il est désormais payé, `null` sinon. `enPanne` dit qu'AU
+ * MOINS UN lien d'argent réel reste sans réponse — son prestataire est muet, ou ce
+ * serveur ne sait plus l'interroger (adaptateur fermé, clés retirées) : tant
+ * qu'il n'a pas répondu, ce lien peut avoir été payé, et aucune seconde commande
+ * ne part (contre-audit du 23 novembre 2026).
+ */
+async function constaterLesLiensOuverts(
+  db: Requete,
+  p: PaiementLu,
+): Promise<{ paye: PaiementLu | null; enAttente: boolean; enPanne: boolean }> {
+  const { rows } = await db.query<LienOuvert>(
+    `select prestataire, reference, dernier, adaptateur, url_api, langue,
+            unites_attendues::text as unites_attendues, fait_entrer_argent
+       from public.paiement_liens_ouverts($1)`,
+    [p.paiement_id],
+  );
+  const hotes = await hotesApi(db, [...new Set(rows.map((l) => l.prestataire))]);
+  let enAttente = false;
+  let sansReponse = 0;
+  for (const l of rows) {
+    // Un lien qui ne fait entrer aucun argent (le simulateur) ne s'interroge pas :
+    // sa décision s'inscrit à l'écran.
+    if (!l.fait_entrer_argent) continue;
+    const adaptateur: Prestataire | null = adaptateurDe({
+      prestataire: l.prestataire,
+      url_api: l.url_api,
+      adaptateur: l.adaptateur,
+      langue: l.langue,
+      hotes_api: hotes.get(l.prestataire) ?? [],
+    });
+    if (!adaptateur) {
+      console.error(
+        `[paiement] ${l.prestataire} : lien ouvert que ce serveur ne sait plus interroger`,
+      );
+      sansReponse += 1;
+      continue;
+    }
+    let r: Awaited<ReturnType<Prestataire["etat"]>>;
+    try {
+      r = await chezLePrestataire(l.prestataire, () =>
+        adaptateur.etat(l.reference, {
+          paiementId: p.paiement_id,
+          unites: Number(l.unites_attendues),
+        }),
+      );
+    } catch {
+      sansReponse += 1;
+      continue;
+    }
+    if (r.etat === "paye") {
+      const paye = await inscrire(
+        db,
+        p.paiement_id,
+        "paye",
+        adaptateur,
+        l.reference,
+        null,
+        r.detail,
+      );
+      return { paye, enAttente: false, enPanne: false };
+    }
+    if (r.etat === "anomalie") {
+      console.error(`[paiement] ${l.prestataire} : réponse incohérente pour ${p.paiement_id}`);
+      await db.query(`select public.paiement_signaler_anomalie($1, $2, $3, $4::jsonb)`, [
+        p.paiement_id,
+        l.prestataire,
+        l.reference,
+        JSON.stringify(r.detail),
+      ]);
+      continue;
+    }
+    if (r.etat === "refuse" && l.dernier) {
+      await inscrire(db, p.paiement_id, "refuse", adaptateur, l.reference, null, r.detail);
+      continue;
+    }
+    if (r.etat === "en_attente" && l.dernier) enAttente = true;
+  }
+  return { paye: null, enAttente, enPanne: sansReponse > 0 };
+}
+
+/** Les hôtes d'API autorisés de ces prestataires (`facturation.hotes_par_prestataire`). */
+async function hotesApi(db: Requete, codes: string[]): Promise<Map<string, string[]>> {
+  if (codes.length === 0) return new Map();
+  const { rows } = await db.query<{ prestataire: string; hotes: string[] }>(
+    `select prestataire, array_agg(hote order by hote) as hotes
+       from facturation.hotes_par_prestataire
+      where usage = 'api' and prestataire = any ($1::text[])
+      group by prestataire`,
+    [codes],
+  );
+  return new Map(rows.map((r) => [r.prestataire, r.hotes]));
+}
+
+/**
  * Inscrire ce que le prestataire a dit. Pour le simulateur, l'API le DÉCLARE à
  * la transaction : la base ne l'admet qu'à cette condition, et l'API ne le
  * déclare que si la tour a ouvert le simulateur — dont les « payés » ne
@@ -92,7 +244,7 @@ async function inscrire(
   db: Requete,
   paiementId: string,
   etat: "lien_cree" | "paye" | "refuse",
-  prestataire: { code: string; simule: boolean },
+  prestataire: Pick<Prestataire, "code" | "simule">,
   reference: string | null,
   lien: string | null,
   detail: Record<string, unknown> = {},
@@ -682,45 +834,37 @@ export const facturation = {
    * et la facture du mois suit.
    */
   async payerEnLigne(db: Requete, paiementId: string, moyen: string) {
-    const p = await lirePaiement(db, paiementId);
+    await verrouiller(db, paiementId);
+    let p = await lirePaiement(db, paiementId);
     if (p.etat === "paye") return { ouvert: true, lien: null, paiement: p };
     // Une montée remplacée par un autre changement d'offre ne se paie plus :
     // la facture du mois facture les jours réellement passés (20261117110000).
     if (p.etat === "remplace") throw new Error("refus.paiement.remplace");
+
+    // Avant toute nouvelle commande, chaque lien encore ouvert est interrogé chez
+    // le prestataire qui l'a créé : s'il est payé, on ne fait pas payer deux fois.
+    const constat = await constaterLesLiensOuverts(db, p);
+    if (constat.paye) return { ouvert: true, lien: null, paiement: constat.paye };
+    // Un prestataire qui ne répond pas sur un lien ouvert : on ne crée pas une
+    // seconde commande à l'aveugle — le client paierait peut-être deux fois.
+    if (constat.enPanne) throw new Error("refus.paiement.prestataire_indisponible");
+    p = await lirePaiement(db, paiementId);
+
     const env = await prestataireOuvert(db);
     if (!env) return { ouvert: false, lien: null, paiement: p };
 
-    // Un lien encore ouvert chez CE prestataire sert encore : on ne crée pas une
+    // Un lien encore en cours chez CE prestataire sert encore : on ne crée pas une
     // seconde commande pour le même paiement (revenir en arrière et choisir
-    // Mastercard après Visa mène à la même page de carte). On demande d'abord
-    // au prestataire s'il n'est pas déjà payé.
-    // Un lien « non abouti » n'est qu'un lien ancien : le temps écoulé ne prouve pas que la commande
-    // n'a pas été payée chez le prestataire (fenêtre fermée avant le retour). On l'interroge aussi.
+    // Mastercard après Visa mène à la même page de carte). Un lien « non abouti »
+    // se rouvre par une commande neuve — l'ancien reste interrogé jusqu'à sa
+    // conclusion.
     if (
-      (p.etat === "lien_cree" || p.etat === "non_abouti") &&
+      p.etat === "lien_cree" &&
       p.prestataire === env.prestataire.code &&
-      p.lien
+      p.lien &&
+      (env.prestataire.simule || constat.enAttente)
     ) {
-      const r =
-        env.prestataire.simule || !p.reference ? null : await env.prestataire.etat(p.reference);
-      // Encore en attente chez le prestataire : un lien en cours sert encore ; un lien dit « non
-      // abouti » se rouvre par une commande neuve (plus bas).
-      if (!r && p.etat === "lien_cree") return { ouvert: true, lien: p.lien, paiement: p };
-      if (r && r.etat === "en_attente" && p.etat === "lien_cree") {
-        return { ouvert: true, lien: p.lien, paiement: p };
-      }
-      if (r && r.etat !== "en_attente") {
-        const constate = await inscrire(
-          db,
-          paiementId,
-          r.etat,
-          env.prestataire,
-          p.reference,
-          null,
-          r.detail,
-        );
-        if (constate.etat === "paye") return { ouvert: true, lien: null, paiement: constate };
-      }
+      return { ouvert: true, lien: p.lien, paiement: p };
     }
 
     // Le moyen choisi doit être actif et accepté par ce prestataire : la base le
@@ -735,17 +879,20 @@ export const facturation = {
     // encaissement saisi entre-temps), la base refuse par une clé.
     await db.query(`select public.paiement_encore_du($1)`, [paiementId]);
 
-    const { reference, lien } = await env.prestataire.creerLien({
-      paiementId,
-      unites: Number(enUnitesExactes(p.montant_ttc, devise.exposant)),
-      devise: devise.iso_numerique,
-      libelle: p.libelle,
-      retour: adresseDeRetour(
-        env.urlPublique,
-        p.payeur_tenant_id ? "cabinet" : "societe",
+    const { reference, lien } = await chezLePrestataire(env.prestataire.code, () =>
+      env.prestataire.creerLien({
         paiementId,
-      ),
-    });
+        unites: Number(enUnitesExactes(p.montant_ttc, devise.exposant)),
+        devise: devise.iso_numerique,
+        libelle: p.libelle,
+        retour: adresseDeRetour(
+          env.urlPublique,
+          p.payeur_tenant_id ? "cabinet" : "societe",
+          paiementId,
+        ),
+        notification: adresseDeNotification(env.urlPublique),
+      }),
+    );
     const inscrit = await inscrire(
       db,
       paiementId,
@@ -803,14 +950,15 @@ export const facturation = {
    * Ce que dit le navigateur ne compte pas.
    */
   async verifierPaiement(db: Requete, paiementId: string) {
+    await verrouiller(db, paiementId);
     const p = await lirePaiement(db, paiementId);
     if (p.etat === "paye" || !p.reference) return p;
-    // On ne demande qu'au prestataire qui a créé le lien, s'il est toujours ouvert.
-    const env = await prestataireOuvert(db);
-    if (!env || env.prestataire.simule || env.prestataire.code !== p.prestataire) return p;
-    const r = await env.prestataire.etat(p.reference);
-    if (r.etat === "en_attente") return p;
-    return inscrire(db, paiementId, r.etat, env.prestataire, p.reference, null, r.detail);
+    // Chaque lien encore ouvert, chez le prestataire qui l'a créé — même si la
+    // tour en a ouvert un autre depuis.
+    const constat = await constaterLesLiensOuverts(db, p);
+    if (constat.paye) return constat.paye;
+    if (constat.enPanne) throw new Error("refus.paiement.prestataire_indisponible");
+    return lirePaiement(db, paiementId);
   },
 
   /** Le simulateur du staging : « payer » ou « refuser », sans carte. */
@@ -818,6 +966,7 @@ export const facturation = {
     const env = await prestataireOuvert(db);
     if (!env || !env.prestataire.simule) throw new Error("paiement.simulateur_ferme");
     if (decision !== "paye" && decision !== "refuse") throw new Error("paiement.decision_inconnue");
+    await verrouiller(db, paiementId);
     const p = await lirePaiement(db, paiementId);
     return inscrire(db, paiementId, decision, env.prestataire, p.reference, null);
   },

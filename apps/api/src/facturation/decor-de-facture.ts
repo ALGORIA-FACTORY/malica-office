@@ -217,10 +217,13 @@ export const monteeARegler = (db: pg.PoolClient, d: Decor) =>
 export async function regler(db: pg.PoolClient, d: Decor, paiement: string): Promise<void> {
   await enPersonne(db, d.titulaire, async () => {
     await db.query(
-      "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://x.tn', '{}', 'visa')",
+      "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa')",
       [paiement],
     );
-    await db.query("select public.paiement_inscrire($1, 'paye', 'clictopay', 'CTP-1')", [paiement]);
+    await db.query(
+      "select public.paiement_inscrire($1, 'paye', 'clictopay', 'REF-0', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
+      [paiement],
+    );
   });
 }
 

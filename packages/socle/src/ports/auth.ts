@@ -30,6 +30,15 @@ export interface AuthPort {
 
   /** Pose un nouveau mot de passe contre le secret du lien, et ouvre la session. */
   reinitialiser(secret: string, motDePasse: string): Promise<Compte>;
+
+  /** L'adresse du compte connecté est-elle prouvée ? Déclarée seulement, elle n'ouvre aucune invitation. */
+  adresseConfirmee(): Promise<boolean>;
+
+  /** Confirme l'adresse contre le secret du lien reçu par courriel. */
+  confirmerAdresse(secret: string): Promise<void>;
+
+  /** Renvoie le lien de confirmation à l'adresse du compte connecté. */
+  renvoyerConfirmation(): Promise<void>;
 }
 
 /**

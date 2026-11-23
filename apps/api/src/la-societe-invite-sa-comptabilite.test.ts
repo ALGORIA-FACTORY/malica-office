@@ -17,7 +17,8 @@ import pg from "pg";
 
 import type { InvitationRecue } from "@malica/socle/ports/repositories";
 
-import { creerCompte, type Utilisateur } from "./auth.ts";
+import { type Utilisateur } from "./auth.ts";
+import { compteDEssai } from "./compte-d-essai.ts";
 import { BASE_CONFIGUREE } from "./circuit-d-essai.ts";
 import { courrielInvitation } from "./courriel/invitation.ts";
 import { libellesDEssai } from "./courriel/libelles-d-essai.ts";
@@ -80,7 +81,7 @@ describe("la société invite sa comptabilité", { skip: !BASE_CONFIGUREE }, () 
 
   before(async () => {
     const compte = async (qui: string) => {
-      const u = await creerCompte(`${marque}-${qui}@essai.local`, "MotDePasseTresLong2026!");
+      const u = await compteDEssai(`${marque}-${qui}@essai.local`, "MotDePasseTresLong2026!");
       assert.ok(u, qui);
       return u;
     };
