@@ -47,6 +47,7 @@ import { rejugerALOuverture, rejugerLesPieces, type BilanDuRejeu } from "../scan
 
 import { dec } from "./decimal.ts";
 import { extraitsEnDeviseDuDossier } from "./en-devise-du-dossier.ts";
+import { avecLesMontantsCorriges } from "./tva-des-montants-corriges.ts";
 
 interface Ligne {
   ordinal: number;
@@ -1339,14 +1340,18 @@ export const office = {
       [tenantId, from, to, ...periodesDeLaRequete(mois)],
     );
     // Une pièce en devise, au cours de son jugement (`en-devise-du-dossier.ts`).
+    // Les montants corrigés au crayon, comme sur la fiche (`tva-des-montants-corriges.ts`).
     return extraitsEnDeviseDuDossier(
       db,
-      (rows as Record<string, unknown>[])
-        .filter((r) => dansLaFenetre(jourDuMois(r, mois).jour, from, to))
-        .map((r) => ({
-          pieceId: r["piece_id"] as string,
-          extract: r["payload"],
-        })),
+      await avecLesMontantsCorriges(
+        db,
+        (rows as Record<string, unknown>[])
+          .filter((r) => dansLaFenetre(jourDuMois(r, mois).jour, from, to))
+          .map((r) => ({
+            pieceId: r["piece_id"] as string,
+            extract: r["payload"],
+          })),
+      ),
     );
   },
 
@@ -1448,25 +1453,29 @@ export const office = {
       [tenantId, from, to, ...periodesDeLaRequete(mois)],
     );
     // Une pièce en devise, au cours de son jugement (`en-devise-du-dossier.ts`).
+    // Les montants corrigés au crayon, comme sur la fiche (`tva-des-montants-corriges.ts`).
     return extraitsEnDeviseDuDossier(
       db,
-      (rows as Record<string, unknown>[]).flatMap((r) => {
-        /** Le jour où la pièce pèse dans la TVA (app.jour_d_imputation_tva). */
-        const { jour } = jourDuMois(r, mois);
-        return dansLaFenetre(jour, from, to)
-          ? [
-              {
-                pieceId: r["piece_id"] as string,
-                extract: r["payload"],
-                // Estimation sans comptabilité : jamais transmise, le jour de sa facture.
-                transmiseLe: r["transmise_le"]
-                  ? (r["transmise_le"] as Date).toISOString().slice(0, 10)
-                  : jour,
-                imputeeLe: jour,
-              },
-            ]
-          : [];
-      }),
+      await avecLesMontantsCorriges(
+        db,
+        (rows as Record<string, unknown>[]).flatMap((r) => {
+          /** Le jour où la pièce pèse dans la TVA (app.jour_d_imputation_tva). */
+          const { jour } = jourDuMois(r, mois);
+          return dansLaFenetre(jour, from, to)
+            ? [
+                {
+                  pieceId: r["piece_id"] as string,
+                  extract: r["payload"],
+                  // Estimation sans comptabilité : jamais transmise, le jour de sa facture.
+                  transmiseLe: r["transmise_le"]
+                    ? (r["transmise_le"] as Date).toISOString().slice(0, 10)
+                    : jour,
+                  imputeeLe: jour,
+                },
+              ]
+            : [];
+        }),
+      ),
     );
   },
 
