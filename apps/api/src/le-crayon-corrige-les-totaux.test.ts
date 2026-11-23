@@ -309,6 +309,48 @@ describe("le crayon corrige le pied de la facture", { skip: !BASE_CONFIGUREE }, 
       retenue: { montant: string; totalTtc: string } | null;
     };
     assert.deepEqual(d.retenue, { montant: "535.530", totalTtc: "17851.000" });
+    // La Bibliothèque suit la règle de la fiche (le dirigeant, 23 novembre 2026 : « tout doit
+    // être conforme, harmonisé ») : le net à payer, avec le TTC avant retenue et la retenue.
+    const [liste] = (await pmeFait("capture.listAvecLectureDesSocietes", [societe])) as Array<{
+      pieces: Array<{
+        id: string;
+        total: string | null;
+        retenue?: { montant: string; totalTtc: string } | null;
+      }>;
+    }>;
+    const ligne = liste?.pieces.find((p) => p.id === id);
+    assert.equal(ligne?.total, "17315.470");
+    assert.deepEqual(ligne?.retenue, { montant: "535.530", totalTtc: "17851.000" });
+    // Les charges par famille et la TVA n'en bougent pas : la charge reste au HT, la TVA
+    // déductible entière — la retenue change le règlement, pas la facture.
+    const m = (
+      (await pmeFait("capture.dossier", id)) as {
+        extraction: { payload: { document_date: string } };
+      }
+    ).extraction.payload.document_date.slice(0, 7);
+    const articles = (
+      (await pmeFait("charges.articles", societe, m, m)) as Array<{
+        pieceId: string;
+        totalHt: string;
+      }>
+    ).filter((a) => a.pieceId === id);
+    assert.equal(
+      articles.reduce((t, a) => t + Number(a.totalHt), 0),
+      15000,
+      "la charge reste au HT",
+    );
+    // La TVA du mois additionne la TVA corrigée au crayon, pas la TVA lue (2 350).
+    const tva = (await pmeFait("office.extraitsTransmis", societe, `${m}-01`, `${m}-28`)) as Array<{
+      pieceId: string;
+      extract: { lines: Array<{ base_ht: string; vat_amount: string }> };
+    }>;
+    const sienne = tva.find((x) => x.pieceId === id);
+    assert.ok(sienne, "la pièce entre à la TVA de son mois");
+    assert.deepEqual(
+      sienne.extract.lines.map((l) => [l.base_ht, l.vat_amount]),
+      [["15000.000", "2850.000"]],
+      "la TVA déductible est celle de la fiche, entière",
+    );
   });
 
   // « Les classer » (22 novembre 2026) : une charge « Non classée » se range dans une famille du pack.

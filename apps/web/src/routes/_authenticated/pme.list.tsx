@@ -558,7 +558,15 @@ function Bibliotheque() {
                         </span>
                       </span>
                       <span className="mt">
-                        {[sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle ?? null, jour(p)]
+                        {[
+                          sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle ?? null,
+                          jour(p),
+                          // Une retenue à la source : le montant est le net à payer, le TTC et
+                          // la retenue se disent ici, comme sur la fiche (23 novembre 2026).
+                          p.retenue
+                            ? `${t("pme.extract.ttc")} ${montant(p.retenue.totalTtc, locale)} · ${t("pme.extract.retenue")} −${montant(p.retenue.montant, locale)}`
+                            : null,
+                        ]
                           .filter((x): x is string => !!x)
                           .join(" · ")}
                       </span>

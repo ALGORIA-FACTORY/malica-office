@@ -242,6 +242,7 @@ export function creerCaptureHttp(): CaptureRepository {
         prouves?: string[];
         decimalesDeLaPiece?: number | null;
         baseProposee?: string | null;
+        retenue?: { montant: string; totalTtc: string } | null;
         archive?: { mandatClosLe: string } | null;
         lectureRefusee?: { motif: string; le: string } | null;
         suivi?: SuiviDEnvoi | null;
@@ -268,6 +269,9 @@ export function creerCaptureHttp(): CaptureRepository {
         prouves: brut.prouves ?? [],
         decimalesDeLaPiece: brut.decimalesDeLaPiece ?? null,
         baseProposee: brut.baseProposee ?? null,
+        // La retenue à la source tranchée et le TTC avant elle : sans elle, le pied de la
+        // fiche disait le net à payer « TTC » (pilote, 23 novembre 2026).
+        retenue: brut.retenue ?? null,
         archive: brut.archive ?? null,
         lectureRefusee: brut.lectureRefusee ?? null,
         suivi: brut.suivi ?? null,
