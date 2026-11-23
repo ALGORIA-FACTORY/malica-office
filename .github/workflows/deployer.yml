@@ -193,3 +193,23 @@ jobs:
             "$GITHUB_ACTOR" "$JETON" "$BREVO_API_KEY" "$ANTHROPIC_API_KEY" "$DEEPSEEK_API_KEY" "$QWEN_API_KEY" "$DOMAINE" "$DOMAINE_ALIAS" \
             "$CLICTOPAY_UTILISATEUR" "$CLICTOPAY_MOT_DE_PASSE" "$FLOUCI_CLE_PUBLIQUE" "$FLOUCI_CLE_PRIVEE" |
             ssh -i ~/.ssh/deploi -p "$PORT" -o BatchMode=yes "malica@$HOTE" "deployer $VERSION"
+
+  # L'application suit le serveur (le dirigeant, 23 novembre 2026). Le pilote
+  # était en 0.2.119 et le téléphone en 0.2.111 : aucune mise à jour en vol
+  # n'était jamais partie sur le canal « pilote ». Une version déployée part
+  # donc aussi vers l'application de son environnement, par `ota.yml`, qui
+  # attend lui-même que la CI du commit soit verte.
+  application:
+    needs: deployer
+    if: github.event.inputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Envoyer ${{ github.event.inputs.version }} vers l'application (${{ github.event.inputs.environnement }})
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPOT: ${{ github.repository }}
+          VERSION: ${{ github.event.inputs.version }}
+          CANAL: ${{ github.event.inputs.environnement }}
+        run: gh workflow run ota.yml --repo "$DEPOT" --ref "$VERSION" -f canal="$CANAL"
