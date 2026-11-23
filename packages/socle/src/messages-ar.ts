@@ -194,13 +194,10 @@ export const ar: Dict = {
   "onboarding.jurisdiction.required": "اختر ولاية قضائية قبل المتابعة.",
   "onboarding.legalId": "المعرف الجبائي (اختياري)",
   "onboarding.adresse": "عنوان المقر (اختياري)",
-  "onboarding.comptabilite": "البريد الإلكتروني لمحاسبكم (اختياري)",
+  "onboarding.comptabilite": "محاسبكم (البريد الإلكتروني، اختياري)",
   "onboarding.comptabilite.help":
-    "يتلقى دعوة لمسك محاسبتكم فور إنشاء الشركة. إن لم يكن لكم محاسب، اتركوا الخانة فارغة: يمكنكم دعوته لاحقاً من الإعدادات › الشركات.",
+    "يتلقى دعوة ويصادق على قيودكم بمجرد قبولها. بدون محاسب، اتركوا الحقل فارغًا: تصادقون بأنفسكم، ويمكنكم دعوته لاحقًا من الإعدادات › الشركات.",
   "onboarding.comptabilite.reessayer": "إعادة إرسال الدعوة",
-  "onboarding.mode": "نمط المصادقة",
-  "onboarding.mode.mandate": "مع محاسبة — تراجع قيودكم وتصادق عليها",
-  "onboarding.mode.autonome": "بمفردكم — تصادقون بأنفسكم، وتُحفظ كل مصادقة",
   "onboarding.submit": "إنشاء المؤسسة",
   "onboarding.error": "تعذّر الإنشاء.",
 

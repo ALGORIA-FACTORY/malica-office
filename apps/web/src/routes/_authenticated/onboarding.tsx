@@ -1,8 +1,8 @@
 /**
- * La création d'une organisation — nature, juridiction, mode de validation, établissement.
+ * La création d'une organisation — nature, comptabilité, juridiction, établissement.
  *
  * Écran du premier pas : la personne dit si elle ouvre une PME ou un cabinet, donne le nom
- * et l'identifiant légal, choisit le mode de validation et nomme l'établissement principal.
+ * et l'identifiant légal, donne s'il le veut l'e-mail de sa comptabilité, et l'adresse du siège.
  *
  * Les juridictions proposées viennent du référentiel (R5, R8) : une option s'affiche parce
  * qu'un pack est en vigueur, jamais parce qu'un code l'a écrite. La devise n'est pas
@@ -21,7 +21,7 @@ import { useState } from "react";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
-import type { OrgKind, ValidationMode } from "@malica/socle/ports/repositories";
+import type { OrgKind } from "@malica/socle/ports/repositories";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
@@ -31,12 +31,12 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
       {
         name: "description",
         content:
-          "Créez votre organisation Malica Office : nature PME ou comptabilité, mode de validation, établissement principal.",
+          "Créez votre organisation Malica Office : nature PME ou comptabilité, e-mail de votre comptabilité, établissement principal.",
       },
       { property: "og:title", content: "Créer une organisation — Malica Office" },
       {
         property: "og:description",
-        content: "Nature, mode de validation et établissement principal de votre organisation.",
+        content: "Nature, comptabilité et établissement principal de votre organisation.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -58,7 +58,6 @@ function Onboarding() {
   const [kind, setKind] = useState<OrgKind>(nature ?? "pme");
   const [name, setName] = useState("");
   const [legalId, setLegalId] = useState("");
-  const [mode, setMode] = useState<ValidationMode>("mandate");
   const [adresse, setAdresse] = useState("");
   const [jurisdiction, setJurisdiction] = useState("");
   const [emailComptabilite, setEmailComptabilite] = useState("");
@@ -98,7 +97,12 @@ function Onboarding() {
           // juridiction. Laisser l'utilisateur en choisir une autre reviendrait à
           // tenir une comptabilité tunisienne en euros.
           currency: devise,
-          validationMode: mode,
+          // Une seule question sur la comptabilité : son e-mail (le dirigeant, 23 novembre
+          // 2026 — « Mode de validation » la reposait). Le mode reste « mandate », le défaut
+          // de la base : sans comptabilité engagée la société tient seule ses livres
+          // (`app.livres_tenus_par_le_cabinet`), et la comptabilité invitée plus tard,
+          // dans Réglages › Sociétés, les tient dès que le mandat est actif.
+          validationMode: "mandate",
           // L'établissement principal porte la raison sociale ; ce qu'on tape ici
           // est l'adresse du siège, et elle va sur la société (4.2).
           adresse: adresse.trim() || null,
@@ -236,27 +240,6 @@ function Onboarding() {
               className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
             />
           </label>
-
-          <fieldset className="lg:col-span-2">
-            <legend className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("onboarding.mode")}
-            </legend>
-            <div className="mt-2 grid gap-px border border-border bg-border">
-              {(["mandate", "autonome"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  aria-pressed={mode === m}
-                  className={`bg-card p-4 text-start text-sm transition-colors ${
-                    mode === m ? "bg-foreground text-background" : "hover:bg-accent"
-                  }`}
-                >
-                  {m === "mandate" ? t("onboarding.mode.mandate") : t("onboarding.mode.autonome")}
-                </button>
-              ))}
-            </div>
-          </fieldset>
 
           {error && (
             <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop lg:col-span-2">
