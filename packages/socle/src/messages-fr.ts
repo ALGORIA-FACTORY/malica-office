@@ -2770,6 +2770,12 @@ export const fr = {
     "Cette période est déjà fermée : une correction est une écriture nouvelle.",
   "refus.facturation.emetteur_futur": "Un émetteur se désigne pour aujourd’hui ou plus tard.",
   "refus.facturation.emetteur_deja": "Cette organisation est déjà l’émetteur à cette date.",
+  "refus.facturation.serie_absente": "Aucune série de factures n’est en vigueur : la tour doit en régler une (Factures).",
+  "refus.facturation.serie_epuisee": "Le compteur de la série est plein pour cette année : la tour doit élargir ses chiffres.",
+  "refus.facturation.serie_invalide": "Série invalide : lettres capitales et chiffres séparés par des tirets, et un compteur de 4 à 9 chiffres.",
+  "refus.facturation.reglage_date": "Un réglage des factures vaut pour aujourd’hui ou plus tard.",
+  "refus.facturation.devise_inconnue": "Cette devise n’existe pas au référentiel.",
+  "refus.facturation.renvoi_pme_seulement": "Seule la facture d’une société se renvoie par courriel.",
   "refus.paiement.encaissement_requis":
     "Un moyen de paiement s’active avec son moyen d’encaissement.",
   "refus.paiement.adresse_de_retour": "Un paiement ouvert a une adresse de retour.",

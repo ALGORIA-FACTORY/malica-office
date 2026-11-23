@@ -533,6 +533,57 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /**
+   * Les factures (23 novembre 2026) : le réglage en vigueur — série, ce que la facture imprime,
+   * la banque — et ceux qui viennent. La RLS ne les ouvre qu'à l'opérateur.
+   */
+  async reglageFactures(db: Requete) {
+    const { rows } = await db.query<{ v: Record<string, unknown> | null; a: unknown[] }>(
+      `with r as (
+         select x.*, x.decide_par is null as livre from plateforme.reglages_factures x
+       ), vue as (
+         select r.*, to_jsonb(r) - 'decide_par' - 'rang' - 'id' as j from r
+       )
+       select (select v.j from vue v where v.valide_des <= current_date
+                order by v.valide_des desc, v.rang desc limit 1) as v,
+              coalesce((select jsonb_agg(v.j order by v.valide_des, v.rang) from vue v
+                         where v.valide_des > current_date), '[]'::jsonb) as a`,
+    );
+    return { en_vigueur: rows[0]?.v ?? null, a_venir: rows[0]?.a ?? [] };
+  },
+
+  /** La tour règle les factures : la base valide la série, la date et le motif. */
+  async reglerFactures(db: Requete, reglage: unknown, valideDes: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.factures_regler($1::jsonb, $2::date, $3) as r`,
+      [JSON.stringify(saisie(z.record(z.string(), z.unknown()), reglage)), valideDes, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
+  /** Les cent dernières factures émises, sous la RLS de l'opérateur. */
+  async facturesEmises(db: Requete) {
+    const { rows } = await db.query(
+      `select f.id as facture_id, f.numero, f.emise_le::text, f.payeur_type,
+              f.destinataire_nom as destinataire, f.montant_ttc::text, f.devise, e.etat
+         from facturation.factures f
+         left join facturation.encours_v e on e.facture_id = f.id
+        where (select app.is_platform())
+        order by f.created_at desc, f.numero desc
+        limit 100`,
+    );
+    return rows;
+  },
+
+  /** Renvoyer le courriel d'une facture de société : une fois par facture dans la fenêtre. */
+  async renvoyerFacture(db: Requete, factureId: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.facture_renvoyer($1, $2) as r`,
+      [saisie(Id, factureId), saisie(Motif, motif)],
+    );
+    return rows[0]!.r;
+  },
+
   /** La tour ouvre ou ferme les relances, et la suspension automatique : daté et motivé. */
   async reglerRelances(
     db: Requete,

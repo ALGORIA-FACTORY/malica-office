@@ -11,8 +11,8 @@
 -- un préfixe dans le code, une séquence globale qui laisse un trou à chaque transaction annulée.
 --
 -- Ce qui change :
---   1. `plateforme.reglages_factures` : ce que la tour règle des factures — la série d'abord,
---      puis (20261231210000) ce que la facture imprimée porte de l'émetteur et de sa banque.
+--   1. `plateforme.reglages_factures` : ce que la tour règle des factures — la série, et ce
+--      que la facture imprimée porte de l'émetteur et de sa banque (lus en 20261231210000).
 --      Daté, motivé, en ajout seul, comme les autres réglages de la tour. Semée ici :
 --      la série `MO-TN-I11` en vigueur le 23 novembre 2026 (défaut livré : `decide_par` nul).
 --   2. `facturation.compteurs_factures` : un compteur par série et par année, verrouillé par
@@ -46,6 +46,21 @@ create table plateforme.reglages_factures (
                       check (serie ~ '^[A-Z0-9]+(-[A-Z0-9]+)*$' and length(serie) <= 32),
   -- Les chiffres du compteur annuel (6 : 000001).
   chiffres            smallint not null check (chiffres between 4 and 9),
+  -- Ce que la facture imprimée porte de l'émetteur, au-delà de son organisation (nom, matricule).
+  -- Nuls : la facture ne les imprime pas (l'adresse retombe sur celle de l'organisation).
+  adresse             text,
+  rne                 text,
+  site_web            text,
+  conditions_paiement text,
+  -- Les coordonnées bancaires imprimées (« COORDONNÉES BANCAIRES — RIB ») : saisies à la tour,
+  -- jamais dans le code ni dans une migration.
+  banque_titulaire    text,
+  banque_nom          text,
+  banque_agence       text,
+  banque_rib          text,
+  banque_iban         text,
+  banque_bic          text,
+  banque_devise       text references ref.devises (code),
   valide_des          date not null,
   motif               text not null check (length(btrim(motif)) > 0),
   -- Nul : le défaut livré par une migration (R10, « un défaut se dit »).
