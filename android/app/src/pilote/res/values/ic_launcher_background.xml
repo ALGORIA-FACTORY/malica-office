@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le pilote se reconnaît d'un coup d'œil : fond encre, marque blanche (le dirigeant, 23 novembre 2026). -->
+<resources>
+    <color name="ic_launcher_background">#0A0A0A</color>
+</resources>
