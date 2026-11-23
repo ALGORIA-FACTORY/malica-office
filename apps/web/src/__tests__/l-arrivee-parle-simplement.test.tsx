@@ -148,6 +148,25 @@ describe("4.1 — choisissez votre espace", () => {
     );
   });
 
+  // Pilote, 23 novembre 2026 : juste après la création, la liste en cache était encore
+  // vide ; l'écran renvoyait à la création au lieu d'entrer dans la société.
+  it("juste après la création, une liste en cache vide ne renvoie pas à la création", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(["tour-suis-je"], false);
+    client.setQueryData(["invitations-pour-moi"], []);
+    client.setQueryData(["my-organizations"], []);
+    await client.invalidateQueries({ queryKey: ["my-organizations"] });
+    monde.orgs = [SOCIETE];
+    const Page = composant(RouteOffice);
+    render(
+      <QueryClientProvider client={client}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(nav.aller).toHaveBeenCalledWith({ to: "/pme" }));
+    expect(nav.aller).not.toHaveBeenCalledWith({ to: "/onboarding", replace: true });
+  });
+
   it("une dirigeante ne voit ni rôle, ni mode de validation, ni juridiction", async () => {
     monde.orgs = [SOCIETE];
     rendre(composant(RouteOffice));
