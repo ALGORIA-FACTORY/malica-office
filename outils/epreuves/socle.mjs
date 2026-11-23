@@ -194,7 +194,13 @@ export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://l
     return (await r.json()).utilisateur;
   }
 
-  /** Crée le compte s'il n'existe pas, puis s'y connecte. */
+  /**
+   * Crée le compte s'il n'existe pas, puis s'y connecte. Sur une instance locale,
+   * l'adresse du compte neuf est prouvée comme par le lien de confirmation, que
+   * personne n'y reçoit : sans cela, aucune invitation ne s'ouvrirait (audit du
+   * 23 novembre 2026). Contre un hôte distant, rien n'est prouvé : l'épreuve
+   * éprouve alors le vrai chemin, courriel compris.
+   */
   async function inscrireOuConnecter(compte, nom) {
     cookie = "";
     const r = await appel("/auth/inscription", {
@@ -202,7 +208,18 @@ export function creerEpreuve(nom, base = process.env["MALICA_BASE"] ?? "http://l
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...compte, nom }),
     });
-    if (r.status === 201) return (await r.json()).utilisateur;
+    if (r.status === 201) {
+      const utilisateur = (await r.json()).utilisateur;
+      if (estUneInstanceLocale(BASE)) {
+        const prouvee = spawnSync(
+          process.execPath,
+          [fileURLToPath(new URL("../adresse-d-essai.mjs", import.meta.url)), compte.email],
+          { stdio: "inherit" },
+        );
+        if (prouvee.status !== 0) throw new Error(`adresse non prouvée : ${compte.email}`);
+      }
+      return utilisateur;
+    }
     return connecter(compte);
   }
 
