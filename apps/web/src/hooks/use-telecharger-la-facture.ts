@@ -40,6 +40,13 @@ async function chargerLaMarque(): Promise<HTMLImageElement | null> {
   }
 }
 
+/** Ce que la préparation et le dessin lèvent : des clés du dictionnaire, dites telles quelles. */
+const ERREURS_DU_PDF: readonly MessageKey[] = [
+  "facture.pdf.sans_emetteur",
+  "facture.pdf.canevas_indisponible",
+  "facture.pdf.encodage_impossible",
+];
+
 export function useTelechargerLaFacture() {
   const { t, locale, dir } = useI18n();
   const telecharger = useMutation({
@@ -56,10 +63,12 @@ export function useTelechargerLaFacture() {
     },
   });
   /** Ce qui n'a pas marché, dans la langue du lecteur. */
-  const erreur = telecharger.error
-    ? telecharger.error instanceof Error && telecharger.error.message.startsWith("facture.pdf.")
-      ? t(telecharger.error.message as MessageKey)
-      : texteDeLErreur(telecharger.error, "hooks/use-telecharger-la-facture", t("common.error"))
+  const e = telecharger.error;
+  const propre = ERREURS_DU_PDF.find((cle) => e instanceof Error && e.message === cle);
+  const erreur = e
+    ? propre
+      ? t(propre)
+      : texteDeLErreur(e, "hooks/use-telecharger-la-facture", t("common.error"))
     : null;
   return { telecharger, erreur };
 }

@@ -25,7 +25,7 @@ type Traduire = (cle: MessageKey, valeurs?: Record<string, string | number>) => 
 /** Le signal du point devant le numéro : la couleur fonctionnelle de l'état de la facture. */
 export type SignalDeFacture = "succes" | "erreur" | "alerte" | "neutre";
 
-export interface LigneImprimable {
+interface LigneImprimable {
   libelle: string;
   quantite: string;
   prixUnitaire: string;
