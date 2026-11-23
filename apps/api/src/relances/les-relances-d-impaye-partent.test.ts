@@ -168,9 +168,12 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
         ["impaye.rappel", "email"],
       ]);
       await relancer(db);
-      const tout = await db.query("select 1 from notif.envois where destinataire = $1", [
-        d.titulaire,
-      ]);
+      // La facture elle-même a averti son titulaire (`facture.emise.pme`) : seules les
+      // relances comptent ici.
+      const tout = await db.query(
+        "select 1 from notif.envois where destinataire = $1 and code like 'impaye.%'",
+        [d.titulaire],
+      );
       assert.equal(tout.rows.length, envois.length, "le second passage se tait et n'inscrit rien");
     });
   });
@@ -267,8 +270,12 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
             titre: string;
             corps: string;
             action_route: string | null;
+            code: string;
           }>("select * from notif.reserver_courriels($1, interval '10 minutes')", [dus + 1]);
-          return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
+          // Le courriel de la facture elle-même (`facture.emise.pme`) n'est pas une relance.
+          return rows.filter(
+            (c) => c.email === `${d.titulaire}@essai.local` && c.code.startsWith("impaye."),
+          );
         });
       const avant = await lire();
       // Le message dit l'état de la file : un échec se lit sans rejouer l'épreuve.
@@ -301,10 +308,12 @@ describe("les relances d'impayé partent", { skip: !ADMIN }, () => {
       await relancer(db);
       await regler(db, d.operateur, false, false);
       const file = await sous(db, "malica_api", null, async () => {
-        const { rows } = await db.query<{ email: string }>(
-          "select email from notif.reserver_courriels(500, interval '10 minutes')",
+        const { rows } = await db.query<{ email: string; code: string }>(
+          "select email, code from notif.reserver_courriels(500, interval '10 minutes')",
         );
-        return rows.filter((c) => c.email === `${d.titulaire}@essai.local`);
+        return rows.filter(
+          (c) => c.email === `${d.titulaire}@essai.local` && c.code.startsWith("impaye."),
+        );
       });
       assert.equal(file.length, 0);
     });

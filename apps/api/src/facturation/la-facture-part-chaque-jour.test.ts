@@ -341,7 +341,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       await regler(db, m, true);
       await db.query("reset role");
       const { rows: avant } = await db.query<{ n: string }>(
-        "select last_value::text as n from facturation.numero_facture_seq",
+        "select coalesce(sum(dernier), 0)::text as n from facturation.compteurs_factures",
       );
       const troisieme = await tour(db);
       assert.equal(troisieme?.etat, "passee");
@@ -349,7 +349,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       assert.ok(somme(troisieme, "deja_emises") >= 2, "le titulaire et le cabinet sont comptés");
       await db.query("reset role");
       const { rows: apres } = await db.query<{ n: string }>(
-        "select last_value::text as n from facturation.numero_facture_seq",
+        "select coalesce(sum(dernier), 0)::text as n from facturation.compteurs_factures",
       );
       assert.equal(apres[0]!.n, avant[0]!.n, "un mois déjà facturé est sauté avant tout numéro");
       assert.equal((await facturesDe(db, "f.licence_id", m.licence)).length, 1);
