@@ -2454,20 +2454,17 @@ function PieceScreen() {
         />
         <div className={vente ? "amt vent" : "amt"}>
           {/* Un avoir retranche : son total se lit en négatif (22 novembre 2026). Une retenue
-              à la source tranchée : le TTC est le dû avant elle, le net à payer se dit à côté
-              (pilote, 23 novembre 2026 — l'en-tête disait le net « TTC »). */}
+              à la source tranchée : le montant est le net à payer, le TTC et la retenue se
+              disent à côté — la même règle que la Bibliothèque et le pied de la lecture
+              (le dirigeant, 23 novembre 2026 : « tout doit être conforme, harmonisé »). */}
           {lisible(
             montantDeLaPiece(
-              {
-                total: dossier.data.retenue?.totalTtc ?? totaux?.ttc ?? null,
-                devise: null,
-                typeDeDocument: piece.documentKind,
-              },
+              { total: totaux?.ttc ?? null, devise: null, typeDeDocument: piece.documentKind },
               sept.types,
             ),
           ) ?? "—"}{" "}
           <u>
-            {devise} {t("pme.extract.ttc")}
+            {devise} {dossier.data.retenue ? t("pme.extract.netAPayer") : t("pme.extract.ttc")}
           </u>
         </div>
         <div className="f-puces">
@@ -2485,11 +2482,11 @@ function PieceScreen() {
           ))}
           {dossier.data.retenue ? (
             <>
+              <span data-entete="ttc">
+                {t("pme.extract.ttc")} <b>{lisible(dossier.data.retenue.totalTtc) ?? "—"}</b>
+              </span>
               <span data-entete="retenue">
                 {t("pme.extract.retenue")} <b>−{lisible(dossier.data.retenue.montant) ?? "—"}</b>
-              </span>
-              <span data-entete="net">
-                {t("pme.extract.netAPayer")} <b>{lisible(totaux?.ttc) ?? "—"}</b>
               </span>
             </>
           ) : null}

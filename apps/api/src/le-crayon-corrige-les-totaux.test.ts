@@ -309,12 +309,18 @@ describe("le crayon corrige le pied de la facture", { skip: !BASE_CONFIGUREE }, 
       retenue: { montant: string; totalTtc: string } | null;
     };
     assert.deepEqual(d.retenue, { montant: "535.530", totalTtc: "17851.000" });
-    // La Bibliothèque dit le montant de la facture, TTC avant retenue — pas le net à payer
-    // (pilote, 23 novembre 2026 : la pièce MAP y comptait 462,720 au lieu de 477,000).
+    // La Bibliothèque suit la règle de la fiche (le dirigeant, 23 novembre 2026 : « tout doit
+    // être conforme, harmonisé ») : le net à payer, avec le TTC avant retenue et la retenue.
     const [liste] = (await pmeFait("capture.listAvecLectureDesSocietes", [societe])) as Array<{
-      pieces: Array<{ id: string; total: string | null }>;
+      pieces: Array<{
+        id: string;
+        total: string | null;
+        retenue?: { montant: string; totalTtc: string } | null;
+      }>;
     }>;
-    assert.equal(liste?.pieces.find((p) => p.id === id)?.total, "17851.000");
+    const ligne = liste?.pieces.find((p) => p.id === id);
+    assert.equal(ligne?.total, "17315.470");
+    assert.deepEqual(ligne?.retenue, { montant: "535.530", totalTtc: "17851.000" });
   });
 
   // « Les classer » (22 novembre 2026) : une charge « Non classée » se range dans une famille du pack.

@@ -239,6 +239,20 @@ function retenueJugee(
   };
 }
 
+/**
+ * La retenue tranchée, le TTC avant elle et le net à payer qui en découle, en décimales de
+ * la devise. Le net se calcule en unités mineures : jamais une soustraction en flottant.
+ */
+function netDeLaRetenue(
+  juge: Record<string, unknown> | undefined,
+  exposant: unknown,
+): { montant: string; totalTtc: string; netAPayer: string } | null {
+  const r = retenueJugee(juge, exposant);
+  if (!r) return null;
+  const net = Number(juge?.["du_mineur"]) - Number(juge?.["retenue_mineure"]);
+  return { ...r, netAPayer: depuisUniteMineure(net, Number(exposant)) };
+}
+
 /** Ce que rend `public.piece_qui_accompagne` (voir la migration `20261025223000`). */
 interface PieceQuiAccompagneBrute {
   genre: "recu" | "justificatif";
@@ -551,11 +565,12 @@ async function piecesLuesDe(
   );
   const exposants = new Map(devises.map((d) => [d.code, Number(d.exposant)]));
   /*
-   * LA RETENUE À LA SOURCE NE CHANGE PAS LE MONTANT DE LA FACTURE (pilote, 23 novembre 2026).
+   * LA RETENUE À LA SOURCE, LA MÊME RÈGLE PARTOUT (pilote, 23 novembre 2026).
    *
-   * Quand le dernier jugement de la dernière lecture tranche une retenue, le TTC imprimé (ou
-   * corrigé au crayon) est le net à payer : la liste rend le TTC avant retenue, comme l'en-tête
-   * de la fiche (`retenueJugee`). Une requête pour toute la liste, par l'index des analyses.
+   * Quand le dernier jugement de la dernière lecture tranche une retenue, la liste suit la même
+   * règle que la fiche (le dirigeant, 23 novembre 2026 : « tout doit être conforme, harmonisé ») :
+   * le montant de la pièce est le net à payer, le TTC avant retenue et la retenue l'accompagnent.
+   * Une requête pour toute la liste, par l'index des analyses.
    */
   const ids = (rows as Record<string, unknown>[]).map((r) => r["id"] as string);
   const { rows: juges } = ids.length
@@ -618,6 +633,7 @@ function versPieceLue(
     totals?: { ttc?: string };
   } | null;
   const cab = versMontantsDuCabinet(r["du_cabinet"]);
+  const retenue = netDeLaRetenue(juge, exposants.get(lu?.currency ?? ""));
   return {
     id: r["id"] as string,
     status: r["status"] as string,
@@ -646,13 +662,10 @@ function versPieceLue(
       // ne dit rien, « Vérifier » rend ce que la personne a choisi (G6c).
       sensDeclare(r["document_kind"]),
     // Le TTC corrigé l'emporte sur le TTC lu, comme sur la fiche ; l'écriture du cabinet sur les deux.
-    // Une retenue tranchée : le TTC avant elle, pas le net à payer.
-    total:
-      cab?.ttc ??
-      retenueJugee(juge, exposants.get(lu?.currency ?? ""))?.totalTtc ??
-      dit.ttc ??
-      lu?.totals?.ttc ??
-      null,
+    // Une retenue tranchée : le net à payer (TTC − retenue), la même règle que la fiche.
+    total: cab?.ttc ?? retenue?.netAPayer ?? dit.ttc ?? lu?.totals?.ttc ?? null,
+    // Le TTC avant retenue et la retenue, que la ligne dit sous le net (`null` : aucune).
+    retenue: cab || !retenue ? null : { montant: retenue.montant, totalTtc: retenue.totalTtc },
     devise: cab?.devise ?? lu?.currency ?? null,
     decimales: exposants.get(cab?.devise ?? lu?.currency ?? "") ?? null,
     typeDeDocument: (r["document_kind"] as string | null) ?? null,

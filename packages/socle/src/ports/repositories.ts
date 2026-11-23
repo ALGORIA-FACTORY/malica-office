@@ -1646,8 +1646,13 @@ export interface PieceLue {
    * ne dit que le sens lu (achat ou vente).
    */
   typeDeDocument: string | null;
-  /** Le total TTC, chaîne décimale du Socle. */
+  /**
+   * Le montant de la pièce, chaîne décimale du Socle : le TTC, ou le net à payer quand une
+   * retenue à la source est tranchée (même règle que la fiche).
+   */
   total: string | null;
+  /** La retenue tranchée et le TTC avant elle ; `null` ou absent : aucune. */
+  retenue?: { montant: string; totalTtc: string } | null;
   devise: string | null;
   /** Les décimales de `devise` au référentiel (`ref.devises`) ; `null` si elle n'y est pas. */
   decimales?: number | null;
