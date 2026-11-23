@@ -8,9 +8,15 @@
  *
  * Il ne crée ni ne change rien lui-même : il mène aux écrans qui écrivent. Le retour ramène à
  * l'accueil ; l'arrivée est déjà marquée vue par « C'est exact ».
+ *
+ * La comptabilité ne se redemande pas (le dirigeant, 23 novembre 2026) : invitée à la
+ * création, ou déjà sous mandat, l'étape 2 est passée et l'on va droit aux pièces.
  */
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 
+import { usePme } from "@/components/malica/pme-context";
+import { useInvitationDeMaComptabilite } from "@/hooks/use-invitation-de-ma-comptabilite";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useI18n } from "@/i18n";
 
 type Etape = "forfait" | "comptabilite";
@@ -27,6 +33,10 @@ function Suite() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { etape } = useSearch({ from: "/_authenticated/pme/suite" });
+  const { tenantId } = usePme();
+  const cabinet = useMonCabinet(tenantId);
+  const invitation = useInvitationDeMaComptabilite(tenantId);
+  const dejaInvitee = Boolean(cabinet.data) || invitation.data?.statut === "en_attente";
 
   return (
     <div
@@ -72,7 +82,11 @@ function Suite() {
                 type="button"
                 className="pr"
                 onClick={() =>
-                  void navigate({ to: "/pme/suite", search: { etape: "comptabilite" } })
+                  void navigate(
+                    dejaInvitee
+                      ? { to: "/pme/capturer" }
+                      : { to: "/pme/suite", search: { etape: "comptabilite" } },
+                  )
                 }
               >
                 {t("pme.suite.continuer")}

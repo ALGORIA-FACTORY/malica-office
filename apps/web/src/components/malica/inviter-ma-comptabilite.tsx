@@ -18,18 +18,20 @@
  * La base décide (propriétaire seul, place de trop, mandat déjà actif) ;
  * l'écran montre le refus.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { clePlaceComptable, usePlaceComptable } from "@/hooks/use-comptable-interne";
+import {
+  cleInvitation,
+  useInvitationDeMaComptabilite,
+} from "@/hooks/use-invitation-de-ma-comptabilite";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 
 type Choix = "externe" | "interne";
-
-const cleInvitation = (tenantId: string) => ["invitation-de-ma-comptabilite", tenantId] as const;
 
 export function InviterMaComptabilite({
   tenantId,
@@ -42,10 +44,7 @@ export function InviterMaComptabilite({
   const { t, locale } = useI18n();
   const qc = useQueryClient();
   const place = usePlaceComptable(tenantId).data;
-  const derniere = useQuery({
-    queryKey: cleInvitation(tenantId),
-    queryFn: () => office().identity.invitationDeMaComptabilite(tenantId),
-  });
+  const derniere = useInvitationDeMaComptabilite(tenantId);
   const [email, setEmail] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoyee, setEnvoyee] = useState<string | null>(null);

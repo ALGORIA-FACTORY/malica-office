@@ -201,13 +201,10 @@ export const fr = {
   "onboarding.jurisdiction.required": "Choisissez une juridiction avant de continuer.",
   "onboarding.legalId": "Identifiant fiscal (facultatif)",
   "onboarding.adresse": "Adresse du siège (facultatif)",
-  "onboarding.comptabilite": "E-mail de votre comptabilité (facultatif)",
+  "onboarding.comptabilite": "Votre expert-comptable (e-mail, facultatif)",
   "onboarding.comptabilite.help":
-    "Elle reçoit une invitation à tenir votre comptabilité dès la création de la société. Sans comptabilité, laissez vide : vous pourrez l'inviter plus tard dans Réglages › Sociétés.",
+    "Il reçoit une invitation et validera vos écritures dès qu'il l'accepte. Sans expert-comptable, laissez vide : vous validez vous-même, et vous pourrez l'inviter plus tard dans Réglages › Sociétés.",
   "onboarding.comptabilite.reessayer": "Renvoyer l'invitation",
-  "onboarding.mode": "Mode de validation",
-  "onboarding.mode.mandate": "Avec une comptabilité — elle relit et valide vos écritures",
-  "onboarding.mode.autonome": "Seul — vous validez vous-même, et chaque validation est gardée",
   "onboarding.submit": "Créer l'organisation",
   "onboarding.error": "Création impossible.",
 

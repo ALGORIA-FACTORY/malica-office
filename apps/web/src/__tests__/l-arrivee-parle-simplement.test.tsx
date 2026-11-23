@@ -21,6 +21,7 @@ const monde = vi.hoisted(() => ({
   orgs: [] as unknown[],
   forfait: null as null | { titulaire: boolean; pris_en_charge_par: string | null },
   matricule: "1234567A/A/M/000" as string | null,
+  invitation: null as null | { statut: string; email: string; envoyeeLe: string },
 }));
 const appels = vi.hoisted(() => ({
   creer: vi.fn(async (..._a: unknown[]) => "org-1"),
@@ -79,6 +80,8 @@ vi.mock("@/verticals/malica-office/composition", () => ({
           createOrganization: appels.creer,
           inviterMaComptabilite: appels.inviter,
           definirOrganisation: saisie.definir,
+          invitationDeMaComptabilite: async () => monde.invitation,
+          monCabinet: async () => null,
         }),
         tour: depot({ suisJePlateforme: async () => monde.operateur }),
         referential: depot({
@@ -127,6 +130,7 @@ afterEach(() => {
     orgs: [],
     forfait: null,
     matricule: "1234567A/A/M/000",
+    invitation: null,
   });
 });
 
@@ -232,6 +236,16 @@ describe("l'invitation de la comptabilité dès la création (22 novembre 2026)"
     expect(appels.inviter).not.toHaveBeenCalled();
   });
 
+  // 23 novembre 2026 : une seule question sur la comptabilité, son e-mail.
+  it("le mode de validation ne se demande plus : la société naît en mandat", async () => {
+    await remplir("");
+    expect(screen.queryByText("onboarding.mode")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "onboarding.submit" }));
+    await waitFor(() => expect(appels.creer).toHaveBeenCalled());
+    const saisie = appels.creer.mock.calls[0]![0] as Record<string, unknown>;
+    expect(saisie["validationMode"]).toBe("mandate");
+  });
+
   it("une invitation refusée ne crée pas une seconde société au renvoi", async () => {
     appels.inviter.mockRejectedValueOnce(new Error("refus"));
     await remplir("cabinet@exemple.tn");
@@ -313,6 +327,21 @@ describe("C1 — « C'est exact » mène au forfait, puis à la comptabilité", 
     expect(screen.queryByText("pme.suite.compta.sans")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "pme.suite.continuer" }));
     expect(nav.aller).toHaveBeenCalledWith({ to: "/pme/suite", search: { etape: "comptabilite" } });
+  });
+
+  it("la comptabilité invitée à la création ne se redemande pas", async () => {
+    etapeDeLaSuite.valeur = "forfait";
+    monde.invitation = {
+      statut: "en_attente",
+      email: "cabinet@exemple.tn",
+      envoyeeLe: "2026-11-23T10:00:00Z",
+    };
+    rendre(composant(RouteSuite));
+    const continuer = screen.getByRole("button", { name: "pme.suite.continuer" });
+    await waitFor(() => {
+      fireEvent.click(continuer);
+      expect(nav.aller).toHaveBeenLastCalledWith({ to: "/pme/capturer" });
+    });
   });
 
   it("à l'étape comptabilité : inviter, ou continuer sans comptabilité", () => {
