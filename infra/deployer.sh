@@ -198,6 +198,13 @@ principal() {
       # 16 novembre 2026 : les comptes marchands du paiement en ligne.
       BREVO_API_KEY | ANTHROPIC_API_KEY | DEEPSEEK_API_KEY | QWEN_API_KEY) ;;
       CLICTOPAY_UTILISATEUR | CLICTOPAY_MOT_DE_PASSE | FLOUCI_CLE_PUBLIQUE | FLOUCI_CLE_PRIVEE) ;;
+      # 23 novembre 2026 : le simulateur de paiement, « oui » sur le staging seul.
+      PAIEMENT_SIMULATEUR)
+        [[ "$valeur" == "oui" || "$valeur" == "non" ]] || {
+          echo "KO : PAIEMENT_SIMULATEUR vaut oui ou non, ignoré" >&2
+          continue
+        }
+        ;;
       DOMAINE | DOMAINE_ALIAS)
         [ -z "$valeur" ] || [[ "$valeur" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || {
           echo "KO : $nom n'est pas un nom d'hôte, ignoré" >&2

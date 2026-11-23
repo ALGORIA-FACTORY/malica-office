@@ -23,7 +23,10 @@ import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 
 import {
+  adresseConfirmee,
+  confirmerAdresse,
   creerCompte,
+  demanderConfirmationAdresse,
   demanderReinitialisation,
   emettreJeton,
   emettreJetonDeRafraichissement,
@@ -39,7 +42,7 @@ import {
   type Utilisateur,
 } from "./auth.ts";
 import { configurationCourriel } from "./courriel/brevo.ts";
-import { envoyerReinitialisation } from "./courriel/reinitialisation.ts";
+import { envoyerConfirmationAdresse, envoyerReinitialisation } from "./courriel/liens-du-compte.ts";
 import { executerSousCle, exigerPorteeDepot, ouParCleApi, PorteeInsuffisante } from "./cles-api.ts";
 import { sonderLaBase, sousIdentite } from "./db.ts";
 import { detailTechnique, introuvableLisible, REFUS_SANS_CLE, refusLisible } from "./refus.ts";
@@ -52,6 +55,7 @@ import { emettreLeGeste, gesteDe } from "./observabilite/gestes.ts";
 import { codeDuRefus, consigner } from "./observabilite/journal.ts";
 import { issueDuStatut, tracerLaRequete } from "./observabilite/requete.ts";
 import { traceCourante } from "./observabilite/trace.ts";
+import { recevoirNotificationFlouci } from "./paiement/recevoir-notification.ts";
 import { executerRpc, origineDEssai, RpcIntrouvable } from "./rpc.ts";
 import {
   estUneCoque,
@@ -191,6 +195,27 @@ app.get("/exports/:id/contenu", exigerIdentite, (req, res, next) => {
   servirUnExport(req, res).catch(next);
 });
 
+/**
+ * La notification de paiement de Flouci — voir `paiement/notification-flouci.ts`.
+ * Montée AVANT `express.json` : la signature porte sur le corps BRUT, octet par
+ * octet, et un JSON relu puis réécrit ne la vérifierait plus. Limitée en débit,
+ * en taille, et sans identité : seule la signature ouvre la vérification.
+ */
+const limiteNotification = rateLimit({
+  windowMs: 60_000,
+  limit: 120,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+app.post(
+  "/notifications-de-paiement/flouci",
+  limiteNotification,
+  express.raw({ type: () => true, limit: "64kb" }),
+  (req, res, next) => {
+    recevoirNotificationFlouci(req, res).catch(next);
+  },
+);
+
 app.use(express.json({ limit: "1mb" }));
 
 /*
@@ -218,6 +243,26 @@ const limiteAuth = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: { erreur: "trop d'essais : réessayez dans une minute" },
+});
+
+/**
+ * Dix mots de passe faux par quart d'heure et par COMPTE (audit du 23 novembre
+ * 2026, F4) : la limite par adresse IP se contourne en changeant d'adresse, pas
+ * celle-ci. Une connexion réussie ne compte pas. La clé est l'adresse saisie,
+ * en minuscules — elle ne dit pas si le compte existe : une adresse inconnue
+ * s'épuise de la même façon.
+ */
+const limiteParCompte = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: Number(process.env["AUTH_ECHECS_PAR_COMPTE"] ?? 10),
+  skipSuccessfulRequests: true,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const email = (req.body as { email?: unknown } | undefined)?.email;
+    return typeof email === "string" ? `compte:${email.trim().toLowerCase()}` : "compte:?";
+  },
+  message: { erreur: "trop d'essais pour ce compte : réessayez dans un quart d'heure" },
 });
 
 /**
@@ -267,13 +312,16 @@ app.post("/auth/inscription", limiteAuth, async (req, res, next) => {
     }
     const jeton = await ouvrirUneSession(utilisateur);
     poserCookie(res, jeton);
+    // L'adresse est déclarée, pas prouvée : le lien de confirmation part tout de
+    // suite. Elle n'ouvre aucune invitation avant d'être prouvée.
+    await envoyerLaConfirmation(utilisateur.id);
     res.status(201).json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
   } catch (erreur) {
     next(erreur);
   }
 });
 
-app.post("/auth/connexion", limiteAuth, async (req, res, next) => {
+app.post("/auth/connexion", limiteAuth, limiteParCompte, async (req, res, next) => {
   try {
     const saisie = Identifiants.safeParse(req.body);
     if (!saisie.success) {
@@ -377,6 +425,63 @@ app.post("/auth/reinitialiser", limiteAuth, async (req, res, next) => {
     const jeton = emettreJeton(utilisateur, emisLe);
     poserCookie(res, jeton);
     res.json({ utilisateur, jeton, ...(await jetonPourLaCoque(req, utilisateur)) });
+  } catch (erreur) {
+    next(erreur);
+  }
+});
+
+/** Envoie le lien de confirmation d'une adresse encore déclarée. Ne lève jamais. */
+async function envoyerLaConfirmation(userId: string): Promise<void> {
+  try {
+    const demande = await demanderConfirmationAdresse(userId);
+    if (!demande) return;
+    let config: ReturnType<typeof configurationCourriel> = null;
+    try {
+      config = configurationCourriel(process.env);
+    } catch (e) {
+      console.error(`[confirmation] ${(e as Error).message}`);
+    }
+    await envoyerConfirmationAdresse(demande, config);
+  } catch (e) {
+    console.error(`[confirmation] ${(e as Error).name} ${(e as Error).message}`);
+  }
+}
+
+/**
+ * L'adresse du compte : prouvée ou seulement déclarée (audit du 23 novembre
+ * 2026, B4). Une adresse déclarée n'ouvre aucune invitation.
+ */
+app.get("/auth/adresse", exigerIdentite, async (req, res, next) => {
+  try {
+    res.json({ confirmee: await adresseConfirmee(req.utilisateur!.id) });
+  } catch (erreur) {
+    next(erreur);
+  }
+});
+
+/** Renvoie le lien de confirmation. Toujours 202 : rien n'est dit de plus. */
+app.post("/auth/adresse/renvoyer", limiteAuth, exigerIdentite, async (req, res, next) => {
+  try {
+    await envoyerLaConfirmation(req.utilisateur!.id);
+    res.status(202).json({ demande: "reçue" });
+  } catch (erreur) {
+    next(erreur);
+  }
+});
+
+/** Confirme l'adresse contre le secret du lien. 410 pour un lien inconnu, expiré ou déjà utilisé. */
+app.post("/auth/adresse/confirmer", limiteAuth, async (req, res, next) => {
+  try {
+    const saisie = z.object({ secret: z.string().min(16).max(200) }).safeParse(req.body);
+    if (!saisie.success) {
+      res.status(400).json({ erreur: "saisie invalide" });
+      return;
+    }
+    if (!(await confirmerAdresse(saisie.data.secret))) {
+      res.status(410).json({ erreur: "lien expiré ou déjà utilisé" });
+      return;
+    }
+    res.json({ confirmee: true });
   } catch (erreur) {
     next(erreur);
   }

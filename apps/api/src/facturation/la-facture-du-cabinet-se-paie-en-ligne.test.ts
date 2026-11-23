@@ -137,12 +137,13 @@ describe("la facture du cabinet se paie en ligne", { skip: !BASE_CONFIGUREE }, (
   const payer = (db: pg.PoolClient, qui: string, paiement: string) =>
     sous(db, qui, async () => {
       await db.query(
-        "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'CAB-1', 'https://x.tn', '{}', 'visa')",
+        "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'CAB-1', 'https://test.clictopay.com/pay/CAB-1', '{}', 'visa')",
         [paiement],
       );
-      await db.query("select public.paiement_inscrire($1, 'paye', 'clictopay', 'CAB-1')", [
-        paiement,
-      ]);
+      await db.query(
+        "select public.paiement_inscrire($1, 'paye', 'clictopay', 'CAB-1', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
+        [paiement],
+      );
     });
 
   it("l'expert du cabinet paie le reste dû ; il s'inscrit sur la facture", async () => {

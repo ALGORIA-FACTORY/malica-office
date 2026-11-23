@@ -153,7 +153,7 @@ jobs:
           #
           # Après eux, les secrets d'application, une ligne NOM=valeur chacun :
           # deployer.sh ne retient que ceux de sa liste.
-          printf '%s\n%s\nBREVO_API_KEY=%s\nCLICTOPAY_UTILISATEUR=%s\nCLICTOPAY_MOT_DE_PASSE=%s\nFLOUCI_CLE_PUBLIQUE=%s\nFLOUCI_CLE_PRIVEE=%s\n' \
+          printf '%s\n%s\nBREVO_API_KEY=%s\nCLICTOPAY_UTILISATEUR=%s\nCLICTOPAY_MOT_DE_PASSE=%s\nFLOUCI_CLE_PUBLIQUE=%s\nFLOUCI_CLE_PRIVEE=%s\nPAIEMENT_SIMULATEUR=oui\n' \
             "$GITHUB_ACTOR" "$JETON" "$BREVO_API_KEY" \
             "$CLICTOPAY_UTILISATEUR" "$CLICTOPAY_MOT_DE_PASSE" "$FLOUCI_CLE_PUBLIQUE" "$FLOUCI_CLE_PRIVEE" |
             ssh -i ~/.ssh/deploi -o BatchMode=yes "malica@$HOTE" "deployer $BRANCHE"

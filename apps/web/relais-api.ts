@@ -64,6 +64,8 @@ const CHEMINS: ReadonlyArray<{ base: string; exact: boolean }> = [
   { base: "/exports", exact: false },
   // Le PDF d'impression, composé à la demande (`POST /impressions`).
   { base: "/impressions", exact: true },
+  // Les notifications signées des prestataires de paiement (Flouci).
+  { base: "/notifications-de-paiement", exact: false },
 ];
 
 export function estPourLApi(url: string): boolean {

@@ -20,6 +20,7 @@
 		path /rpc /rpc/* /moi /moi/* /sante /sante/* /pieces /pieces/*
 		path /journal-atelier /journal-atelier/* /malica/* /auth/* /exports/*
 		path /impressions /impressions/*
+		path /notifications-de-paiement/*
 	}
 
 	# Une lecture par Malica peut durer des minutes.

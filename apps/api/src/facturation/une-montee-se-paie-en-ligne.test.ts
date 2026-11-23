@@ -97,7 +97,7 @@ type Paiement = {
  */
 const lien = (db: pg.PoolClient, paiement: string, prestataire: string) =>
   db.query(
-    "select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-0', 'https://x.tn', '{}', 'visa')",
+    "select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa')",
     [paiement, prestataire],
   );
 
@@ -207,7 +207,7 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
       const d = await decor(db);
       const p = (await monter(db, d))!;
       const inscrire = () =>
-        db.query("select public.paiement_inscrire($1, 'paye', 'simulateur', 'sim-1')", [
+        db.query("select public.paiement_inscrire($1, 'paye', 'simulateur', 'REF-0')", [
           p.paiement_id,
         ]);
 
@@ -264,7 +264,7 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
       await sous(db, d.principal, async () => {
         await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
         await lien(db, p.paiement_id, "simulateur");
-        await db.query("select public.paiement_inscrire($1, 'paye', 'simulateur', 'sim-1')", [
+        await db.query("select public.paiement_inscrire($1, 'paye', 'simulateur', 'REF-0')", [
           p.paiement_id,
         ]);
       });
@@ -291,9 +291,10 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
       const p = (await monter(db, d))!;
       await sous(db, d.principal, async () => {
         await lien(db, p.paiement_id, "clictopay");
-        await db.query("select public.paiement_inscrire($1, 'paye', 'clictopay', 'CTP-42')", [
-          p.paiement_id,
-        ]);
+        await db.query(
+          "select public.paiement_inscrire($1, 'paye', 'clictopay', 'REF-0', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
+          [p.paiement_id],
+        );
       });
 
       const periode = await db.query<{ p: string }>(
@@ -314,7 +315,7 @@ describe("une montée se paie en ligne", { skip: !ADMIN }, () => {
       assert.equal(enc.rows.length, 1);
       assert.equal(enc.rows[0]!.moyen, "carte");
       assert.equal(Number(enc.rows[0]!.montant), Number(p.montant_ttc));
-      assert.match(enc.rows[0]!.reference, /CTP-42/);
+      assert.match(enc.rows[0]!.reference, /REF-0/);
 
       const v = await db.query<{ impute: boolean }>(
         "select impute from facturation.paiements_en_ligne_v where paiement_id = $1",

@@ -116,13 +116,13 @@ const lienPuisPaye = (db: pg.PoolClient, qui: string, paiement: string, prestata
       await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
     }
     await db.query(
-      "select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-9', 'https://x.tn', '{}', 'visa')",
+      "select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-9', 'https://test.clictopay.com/pay/REF-9', '{}', 'visa')",
       [paiement, prestataire],
     );
-    await db.query("select public.paiement_inscrire($1, 'paye', $2, 'REF-9')", [
-      paiement,
-      prestataire,
-    ]);
+    await db.query(
+      "select public.paiement_inscrire($1, 'paye', $2, 'REF-9', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
+      [paiement, prestataire],
+    );
   });
 
 const encours = async (db: pg.PoolClient, facture: string) =>
@@ -181,6 +181,36 @@ describe("une facture se paie en ligne", { skip: !ADMIN }, () => {
     });
   });
 
+  it("un encaissement saisi pendant que la page de carte était ouverte : l'argent entre, le trop-perçu se dit", async () => {
+    await aBlanc(async (db) => {
+      const d = await uneFacture(db);
+      const p = await preparer(db, d.principal, d.facture);
+      await sous(db, d.principal, () =>
+        db.query(
+          "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-9', 'https://test.clictopay.com/pay/REF-9', '{}', 'visa')",
+          [p.paiement_id],
+        ),
+      );
+      await db.query(
+        `insert into facturation.encaissements (facture_id, montant, moyen, reference, encaisse_le, saisi_par)
+         values ($1, 1, 'virement', 'acompte manuel', current_date, $2)`,
+        [d.facture, d.operateur],
+      );
+      await sous(db, d.principal, () =>
+        db.query(
+          "select public.paiement_inscrire($1, 'paye', 'clictopay', 'REF-9', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
+          [p.paiement_id],
+        ),
+      );
+      const j = await db.query<{ payload: { trop_percu: string } }>(
+        "select payload from audit.event_log where object_id = $1 and action = 'paiement.trop_percu'",
+        [p.paiement_id],
+      );
+      assert.equal(j.rows.length, 1, "la tour voit le trop-perçu à rembourser");
+      assert.equal(Number(j.rows[0]!.payload.trop_percu), 1);
+    });
+  });
+
   it("un encaissement saisi entre-temps rend le montant périmé : pas de lien, un nouveau paiement", async () => {
     await aBlanc(async (db) => {
       const d = await uneFacture(db);
@@ -193,7 +223,7 @@ describe("une facture se paie en ligne", { skip: !ADMIN }, () => {
       await assert.rejects(
         sous(db, d.principal, () =>
           db.query(
-            "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'R', 'https://x', '{}', 'visa')",
+            "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'R', 'https://test.clictopay.com/pay/R', '{}', 'visa')",
             [p.paiement_id],
           ),
         ),
