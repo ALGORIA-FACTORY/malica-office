@@ -92,7 +92,12 @@ describe("un fil rouvert ne dit rien de la mécanique", { skip: !BASE_CONFIGUREE
       [null, null, null, null, null],
     );
     const sur_le_reseau = JSON.stringify(relu);
-    assert.doesNotMatch(sur_le_reseau, /claude|sonnet|haiku|deepseek|anthropic|1234|567|8901/i);
+    assert.doesNotMatch(sur_le_reseau, /claude|sonnet|haiku|deepseek|anthropic/i);
+    // Les jetons et la durée se cherchent comme VALEURS du JSON, pas comme chiffres
+    // n'importe où : un identifiant aléatoire contient « 567 » une fois sur quelques
+    // dizaines (CI de #440, 23 novembre 2026 : « …c505677bea »), et l'épreuve tombait
+    // sans qu'aucune mécanique ne fuie.
+    assert.doesNotMatch(sur_le_reseau, /:\s*"?(1234|567|8901)"?\s*[,}\]]/);
     assert.equal(reponse.contenu, "Un crédit.");
   });
 
