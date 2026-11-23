@@ -3,7 +3,7 @@
  *
  * Depuis l'audit du 23 novembre 2026, un compte neuf n'a qu'une adresse
  * DÉCLARÉE : aucune invitation ne s'ouvre pour lui avant le lien de
- * confirmation (`auth.confirmations_adresse`) ou le lien d'une invitation. Les
+ * confirmation (`auth.confirmations_adresse`), seule preuve admise. Les
  * épreuves qui éprouvent l'invitation, la matrice des droits ou l'entrée en
  * relation partent d'une adresse déjà prouvée — c'est la confirmation elle-même
  * qu'éprouve `une-adresse-se-prouve-avant-l-invitation.test.ts`.

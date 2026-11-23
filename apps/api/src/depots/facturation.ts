@@ -127,6 +127,7 @@ interface LienOuvert {
   url_api: string | null;
   langue: string | null;
   unites_attendues: string;
+  fait_entrer_argent: boolean;
 }
 
 /**
@@ -140,8 +141,11 @@ interface LienOuvert {
  * Une réponse incohérente (`anomalie` : un autre montant, un autre paiement) ne
  * solde rien et se signale à la tour.
  *
- * Rend le paiement s'il est désormais payé, `null` sinon ; `enPanne` dit si aucun
- * prestataire n'a pu répondre.
+ * Rend le paiement s'il est désormais payé, `null` sinon. `enPanne` dit qu'AU
+ * MOINS UN lien d'argent réel reste sans réponse — son prestataire est muet, ou ce
+ * serveur ne sait plus l'interroger (adaptateur fermé, clés retirées) : tant
+ * qu'il n'a pas répondu, ce lien peut avoir été payé, et aucune seconde commande
+ * ne part (contre-audit du 23 novembre 2026).
  */
 async function constaterLesLiensOuverts(
   db: Requete,
@@ -149,15 +153,17 @@ async function constaterLesLiensOuverts(
 ): Promise<{ paye: PaiementLu | null; enAttente: boolean; enPanne: boolean }> {
   const { rows } = await db.query<LienOuvert>(
     `select prestataire, reference, dernier, adaptateur, url_api, langue,
-            unites_attendues::text as unites_attendues
+            unites_attendues::text as unites_attendues, fait_entrer_argent
        from public.paiement_liens_ouverts($1)`,
     [p.paiement_id],
   );
   const hotes = await hotesApi(db, [...new Set(rows.map((l) => l.prestataire))]);
   let enAttente = false;
-  let interroges = 0;
-  let pannes = 0;
+  let sansReponse = 0;
   for (const l of rows) {
+    // Un lien qui ne fait entrer aucun argent (le simulateur) ne s'interroge pas :
+    // sa décision s'inscrit à l'écran.
+    if (!l.fait_entrer_argent) continue;
     const adaptateur: Prestataire | null = adaptateurDe({
       prestataire: l.prestataire,
       url_api: l.url_api,
@@ -165,9 +171,13 @@ async function constaterLesLiensOuverts(
       langue: l.langue,
       hotes_api: hotes.get(l.prestataire) ?? [],
     });
-    // Le simulateur ne s'interroge pas : sa décision s'inscrit à l'écran.
-    if (!adaptateur || adaptateur.simule) continue;
-    interroges += 1;
+    if (!adaptateur) {
+      console.error(
+        `[paiement] ${l.prestataire} : lien ouvert que ce serveur ne sait plus interroger`,
+      );
+      sansReponse += 1;
+      continue;
+    }
     let r: Awaited<ReturnType<Prestataire["etat"]>>;
     try {
       r = await chezLePrestataire(l.prestataire, () =>
@@ -177,7 +187,7 @@ async function constaterLesLiensOuverts(
         }),
       );
     } catch {
-      pannes += 1;
+      sansReponse += 1;
       continue;
     }
     if (r.etat === "paye") {
@@ -208,7 +218,7 @@ async function constaterLesLiensOuverts(
     }
     if (r.etat === "en_attente" && l.dernier) enAttente = true;
   }
-  return { paye: null, enAttente, enPanne: interroges > 0 && pannes === interroges };
+  return { paye: null, enAttente, enPanne: sansReponse > 0 };
 }
 
 /** Les hôtes d'API autorisés de ces prestataires (`facturation.hotes_par_prestataire`). */

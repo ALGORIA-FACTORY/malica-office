@@ -101,7 +101,7 @@ export const fr = {
   "auth.reset.title": "Nouveau mot de passe",
   "adresse.titre": "Adresse à confirmer",
   "adresse.texte":
-    "Un lien de confirmation vient de partir à l'adresse de votre compte. Tant qu'elle n'est pas confirmée, aucune invitation d'un cabinet ou d'une société ne s'ouvre ici. Le lien d'une invitation reçue par courriel la confirme aussi.",
+    "Un lien de confirmation vient de partir à l'adresse de votre compte. Tant qu'elle n'est pas confirmée, aucune invitation d'un cabinet ou d'une société ne s'ouvre ici.",
   "adresse.renvoyer": "Renvoyer le lien",
   "adresse.renvoye": "Lien renvoyé. Regardez aussi les courriers indésirables.",
   "adresse.page.titre": "Confirmer l'adresse",
@@ -4525,6 +4525,8 @@ export const fr = {
   "pme.payer.securise": "Paiement sécurisé par {prestataire}",
   "pme.payer.rienARegler": "Ce paiement n'est plus à régler.",
   "refus.paiement.moyen_indisponible": "Ce moyen de paiement n'est pas disponible.",
+  "refus.compte.adresse_non_confirmee":
+    "L'adresse de ce compte n'est pas encore confirmée : la personne doit d'abord ouvrir le lien reçu par courriel.",
   "refus.paiement.prestataire_indisponible":
     "Le service de paiement ne répond pas pour l'instant. Votre paiement n'a pas été perdu : réessayez dans quelques minutes.",
   "refus.paiement.hote_non_autorise":

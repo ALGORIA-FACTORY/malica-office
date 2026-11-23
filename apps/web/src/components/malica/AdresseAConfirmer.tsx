@@ -6,9 +6,10 @@
  *
  * Une invitation ne s'ouvre que pour une adresse PROUVÉE (audit du 23 novembre
  * 2026) : sans cela, quiconque créait un compte avec l'adresse d'un associé
- * invité prenait sa place. Le lien de confirmation part à l'inscription ; le
- * lien d'une invitation prouve aussi l'adresse. Tant qu'aucun n'est ouvert, la
- * personne doit savoir pourquoi ses invitations n'apparaissent pas.
+ * invité prenait sa place. Le lien de confirmation part à l'inscription — c'est
+ * la seule preuve : le lien d'une invitation n'en est pas une, celui qui invite
+ * le reçoit aussi. Tant qu'il n'est pas ouvert, la personne doit savoir
+ * pourquoi ses invitations n'apparaissent pas.
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";

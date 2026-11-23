@@ -8,13 +8,17 @@
 -- dossiers, ses factures, son droit de payer.
 --
 -- La cause est une seule fonction : `app.mon_email()` rendait une adresse
--- DÉCLARÉE. Elle ne rend plus qu'une adresse PROUVÉE. Deux preuves existent :
+-- DÉCLARÉE. Elle ne rend plus qu'une adresse PROUVÉE, et une seule preuve
+-- existe : le lien de confirmation envoyé à l'inscription
+-- (`auth.confirmations_adresse`, comme `auth.reinitialisations` : hors RLS, seule
+-- l'empreinte du secret est gardée, l'API seule y écrit).
 --
---   1. le lien de confirmation envoyé à l'inscription (`auth.confirmations_adresse`,
---      comme `auth.reinitialisations` : hors RLS, seule l'empreinte du secret est
---      gardée, l'API seule y écrit) ;
---   2. le lien d'une invitation : il a été reçu à cette adresse. L'ouvrir confirme
---      l'adresse, puis l'invitation s'accepte par le chemin ordinaire.
+-- Le lien d'une invitation n'est PAS une preuve : celui qui invite reçoit le
+-- jeton à l'écran (le lien se copie quand le courriel ne part pas). Un compte
+-- ouvert sur l'adresse d'autrui pouvait s'inviter lui-même depuis une société à
+-- lui, accepter, et se faire ainsi « prouver » l'adresse (contre-audit exécuté
+-- du 23 novembre 2026). Une invitation, par lien ou depuis la liste, attend
+-- donc l'adresse confirmée.
 --
 -- Les comptes déjà ouverts sont tenus pour confirmés à leur date de création :
 -- les retirer couperait les cabinets du pilote de leurs invitations en cours.
@@ -60,28 +64,6 @@ $$;
 revoke all on function app.mon_email() from public, anon, service_role;
 grant execute on function app.mon_email() to authenticated;
 
--- Le lien d'une invitation adressée à l'adresse déclarée du compte connecté prouve
--- cette adresse : la personne a reçu le courriel — que l'invitation soit encore
--- ouverte ou non. Ne rend rien, ne dit pas si le jeton existe ; l'acceptation qui
--- suit refuse ce qui ne va pas (expirée, révoquée, déjà acceptée).
-create or replace function app.adresse_prouvee_par_invitation(p_jeton text)
-returns void
-language sql
-security definer
-set search_path = ''
-as $$
-  update auth.users u
-     set adresse_confirmee_le = now()
-   where u.id = auth.uid()
-     and u.adresse_confirmee_le is null
-     and exists (
-       select 1 from identity.invitations i
-        where i.token_hash = encode(sha256(convert_to(coalesce(p_jeton, ''), 'UTF8')), 'hex')
-          and lower(i.email) = lower(u.email::text))
-$$;
-revoke all on function app.adresse_prouvee_par_invitation(text) from public, anon;
-grant execute on function app.adresse_prouvee_par_invitation(text) to authenticated;
-
 -- Les textes du courriel de confirmation, dans les trois langues.
 insert into notif.libelles_courriel (cle, locale, texte, effective_from) values
   ('confirmation.sujet', 'fr', 'Confirmez votre adresse — Malica Office', date '2026-11-23'),
@@ -106,114 +88,118 @@ insert into notif.libelles_courriel (cle, locale, texte, effective_from) values
   ('confirmation.raison', 'en', 'A Malica Office access was created with this address.', date '2026-11-23'),
   ('confirmation.raison', 'ar', 'أُنشئ حساب على Malica Office بهذا العنوان.', date '2026-11-23');
 
--- Les deux acceptations par lien : le lien prouve d'abord l'adresse.
+-- Deux gestes de la tour nomment une personne par son adresse : confier une
+-- société à un dirigeant, accorder l'accès total. Ils exigent eux aussi une
+-- adresse prouvée (contre-audit du 23 novembre 2026).
 
-CREATE OR REPLACE FUNCTION public.invitation_par_lien_accepter(p_jeton text)
+CREATE OR REPLACE FUNCTION public.plateforme_organisation_confier(p_org uuid, p_email text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
 AS $function$
 declare
-  v record;
+  v_kind    text;
+  v_archive timestamptz;
+  v_user    uuid;
+  v_licence uuid;
 begin
-  if auth.uid() is null then
-    raise exception 'refus.authentification_requise' using errcode = '42501';
+  if not app.is_platform() then
+    raise exception 'refus.reserve.plateforme' using errcode = '42501';
   end if;
-  -- Le lien prouve l'adresse : la personne qui l'ouvre a reçu le courriel.
-  perform app.adresse_prouvee_par_invitation(p_jeton);
-  select id, tenant_id, email, role, expires_at, accepted_at, revoked_at into v
-    from identity.invitations
-   where token_hash = encode(sha256(convert_to(coalesce(p_jeton, ''), 'UTF8')), 'hex');
-  if v.id is null or lower(v.email) <> lower(coalesce(app.mon_email(), '')) then
-    raise exception 'refus.introuvable.invitation' using errcode = '42501';
+
+  select o.kind, o.archived_at into v_kind, v_archive
+    from identity.organizations o where o.id = p_org for update;
+  if v_kind is null or v_archive is not null then
+    raise exception 'refus.introuvable.organisation' using errcode = '42501';
   end if;
-  if app.statut_invitation(v.accepted_at, v.revoked_at, v.expires_at) <> 'en_attente' then
-    raise exception 'refus.invitation.expiree' using errcode = '22023';
+  if v_kind <> 'pme' then
+    raise exception 'refus.organisation.pas_une_societe' using errcode = '22023';
   end if;
-  -- Une invitation de la société à SA comptabilité ne fait entrer personne
-  -- dans la société : elle s'accepte par sa porte, qui choisit la comptabilité
-  -- (`comptabilite_invitation_accepter`).
-  if v.role = 'expert' and exists (select 1 from identity.organizations o
-                                    where o.id = v.tenant_id and o.kind = 'pme') then
-    raise exception 'refus.invitation.choisir_la_comptabilite' using errcode = '22023';
+  if exists (select 1 from identity.memberships m where m.tenant_id = p_org) then
+    raise exception 'refus.organisation.deja_dirigee' using errcode = '22023';
   end if;
+
+  select u.id into v_user
+    from auth.users u where lower(u.email) = lower(btrim(coalesce(p_email, '')));
+  if v_user is null then
+    raise exception 'refus.introuvable.compte' using errcode = '22023';
+  end if;
+  -- Une adresse seulement déclarée ne reçoit rien (audit du 23 novembre 2026).
+  if not exists (select 1 from auth.users u
+                  where u.id = v_user and u.adresse_confirmee_le is not null) then
+    raise exception 'refus.compte.adresse_non_confirmee' using errcode = '22023';
+  end if;
+
   insert into identity.memberships (tenant_id, user_id, role)
-  values (v.tenant_id, auth.uid(), v.role)
-  on conflict (tenant_id, user_id) do nothing;
-  if v.role = 'dirigeant' then
-    perform facturation.dirigeant_arrive(v.tenant_id);
-  end if;
-  update identity.invitations
-     set accepted_at = now(), accepted_by = auth.uid()
-   where id = v.id;
-  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
-                               object_id, payload)
-  values (v.tenant_id, auth.uid(), 'membre.rejoint', 'identity', 'memberships', v.id,
-          jsonb_build_object('role', v.role, 'par', 'lien'));
-  return jsonb_build_object('tenantId', v.tenant_id, 'role', v.role);
+  values (p_org, v_user, 'dirigeant');
+
+  -- Sa licence, à son nom : la société ne fonctionne pas sans (le forfait,
+  -- les lectures, les accès que propose un cabinet). Idempotente.
+  v_licence := facturation.licence_naitre(p_org, v_user);
+
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id,
+                               payload)
+  values (p_org, auth.uid(), 'organisation.confiee', 'identity', 'organizations', p_org,
+          jsonb_build_object('dirigeant', v_user, 'licence', v_licence));
+
+  return jsonb_build_object('organisation_id', p_org, 'dirigeant', v_user, 'licence', v_licence);
 end
 $function$;
 
-CREATE OR REPLACE FUNCTION public.comptabilite_invitation_accepter(p_jeton text, p_invitation uuid, p_cabinet uuid)
+CREATE OR REPLACE FUNCTION plateforme.acces_total_accorder(p_email text, p_motif text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
 AS $function$
 declare
-  v record;
-  v_engagement uuid;
-  v_cabinet text;
+  v_user uuid;
+  v_org  uuid;
+  v_id   uuid;
 begin
-  if auth.uid() is null then
-    raise exception 'refus.authentification_requise' using errcode = '42501';
+  if not app.is_platform() then
+    raise exception 'refus.reserve.plateforme' using errcode = '42501';
   end if;
-  -- Le lien prouve l'adresse ; sans lien, l'adresse doit déjà être confirmée.
-  if p_jeton is not null then
-    perform app.adresse_prouvee_par_invitation(p_jeton);
+  if p_motif is null or length(btrim(p_motif)) = 0 then
+    raise exception 'refus.acces_total.motif_requis' using errcode = '22023';
   end if;
-  select * into v from app.invitation_expert_lire(p_jeton, p_invitation);
-  if v.id is null or v.pme_kind <> 'pme' then
-    raise exception 'refus.introuvable.invitation' using errcode = '42501';
+  select u.id into v_user
+    from auth.users u where lower(u.email) = lower(btrim(coalesce(p_email, '')));
+  if v_user is null then
+    raise exception 'refus.introuvable.compte' using errcode = '22023';
   end if;
-  if app.statut_invitation(v.accepted_at, v.revoked_at, v.expires_at) <> 'en_attente' then
-    raise exception 'refus.invitation.expiree' using errcode = '22023';
+  -- Une adresse seulement déclarée ne reçoit rien (audit du 23 novembre 2026).
+  if not exists (select 1 from auth.users u
+                  where u.id = v_user and u.adresse_confirmee_le is not null) then
+    raise exception 'refus.compte.adresse_non_confirmee' using errcode = '22023';
   end if;
-  if not exists (select 1 from identity.organizations c
-                  where c.id = p_cabinet and c.kind = 'cabinet' and c.archived_at is null)
-     or not app.has_org_role(p_cabinet, array['expert']) then
-    raise exception 'refus.reserve.expert' using errcode = '42501';
+  if not exists (select 1 from app.platform_operators po where po.user_id = v_user) then
+    raise exception 'refus.acces_total.pas_operateur' using errcode = '22023';
   end if;
-  if app.autre_mandat_en_vigueur(v.tenant_id, p_cabinet) then
-    raise exception 'refus.mandat.un_seul_actif' using errcode = '22023';
+  -- Une décision à la fois par personne : deux accords simultanés liraient le
+  -- même état et s'inscriraient tous les deux.
+  perform pg_advisory_xact_lock(hashtextextended('plateforme.acces_total:' || v_user::text, 0));
+  if coalesce((select a.actif from plateforme.acces_total a where a.user_id = v_user
+                order by a.rang desc limit 1), false) then
+    raise exception 'refus.acces_total.deja_accorde' using errcode = '22023';
+  end if;
+  v_org := plateforme.organisation_de_la_plateforme();
+  if v_org is null then
+    raise exception 'refus.acces_total.sans_emetteur' using errcode = '22023';
   end if;
 
-  -- Le mandat, puis ce qu'il dit ; l'invitation est encore ouverte à cet
-  -- instant, c'est elle qui autorise ces écritures (politiques ci-dessus).
-  insert into identity.engagements (pme_org_id, cabinet_org_id, status, starts_on, created_by)
-  values (v.tenant_id, p_cabinet, 'actif', current_date, auth.uid())
-  on conflict (pme_org_id, cabinet_org_id) do update
-    set status = 'actif', starts_on = current_date, ends_on = null
-  returning id into v_engagement;
+  insert into plateforme.acces_total (user_id, actif, motif, par)
+  values (v_user, true, btrim(p_motif), auth.uid())
+  returning id into v_id;
 
-  select name into v_cabinet from identity.organizations where id = p_cabinet;
-  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
-  values (v.tenant_id, auth.uid(), 'engagement.accepte', 'identity', 'engagements', v_engagement,
-          jsonb_build_object('cabinet_org_id', p_cabinet, 'par', 'invitation')),
-         (p_cabinet, auth.uid(), 'engagement.accepte', 'identity', 'engagements', v_engagement,
-          jsonb_build_object('pme_org_id', v.tenant_id, 'par', 'invitation'));
-  perform notif.emettre(v.tenant_id, 'mandat.accepte', jsonb_build_object('engagement_id', v_engagement, 'cabinet', v_cabinet,
-                             'client', v.pme_name));
+  insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id,
+                               payload)
+  values (v_org, auth.uid(), 'acces_total.accorde', 'plateforme', 'acces_total', v_id,
+          jsonb_build_object('personne', v_user, 'motif', btrim(p_motif)));
 
-  update identity.invitations
-     set accepted_at = now(), accepted_by = auth.uid()
-   where id = v.id;
-
-  return jsonb_build_object('engagementId', v_engagement, 'pmeTenantId', v.tenant_id,
-                            'cabinetTenantId', p_cabinet);
+  return jsonb_build_object('decision', v_id, 'personne', v_user, 'actif', true);
 end
 $function$;
-
 
 commit;

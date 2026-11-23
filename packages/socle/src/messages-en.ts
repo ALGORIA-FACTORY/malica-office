@@ -100,7 +100,7 @@ export const en: Dict = {
   "auth.reset.title": "New password",
   "adresse.titre": "Address to confirm",
   "adresse.texte":
-    "A confirmation link has just been sent to your account's address. Until it is confirmed, no invitation from a firm or a company opens here. The link of an invitation received by email confirms it too.",
+    "A confirmation link has just been sent to your account's address. Until it is confirmed, no invitation from a firm or a company opens here.",
   "adresse.renvoyer": "Resend the link",
   "adresse.renvoye": "Link sent again. Check your spam folder too.",
   "adresse.page.titre": "Confirm the address",
@@ -4396,6 +4396,8 @@ export const en: Dict = {
   "pme.payer.securise": "Secure payment by {prestataire}",
   "pme.payer.rienARegler": "This payment is no longer due.",
   "refus.paiement.moyen_indisponible": "This payment method is not available.",
+  "refus.compte.adresse_non_confirmee":
+    "This account's address is not confirmed yet: the person must first open the link received by email.",
   "refus.paiement.prestataire_indisponible":
     "The payment service is not responding right now. Your payment has not been lost: try again in a few minutes.",
   "refus.paiement.hote_non_autorise": "This address does not belong to this payment provider.",

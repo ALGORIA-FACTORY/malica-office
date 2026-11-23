@@ -468,8 +468,9 @@ export async function reinitialiser(
  *
  * Une adresse déclarée n'ouvre aucune invitation : seule une adresse PROUVÉE le
  * fait (`app.mon_email()`). Le lien part à l'inscription, et à la demande ; il
- * vaut trois jours, une seule fois, et seule son empreinte est gardée. Le lien
- * d'une invitation prouve aussi l'adresse, côté base.
+ * vaut trois jours, une seule fois, et seule son empreinte est gardée. C'est la
+ * seule preuve : le lien d'une invitation n'en est pas une (celui qui invite le
+ * reçoit aussi).
  */
 const DUREE_CONFIRMATION_MS = 3 * 24 * 60 * 60 * 1000;
 

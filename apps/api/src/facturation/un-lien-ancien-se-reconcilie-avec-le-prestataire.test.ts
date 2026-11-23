@@ -270,4 +270,60 @@ describe("un lien ancien se réconcilie avec le prestataire", { skip: !ADMIN }, 
       assert.equal(droits.rows[0]!.ok, false, "réservée à l'API, jamais à un client");
     });
   });
+  it("un lien ouvert que ce serveur ne sait plus interroger bloque une seconde commande (contre-audit)", async () => {
+    await aBlanc(async (db) => {
+      const { d, paiement } = await unLienOuvert(db, (await ttl(db)) + 5);
+      // Les identifiants ClicToPay sont retirés du serveur : l'ancien lien reste sans réponse.
+      delete process.env["CLICTOPAY_UTILISATEUR"];
+      await assert.rejects(payer(db, d, paiement), /refus\.paiement\.prestataire_indisponible/);
+      assert.deepEqual(appels, [], "rien n'a été demandé ni créé");
+    });
+  });
+
+  it("le dernier lien refusé et un ancien lien muet : pas de seconde commande (contre-audit)", async () => {
+    await aBlanc(async (db) => {
+      const { d, paiement } = await unLienOuvert(db, (await ttl(db)) + 5);
+      await db.query(
+        `insert into facturation.paiement_evenements (paiement_id, etat, prestataire, reference, lien, le)
+         values ($1, 'lien_cree', 'clictopay', 'ORDRE-RECENT', 'https://test.clictopay.com/pay/ORDRE-RECENT',
+                 now() - interval '1 minute')`,
+        [paiement],
+      );
+      globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+        const operation = String(url).split("/").pop()!;
+        appels.push(operation);
+        const ordre = new URLSearchParams(String(init?.body ?? "")).get("orderId");
+        if (ordre === "ORDRE-ANCIEN") throw new TypeError("fetch failed");
+        return new Response(JSON.stringify({ orderStatus: 6, errorCode: "0" }), { status: 200 });
+      }) as typeof fetch;
+      await assert.rejects(payer(db, d, paiement), /refus\.paiement\.prestataire_indisponible/);
+      assert.ok(!appels.includes("register.do"), "aucune commande neuve");
+    });
+  });
+  it("la base refuse une adresse d'API qui mène ailleurs, quelle que soit sa forme (contre-audit)", async () => {
+    await aBlanc(async (db) => {
+      const d = await decor(db, "solo");
+      for (const url of [
+        "https://evil.example?@test.clictopay.com/",
+        "https://evil.example#@test.clictopay.com/",
+        "https://evil.example\\@test.clictopay.com/",
+        "https://u:p@test.clictopay.com/",
+        "https://test.clictopay.com:4443/",
+        "https://test.clictopay.com.evil.example/",
+      ]) {
+        await db.query("savepoint essai");
+        await assert.rejects(
+          enPersonne(db, d.operateur, () =>
+            db.query(
+              "select plateforme.paiement_regler('clictopay', $1, 'https://app.test', 'x')",
+              [url],
+            ),
+          ),
+          /refus\.paiement\.hote_non_autorise/,
+          url,
+        );
+        await db.query("rollback to savepoint essai");
+      }
+    });
+  });
 });

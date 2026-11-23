@@ -64,14 +64,18 @@ insert into facturation.hotes_par_prestataire (prestataire, usage, hote) values
   ('clictopay', 'page', 'test.clictopay.com'),
   ('clictopay', 'page', 'ipay.clictopay.com');
 
--- L'hôte d'une adresse, en minuscules, sans port ni identifiants.
+-- L'hôte d'une adresse en https, en minuscules — ou rien. L'autorité ne porte que
+-- des lettres, des chiffres, des points et des tirets, suivis de la fin, d'un
+-- chemin, d'une requête ou d'un fragment : ni identifiants (`@`), ni port, ni
+-- barre inverse. `https://autre.exemple?@developers.flouci.com` rend donc
+-- `autre.exemple`, que la liste refuse (contre-audit du 23 novembre 2026).
 create or replace function facturation.hote_de(p_url text)
 returns text
 language sql
 immutable
 set search_path = ''
 as $$
-  select lower(substring(p_url from '^https://(?:[^/@]*@)?([^/:?#]+)'))
+  select lower(substring(p_url from '^https://([A-Za-z0-9.-]+)(?:[/?#]|$)'))
 $$;
 
 -- Le réglage de la tour : l'adresse de l'API est en https ET sur un hôte de ce
@@ -376,11 +380,12 @@ grant execute on function public.paiement_verrouiller(uuid) to authenticated;
 -- Les liens d'un paiement que personne n'a encore conclus (ni payé, ni refusé sur
 -- leur référence), du plus récent au plus ancien, avec ce qu'il faut pour
 -- interroger LEUR prestataire : son adaptateur, la dernière adresse d'API que la
--- tour lui a donnée, sa langue, et les unités attendues. Aucun secret.
+-- tour lui a donnée, sa langue, les unités attendues, et s'il fait entrer de
+-- l'argent. Aucun secret.
 create or replace function public.paiement_liens_ouverts(p_paiement uuid)
 returns table (
   prestataire text, reference text, dernier boolean, adaptateur text, url_api text,
-  langue text, unites_attendues numeric, exposant integer)
+  langue text, unites_attendues numeric, exposant integer, fait_entrer_argent boolean)
 language plpgsql
 stable
 security definer
@@ -407,7 +412,8 @@ begin
            order by r.decide_le desc, r.id desc limit 1),
          pp.langue,
          p.montant_ttc * power(10::numeric, d.exposant),
-         d.exposant::integer
+         d.exposant::integer,
+         pp.fait_entrer_argent
     from facturation.paiement_evenements e
     join facturation.paiements_en_ligne p on p.id = e.paiement_id
     join ref.devises d on d.code = p.devise

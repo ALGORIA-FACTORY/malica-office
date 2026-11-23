@@ -8,8 +8,10 @@
  * sans jamais avoir reçu le courriel. Il devenait la comptabilité de la société.
  *
  * Ce qui tient désormais : une adresse seulement déclarée ne voit ni n'accepte
- * aucune invitation. Elle se prouve par le lien de confirmation, ou par le lien
- * de l'invitation elle-même (qui n'arrive qu'à la vraie boîte).
+ * aucune invitation, ni depuis sa liste ni par un lien. Elle se prouve par le
+ * lien de confirmation, et par lui seul : le contre-audit a montré qu'un lien
+ * d'invitation n'est pas une preuve — l'usurpateur s'invitait lui-même depuis
+ * une société à lui, recevait le jeton à l'écran, et se « prouvait » l'adresse.
  *
  *   node --experimental-strip-types --test src/une-adresse-se-prouve-avant-l-invitation.test.ts
  */
@@ -143,14 +145,63 @@ describe("une adresse se prouve avant d'ouvrir une invitation", { skip: !BASE_CO
     assert.equal(mandat.rows.length, 0, "l'usurpateur n'est la comptabilité de personne");
   });
 
-  it("le lien de l'invitation, reçu dans la vraie boîte, prouve l'adresse et ouvre l'invitation", async () => {
+  it("même avec le lien, une adresse déclarée n'accepte pas : le lien n'est pas une preuve", async () => {
+    assert.match(
+      await refus(
+        fait(usurpateur, "identite.accepterInvitationDeLaSociete", {
+          jeton,
+          invitationId: null,
+          cabinetTenantId: cabinetUsurpe,
+        }),
+      ),
+      /refus\.introuvable\.invitation/,
+    );
+    assert.equal(await adresseConfirmee(usurpateur.id), false);
+  });
+
+  it("s'inviter soi-même depuis une société à soi ne prouve pas l'adresse d'autrui (contre-audit)", async () => {
+    // L'usurpateur ouvre SA société et invite l'adresse qu'il a usurpée : il
+    // reçoit le jeton à l'écran.
+    const sienne = await creer(usurpateur, "pme", `SIENNE ${marque}`, matriculeDEssai());
+    const r = (await fait(
+      usurpateur,
+      "identite.inviterMaComptabilite",
+      sienne,
+      adresseInvitee,
+    )) as {
+      jeton: string;
+    };
+    assert.match(
+      await refus(
+        fait(usurpateur, "identite.accepterInvitationDeLaSociete", {
+          jeton: r.jeton,
+          invitationId: null,
+          cabinetTenantId: cabinetUsurpe,
+        }),
+      ),
+      /refus\.introuvable\.invitation/,
+    );
+    assert.equal(await adresseConfirmee(usurpateur.id), false, "rien n'est prouvé");
+    const recues = (await fait(usurpateur, "collab.invitationsPourMoi")) as InvitationRecue[];
+    assert.deepEqual(recues, [], "l'invitation de la victime reste cachée");
+    await admin.query(
+      `update identity.organizations
+          set archived_at = now(), archived_reason = 'fixture de test automatisé'
+        where id = $1`,
+      [sienne],
+    );
+  });
+
+  it("confirmée par son lien, la vraie personne accepte l'invitation", async () => {
+    const demande = await demanderConfirmationAdresse(usurpateur.id);
+    assert.ok(demande);
+    assert.equal(await confirmerAdresse(demande.secret), true);
     const r = (await fait(usurpateur, "identite.accepterInvitationDeLaSociete", {
       jeton,
       invitationId: null,
       cabinetTenantId: cabinetUsurpe,
     })) as { pmeTenantId: string };
     assert.equal(r.pmeTenantId, pme);
-    assert.equal(await adresseConfirmee(usurpateur.id), true, "le lien a prouvé l'adresse");
   });
 
   it("le lien de confirmation prouve l'adresse, une seule fois", async () => {

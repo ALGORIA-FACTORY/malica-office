@@ -5,8 +5,8 @@
  *
  * Un cabinet invite une adresse. Quand cette adresse se connecte, elle
  * trouve ici l'invitation, avec le rôle réservé, et rejoint le cabinet d'un
- * geste — ou décline. Le compte est la preuve, une fois son adresse confirmée (lien de confirmation ou lien
- * d'une invitation, audit du 23 novembre 2026).
+ * geste — ou décline. Le compte est la preuve, une fois son adresse confirmée par le lien
+ * de confirmation (audit du 23 novembre 2026).
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
