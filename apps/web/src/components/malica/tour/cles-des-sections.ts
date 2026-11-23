@@ -18,6 +18,7 @@ const CLES_DES_SECTIONS = [
   "calendrier",
   "licences",
   "acces",
+  "pannes",
   "nuit",
   "modeles",
   "conseil",

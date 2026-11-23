@@ -3261,10 +3261,6 @@ export const fr = {
   "pme.reglages.signaler": "Signaler un problème",
   "pme.reglages.signaler.sous":
     "Dites-le en une phrase. Elle arrive telle quelle à l'équipe, avec l'écran et la version — jamais vos documents.",
-  "pme.reglages.pannes": "Ce qui n’a pas marché",
-  "pme.reglages.pannes.regler": "Tout est réglé",
-  "pme.reglages.pannes.sous":
-    "Ce que l’application a constaté elle-même, sans que vous ayez à le signaler.",
   "pme.reglages.signaler.champ": "Ce qui s'est passé, et ce que vous attendiez",
   "pme.reglages.signaler.envoyer": "Envoyer",
   "pme.reglages.signaler.merci": "Reçu. Merci — on regarde.",
@@ -4108,6 +4104,7 @@ export const fr = {
   "tour.menu.emetteur": "Émetteur",
   "tour.menu.relances": "Relances",
   "tour.menu.calendrier": "Calendrier fiscal",
+  "tour.menu.pannes": "Journal des pannes",
   "tour.menu.licences": "Licences",
   "tour.menu.lecture": "Lecture",
   "tour.menu.nuit": "Relecture de nuit",
@@ -4469,6 +4466,16 @@ export const fr = {
   "tour.abonnement.annuel.ferme": "Fermé",
   "tour.abonnement.annuel.offerts": "Mois offerts sur douze",
   "tour.abonnement.annuel.offerts.borne": "Entre 0 et 11.",
+  "tour.pannes": "Le journal des pannes",
+  "tour.pannes.sous":
+    "Ce qui a échoué chez tous les utilisateurs, du plus récent : les pannes d'un dossier, et hors dossier les pannes d'écran, les plantages et les signalements. Rien ne s'efface : « Tout est réglé » masque ce qui précède pour ce dossier.",
+  "tour.pannes.aucune": "Aucune panne à relire.",
+  "tour.pannes.horsDossier": "hors dossier",
+  "tour.pannes.regler": "Tout est réglé pour {societe}",
+  "tour.pannes.source.dossier": "Panne",
+  "tour.pannes.source.panne": "Panne d'écran",
+  "tour.pannes.source.plantage": "Plantage",
+  "tour.pannes.source.personne": "Signalement",
   "tour.licences": "Les licences",
   "tour.licences.ligne":
     "{offre} · {statut} · {lectures}/{droit} lectures · places occupées : {sieges} · recharges {recharges}",

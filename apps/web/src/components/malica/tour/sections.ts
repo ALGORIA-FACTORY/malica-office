@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Store,
   ToggleRight,
+  TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -47,6 +48,7 @@ import { DesignerLEmetteur } from "./emetteur";
 import { LaFacturationAutomatique } from "./facturation-automatique";
 import { LesFonctionsDuProduit } from "./fonctions";
 import { LaGrille } from "./grille";
+import { LeJournalDesPannes } from "./journal-des-pannes";
 import { LesLicences } from "./licences";
 import { ReglerLePaiement } from "./paiement";
 import { LaPasseDeNuit, LeCompteDeService } from "./passe-de-nuit";
@@ -83,6 +85,7 @@ export const SECTIONS = {
   },
   licences: { libelle: "tour.menu.licences", icone: BadgeCheck, cartes: [LesLicences] },
   acces: { libelle: "tour.menu.acces", icone: ShieldCheck, cartes: [LAccesTotal] },
+  pannes: { libelle: "tour.menu.pannes", icone: TriangleAlert, cartes: [LeJournalDesPannes] },
   nuit: { libelle: "tour.menu.nuit", icone: MoonStar, cartes: [LaPasseDeNuit] },
   modeles: {
     libelle: "tour.menu.modeles",
@@ -155,7 +158,9 @@ export const MENU: ReadonlyArray<{ cle: string; libelle: MessageKey; entrees: En
   {
     cle: "lecture",
     libelle: "tour.menu.lecture",
-    entrees: (["nuit", "modeles", "conseil", "assistant", "compte"] as const).map(deSection),
+    entrees: (["pannes", "nuit", "modeles", "conseil", "assistant", "compte"] as const).map(
+      deSection,
+    ),
   },
 ];
 

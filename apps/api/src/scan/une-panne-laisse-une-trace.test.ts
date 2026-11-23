@@ -27,15 +27,29 @@ import { executerRpc } from "../rpc.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
 const BASE_CONFIGUREE = Boolean(process.env["DATABASE_URL"] && process.env["JWT_SECRET"]);
 
-type Panne = { id: string; ou: string; message: string; version: string | null };
+type Panne = {
+  source: string;
+  id: string;
+  tenant_id: string | null;
+  ou: string;
+  message: string;
+  version: string | null;
+};
 
 describe("une panne laisse une trace en base", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `panne-${Date.now()}`;
   let u: Utilisateur;
+  /** L'opérateur de la tour : c'est lui, et lui seul, qui relit le journal (23 novembre 2026). */
+  let operateur: Utilisateur;
   let org = "";
 
   const rpc = (depot: string, methode: string, ...args: unknown[]) =>
     sousIdentite(u.id, (db) => executerRpc(db, { depot, methode, args }));
+  const tour = (methode: string, ...args: unknown[]) =>
+    sousIdentite(operateur.id, (db) => executerRpc(db, { depot: "tour", methode, args }));
+  /** Les pannes de NOTRE dossier, telles que la tour les montre. */
+  const dernieres = async () =>
+    ((await tour("pannes")) as Panne[]).filter((p) => p.tenant_id === org);
 
   const admin = async <T>(f: (p: pg.Pool) => Promise<T>) => {
     const p = new pg.Pool({ connectionString: process.env["DATABASE_URL_ADMIN"] });
@@ -50,6 +64,12 @@ describe("une panne laisse une trace en base", { skip: !BASE_CONFIGUREE }, () =>
     const c = await creerCompte(`${marque}@essai.local`, "MotDePasseTresLong2026!");
     assert.ok(c);
     u = c;
+    const o = await creerCompte(`${marque}-tour@essai.local`, "MotDePasseTresLong2026!");
+    assert.ok(o);
+    operateur = o;
+    await admin((p) =>
+      p.query(`insert into app.platform_operators (user_id, note) values ($1, 'essai')`, [o.id]),
+    );
     org = await sousIdentite(u.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
         `select public.create_organization('pme', 'ALGORIA FACTORY SUARL', 'autonome',
@@ -60,6 +80,9 @@ describe("une panne laisse une trace en base", { skip: !BASE_CONFIGUREE }, () =>
   });
 
   after(async () => {
+    await admin((p) =>
+      p.query(`delete from app.platform_operators where user_id = $1`, [operateur.id]),
+    );
     await admin((p) =>
       p.query(
         `update identity.organizations set archived_at = now(),
@@ -79,7 +102,7 @@ describe("une panne laisse une trace en base", { skip: !BASE_CONFIGUREE }, () =>
       version: "0.2.13",
       plateforme: "Android 14 / WebView 131",
     });
-    const pannes = (await rpc("journal", "dernieres", org, 10)) as Panne[];
+    const pannes = await dernieres();
     assert.equal(pannes.length, 1);
     assert.equal(pannes[0]!.ou, "components/malica/comment-c-est-paye");
     assert.match(pannes[0]!.message, /canevas/);
@@ -158,15 +181,15 @@ describe("une panne laisse une trace en base", { skip: !BASE_CONFIGUREE }, () =>
     );
   });
 
-  it("« tout est réglé » vide la liste sans rien effacer, et la suite s'y montre", async () => {
+  it("la tour règle le journal sans rien effacer, et la suite s'y montre", async () => {
     /*
      * 1er novembre 2026, Wissem : « Journal vide ». Le journal est en ajout
      * seul : la marque borne ce que l'écran montre, la base garde tout.
      */
-    const avant = (await rpc("journal", "dernieres", org, 50)) as Panne[];
+    const avant = await dernieres();
     assert.ok(avant.length > 0);
-    await rpc("journal", "regler", org);
-    assert.deepEqual(await rpc("journal", "dernieres", org, 50), []);
+    await tour("reglerLesPannes", org);
+    assert.deepEqual(await dernieres(), []);
     const enBase = await admin(async (p) => {
       const { rows } = await p.query<{ n: string }>(
         `select count(*)::text as n from audit.journal_client where tenant_id = $1`,
@@ -176,7 +199,7 @@ describe("une panne laisse une trace en base", { skip: !BASE_CONFIGUREE }, () =>
     });
     assert.ok(enBase >= avant.length, "rien n'est effacé");
     await rpc("journal", "consigner", { tenantId: org, ou: "apres", message: "nouvelle panne" });
-    const apres = (await rpc("journal", "dernieres", org, 50)) as Panne[];
+    const apres = await dernieres();
     assert.deepEqual(
       apres.map((x) => x.ou),
       ["apres"],
@@ -192,6 +215,19 @@ describe("une panne laisse une trace en base", { skip: !BASE_CONFIGUREE }, () =>
       return rows[0]?.id ?? null;
     });
     if (autre === null) return;
-    await assert.rejects(() => rpc("journal", "regler", autre), /refus\.journal\.droits/);
+    // Ni par la tour, qui n'est pas la sienne, ni par la porte de la base.
+    await assert.rejects(() => rpc("tour", "reglerLesPannes", autre));
+    await assert.rejects(
+      () =>
+        sousIdentite(u.id, (db) => db.query(`select public.journal_client_regler($1)`, [autre])),
+      /refus\.journal\.droits/,
+    );
+  });
+
+  // Le dirigeant, 23 novembre 2026 : « sur la tour uniquement », pour tous les utilisateurs.
+  it("le journal ne se relit que dans la tour, et il montre tous les dossiers", async () => {
+    await rpc("journal", "consigner", { tenantId: org, ou: "tour", message: "vue par la tour" });
+    assert.ok((await dernieres()).some((p) => p.ou === "tour" && p.source === "dossier"));
+    await assert.rejects(() => rpc("tour", "pannes"));
   });
 });

@@ -4142,10 +4142,6 @@ export interface JournalRepository {
     version?: string | null;
     plateforme?: string | null;
   }): Promise<{ inscrite: boolean }>;
-  /** Les dernieres pannes d'un dossier, de la plus recente. */
-  dernieres(tenantId: string, limite?: number): Promise<PanneConsignee[]>;
-  /** « Tout est reglé » : une marque datée ; rien n'est effacé (R7). */
-  regler(tenantId: string): Promise<{ le: string }>;
   /**
    * Les étapes que l'appareil a vécues hors de toute requête (capture, file
    * hors ligne, synchronisation, affichage), par lots de cinquante au plus.
@@ -4170,16 +4166,6 @@ export interface EtapeDeLAppareil {
 }
 
 /** Une panne inscrite au journal. */
-export interface PanneConsignee {
-  id: string;
-  /** L'endroit du code qui a signale, tel que l'application le nomme. */
-  ou: string;
-  message: string;
-  version: string | null;
-  plateforme: string | null;
-  at: string;
-}
-
 /** Une ligne de l'ecriture d'un reglement, telle que le Socle la rend. */
 export interface LigneDeReglementLue {
   account_code: string;
@@ -5145,8 +5131,31 @@ export interface EtatDuConseilCite {
   mois: { appels: number; cout: number };
 }
 
+/**
+ * Une panne vue par la tour (le dirigeant, 23 novembre 2026) : d'un dossier (`dossier`),
+ * ou hors dossier — une panne d'écran, un plantage, un signalement d'une personne.
+ */
+export interface PanneDeLaTour {
+  source: "dossier" | "panne" | "plantage" | "personne";
+  id: string;
+  tenant_id: string | null;
+  /** La société ou la comptabilité du dossier ; null hors dossier. */
+  societe: string | null;
+  /** L'endroit du code qui a signalé, tel que l'application le nomme. */
+  ou: string;
+  message: string;
+  version: string | null;
+  /** La plateforme ou l'appareil. */
+  plateforme: string | null;
+  at: string;
+}
+
 export interface TourRepository {
   suisJePlateforme(): Promise<boolean>;
+  /** Le journal des pannes de tous les utilisateurs, du plus récent (200 au plus). */
+  pannes(): Promise<PanneDeLaTour[]>;
+  /** « Tout est réglé » sur le journal d'un dossier : une marque datée, rien n'est effacé. */
+  reglerLesPannes(tenantId: string): Promise<{ le: string }>;
   /** Tous les cabinets et toutes les PME, avec ou sans cabinet : des compteurs et des états. */
   clients(): Promise<{ cabinets: CabinetDeLaTour[]; pme: PmeDeLaTour[] }>;
   /** Les derniers gestes de la tour sur une licence. */
