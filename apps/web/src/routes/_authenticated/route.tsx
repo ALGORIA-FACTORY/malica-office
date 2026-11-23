@@ -18,6 +18,7 @@ import {
   useNavigate,
   useRouteContext,
   useRouter,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -119,7 +120,7 @@ function Ouverture() {
  * Un réseau absent n'est pas une panne de l'application : on le dit, et on
  * propose de réessayer. Tout autre échec remonte à la frontière de la racine.
  */
-function Refus({ error }: { error: Error }) {
+function Refus({ error }: ErrorComponentProps) {
   const { t } = useI18n();
   const router = useRouter();
   if (!(error instanceof EchecAuth) || error.motif !== "reseau") throw error;

@@ -7,6 +7,7 @@ import {
   useRouterState,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -156,7 +157,7 @@ function langueDeSecours(): LangueDeSecours {
   return "fr";
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   const mots = SECOURS[langueDeSecours()];
 
@@ -185,7 +186,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     void rapporterPlantage({
       ou: "frontière d'erreur",
       message: error,
-      pile: error.stack,
+      // Le routeur type l'erreur `unknown` : une valeur lancée n'est pas toujours une `Error`.
+      pile: error instanceof Error ? error.stack : undefined,
       versionClient: versionClient(),
       appareil: typeof navigator === "undefined" ? undefined : navigator.userAgent,
     });

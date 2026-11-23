@@ -214,9 +214,14 @@ principal() {
       *) continue ;;
       esac
       [ -n "$valeur" ] || continue
-      [[ "$valeur" =~ ^[A-Za-z0-9._-]+$ ]] || {
-        echo "KO : $nom porte des caractères inattendus, ignoré" >&2
-        continue
+      # 23 novembre 2026 (audit, M3) : un secret refusé ARRÊTE le déploiement.
+      # L'ignorer laissait partir une version dont l'adaptateur de paiement
+      # restait fermé sans que personne ne le voie. Le jeu admis couvre le
+      # base64 (`+`, `/`, `=`) ; `|`, `&` et `\` restent exclus : ils
+      # casseraient la substitution `sed` ci-dessous.
+      [[ "$valeur" =~ ^[A-Za-z0-9._+/=-]+$ ]] || {
+        echo "KO : $nom porte des caractères inattendus : déploiement arrêté" >&2
+        exit 3
       }
       if grep -q "^$nom=" "$ENV"; then
         sed -i -E "s|^$nom=.*|$nom=$valeur|" "$ENV"
