@@ -757,6 +757,57 @@ export const facturation = {
   },
 
   /**
+   * Une facture, de quoi l'imprimer (23 novembre 2026). La facture, ses lignes, son état et
+   * la société facturée se lisent sous la RLS de l'appelant : le titulaire voit les siennes, le
+   * cabinet les siennes, l'opérateur toutes — un autre ne trouve rien. L'en-tête (émetteur,
+   * banque, conditions, noms de la devise) vient de `facturation.entete_de_facture`, qui
+   * applique la même règle de lecture. Rien n'est recalculé ici : chiffres et libellés tels que
+   * la base les porte.
+   */
+  async factureDetail(db: Requete, factureId: string) {
+    // Un identifiant mal formé désigne une facture qui n'existe pas : même refus.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(factureId)) {
+      throw new Error("refus.introuvable.facture");
+    }
+    const { rows } = await db.query(
+      `select f.id as facture_id, f.numero, f.emise_le::text, f.echeance_le::text,
+              f.couvre_du::text, f.couvre_au::text, f.payeur_type, f.offre_code,
+              (ref.offre_a(f.offre_code, f.emise_le)).libelle as offre_libelle,
+              f.reference_abonne, f.montant_ht::text, f.taux_tva::text, f.montant_tva::text,
+              f.timbre::text, f.montant_ttc::text, f.devise, e.etat, e.reste_du::text,
+              jsonb_build_object(
+                'nom', coalesce(o.name, f.destinataire_nom),
+                'destinataire', f.destinataire_nom,
+                'matricule', coalesce(f.destinataire_legal_id, o.legal_id),
+                'adresse', o.adresse) as client,
+              coalesce((select jsonb_agg(jsonb_build_object(
+                          'ordinal', l.ordinal, 'libelle', l.libelle,
+                          'quantite', l.quantite::text, 'prix_unitaire', l.prix_unitaire::text,
+                          'montant_ht', l.montant_ht::text) order by l.ordinal)
+                          from facturation.facture_lignes l where l.facture_id = f.id),
+                       '[]'::jsonb) as lignes
+         from facturation.factures f
+         left join facturation.encours_v e on e.facture_id = f.id
+         left join lateral (
+           select x.name, x.legal_id, x.adresse
+             from identity.organizations x
+            where x.id = coalesce(f.payeur_tenant_id,
+                                  (select lo.tenant_id from facturation.licence_organisations lo
+                                    where lo.licence_id = f.licence_id
+                                    order by lo.tenant_id limit 1))
+         ) o on true
+        where f.id = $1`,
+      [factureId],
+    );
+    const facture = rows[0];
+    if (!facture) throw new Error("refus.introuvable.facture");
+    const entete = await db.query<{ e: unknown }>("select facturation.entete_de_facture($1) as e", [
+      factureId,
+    ]);
+    return { ...facture, entete: entete.rows[0]!.e };
+  },
+
+  /**
    * Payer une facture en ligne : la base prépare le paiement de son reste dû,
    * en entier, et rend un paiement déjà ouvert pour ce montant. Le moyen se
    * choisit ensuite sur la page de choix.

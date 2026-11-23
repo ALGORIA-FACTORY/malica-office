@@ -4428,6 +4428,12 @@ export interface FacturationRepository {
   mesPaiements(): Promise<PaiementEnLigne[]>;
   /** Les factures que l'appelant paie lui-même, et ce qu'il en reste à payer. */
   mesFactures(): Promise<FactureDuTitulaire[]>;
+  /**
+   * Une facture de la plateforme, de quoi l'imprimer : ses lignes et ses totaux sous la RLS de
+   * l'appelant (le titulaire, le payeur, l'opérateur), l'en-tête (émetteur, banque, conditions,
+   * noms de la devise) par `facturation.entete_de_facture`. Refus `refus.introuvable.facture`.
+   */
+  factureDetail(factureId: string): Promise<FactureDetaillee>;
   /** Préparer le paiement en ligne du reste dû d'une facture (en entier). */
   payerFacture(factureId: string): Promise<PaiementEnLigne>;
   /** `ouvert: false` : aucun prestataire dans cet environnement — l'offre reste ouverte. */
@@ -4703,6 +4709,122 @@ export interface FactureDuTitulaire {
   devise: string;
   /** L'état déduit des encaissements (`facturation.encours_v`). */
   etat: EtatDeFacture;
+}
+
+/** Les formes d'un nom compté, pour écrire un montant en lettres (`ref.devises_ecrites`). */
+export interface FormesDuNomDeDevise {
+  singulier: string;
+  pluriel: string;
+  duel: string | null;
+  accusatif: string | null;
+}
+
+/** Ce que la facture imprime au-delà de ses lignes (`facturation.entete_de_facture`). */
+export interface EnteteDeFacture {
+  /** L'émetteur en vigueur au jour de l'émission ; `null` si aucun ne l'était. */
+  emetteur: {
+    nom: string;
+    matricule: string | null;
+    adresse: string | null;
+    rne: string | null;
+    site_web: string | null;
+  } | null;
+  conditions_paiement: string | null;
+  /** Les coordonnées bancaires réglées à la tour ; `null` tant qu'aucune ne l'est. */
+  banque: {
+    titulaire: string | null;
+    banque: string | null;
+    agence: string | null;
+    rib: string | null;
+    iban: string | null;
+    bic: string | null;
+    devise: string | null;
+  } | null;
+  /** Les décimales de la devise de la facture (`ref.devises.exposant`). */
+  exposant: number | null;
+  /** Les noms de la devise, par langue ; une langue absente n'écrit pas de lettres. */
+  lettres: Partial<
+    Record<"fr" | "en" | "ar", { majeure: FormesDuNomDeDevise; mineure: FormesDuNomDeDevise }>
+  > | null;
+}
+
+/** Une ligne de facture de la plateforme (`facturation.facture_lignes`). */
+export interface LigneDeFactureDetaillee {
+  ordinal: number;
+  libelle: string;
+  quantite: string;
+  prix_unitaire: string;
+  montant_ht: string;
+}
+
+/** Une facture de la plateforme, de quoi l'imprimer (`factureDetail`). */
+export interface FactureDetaillee {
+  facture_id: string;
+  numero: string;
+  emise_le: string;
+  echeance_le: string;
+  couvre_du: string;
+  couvre_au: string;
+  payeur_type: "titulaire" | "cabinet";
+  offre_code: string | null;
+  /** Le nom de l'offre à la date d'émission (`ref.offre_a`). */
+  offre_libelle: string | null;
+  reference_abonne: string | null;
+  montant_ht: string;
+  /** Le taux tel que la facture le porte (0.190000). */
+  taux_tva: string;
+  montant_tva: string;
+  timbre: string;
+  montant_ttc: string;
+  devise: string;
+  etat: EtatDeFacture | null;
+  reste_du: string | null;
+  /** La société facturée (celle de la licence, ou le cabinet payeur) et la personne nommée. */
+  client: {
+    nom: string;
+    destinataire: string;
+    matricule: string | null;
+    adresse: string | null;
+  };
+  lignes: LigneDeFactureDetaillee[];
+  entete: EnteteDeFacture;
+}
+
+/** Ce que la tour règle des factures (`plateforme.reglages_factures`). */
+export interface SaisieDesFactures {
+  serie: string;
+  chiffres: number;
+  adresse: string | null;
+  rne: string | null;
+  site_web: string | null;
+  conditions_paiement: string | null;
+  banque_titulaire: string | null;
+  banque_nom: string | null;
+  banque_agence: string | null;
+  banque_rib: string | null;
+  banque_iban: string | null;
+  banque_bic: string | null;
+  banque_devise: string | null;
+}
+
+/** Une version du réglage des factures : datée, motivée ; `livre` : le défaut d'une migration. */
+export interface ReglageDesFactures extends SaisieDesFactures {
+  valide_des: string;
+  motif: string;
+  decide_le: string;
+  livre: boolean;
+}
+
+/** Une facture émise, vue de la tour. */
+export interface FactureDeLaTour {
+  facture_id: string;
+  numero: string;
+  emise_le: string;
+  payeur_type: "titulaire" | "cabinet";
+  destinataire: string;
+  montant_ttc: string;
+  devise: string;
+  etat: EtatDeFacture | null;
 }
 
 /** L'état d'une facture, déduit de ses encaissements (`facturation.encours_v`). */
@@ -5325,6 +5447,23 @@ export interface TourRepository {
   } | null>;
   /** La tour ouvre ou ferme les relances d'impayé et la suspension automatique. */
   reglerRelances(actives: boolean, suspensionAutomatique: boolean, motif: string): Promise<unknown>;
+  /** Les factures : le réglage en vigueur (série, impression, banque) et ceux qui viennent. */
+  reglageFactures(): Promise<{
+    en_vigueur: ReglageDesFactures | null;
+    a_venir: ReglageDesFactures[];
+  }>;
+  /** La tour règle les factures : daté (aujourd'hui ou plus tard), motivé, en ajout seul. */
+  reglerFactures(reglage: SaisieDesFactures, valideDes: string, motif: string): Promise<unknown>;
+  /** Les dernières factures émises, toutes sociétés et tous cabinets. */
+  facturesEmises(): Promise<FactureDeLaTour[]>;
+  /**
+   * Renvoyer le courriel d'une facture de société déjà émise. `deja` : un courriel de cette
+   * facture est déjà décidé dans la fenêtre du moteur, rien n'est reposé.
+   */
+  renvoyerFacture(
+    factureId: string,
+    motif: string,
+  ): Promise<{ numero: string; deja: boolean; poste?: boolean; abandon?: string | null }>;
   /** L'émission automatique : pour chaque périmètre, la décision en vigueur et le dernier passage. */
   reglageFacturationAuto(): Promise<EtatFacturationAuto>;
   /** La tour ouvre ou coupe un périmètre de l'émission : daté, motivé, en ajout seul. */
