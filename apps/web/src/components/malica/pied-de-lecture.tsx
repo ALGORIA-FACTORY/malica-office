@@ -107,6 +107,8 @@ export function PiedDeLecture({
   tva,
   droits,
   total,
+  retenue,
+  totalAvantRetenue,
   devise,
   parLeCabinet,
   totalNeFermePas,
@@ -117,6 +119,13 @@ export function PiedDeLecture({
   tva: MontantDuPied;
   droits: ReadonlyArray<DroitDuPied>;
   total: MontantDuPied;
+  /**
+   * La retenue à la source (pilote, 22 novembre 2026). Présente avec une valeur, le total
+   * lu est le NET À PAYER, et `totalAvantRetenue` — le dû que le moteur a jugé — s'affiche
+   * au-dessus. Sans valeur, la ligne se montre vide avec son crayon : on la dit.
+   */
+  retenue?: MontantDuPied | undefined;
+  totalAvantRetenue?: string | null | undefined;
   devise: string;
   /** Les montants viennent de l'écriture du cabinet : ils n'ont pas à être « lus ». */
   parLeCabinet: boolean;
@@ -191,6 +200,24 @@ export function PiedDeLecture({
           })}
         </Fragment>
       ))}
+      {retenue && retenue.valeur !== null && totalAvantRetenue ? (
+        <>
+          {/* Le dû avant la retenue : jugé par le moteur, il ne se corrige pas ici. */}
+          <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-foreground pt-3">
+            <span className="text-[13.5px] font-semibold">
+              {t("pme.extract.totalAvantRetenue")}
+            </span>
+            <span className="num text-[13.5px] font-semibold">
+              {totalAvantRetenue} {devise}
+            </span>
+          </div>
+          {ligne(retenue.champ, retenue.libelle, `− ${retenue.valeur}`, retenue.etat, {
+            ligne: "pt-1.5",
+            libelle: "text-[13.5px]",
+            valeur: "text-[13.5px]",
+          })}
+        </>
+      ) : null}
       {ligne(
         total.champ,
         total.libelle,
@@ -209,6 +236,13 @@ export function PiedDeLecture({
           valeur: "",
         },
       )}
+      {retenue && retenue.valeur === null && !parLeCabinet
+        ? ligne(retenue.champ, retenue.libelle, "—", retenue.etat, {
+            ligne: "pt-1.5",
+            libelle: "text-[13.5px] text-text-2",
+            valeur: "text-[13.5px] text-text-2",
+          })
+        : null}
       {nonLus.length > 0 ? (
         <p role="alert" className="mt-1.5 text-[12px] leading-[1.45] text-signal-warn">
           {t("pme.detail.montantsNonLus", {

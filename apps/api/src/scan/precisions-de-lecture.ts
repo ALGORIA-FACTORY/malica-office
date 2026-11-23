@@ -35,6 +35,8 @@ interface Totaux {
   base_ht?: string | null;
   vat?: string | null;
   ttc?: string | null;
+  /** La retenue à la source déduite du total (le TTC imprimé est alors le net à payer). */
+  withholding?: string | null;
 }
 
 /** Une ligne de la facture (un article), telle que la lecture la rend. */
@@ -54,7 +56,7 @@ interface PayloadPrecisable {
   totals?: Totaux;
 }
 
-const TOTAL = /^totals\.(base_ht|vat|ttc)$/;
+const TOTAL = /^totals\.(base_ht|vat|ttc|withholding)$/;
 const DROIT = /^other_charges\[(\d{1,3})\]\.amount$/;
 const ARTICLE = /^articles\[(\d{1,3})\]\.(designation|quantity|unit_price_ht|total_ht|tax_code)$/;
 
@@ -98,7 +100,7 @@ export function appliquerLesPrecisions<P extends PayloadPrecisable>(
   if (dites.size === 0) return { payload, imprime };
 
   const totals: Totaux = { ...payload.totals };
-  for (const cle of ["base_ht", "vat", "ttc"] as const) {
+  for (const cle of ["base_ht", "vat", "ttc", "withholding"] as const) {
     const v = dites.get(`totals.${cle}`);
     if (v !== undefined) totals[cle] = v;
   }

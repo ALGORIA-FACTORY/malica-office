@@ -1422,6 +1422,11 @@ export interface PieceDossier {
    * SAISIE ne fait pas tenir la facture : l'écran la propose en un geste.
    * `null` sinon.
    */
+  /**
+   * La retenue à la source que le dernier jugement a retenue, et le dû avant elle
+   * (« Total TTC ») ; le TTC lu est alors le net à payer. `null` sans retenue.
+   */
+  retenue?: { montant: string; totalTtc: string } | null;
   baseProposee: string | null;
   /**
    * La pièce se lit dans l'ARCHIVE d'une comptabilité dont le mandat a pris fin
@@ -3860,6 +3865,11 @@ export interface ChargesRepository {
   familles(packId: string, locale?: string): Promise<ChargeFamille[]>;
   anomalyThreshold(packId: string, code: string): Promise<AnomalyThresholdRow | null>;
   articles(tenantId: string, fromPeriod: string, toPeriod: string): Promise<PieceArticle[]>;
+  /**
+   * « Les classer » : la famille du pack choisie pour une ligne de charge (l'ordinal de
+   * l'article, 0 pour une pièce sans articles). Refusé quand le cabinet tient les livres.
+   */
+  classer(pieceId: string, ordinal: number, famille: string): Promise<{ id: string }>;
   enAttenteDeDate(tenantId: string): Promise<ChargesEnAttenteDeDate>;
   /**
    * Les articles d'une pièce en devise sans cours de change (31 octobre

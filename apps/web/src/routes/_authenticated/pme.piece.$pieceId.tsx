@@ -1564,11 +1564,30 @@ function PieceScreen() {
                 }))}
                 total={{
                   champ: "totals.ttc",
-                  libelle: duCabinet ? t("pme.verifie.totalTtc") : t("pme.verifie.total"),
+                  // Avec une retenue, le total imprimé est le net à payer (22 novembre 2026).
+                  libelle: dossier.data.retenue
+                    ? t("pme.extract.netAPayer")
+                    : duCabinet
+                      ? t("pme.verifie.totalTtc")
+                      : t("pme.verifie.total"),
                   valeur: lisible(totaux?.ttc),
                   aUneSource: byField.has("totals.ttc"),
                   etat: etatDuChamp("totals.ttc"),
                 }}
+                retenue={{
+                  champ: "totals.withholding",
+                  libelle: t("pme.extract.retenue"),
+                  valeur: lisible(
+                    dossier.data.retenue?.montant ??
+                      corrections.get("totals.withholding")?.valeur ??
+                      (payload?.totals as { withholding?: string | null } | undefined)
+                        ?.withholding ??
+                      null,
+                  ),
+                  aUneSource: byField.has("totals.withholding"),
+                  etat: etatDuChamp("totals.withholding"),
+                }}
+                totalAvantRetenue={lisible(dossier.data.retenue?.totalTtc ?? null)}
                 devise={deviseDeLaPiece}
                 parLeCabinet={duCabinet !== null}
                 totalNeFermePas={totalNeFermePas}

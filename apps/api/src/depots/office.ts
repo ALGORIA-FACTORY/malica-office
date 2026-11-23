@@ -1430,7 +1430,10 @@ export const office = {
              join pieces_qui_comptent_v p on p.id = x.piece_id
              left join app.jours_des_ecritures_du_dossier($1) j on j.piece_id = p.id
             where p.tenant_id = $1
-              and p.transmise_le is not null
+              -- Sans comptabilité, rien ne part au cabinet : la pièce qui tient compte en
+              -- estimation (pieces_qui_comptent_v.estimation, 22 novembre 2026), au mois de
+              -- sa facture. La carte de TVA d'une telle société restait vide pour toujours.
+              and (p.transmise_le is not null or p.estimation)
               and x.contract = 'extract.v1'
             order by x.piece_id, x.created_at desc
          ) d
@@ -1439,7 +1442,7 @@ export const office = {
          -- la pièce passe au jour de sa transmission. 11 novembre 2026 : ou
          -- le mois où la TVA devient exigible. Une seule règle pour les deux
          -- côtés (app.jour_d_imputation_tva).
-         cross join lateral (${HYPOTHESES_DU_MOIS("d.tenant_id", "d.piece_id", "d.jour", "d.transmise_le::date")}) i
+         cross join lateral (${HYPOTHESES_DU_MOIS("d.tenant_id", "d.piece_id", "d.jour", "coalesce(d.transmise_le::date, d.jour)")}) i
         where i.dans_la_fenetre
        ${lusParLaPorte("c.piece_id, c.transmise_le, c.hypotheses, c.jour_de_la_facture")}`,
       [tenantId, from, to, ...periodesDeLaRequete(mois)],
@@ -1455,7 +1458,10 @@ export const office = {
               {
                 pieceId: r["piece_id"] as string,
                 extract: r["payload"],
-                transmiseLe: (r["transmise_le"] as Date).toISOString().slice(0, 10),
+                // Estimation sans comptabilité : jamais transmise, le jour de sa facture.
+                transmiseLe: r["transmise_le"]
+                  ? (r["transmise_le"] as Date).toISOString().slice(0, 10)
+                  : jour,
                 imputeeLe: jour,
               },
             ]

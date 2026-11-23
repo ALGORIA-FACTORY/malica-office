@@ -324,6 +324,7 @@ export function AbonnementDeLaComptabilite({
 /* --------------------------------------------------------------- l'offre */
 
 export function ChangerDOffre() {
+  const navigate = useNavigate();
   const catalogue = useCatalogueDesOffres().data;
   const { t, locale } = useI18n();
   const pme = usePme();
@@ -354,6 +355,16 @@ export function ChangerDOffre() {
       // Payer d'abord (22 novembre 2026) : une montée que la société paie elle-même ne
       // s'ouvre qu'au paiement reçu ; le bloc « À régler » apparaît juste dessous.
       const offre = libelleDOffre(catalogue, code);
+      // Payer d'abord : la montée mène droit à la page de paiement (22 novembre 2026),
+      // au lieu de laisser chercher « Payer » plus bas.
+      if (!r.change && r.paiement) {
+        await invalider();
+        void navigate({
+          to: "/pme/payer/$paiementId",
+          params: { paiementId: r.paiement.paiement_id },
+        });
+        return;
+      }
       setRetour(
         !r.change && r.paiement
           ? t("pme.reglages.offres.payerPourOuvrir", { offre })
