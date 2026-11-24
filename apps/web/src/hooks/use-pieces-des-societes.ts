@@ -6,7 +6,7 @@
  * siège (maquettes validées par Wissem le 1er novembre 2026). La lecture et les
  * règles vivent ici, une fois.
  */
-import { piecesCompteesDe } from "@/lib/lecture";
+import { piecesDeLaBibliotheque } from "@/lib/ordre-de-la-bibliotheque";
 import type { PieceLue } from "@malica/socle/ports/repositories";
 
 import { usePme } from "@/components/malica/pme-context";
@@ -43,7 +43,7 @@ export function usePiecesDesSocietes() {
   // document joint ou un reçu n'est pas une pièce de plus : « 2 pièces »
   // comptait une facture et son bon de livraison (G8, 13 novembre 2026).
   const deLaSociete = (lot: readonly PieceLue[] | undefined, societe: string) =>
-    piecesCompteesDe((lot ?? []).filter((p) => p.vis !== "personnel")).map((piece) => ({
+    piecesDeLaBibliotheque(lot ?? []).map((piece) => ({
       piece,
       societe,
     }));

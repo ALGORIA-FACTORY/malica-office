@@ -1,0 +1,458 @@
+/* ══════════════════════════════════════════════════════════════════════════
+ * LA BIBLIOTHÈQUE ET LA PIÈCE, AU BUREAU
+ *
+ * Maquettes « Bibliothèque — desktop » et « Pièce — lecture côte à côte »,
+ * validées par le dirigeant. Tout vit sous `min-width: 1024px` : sous cette
+ * largeur, le téléphone et l'application Android gardent leur dessin, nœud
+ * pour nœud — les classes `b-*` et `pb-*` n'y sont même pas rendues
+ * (`useBureau`).
+ *
+ * Aucune couleur écrite ici : les jetons de la surface PME (`styles-pme.css`)
+ * portent le clair et le sombre, et les teintes des dossiers (`--pf`, `--pe`)
+ * viennent de `[data-teinte]`.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  /* ------------------------------------------------------- la Bibliothèque */
+  [data-surface="pme"] [data-ecran="bibliotheque"] .pad {
+    width: 100%;
+    max-width: 82.5rem;
+    margin-inline: auto;
+    padding: 0 2rem 2rem;
+    box-sizing: border-box;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-biblio {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  /* Les dossiers, en puces : un choix, sa teinte. */
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-puces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-puce {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 36px;
+    padding: 0 0.875rem;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+    color: var(--t2);
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-puce i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pe);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-puce .n {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-puce[aria-pressed="true"] {
+    background: var(--tx);
+    color: var(--bg);
+    box-shadow: none;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-puce[data-teinte][aria-pressed="true"] {
+    background: var(--pf);
+    color: var(--pe);
+    box-shadow: inset 0 0 0 1px var(--pe);
+  }
+
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-grille {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* Le tableau : filtres, mois, pièces, total. */
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table {
+    min-width: 0;
+    overflow-x: auto;
+    border-radius: var(--r-md);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-filtres {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-filtres label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-filtres select,
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-bascule {
+    min-height: 32px;
+    padding: 0 0.625rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--d2);
+    color: var(--tx);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-bascule[aria-pressed="true"] {
+    background: var(--tx);
+    color: var(--bg);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-inline-start: auto;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-actions .sub {
+    margin: 0;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-act {
+    min-height: 36px;
+    padding: 0 0.875rem;
+    border: 0;
+    border-radius: 10px;
+    background: var(--d2);
+    box-shadow: inset 0 0 0 1px var(--dl);
+    color: var(--tx);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-act.pr {
+    background: var(--acc);
+    color: var(--on-acc);
+    box-shadow: none;
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-act:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table table {
+    width: 100%;
+    min-width: 46rem;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table thead th {
+    padding: 0.625rem 0.5rem;
+    text-align: start;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table .nb {
+    text-align: end;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table td.nb,
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table td.dt {
+    font-family: var(--mono);
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table .ck {
+    width: 1rem;
+    padding-inline: 1rem 0.5rem;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table .ck input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--acc);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table tbody tr {
+    border-top: 1px solid var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table tbody td {
+    padding: 0.5rem;
+    vertical-align: middle;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table :is(th, td):last-child {
+    padding-inline-end: 1rem;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table td.dt {
+    white-space: nowrap;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table td.ras {
+    color: var(--am);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table td.net {
+    color: var(--tx);
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table td.net.rec,
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table u {
+    color: var(--acc);
+    text-decoration: none;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table tr.dim td.net {
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table td.vide {
+    padding: 1.5rem 1rem;
+    text-align: center;
+    color: var(--t2);
+  }
+
+  /* Le mois : son nom, son compte, son total. */
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table tr.mo :is(th, td) {
+    padding: 0.5rem 1rem;
+    background: var(--d0);
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: start;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table tr.mo td {
+    text-align: end;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table :is(tr.mo, tfoot) th span {
+    unicode-bidi: isolate;
+    margin-inline-start: 0.75rem;
+    font-weight: 500;
+    color: var(--t3);
+  }
+
+  /* Le total général. */
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table tfoot tr {
+    border-top: 1px solid var(--dl);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table tfoot :is(th, td) {
+    padding: 0.875rem 1rem;
+    text-align: start;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-table tfoot td {
+    text-align: end;
+    font-family: var(--mono);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--tx);
+  }
+
+  /* La ligne d'une pièce reprend celle du téléphone (`.pc`), resserrée. */
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-piece.pc {
+    padding: 0.25rem 0.375rem;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-piece .vignette {
+    width: 32px;
+    height: 40px;
+    flex: none;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-piece .mt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.625rem;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-piece .tag {
+    margin-top: 0;
+  }
+
+  /* À droite : le résumé du dossier choisi, et la sélection. */
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-cote {
+    position: sticky;
+    top: 1.5rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-resume {
+    display: grid;
+    gap: 0.625rem;
+    padding: 1.125rem;
+    border-radius: var(--r-md);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+    color: var(--tx);
+    font-size: 0.75rem;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-resume[data-teinte] {
+    background: var(--pf);
+    color: var(--pe);
+    box-shadow: none;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-resume .k {
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-resume b {
+    font-family: var(--mono);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-resume u {
+    text-decoration: none;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-resume a {
+    justify-self: start;
+    color: inherit;
+    font-weight: 600;
+    text-underline-offset: 3px;
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-sel {
+    display: grid;
+    gap: 0.5rem;
+    padding: 1.125rem;
+    border-radius: var(--r-md);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+    font-size: 0.8125rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-sel b {
+    font-weight: 600;
+    color: var(--tx);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-sel .k {
+    font-size: 0.75rem;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="bibliotheque"] .b-sel button {
+    justify-self: start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--acc);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ------------------------------------------------------------- la pièce */
+  [data-surface="pme"] [data-ecran="dossier"] .pb-nav {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-nav button {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+    color: var(--tx);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-nav button:disabled {
+    color: var(--t3);
+    cursor: default;
+  }
+
+  /* La pièce à gauche, sa lecture à droite. */
+  [data-surface="pme"] [data-ecran="dossier"] .pb-cote {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-doc {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow: auto;
+    box-sizing: border-box;
+    padding: 1.5rem;
+    border-inline-end: 1px solid var(--hr);
+    background: var(--d0);
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-vide {
+    margin: 0;
+    padding: 1rem;
+    border-radius: var(--r-sm);
+    background: var(--d1);
+    font-size: 0.8125rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-lec {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 1.5rem;
+  }
+  /* La miniature ouvrait la pièce en plein écran : au bureau, elle est déjà à gauche. */
+  [data-surface="pme"] [data-ecran="dossier"] .pb-lec .f-vign {
+    display: none;
+  }
+  /* Les montants en cases : base, TVA, droits, TTC, retenue. */
+  [data-surface="pme"] [data-ecran="dossier"] .pb-lec .f-puces {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-lec .f-puces span {
+    display: grid;
+    align-content: start;
+    gap: 0.25rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: var(--r-sm);
+    box-shadow: inset 0 0 0 1px var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-lec .f-puces b {
+    font-size: 0.875rem;
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-lec [data-entete="retenue"] b {
+    color: var(--am);
+  }
+  /*
+   * La carte de Malica — sa note et ses gestes — ferme la lecture ; quand elle
+   * porte des gestes, elle reste collée en bas, comme une barre d'actions.
+   */
+  [data-surface="pme"] [data-ecran="dossier"] .pb-lec .f-dec {
+    order: 1;
+  }
+  [data-surface="pme"] [data-ecran="dossier"] .pb-lec .f-dec:has(.f-dec-gestes) {
+    position: sticky;
+    bottom: 0;
+    z-index: 6;
+    margin-bottom: 0;
+  }
+}
