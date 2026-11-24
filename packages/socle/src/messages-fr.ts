@@ -859,6 +859,7 @@ export const fr = {
   "pme.home.voix.attendent#other": "{count} factures attendent votre réponse.",
   "pme.home.voix.rien": "Rien encore. Photographiez une facture, je m'occupe du reste.",
   "pme.home.voix.enOrdre": "Tout est en ordre : {mois} est bouclé.",
+  "pme.home.voix.echeancesALire": "Je fais le point sur vos échéances…",
   "pme.home.voix.enRetard": "{count} échéances sont en retard.",
   "pme.home.voix.enRetard#one": "Une échéance est en retard.",
   "pme.home.voix.enRetard#other": "{count} échéances sont en retard.",

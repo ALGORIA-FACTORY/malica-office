@@ -779,6 +779,7 @@ export const ar: Dict = {
   "pme.home.voix.attendent#other": "{count} فواتير تنتظر ردّك.",
   "pme.home.voix.rien": "لا شيء بعد. صوّر فاتورة وأنا أتكفّل بالباقي.",
   "pme.home.voix.enOrdre": "كل شيء على ما يرام. {mois} مُقفَل.",
+  "pme.home.voix.echeancesALire": "أراجع آجالكم…",
   "pme.home.voix.enRetard": "{count} آجال متأخرة.",
   "pme.home.voix.enRetard#one": "أجل واحد متأخر.",
   "pme.home.voix.enRetard#other": "{count} آجال متأخرة.",

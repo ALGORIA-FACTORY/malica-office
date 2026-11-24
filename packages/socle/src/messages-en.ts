@@ -803,6 +803,7 @@ export const en: Dict = {
   "pme.home.voix.attendent#other": "{count} invoices are waiting for your answer.",
   "pme.home.voix.rien": "Nothing yet. Photograph an invoice — I'll take it from there.",
   "pme.home.voix.enOrdre": "All in order: {mois} is closed.",
+  "pme.home.voix.echeancesALire": "Checking your deadlines…",
   "pme.home.voix.enRetard": "{count} deadlines are overdue.",
   "pme.home.voix.enRetard#one": "One deadline is overdue.",
   "pme.home.voix.enRetard#other": "{count} deadlines are overdue.",

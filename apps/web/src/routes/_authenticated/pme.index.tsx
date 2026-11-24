@@ -498,11 +498,14 @@ function PmeHome() {
    */
   // Compté en JOURS, comme l'écran des échéances (« 1 échéance dépassée ») : le 20 novembre
   // et ses quatre déclarations sont une échéance, pas quatre.
-  const enRetard = echeancesParJour(
-    (echeances.data ?? []).filter((e) => Date.parse(`${e.dueDate}T00:00:00Z`) < aujourdhui),
-    new Date().toISOString().slice(0, 10),
-    Number.POSITIVE_INFINITY,
-  ).length;
+  // Tant que les échéances ne sont pas lues (ou si leur lecture échoue), le retard est inconnu.
+  const enRetard = echeances.isSuccess
+    ? echeancesParJour(
+        echeances.data.filter((e) => Date.parse(`${e.dueDate}T00:00:00Z`) < aujourdhui),
+        new Date().toISOString().slice(0, 10),
+        Number.POSITIVE_INFINITY,
+      ).length
+    : null;
   const etat = etatDeLAccueil({ ...a, enRetard, aExporter: aExporter.length });
   const phrase =
     etat === "vide"
@@ -510,10 +513,12 @@ function PmeHome() {
       : etat === "en_ordre"
         ? t("pme.home.voix.enOrdre", { mois: moisCourant })
         : etat === "en_retard"
-          ? t("pme.home.voix.enRetard", { count: enRetard })
+          ? t("pme.home.voix.enRetard", { count: enRetard ?? 0 })
           : etat === "a_exporter"
             ? t("pme.home.voix.aExporter", { count: aExporter.length })
-            : attendent;
+            : etat === "echeances_a_lire"
+              ? t("pme.home.voix.echeancesALire")
+              : attendent;
   const aRegler = etat === "a_regler";
   const aVerifier = a.enAttente > 0;
   const titreHero = aRegler ? attendCabinet : phrase;
@@ -689,11 +694,11 @@ function PmeHome() {
           <Link
             to="/pme/echeances"
             className="nav-desktop ech-kpi"
-            data-retard={enRetard > 0 || undefined}
+            data-retard={(enRetard ?? 0) > 0 || undefined}
           >
             <span className="k">{t("pme.home.card.echeances")}</span>
             <span className="v">
-              {enRetard > 0
+              {enRetard !== null && enRetard > 0
                 ? t("pme.bureau.kpi.enRetard", { count: enRetard })
                 : prochaine
                   ? jour(prochaine.dueDate)

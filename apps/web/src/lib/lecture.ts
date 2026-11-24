@@ -217,16 +217,22 @@ export function etatDeLAccueil(a: {
   avancement: number | null;
   enAttente: number;
   retournees: number;
-  /** Les échéances passées et non faites (22 novembre 2026). */
-  enRetard?: number;
+  /**
+   * Les échéances passées et non faites (22 novembre 2026). `null` : pas encore lues, ou
+   * leur lecture a échoué — on ne sait pas, et « en ordre » ne se dit pas sur ce qu'on ignore.
+   */
+  enRetard?: number | null;
   /** Les pièces d'une société sans comptabilité qu'aucun export n'a remises. */
   aExporter?: number;
-}): "vide" | "a_regler" | "a_envoyer" | "en_retard" | "a_exporter" | "en_ordre" {
+}):
+  "vide" | "a_regler" | "a_envoyer" | "en_retard" | "a_exporter" | "echeances_a_lire" | "en_ordre" {
   if (a.avancement === null) return "vide";
   if (a.retournees > 0) return "a_regler";
   if (a.enAttente > 0) return "a_envoyer";
   // « En ordre » ne se dit pas par-dessus une échéance dépassée ni des pièces à remettre.
   if ((a.enRetard ?? 0) > 0) return "en_retard";
   if ((a.aExporter ?? 0) > 0) return "a_exporter";
+  // Local, 24 novembre 2026 : « novembre est bouclé » au-dessus d'échéances encore « — ».
+  if (a.enRetard === null) return "echeances_a_lire";
   return "en_ordre";
 }
