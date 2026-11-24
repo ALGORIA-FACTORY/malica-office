@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { usePme } from "@/components/malica/pme-context";
+import { ClasseurDesMois } from "@/components/malica/classeur-des-mois";
 import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { currentPeriod } from "@/hooks/use-tva";
@@ -339,9 +340,9 @@ function ChargesScreen() {
    * c'est là qu'il porte : au-delà du plafond, le total affiché juste
    * au-dessus est incomplet, et c'est la seule chose qui l'explique.
    *
-   * Aucun seuil n'est inventé : il ne paraît pas « quand il reste peu », il
-   * paraît quand le compteur est LU. Décider à partir de quel reste il doit
-   * se taire est une décision de produit, pas une liberté d'écran.
+   * Aucun seuil n'est écrit ici : il paraît quand la base dit le reste bas
+   * (`lectures_basses`, sous la part d'alerte que la tour règle — 24 novembre
+   * 2026, « 269 sur 280 » en couleur d'alerte n'alertait de rien).
    */
   const lecturesRestantes = nombre(pme.forfait.ligne?.lectures_restantes);
   const lecturesDroit = nombre(pme.forfait.ligne?.lectures_droit);
@@ -349,6 +350,7 @@ function ChargesScreen() {
   // 2026 : « vos charges de septembre seront incomplètes » sous un compteur de novembre).
   const plafondLisible =
     period === currentPeriod() &&
+    pme.forfait.ligne?.lectures_basses === true &&
     lecturesRestantes !== null &&
     lecturesDroit !== null &&
     lecturesDroit > 0;
@@ -370,22 +372,14 @@ function ChargesScreen() {
     "";
   const lignesOuvertes = lignesDuMois.filter((a) => a.familleCode === openFamille);
 
-  /** Le classeur des mois — commun aux deux écrans. */
+  /** Le classeur des mois — commun aux deux écrans de cette route, et à la TVA. */
   const classeurDesMois = (
-    <div className="mths" role="group" aria-label={t("pme.charges.period")}>
-      {periods.map((p) => (
-        <button
-          key={p.periode}
-          type="button"
-          className={p.periode === period ? "on" : undefined}
-          onClick={() => setPeriod(p.periode)}
-          disabled={p.aVenir}
-          aria-pressed={p.periode === period}
-        >
-          {monthLabel(p.periode)}
-        </button>
-      ))}
-    </div>
+    <ClasseurDesMois
+      mois={periods}
+      periode={period}
+      choisir={setPeriod}
+      libelle={t("pme.charges.period")}
+    />
   );
 
   /* ─────────────────────────────── l'écran d'une classe ─────────────────── */

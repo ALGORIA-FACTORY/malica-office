@@ -360,7 +360,8 @@ export const facturation = {
     const { rows } = await db.query(
       `select offre, statut, lectures_droit, lectures_consommees, lectures_restantes,
               organisations, sieges_occupes, sieges_inclus, sieges_max, prix_mensuel_ht,
-              titulaire, pris_en_charge_par
+              titulaire, pris_en_charge_par,
+              public.lectures_basses(lectures_restantes, lectures_droit) as lectures_basses
          from public.mon_forfait($1::uuid)`,
       [tenantId ?? null],
     );
