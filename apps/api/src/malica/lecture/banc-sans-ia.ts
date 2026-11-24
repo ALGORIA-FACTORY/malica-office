@@ -1446,6 +1446,31 @@ const compter = (x: Compte, c: MesureDuChamp) => {
 };
 
 /**
+ * Les pièces qu'UNE seule exigence sépare de la lecture sans modèle, avec ce que le moteur
+ * a lu du champ en cause et ce que la vérité attend : la liste de travail la plus courte.
+ */
+function seulesManquantes(mesurees: readonly MesureDeLaPiece[]): string {
+  const lignes = mesurees
+    .filter((m) => m.production!.manque.length === 1)
+    .map((m) => {
+      const e = m.production!.manque[0]!;
+      const c = m.champs.find((x) =>
+        e === "numero"
+          ? x.champ === "numero_facture"
+          : e === "date"
+            ? x.champ === "date_emission"
+            : false,
+      );
+      const detail = c
+        ? ` — ${c.issue}, lu ${JSON.stringify(c.lu)}, attendu ${JSON.stringify(c.attendu)}`
+        : "";
+      return `  - ${e} : ${m.corpus}/${m.id} (${m.rendu}, ${m.langue})${detail}`;
+    })
+    .sort();
+  return lignes.length ? `\n- Une seule exigence manque :\n${lignes.join("\n")}` : "";
+}
+
+/**
  * La ligne de la PRODUCTION : combien de pièces se liraient sans aucun modèle, telles que la
  * production les lit (grille de la lecture citée, relecture des cellules, exigences de
  * l'écriture). C'est le chiffre à comparer au « prouvee » des issues, qui est le plafond.
@@ -1481,7 +1506,8 @@ function enProduction(mesures: readonly MesureDeLaPiece[]): string {
         .sort((a, b) => b[1] - a[1])
         .map(([e, n]) => `${e} ${n}${seule.get(e) ? ` (seule manquante : ${seule.get(e)})` : ""}`)
         .join(" · ") || "aucune"
-    }`
+    }` +
+    seulesManquantes(mesurees)
   );
 }
 
