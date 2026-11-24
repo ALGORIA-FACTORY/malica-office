@@ -311,7 +311,11 @@ describe("le Sudoku d'abord, sur le vrai moteur", { skip: !(MOTEUR && BASE) }, (
       {
         async rpc<T>(_d: string, methode: string): Promise<T> {
           if (methode === "contexteSudoku")
-            return { ...contexte, mode: "observe" } satisfies ContexteDuSudokuBranche as T;
+            return {
+              ...contexte,
+              mode: "observe",
+              relectureDesCellules: true,
+            } satisfies ContexteDuSudokuBranche as T;
           return undefined as T;
         },
         async contenu(): Promise<never> {

@@ -266,6 +266,7 @@ describe(
               return {
                 ...contexte,
                 mode: o.mode ?? "observe",
+                relectureDesCellules: true,
               } satisfies ContexteDuSudokuBranche as T;
             return undefined as T;
           },

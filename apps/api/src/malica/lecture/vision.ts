@@ -592,7 +592,7 @@ async function lireUnePage(image: { dataUrl: string; page: number }): Promise<{
 }
 
 /** Les octets d'une image rendue en `data:` — ce que le second lecteur attend. */
-function octetsDuDataUrl(dataUrl: string): Uint8Array {
+export function octetsDuDataUrl(dataUrl: string): Uint8Array {
   const virgule = dataUrl.indexOf(",");
   return new Uint8Array(Buffer.from(dataUrl.slice(virgule + 1), "base64"));
 }
@@ -693,6 +693,7 @@ async function releverDesPages(
     releve: {
       tokens,
       marques: lues.flatMap((lu) => lu!.marques),
+      pages,
       source: modele,
       lecteur: "paddle",
       paddleTente: true,
@@ -724,6 +725,12 @@ export interface Releve {
   tokens: PageToken[];
   /** Les marques vues sans modèle (les cachets) ; seul le second lecteur en relève. */
   marques: MarqueDeLaPage[];
+  /**
+   * Les images des pages que le second lecteur a lues, chacune à sa page : de quoi relire
+   * une cellule seule, dans sa boîte (`sudoku.ts`, `relireLesCellules`). Absentes pour la
+   * couche de texte d'un PDF et pour le modèle de vision.
+   */
+  pages?: ReadonlyArray<{ dataUrl: string; page: number }>;
   source: string;
   lecteur: Lecteur;
   paddleTente: boolean;
@@ -1027,7 +1034,19 @@ export async function runVisionRead(params: {
    * appelé ; `null`, et la recette puis la chaîne partent comme avant.
    * Injecté, comme la recette : `vision.ts` ne connaît ni la base ni le moteur.
    */
-  sudokuDAbord?: (plan: readonly PageToken[]) => Promise<VisionSelection | null>;
+  sudokuDAbord?: (
+    plan: readonly PageToken[],
+    releve: Pick<Releve, "lecteur" | "marques">,
+  ) => Promise<VisionSelection | null>;
+  /**
+   * LA RELECTURE DES CELLULES (24 novembre 2026) : appelée sur le plan que PaddleOCR vient
+   * de relever, AVANT le Sudoku d'abord et avant toute désignation. Elle rend le plan à
+   * garder : celui du relevé, ou le même dont les cellules d'un tableau que l'arithmétique
+   * contredisait ont été relues seules. Tout l'aval — preuve, désignation, citations,
+   * persistance — lit CE plan-là : une valeur citée se relit dans le plan persisté (R2).
+   * Injectée comme le Sudoku d'abord : `vision.ts` ne connaît ni la base ni le moteur.
+   */
+  relireLesCellules?: (plan: readonly PageToken[], releve: Releve) => Promise<readonly PageToken[]>;
   designation?: {
     chaine: () => Promise<readonly MaillonDeDesignation[]>;
     appeler?: (
@@ -1059,10 +1078,15 @@ export async function runVisionRead(params: {
         sansPaddle: params.sansPaddle ?? false,
         sansCoucheTexte: params.sansCoucheTexte ?? false,
       });
-  const tokens = pass1.tokens;
   const finReleve = Date.now();
   // L'œil a regardé, et n'a rien lu d'exploitable. Même contrat : un code.
-  if (tokens.length === 0) throw new Error("lecture.vide");
+  if (pass1.tokens.length === 0) throw new Error("lecture.vide");
+  // Un plan fourni (le rattrapage) a déjà été relevé, et relu s'il y avait lieu : on ne le
+  // relit pas. Seul un relevé de PaddleOCR se relit, par le même lecteur.
+  const tokens: PageToken[] =
+    !params.tokens && params.relireLesCellules && pass1.lecteur === "paddle"
+      ? [...(await params.relireLesCellules(pass1.tokens, pass1))]
+      : pass1.tokens;
 
   /*
    * ====================================== LE SEUL POINT D'INSERTION (tâche 5)
@@ -1082,7 +1106,7 @@ export async function runVisionRead(params: {
    */
   if (params.sudokuDAbord) {
     const debut = Date.now();
-    const prouvee = await params.sudokuDAbord(tokens);
+    const prouvee = await params.sudokuDAbord(tokens, pass1);
     if (prouvee) {
       return {
         tokens,

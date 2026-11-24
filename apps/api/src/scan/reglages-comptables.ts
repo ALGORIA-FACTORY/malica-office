@@ -61,6 +61,9 @@ export const OPTIONS_APPLIQUEES: Readonly<Record<string, readonly string[]>> = {
   // (`app.relecture_de_nuit`), `read-flow.ts` diffère le rattrapage quand elle
   // est active et le fait sur-le-champ quand elle est coupée.
   "lecture.relecture_nuit": ["active", "coupee"],
+  // La relecture des cellules d'un tableau que l'arithmétique contredit (24 novembre 2026) :
+  // `sudoku.ts` la fait sur le plan de jetons, avant le Sudoku d'abord, quand elle est active.
+  "lecture.relecture_cellules": ["active", "coupee"],
 };
 
 /**

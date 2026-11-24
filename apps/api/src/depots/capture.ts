@@ -56,6 +56,7 @@ import { lireLesReglesDeLecture } from "../malica/lecture/regles-de-lecture.ts";
 import {
   lireLeContexteDuSudoku,
   modeDuSudoku,
+  relectureDesCellules,
   type ChampsLusAInscrire,
   type ContexteDuSudokuBranche,
 } from "../malica/lecture/sudoku.ts";
@@ -1290,7 +1291,11 @@ export const capture = {
       lireLeContexteDuSudoku(db, packId, grilleCode, deviseCode, jour),
       lireLesReglagesComptables(db, dossierId, packId, rows[0]!.j),
     ]);
-    return { ...contexte, mode: modeDuSudoku(reglages) };
+    return {
+      ...contexte,
+      mode: modeDuSudoku(reglages),
+      relectureDesCellules: relectureDesCellules(reglages),
+    };
   },
 
   /**

@@ -56,9 +56,13 @@ import type { Requete } from "../../db.ts";
 import { dateDeLaPiece } from "../../depots/dates.ts";
 import type { ReglagesResolus } from "../../scan/reglages-comptables.ts";
 
+import { consigner } from "../../observabilite/journal.ts";
+
 import type { VerdictDuSudoku } from "./etapes-de-lecture.ts";
 import { cleDeJeton, datesDuPlan, identifiantsDuPlan, lettresDuPlan } from "./experts.ts";
 import { treillisMontant } from "./montants.ts";
+import { relireDesCellules } from "./paddle.ts";
+import { avecLesRelectures, cellulesContredites } from "./relecture.ts";
 import { lireLesReglesDeLecture, type ReglesDeLecture } from "./regles-de-lecture.ts";
 import {
   resolveFromTokenPlan,
@@ -66,7 +70,7 @@ import {
   type PageToken,
   type TokenRef,
 } from "./token-plan.ts";
-import type { VisionRead, VisionSelection } from "./vision.ts";
+import { octetsDuDataUrl, type Releve, type VisionRead, type VisionSelection } from "./vision.ts";
 import { jetonDouteux } from "./lexique.ts";
 
 /** La grille de la lecture citée : elle lit des factures (voir l'en-tête). */
@@ -1222,9 +1226,51 @@ export function modeDuSudoku(r: ReglagesResolus): ModeDuSudoku {
   return mode;
 }
 
+/** Le réglage qui relit les cellules contredites (`ref.reglages_comptables`). */
+const REGLAGE_DE_LA_RELECTURE = "lecture.relecture_cellules";
+
+/**
+ * La relecture des cellules est-elle active pour le dossier ? Le cabinet la coupe comme
+ * tout réglage. Absent ou inconnu : une erreur nommée, comme pour le mode (R4) — le sudoku
+ * la crie et la lecture continue sans relecture.
+ */
+export function relectureDesCellules(r: ReglagesResolus): boolean {
+  const v = r.get(REGLAGE_DE_LA_RELECTURE);
+  if (v === "active") return true;
+  if (v === "coupee") return false;
+  throw new Error("reglage.lecture.illisible");
+}
+
 /** Le contexte d'une pièce, avec le mode que son dossier a arrêté. */
 export interface ContexteDuSudokuBranche extends ContexteDuSudoku {
   readonly mode: ModeDuSudoku;
+  /** `lecture.relecture_cellules` = `active` : relire les cellules que l'arithmétique contredit. */
+  readonly relectureDesCellules: boolean;
+}
+
+/**
+ * Une relecture des cellules est-elle retenue ? La règle est faite pour ne rien casser :
+ *
+ *   - la pièce reste PROUVÉE, et ses lignes le DEVIENNENT (c'est le seul gain cherché) ;
+ *   - aucun champ prouvé avant ne change de valeur ni ne perd sa preuve, et des parties
+ *     prouvées gardent leur preuve et leur sens : une relecture ne déplace jamais un total,
+ *     une TVA, un droit, une date ou une partie déjà prouvés.
+ *
+ * Sinon le plan reste celui du relevé, à l'octet près.
+ */
+export function relectureRetenue(avant: SortieDuSudoku, apres: SortieDuSudoku): boolean {
+  if (avant.issue !== "prouvee" || apres.issue !== "prouvee") return false;
+  if (etatDesLignes(avant) === "prouvees" || etatDesLignes(apres) !== "prouvees") return false;
+  if (
+    avant.parties?.statut === "prouve" &&
+    (apres.parties?.statut !== "prouve" || apres.parties.sens !== avant.parties.sens)
+  )
+    return false;
+  return Object.entries(avant.champs).every(([code, c]) => {
+    if (c.statut !== "prouve") return true;
+    const d = apres.champs[code];
+    return d !== undefined && d.statut === "prouve" && d.valeur === c.valeur;
+  });
 }
 
 /**
@@ -1256,7 +1302,10 @@ export interface Sudoku {
    * la chaîne de désignation part comme avant. Ne lève jamais : une panne du
    * moteur rend `null`.
    */
-  sansIa(tokens: readonly PageToken[]): Promise<VisionSelection | null>;
+  sansIa(
+    tokens: readonly PageToken[],
+    releve?: Pick<VisionRead, "marques" | "lecteur">,
+  ): Promise<VisionSelection | null>;
   /**
    * Inscrire ce que le sudoku a lu sur la lecture RETENUE — après sa
    * persistance, jamais avant : un rattrapage écarté ne laisse pas de champs
@@ -1271,6 +1320,18 @@ export interface Sudoku {
    * En observation, toujours faux : la chaîne garde son comportement entier.
    */
   prouvee(lecture: VisionRead): boolean;
+  /**
+   * LA RELECTURE DES CELLULES (24 novembre 2026) : sur le plan que PaddleOCR vient de
+   * relever, quand le centre est prouvé et que les lignes ne le sont pas, les cellules du
+   * tableau sont relues SEULES, dans leur boîte (`relecture.ts`, `POST /relire`). Rend le
+   * plan à garder : relu si la relecture est retenue (`relectureRetenue`), celui du relevé
+   * sinon. Ne lève jamais : une panne, un lecteur occupé, un réglage coupé rendent le plan
+   * reçu.
+   */
+  relireLesCellules(
+    tokens: readonly PageToken[],
+    releve: Pick<Releve, "lecteur" | "marques" | "pages">,
+  ): Promise<readonly PageToken[]>;
   /** Ce que le sudoku a rendu de cette lecture, pour le journal ; rien s'il ne l'a pas vue. */
   verdict(lecture: VisionRead): VerdictDuSudoku | null;
   /**
@@ -1355,6 +1416,8 @@ export function creerLeSudoku(
       readonly raisonSociale: string;
     }[];
   },
+  /** Le second lecteur qui relit une cellule seule ; injectable pour une épreuve sans service. */
+  relire: typeof relireDesCellules = relireDesCellules,
 ): Sudoku {
   const contextes = new Map<string, Promise<ContexteDuSudokuBranche>>();
   const lus = new WeakMap<VisionRead, ChampsLusAInscrire>();
@@ -1414,15 +1477,75 @@ export function creerLeSudoku(
     return { ctx, jetons, sortie };
   };
   return {
-    async sansIa(tokens) {
+    async relireLesCellules(tokens, releve) {
+      if (releve.lecteur !== "paddle" || !releve.pages?.length || !piece.devise) return tokens;
+      const jour = piece.recueLe;
+      const debut = Date.now();
+      const tracer = (issue: string, detail: Record<string, string | number | null> = {}) =>
+        consigner("relecture_cellules", issue === "erreur" ? "erreur" : "ok", {
+          cle: `${piece.pieceId}:relecture_cellules`,
+          piece: piece.pieceId,
+          dureeMs: Date.now() - debut,
+          detail: { issue, ...detail },
+        });
+      try {
+        // Le réglage d'abord : coupée, la relecture ne coûte pas même un passage du moteur.
+        if (!(await contexteDuJour(jour, piece.devise)).relectureDesCellules) return tokens;
+        const avant = await resoudreAuJour(tokens, jour, piece.devise, releve);
+        const ht = champsDeLaGrille(avant.ctx.grille).ht;
+        const indices = ht ? cellulesContredites(tokens, avant.sortie, ht) : [];
+        if (indices.length === 0) return tokens;
+        // Les cellules contredites sont toutes sur la page du total HT (`cellulesContredites`).
+        const page = tokens[indices[0]!]!.page;
+        const image = releve.pages.find((p) => p.page === page);
+        if (!image) return tokens;
+        const lues = await relire(
+          octetsDuDataUrl(image.dataUrl),
+          indices.map((i) => {
+            const t = tokens[i]!;
+            return [t.x0, t.y0, t.x1, t.y1] as const;
+          }),
+        );
+        if (!lues) return tokens;
+        const relus = avecLesRelectures(tokens, indices, lues);
+        const changees = relus.filter((t, i) => t !== tokens[i]).length;
+        if (changees === 0) {
+          tracer("inchangee", { cellules: indices.length });
+          return tokens;
+        }
+        const apres = await resoudreAuJour(relus, jour, piece.devise, releve);
+        const retenue = relectureRetenue(avant.sortie, apres.sortie);
+        tracer(retenue ? "retenue" : "ecartee", {
+          cellules: indices.length,
+          changees,
+          issue_apres: apres.sortie.issue,
+          lignes_apres: etatDesLignes(apres.sortie),
+        });
+        return retenue ? relus : tokens;
+      } catch (e: unknown) {
+        contextes.delete(jour);
+        tracer("erreur", { erreur: e instanceof Error ? e.name : typeof e });
+        console.error(
+          `relecture des cellules : plan gardé — pièce ${piece.pieceId} : ${message(e)}`,
+        );
+        return tokens;
+      }
+    },
+
+    async sansIa(tokens, releve) {
       let jour: string | null = null;
       try {
         if (!piece.devise) return null;
         // Sans désignation, le jour des règles est celui de la réception ; une
         // date lue autre se rejoue à son propre jour — une facture de 2025 se
         // prouve aux taux de 2025, jamais à ceux du jour où elle arrive.
+        //
+        // Le lecteur et les marques du relevé passent au moteur, comme à `lire` et au banc
+        // (24 novembre 2026) : la couche de texte d'un PDF est le texte exact, et les mots
+        // d'un lecteur génératif sont douteux — sans le dire, le Sudoku d'abord affirmait
+        // un texte que le modèle de vision avait pu récrire.
         jour = piece.recueLe;
-        let r = await resoudreAuJour(tokens, jour, piece.devise);
+        let r = await resoudreAuJour(tokens, jour, piece.devise, releve);
         const exigences = r.ctx.exigencesSansIa ?? [];
         const champsDeDate = exigences.filter((e) => e.exigence === "date" && e.champ);
         const lue = champsDeDate
@@ -1431,7 +1554,7 @@ export function creerLeSudoku(
           .find((d): d is string => d !== null);
         if (lue && lue !== jour) {
           jour = lue;
-          r = await resoudreAuJour(tokens, jour, piece.devise);
+          r = await resoudreAuJour(tokens, jour, piece.devise, releve);
         }
         const ex = r.ctx.exigencesSansIa ?? [];
         if (!prouveePourLEcriture(r.sortie, ex)) return null;

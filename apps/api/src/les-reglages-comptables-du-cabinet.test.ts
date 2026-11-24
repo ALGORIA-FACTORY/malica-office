@@ -161,14 +161,18 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
     // fiscale. Le sudoku désigne (décision du dirigeant, 1er novembre 2026) ; la
     // relecture de nuit est coupée, à 4 heures (passe de nuit, 2 novembre 2026).
     assert.deepEqual(
-      ["lecture.sudoku", "lecture.relecture_nuit", "lecture.relecture_delai_heures"].map((code) => [
-        valeur(r, code)?.valeur,
-        valeur(r, code)?.origine,
-      ]),
+      [
+        "lecture.sudoku",
+        "lecture.relecture_nuit",
+        "lecture.relecture_delai_heures",
+        "lecture.relecture_cellules",
+      ].map((code) => [valeur(r, code)?.valeur, valeur(r, code)?.origine]),
       [
         ["designe", "pack"],
         ["coupee", "pack"],
         ["4", "pack"],
+        // La relecture des cellules (24 novembre 2026) : active par défaut, le cabinet la coupe.
+        ["active", "pack"],
       ],
     );
     for (const [code, attendu] of Object.entries(CHOIX_DU_CEO)) {
@@ -219,6 +223,14 @@ describe("les réglages comptables du cabinet", { skip: !BASE_CONFIGUREE }, () =
       assert.equal(valeur(r, code)?.appliquee, true, code);
     assert.deepEqual(
       valeur(r, "lecture.relecture_nuit")!.options!.map((o) => [o.code, o.appliquee]),
+      [
+        ["active", true],
+        ["coupee", true],
+      ],
+    );
+    assert.equal(valeur(r, "lecture.relecture_cellules")?.appliquee, true);
+    assert.deepEqual(
+      valeur(r, "lecture.relecture_cellules")!.options!.map((o) => [o.code, o.appliquee]),
       [
         ["active", true],
         ["coupee", true],

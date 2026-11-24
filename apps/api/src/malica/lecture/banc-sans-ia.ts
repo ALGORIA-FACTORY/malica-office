@@ -69,9 +69,12 @@ import {
 import { DEVISES_LUES_D_ESSAI } from "../../scan/devise-d-essai.ts";
 
 import {
+  GRILLE_DE_LA_LECTURE_CITEE,
   champsDeLaGrille,
   jetonsDuSudoku,
   lireLeContexteDuSudoku,
+  prouveePourLEcriture,
+  relectureRetenue,
   resoudreLaPiece,
   type ContexteDuSudoku,
 } from "./sudoku.ts";
@@ -203,6 +206,20 @@ export interface MesureDeLaPiece {
     readonly raison: string | null;
   };
   readonly champs: readonly MesureDuChamp[];
+  /**
+   * La pièce telle que la PRODUCTION la lit (24 novembre 2026) : la grille de la lecture
+   * citée (`facture`) quel que soit le type, la relecture des cellules dans les conditions
+   * de la production (`relectureRetenue`), et la règle du Sudoku d'abord — prouvée pour
+   * tout ce que l'écriture exige (`prouveePourLEcriture`). `sansIa` : aucun modèle ne serait
+   * appelé. Le reste du bulletin mesure le PLAFOND : la grille du vrai type de la pièce.
+   */
+  readonly production?: {
+    readonly sansIa: boolean;
+    /** Sans IA AVANT la relecture des cellules : ce que la production lisait jusqu'ici. */
+    readonly sansIaAvantRelecture: boolean;
+    readonly relue: boolean;
+    readonly erreur?: string;
+  } | null;
   readonly erreur?: string;
 }
 
@@ -504,6 +521,37 @@ function mesurerLesRangees(
 
 /* ========================================================= UNE PIÈCE ====== */
 
+/** Le contexte de la grille de production, par pack, devise et jour : lu une fois. */
+const contextesDeProduction = new Map<string, Promise<ContexteDuSudoku>>();
+
+function contexteDeProduction(
+  db: pg.Pool,
+  packId: string,
+  devise: string,
+  jour: string,
+): Promise<ContexteDuSudoku> {
+  const cle = `${packId}|${devise}|${jour}`;
+  let c = contextesDeProduction.get(cle);
+  if (!c) {
+    c = (async () => {
+      const client = await db.connect();
+      try {
+        return await lireLeContexteDuSudoku(
+          client,
+          packId,
+          GRILLE_DE_LA_LECTURE_CITEE,
+          devise,
+          jour,
+        );
+      } finally {
+        client.release();
+      }
+    })();
+    contextesDeProduction.set(cle, c);
+  }
+  return c;
+}
+
 export async function mesurerLaPiece(
   db: pg.Pool,
   packId: string,
@@ -603,12 +651,54 @@ export async function mesurerLaPiece(
   } catch (e) {
     return panne({}, `relevé : ${e instanceof Error ? e.message : String(e)}`);
   }
+  // La production : la grille de la lecture citée, la relecture des cellules à ses
+  // conditions, la règle du Sudoku d'abord. Mesurée pour CHAQUE pièce, sans grille comprise :
+  // la production lit toute pièce avec cette grille.
+  let production: MesureDeLaPiece["production"] = null;
+  if (devise) {
+    try {
+      const cf = await contexteDeProduction(db, packId, piece.devise, piece.jour);
+      const exact = releve.lecteur === "pdf-text";
+      const vision = releve.lecteur === "vision";
+      let t = releve.tokens;
+      let s = resoudreSur(t, cf, devise, releve.marques, exact, vision);
+      let relue = false;
+      const exigences = cf.exigencesSansIa ?? [];
+      const sansIaAvantRelecture = prouveePourLEcriture(s, exigences);
+      const ht = champsDeLaGrille(cf.grille).ht;
+      const indices =
+        piece.relire && ht && releve.lecteur === "paddle" ? cellulesContredites(t, s, ht) : [];
+      if (indices.length > 0) {
+        const lues = await piece.relire!(
+          indices.map((i) => [t[i]!.x0, t[i]!.y0, t[i]!.x1, t[i]!.y1] as const),
+        );
+        if (lues) {
+          const t2 = avecLesRelectures(t, indices, lues);
+          const s2 = resoudreSur(t2, cf, devise, releve.marques, exact, vision);
+          if (relectureRetenue(s, s2)) {
+            t = t2;
+            s = s2;
+            relue = true;
+          }
+        }
+      }
+      production = { sansIa: prouveePourLEcriture(s, exigences), sansIaAvantRelecture, relue };
+    } catch (e) {
+      production = {
+        sansIa: false,
+        sansIaAvantRelecture: false,
+        relue: false,
+        erreur: e instanceof Error ? e.message : String(e),
+      };
+    }
+  }
   const commun = {
     lecteur: releve.lecteur,
     releveMs: releve.millisecondes,
     tableau: releve.tableau ?? null,
     appels: releve.appels ?? null,
     jetons: releve.jetons ?? null,
+    production,
   };
   if (!piece.grille) {
     return {
@@ -1346,6 +1436,33 @@ const compter = (x: Compte, c: MesureDuChamp) => {
   if (c.normal) x.normal++;
 };
 
+/**
+ * La ligne de la PRODUCTION : combien de pièces se liraient sans aucun modèle, telles que la
+ * production les lit (grille de la lecture citée, relecture des cellules, exigences de
+ * l'écriture). C'est le chiffre à comparer au « prouvee » des issues, qui est le plafond.
+ */
+function enProduction(mesures: readonly MesureDeLaPiece[]): string {
+  const mesurees = mesures.filter((m) => m.production);
+  if (mesurees.length === 0) return "";
+  const sansIa = mesurees.filter((m) => m.production!.sansIa);
+  const avant = mesurees.filter((m) => m.production!.sansIaAvantRelecture);
+  const relues = mesurees.filter((m) => m.production!.relue);
+  const pannes = mesurees.filter((m) => m.production!.erreur);
+  const parCorpus = [...new Set(mesurees.map((m) => m.corpus))]
+    .map((c) => {
+      const du = mesurees.filter((m) => m.corpus === c);
+      return `${c} ${du.filter((m) => m.production!.sansIa).length}/${du.length}`;
+    })
+    .join(" · ");
+  return (
+    `- En production (grille « ${GRILLE_DE_LA_LECTURE_CITEE} », relecture des cellules, exigences de l'écriture) : ` +
+    `${sansIa.length} / ${mesurees.length} pièces sans aucun modèle (${parCorpus}), ` +
+    `${avant.length} sans la relecture des cellules ; ` +
+    `${relues.length} relue(s) aux cellules` +
+    (pannes.length ? ` ; ${pannes.length} en panne` : "")
+  );
+}
+
 export function rapport(mesures: readonly MesureDeLaPiece[]): string {
   const par = (cle: (m: MesureDeLaPiece, c: MesureDuChamp) => string) => {
     const t = new Map<string, Compte>();
@@ -1401,6 +1518,7 @@ export function rapport(mesures: readonly MesureDeLaPiece[]): string {
     auTableau.length
       ? `- Pièces prouvées dès le tableau (premier temps) : ${auTableau.length}, en ${auTableau[Math.floor(auTableau.length / 2)]} ms médians`
       : "",
+    enProduction(mesures),
     ...tete("Total"),
     ligne("tous les champs", total),
     "",
