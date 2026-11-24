@@ -2668,7 +2668,6 @@ export const fr = {
   "refus.organisation.supplement_a_accepter":
     "Cette société n’est pas comprise dans votre offre : son prix en plus doit être accepté.",
   "refus.organisation.juridiction_requise": "Choisissez la juridiction de l’organisation.",
-  "refus.mandat.statut_inconnu": "Ce statut de mandat n’existe pas.",
   "refus.etablissement.dernier":
     "C’est le dernier établissement ouvert de cette société : il ne se ferme pas.",
   "refus.pv.envoye":

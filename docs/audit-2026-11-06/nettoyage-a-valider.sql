@@ -1,4 +1,5 @@
 -- docs/audit-2026-11-06/nettoyage-a-valider.sql
+-- APPLIQUÉ (24 novembre 2026), en partie : db/migrations/20261231290000_les_objets_orphelins_se_retirent.sql — ce qu'elle retire, ce qu'elle garde de cette liste et pourquoi, dans son en-tête.
 --
 -- PRÉPARÉ, NON VALIDÉ. Ce fichier n'est PAS une migration et n'est pas dans
 -- db/migrations/ : rien ne le joue. Il porte les retraits que le lot D (7 novembre
