@@ -93,3 +93,37 @@ La relecture des cellules ne fait gagner aucune pièce « sans modèle » au ban
 d'articles ne sont pas une exigence de l'écriture. Elle sert la nuit et l'écran (« lu,
 vérifié » au lieu de « lu, non vérifié »), et sa règle de rétention n'a retenu aucune
 relecture sur ce banc, ce qui confirme qu'elle ne déplace rien.
+
+## Lot 2 — les parties (anneau 2)
+
+Le banc dit désormais, pour chaque pièce dont le sens n'est pas dit, où est passé le
+matricule de l'AUTRE partie. Sur 144 pièces, 134 l'ont dans leur relevé : c'est
+l'attribution, pas l'OCR, qui manquait.
+
+**Deux repères du client, ajoutés aux grilles `facture`** (`20261231290000`) :
+
+- « Livré à » : le dossier imprimé sous « Livré à : » n'était pas placé au camp du client.
+  Seul un repli votait « achat », et la hauteur votait « vente », parce que le fournisseur
+  imprime son matricule en pied de page. Le moteur se taisait (33 pièces « indices de sens
+  contradictoires », 9 après) ;
+- « السيد » : l'équivalent arabe de « M. », déjà repère du client ; les carnets arabes
+  présentent le client ainsi.
+
+|                                 | après lot 1 | « Livré à » | + « السيد » |
+| ------------------------------- | ----------: | ----------: | ----------: |
+| Sens justes / 347               |         203 |         227 |         232 |
+| Sens inversés                   |           0 |           0 |           0 |
+| Valeurs justes                  |       7 130 |       7 272 |       7 286 |
+| Valeurs fausses ou inventées    |           0 |           0 |           0 |
+| Pièces sans modèle (production) |          57 |          80 |          80 |
+
+**Ce qui reste, et qui ne relève pas du moteur** : 77 pièces « seul le matricule du dossier
+est lu ». Les matricules fictifs du jeu d'essai (`matriculeDEssai`) tirent leur lettre de
+contrôle au hasard, de A à Z : 26 sur 29 dans le jeu d'ALGORIA, 12 sur 15 dans le jeu
+synthétique, ne portent pas la lettre que la règle du pack calcule, et 8 portent une lettre
+qui n'existe pas (I, O, U). L'OCR lit le « O » comme un zéro (`1487008O` relevé
+`14870080`, algoria-045), et le moteur refuse — à juste titre — de réparer vers une lettre
+impossible. Un vrai matricule tunisien porte sa lettre calculée (ALGORIA : `1958330V`,
+vérifié). Corriger le jeu demande de le régénérer là où son rendu est reproductible à
+l'octet ; ce n'est pas le cas dans l'atelier de cette mesure (145 fichiers changent sans
+aucune modification). Décision du dirigeant.
