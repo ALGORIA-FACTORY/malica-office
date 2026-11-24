@@ -846,7 +846,7 @@ export const facturation = {
             where x.id = coalesce(f.payeur_tenant_id,
                                   (select lo.tenant_id from facturation.licence_organisations lo
                                     where lo.licence_id = f.licence_id
-                                    order by lo.tenant_id limit 1))
+                                    order by lo.rattachee_le, lo.tenant_id limit 1))
          ) o on true
         where f.id = $1`,
       [factureId],
@@ -982,6 +982,9 @@ export const facturation = {
            on demandee.ns = 'moyen_en_ligne' and demandee.key = m.code and demandee.locale = $1
          left join ref_labels_v francais
            on francais.ns = 'moyen_en_ligne' and francais.key = m.code and francais.locale = 'fr'
+        -- Un moyen inactif ne se montre pas au client (décision du dirigeant, 24 novembre 2026 :
+        -- D17 retiré de la page tant que La Poste n'est pas contractée). La tour l'active : il paraît.
+        where m.actif
         order by m.rang`,
       [locale, code],
     );

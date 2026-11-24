@@ -286,7 +286,7 @@ describe("les moyens de paiement vivent en table", { skip: !ADMIN }, () => {
     });
   });
 
-  it("la page de choix : noms traduits, payable si actif et accepté par le prestataire en service", async () => {
+  it("la page de choix : noms traduits, les seuls moyens actifs, payables si le prestataire en service les accepte", async () => {
     await aBlanc(async (db) => {
       const d = await unPaiement(db);
       await sous(db, d.operateur, () =>
@@ -299,9 +299,9 @@ describe("les moyens de paiement vivent en table", { skip: !ADMIN }, () => {
       const parCode = Object.fromEntries(r.moyens.map((m) => [m["code"], m]));
       assert.equal(parCode["visa"]!["accepte"], true);
       assert.equal(parCode["visa"]!["actif"], true);
-      assert.equal(parCode["d17"]!["actif"], false);
-      assert.equal(parCode["d17"]!["accepte"], false);
-      assert.equal(parCode["d17"]!["libelle"], "D17 — البريد التونسي");
+      assert.equal(parCode["visa"]!["libelle"] !== "visa", true, "le nom traduit");
+      // Inactif, D17 ne se montre pas au client (24 novembre 2026).
+      assert.equal(parCode["d17"], undefined);
     });
   });
 

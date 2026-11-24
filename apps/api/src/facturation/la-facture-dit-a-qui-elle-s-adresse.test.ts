@@ -105,6 +105,49 @@ describe("la facture dit à qui elle s'adresse", { skip: !ADMIN }, () => {
     });
   });
 
+  it("un abonnement à deux sociétés facture la principale, pas la première par identifiant", async () => {
+    await aBlanc(async (db) => {
+      const s = await socle(db);
+      await regler(db, s, "pme", true);
+      const p = await unePme(db, await jourDe(db, -5), "premium");
+      // Une seconde société, rattachée après, à l'identifiant le plus petit qui soit.
+      const { rows } = await db.query<{ id: string }>(
+        `insert into identity.organizations (id, kind, name, jurisdiction, currency)
+         select '00000000-0000-4000-8000-000000000001', 'pme', 'Seconde société', o.jurisdiction,
+                o.currency
+           from identity.organizations o where o.id = $1
+         returning id`,
+        [p.tenant],
+      );
+      await db.query(
+        "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
+        [rows[0]!.id, p.titulaire],
+      );
+      await db.query(
+        `insert into facturation.licence_organisations (licence_id, tenant_id, rattachee_le)
+         select licence_id, $2, rattachee_le + interval '1 day'
+           from facturation.licence_organisations where tenant_id = $1`,
+        [p.tenant, rows[0]!.id],
+      );
+      // Une recharge achetée depuis la seconde société : la facture va quand même à la principale.
+      await enPersonne(db, p.titulaire);
+      const { rows: r } = await db.query<{ r: { recharge_id: string } }>(
+        "select public.recharge_acheter((select code from ref.recharges order by prix_ht limit 1), $1) as r",
+        [rows[0]!.id],
+      );
+      const { rows: pr } = await db.query<{ p: { paiement_id: string } }>(
+        "select public.paiement_recharge_preparer($1) as p",
+        [r[0]!.r.recharge_id],
+      );
+      assert.equal(
+        (await payeurDuPaiement(db, pr[0]!.p.paiement_id)).tenant_id,
+        p.tenant,
+        "la société principale",
+      );
+      await db.query("reset role");
+    });
+  });
+
   it("personne d'autre ne lit à qui le paiement s'adresse", async () => {
     await aBlanc(async (db) => {
       const { id } = await unPaiementSansCoordonnees(db);

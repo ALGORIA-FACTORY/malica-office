@@ -1097,5 +1097,7 @@ réglée (« Réglée le … par carte bancaire, réf. … », sans RIB). Les co
   adresse à l'activation.
 - **Le renvoi par la tour** reste réservé aux factures de PME ; la facture du mois d'un cabinet ne se renvoie pas
   encore (plusieurs experts destinataires).
+- **La société facturée d'un abonnement à plusieurs sociétés** est la principale, la première rattachée
+  (`20261231320000`) ; elle était la première par identifiant, au hasard (recette du pilote, 24 novembre).
 - **Le RIB et le RNE d'ALGORIA** restent saisis une fois à la tour (Tour → Factures) ; ils ne se lisent pas encore dans
   la fiche de l'organisation émettrice (son compte bancaire n'a qu'un libellé et un IBAN).
