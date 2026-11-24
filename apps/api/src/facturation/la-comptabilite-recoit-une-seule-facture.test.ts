@@ -1,6 +1,6 @@
 /**
  * La comptabilité reçoit UNE facture par mois, qui dit chaque abonnement et chaque passage
- * (décision du dirigeant, 24 novembre 2026 — 20261231280000).
+ * (décision du dirigeant, 24 novembre 2026 — 20261231300000).
  *
  *   - la comptabilité n'a rien à payer pour activer ou monter un client : tout se retrouve sur
  *     sa facture du mois, une ligne par société et par offre, le passage nommé, avec ses dates ;

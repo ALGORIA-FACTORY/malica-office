@@ -1076,12 +1076,12 @@ reçoit aucun abonnement de sa comptabilité. Restent ouverts :
   événement n'est remonté dans Sentry, et le journal du conteneur de l'API n'est pas lisible depuis la CI. L'écran dit
   désormais « le service a été interrompu un instant », la panne part au journal sous sa référence ; la cause reste à
   lire dans `docker compose logs api` du pilote autour de 10 h 38 UTC.
-- ~~Le renvoi d'une facture déjà réglée~~ : réglé par `20261231280000` — une facture entièrement encaissée se dit
+- ~~Le renvoi d'une facture déjà réglée~~ : réglé par `20261231300000` — une facture entièrement encaissée se dit
   réglée, au renvoi comme à l'émission.
 
 ### Une seule facture pour la comptabilité ; la facture dit à qui elle s'adresse (24 novembre 2026)
 
-Livré par `20261231280000` et `20261231290000`. Tranché par le dirigeant : la comptabilité ne paie rien en ligne pour
+Livré par `20261231300000` et `20261231310000`. Tranché par le dirigeant : la comptabilité ne paie rien en ligne pour
 activer ou monter un client ; tout ce qu'elle a activé, et chaque passage d'offre, est sur SA facture du mois, par
 virement (RIB sur la facture) ou en ligne. La PME qui paie elle-même paie d'abord, par carte, et sa facture naît
 réglée (« Réglée le … par carte bancaire, réf. … », sans RIB). Les coordonnées du payeur viennent de son compte.

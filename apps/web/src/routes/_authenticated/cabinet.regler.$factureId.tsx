@@ -1,6 +1,6 @@
 /**
  * Payer la facture du mois, depuis son courriel — l'adresse du bouton « Payer la facture »
- * (20261231280000). La base prépare le paiement du reste dû de CETTE facture, puis la page de
+ * (20261231300000). La base prépare le paiement du reste dû de CETTE facture, puis la page de
  * choix s'ouvre (CGV, payeur, Flouci).
  *
  * Aucun titre de page figé en français (verrou d'intégrité) : la page dit le sien.

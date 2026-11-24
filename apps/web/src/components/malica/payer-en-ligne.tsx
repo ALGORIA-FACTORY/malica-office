@@ -68,7 +68,7 @@ function CaseDesCgv({
 /**
  * À qui la facture s'adressera : le payeur, tel que son compte le porte (raison sociale, matricule
  * fiscal, adresse). S'il en manque, on les demande ici et ils s'enregistrent dans son compte —
- * la facture les reprendra. La base refuse de payer tant qu'ils manquent (20261231290000).
+ * la facture les reprendra. La base refuse de payer tant qu'ils manquent (20261231310000).
  */
 function BlocDuPayeur({
   payeur,
@@ -467,7 +467,7 @@ const routeRegler = getRouteApi("/_authenticated/cabinet/regler/$factureId");
 const OU_REGLER = "components/malica/payer-en-ligne#regler";
 
 /**
- * Le bouton « Payer la facture » du courriel de la facture du mois (20261231280000) : il ouvre
+ * Le bouton « Payer la facture » du courriel de la facture du mois (20261231300000) : il ouvre
  * ICI, connecté, le paiement de CETTE facture — son reste dû, préparé par la base — puis la page
  * de choix (case des CGV, payeur, Flouci). Pas de lien de prestataire dans le courriel : il
  * expirerait, et passerait outre ce que la base exige avant de payer. Déjà réglée : on le dit.

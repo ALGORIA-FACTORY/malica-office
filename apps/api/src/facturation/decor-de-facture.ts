@@ -66,7 +66,7 @@ export async function uneOrganisation(
   nom: string,
 ): Promise<string> {
   // Un matricule et une adresse d'essai : la facture les porte, et la base refuse de payer sans
-  // eux (20261231290000).
+  // eux (20261231310000).
   const { rows } = await db.query<{ id: string }>(
     `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
      select $1, $2, p.jurisdiction, p.currency, $3, $4
