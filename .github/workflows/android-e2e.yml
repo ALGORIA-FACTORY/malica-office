@@ -36,6 +36,8 @@ on:
       - "apps/web/src/styles*.css"
       - "packages/socle/src/messages*.ts"
       - "android/maestro/**"
+      # La configuration de la coque (greffons, mise à jour en vol) se prouve sur l'émulateur.
+      - "apps/web/capacitor.config.ts"
       - ".github/workflows/android-e2e.yml"
 
 concurrency:
