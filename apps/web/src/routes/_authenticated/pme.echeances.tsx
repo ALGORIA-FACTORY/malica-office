@@ -14,6 +14,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
+import { CalendrierDesEcheances } from "@/components/malica/calendrier-des-echeances";
 import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
@@ -219,28 +220,44 @@ function PmeEcheances() {
             })
           : t("pme.echeances.voice.empty");
 
+  /** Le ton d'un jour : déposé, en retard, sous la semaine, ou rien. La liste et le calendrier le lisent. */
+  const tonDe = (j: (typeof parJour)[number]) =>
+    j.faites
+      ? "acc"
+      : j.premiere.status === "en_retard"
+        ? "ve"
+        : jours(j.dueDate) <= BORNE_SEMAINE
+          ? "am"
+          : "";
+
   /*
-   * Les trois tranches du dessin. Une tranche vide ne s'affiche pas : un titre
-   * de section suivi de rien ferait croire à une perte.
+   * Les tranches du dessin. Toutes se comptent (les compteurs de l'ordinateur) ;
+   * une tranche vide ne s'affiche pas dans la liste : un titre de section suivi
+   * de rien ferait croire à une perte.
    */
-  const tranches = [
+  const toutesLesTranches = [
     {
       titre: t("relation.echeances.retard"),
       lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "retard"),
+      ton: "ve",
     },
     {
       titre: t("relation.echeances.semaine"),
       lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "semaine"),
+      ton: "am",
     },
     {
       titre: t("relation.echeances.mois"),
       lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "mois"),
+      ton: "",
     },
     {
       titre: t("pme.echeances.aVenir"),
       lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "suite"),
+      ton: "",
     },
-  ].filter((tr) => tr.lignes.length > 0);
+  ];
+  const tranches = toutesLesTranches.filter((tr) => tr.lignes.length > 0);
 
   return (
     <div
@@ -327,59 +344,85 @@ function PmeEcheances() {
           </div>
         ) : null}
 
-        {echeances.isPending && !echec ? (
-          <p className="regle">
-            <span>{t("common.loading")}</span>
-          </p>
-        ) : rows.length === 0 ? (
-          <div className="card">
-            <p>{t("pme.echeances.empty")}</p>
-          </div>
-        ) : (
-          tranches.map((tr) => (
-            <div key={tr.titre}>
-              <div className="sec">
-                <h2>{tr.titre}</h2>
-                {/* Le compte, et lui seul : le total en dinars n'est pas servi. */}
-                <span>{tr.lignes.length}</span>
+        {/*
+         * Les compteurs et le calendrier ne paraissent que sur ordinateur
+         * (`styles-pme-bureau-chiffres.css`) : au téléphone, la liste suffit, et
+         * son dessin ne change pas. La liste, elle, est enveloppée d'un bloc sans
+         * style au téléphone — le tableau de l'ordinateur.
+         */}
+        {rows.length > 0 ? (
+          <dl className="ec-compteurs">
+            {toutesLesTranches.map((tr) => (
+              <div key={tr.titre} data-ton={tr.lignes.length > 0 ? tr.ton || undefined : undefined}>
+                <dt>{tr.titre}</dt>
+                <dd>{tr.lignes.length}</dd>
               </div>
-              {tr.lignes.map((j) => {
-                const retard = !j.faites && j.premiere.status === "en_retard";
-                const deposee = j.faites;
-                const reste = jours(j.dueDate);
-                const ton = deposee ? "acc" : retard ? "ve" : reste <= BORNE_SEMAINE ? "am" : "";
-                return (
-                  <div className="rw" key={j.cle}>
-                    <i className={ton === "acc" ? undefined : ton || undefined}>
-                      <IconeObligation />
-                    </i>
-                    <span className="bd">
-                      <b>{libelle(j)}</b>
-                      <span className={ton || undefined}>
-                        {deposee
-                          ? t("pme.echeances.sous.deposee")
-                          : retard
-                            ? t("pme.echeances.sous.retard", { count: Math.abs(reste) })
-                            : t("pme.echeances.sous.avenir", { count: reste })}
-                      </span>
-                      <OrigineDEcheance echeance={j.premiere} />
-                      {/* Toutes les sociétés : chaque jour dit la sienne. */}
-                      {plusieurs ? <span>{nomDeSociete(j.tenantId)}</span> : null}
-                    </span>
-                    <span className="rt">
-                      {/*
-                       * `.vl` porte le montant dans le dessin. Faute de
-                       * montant : `—`, ou l'état quand il y en a un à dire.
-                       */}
-                      <span className="vl">{deposee ? t("pme.echeances.reglee") : "—"}</span>
-                      <span className="dt">{jour(j.dueDate)}</span>
-                    </span>
-                  </div>
-                );
-              })}
+            ))}
+          </dl>
+        ) : null}
+
+        <div className="ec-liste">
+          {echeances.isPending && !echec ? (
+            <p className="regle">
+              <span>{t("common.loading")}</span>
+            </p>
+          ) : rows.length === 0 ? (
+            <div className="card">
+              <p>{t("pme.echeances.empty")}</p>
             </div>
-          ))
-        )}
+          ) : (
+            tranches.map((tr) => (
+              <div key={tr.titre}>
+                <div className="sec">
+                  <h2>{tr.titre}</h2>
+                  {/* Le compte, et lui seul : le total en dinars n'est pas servi. */}
+                  <span>{tr.lignes.length}</span>
+                </div>
+                {tr.lignes.map((j) => {
+                  const retard = !j.faites && j.premiere.status === "en_retard";
+                  const deposee = j.faites;
+                  const reste = jours(j.dueDate);
+                  const ton = tonDe(j);
+                  return (
+                    <div className="rw" key={j.cle}>
+                      <i className={ton === "acc" ? undefined : ton || undefined}>
+                        <IconeObligation />
+                      </i>
+                      <span className="bd">
+                        <b>{libelle(j)}</b>
+                        <span className={ton || undefined}>
+                          {deposee
+                            ? t("pme.echeances.sous.deposee")
+                            : retard
+                              ? t("pme.echeances.sous.retard", { count: Math.abs(reste) })
+                              : t("pme.echeances.sous.avenir", { count: reste })}
+                        </span>
+                        <OrigineDEcheance echeance={j.premiere} />
+                        {/* Toutes les sociétés : chaque jour dit la sienne. */}
+                        {plusieurs ? <span>{nomDeSociete(j.tenantId)}</span> : null}
+                      </span>
+                      <span className="rt">
+                        {/*
+                         * `.vl` porte le montant dans le dessin. Faute de
+                         * montant : `—`, ou l'état quand il y en a un à dire.
+                         */}
+                        <span className="vl">{deposee ? t("pme.echeances.reglee") : "—"}</span>
+                        <span className="dt">{jour(j.dueDate)}</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
+
+        {rows.length > 0 ? (
+          <CalendrierDesEcheances
+            aujourdHui={today}
+            jours={parJour.map((j) => ({ date: j.dueDate, ton: tonDe(j), libelle: libelle(j) }))}
+          />
+        ) : null}
 
         {/*
          * La carte du bas du dessin. Elle ne paraît que s'il y a vraiment un

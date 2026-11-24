@@ -5304,6 +5304,8 @@ export const fr = {
   "pme.echeances.retardTexte":
     "Je ne l'ai pas vue passer parce que personne ne me l'a dit : aucune pièce de paiement n'est arrivée. Si vous l'avez réglée, photographiez l'avis et je rapprocherai la ligne.",
   "pme.echeances.retardGeste": "Photographier l'avis",
+  "pme.echeances.moisPrecedent": "Mois précédent",
+  "pme.echeances.moisSuivant": "Mois suivant",
   "pme.bienvenue.barre": "Votre société",
   "pme.bienvenue.carteBandeau": "République Tunisienne · Carte d'identification fiscale",
   "pme.bienvenue.ditTitre": "Voici votre matricule fiscal.",

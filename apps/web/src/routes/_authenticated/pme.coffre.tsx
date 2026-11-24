@@ -389,25 +389,30 @@ function PmeCoffre() {
       </div>
 
       <div className="pad">
-        <h1>
-          {t("pme.coffre.titre")}
-          <Aide
-            titre={t("pme.coffre.titre")}
-            paragraphes={[
-              { texte: t("pme.prive.sous") },
-              { texte: t("pme.coffre.wall") },
-              { texte: t("pme.coffre.choisir.aide") },
-              { texte: t("pme.coffre.pied") },
-            ]}
-          />
-        </h1>
+        {/*
+         * Deux enveloppes sans style au téléphone, autour des rayons : sur
+         * ordinateur, les rayons font la colonne de gauche, l'en-tête et la
+         * galerie celle de droite (`styles-pme-bureau-chiffres.css`).
+         */}
+        <div className="pv-tete">
+          <h1>
+            {t("pme.coffre.titre")}
+            <Aide
+              titre={t("pme.coffre.titre")}
+              paragraphes={[
+                { texte: t("pme.prive.sous") },
+                { texte: t("pme.coffre.wall") },
+                { texte: t("pme.coffre.choisir.aide") },
+                { texte: t("pme.coffre.pied") },
+              ]}
+            />
+          </h1>
 
-        <CompteDesPapiers n={privees.length} />
+          <CompteDesPapiers n={privees.length} />
 
-        <FileLocale vis="personnel" />
+          <FileLocale vis="personnel" />
 
-        {privees.length > 0 ? (
-          <>
+          {privees.length > 0 ? (
             <label className="rp-cherche">
               <svg viewBox="0 0 24 24" className="g" aria-hidden>
                 <circle cx="11" cy="11" r="7" />
@@ -421,122 +426,125 @@ function PmeCoffre() {
                 onChange={(e) => setCherche(e.target.value)}
               />
             </label>
-            {tuilesDeRayon.length > 0 ? (
-              <div className="rp-grille" role="group" aria-label={t("pme.prive.rayons")}>
-                {tuilesDeRayon.map((r) => {
-                  const n = privees.filter((p) => rangement(p)?.rayon === r.code).length;
-                  return (
-                    <button
-                      key={r.code}
-                      type="button"
-                      className="rp-tt"
-                      aria-pressed={rayonVu === r.code}
-                      style={r.teinte ? { background: r.teinte } : undefined}
-                      onClick={() => setRayonVu((v) => (v === r.code ? null : r.code))}
-                    >
-                      <i aria-hidden>{libelleDuRayon(r.code, t).slice(0, 1).toLocaleUpperCase()}</i>
-                      <small>{t("pme.prive.rayon.compte", { count: n })}</small>
-                      <b>{libelleDuRayon(r.code, t)}</b>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </>
+          ) : null}
+        </div>
+
+        {privees.length > 0 && tuilesDeRayon.length > 0 ? (
+          <div className="rp-grille" role="group" aria-label={t("pme.prive.rayons")}>
+            {tuilesDeRayon.map((r) => {
+              const n = privees.filter((p) => rangement(p)?.rayon === r.code).length;
+              return (
+                <button
+                  key={r.code}
+                  type="button"
+                  className="rp-tt"
+                  aria-pressed={rayonVu === r.code}
+                  style={r.teinte ? { background: r.teinte } : undefined}
+                  onClick={() => setRayonVu((v) => (v === r.code ? null : r.code))}
+                >
+                  <i aria-hidden>{libelleDuRayon(r.code, t).slice(0, 1).toLocaleUpperCase()}</i>
+                  <small>{t("pme.prive.rayon.compte", { count: n })}</small>
+                  <b>{libelleDuRayon(r.code, t)}</b>
+                </button>
+              );
+            })}
+          </div>
         ) : null}
 
-        {/* Hors ligne, l'écran le dit — même quand il montre ce qu'il gardait
+        <div className="pv-corps">
+          {/* Hors ligne, l'écran le dit — même quand il montre ce qu'il gardait
             déjà : la session connue (8 novembre 2026) ne fait plus échouer
             l'ouverture de l'écran, c'est à lui de le dire. */}
-        {panne || pieces.fetchStatus === "paused" || !enLigne ? (
-          <div className="card" role="status">
-            <p>
-              {pieces.fetchStatus === "paused" || !enLigne
-                ? t("common.horsLigne")
-                : texteDeLErreur(panne, OU, t("common.error"))}
-            </p>
-            <button
-              type="button"
-              className="btn"
-              disabled={pieces.fetchStatus === "paused" || !enLigne}
-              onClick={() => void pieces.refetch()}
-            >
-              {t("common.reessayer")}
-            </button>
-          </div>
-        ) : null}
+          {panne || pieces.fetchStatus === "paused" || !enLigne ? (
+            <div className="card" role="status">
+              <p>
+                {pieces.fetchStatus === "paused" || !enLigne
+                  ? t("common.horsLigne")
+                  : texteDeLErreur(panne, OU, t("common.error"))}
+              </p>
+              <button
+                type="button"
+                className="btn"
+                disabled={pieces.fetchStatus === "paused" || !enLigne}
+                onClick={() => void pieces.refetch()}
+              >
+                {t("common.reessayer")}
+              </button>
+            </div>
+          ) : null}
 
-        {erreur ? (
-          <div className="card" role="alert">
-            <p>{erreur}</p>
-          </div>
-        ) : null}
+          {erreur ? (
+            <div className="card" role="alert">
+              <p>{erreur}</p>
+            </div>
+          ) : null}
 
-        {pieces.isPending && pieces.fetchStatus !== "paused" ? (
-          <p className="foot">{t("common.loading")}</p>
-        ) : !pieces.isSuccess && pieces.data === undefined ? null : privees.length === 0 &&
-          !pme.file.elements.some((e) => e.vis === "personnel") ? (
-          <div className="card">
-            <p>{t("pme.prive.vide")}</p>
-          </div>
-        ) : (
-          <>
-            {visibles.length === 0 && privees.length > 0 ? (
-              <p className="foot">{t("pme.prive.aucun")}</p>
-            ) : null}
-            <GrilleDesMois
-              papiers={visibles}
-              moisDe={moisDe}
-              titreDe={titreDe}
-              ligneDe={(p) => [rayonDe(p), jour(p), somme(p)].filter(Boolean).join(" · ")}
-              enPlus={(p) =>
-                // Planche 10 : plus de « Non lue » en rouge sur un papier privé.
-                // Seul un refus d'une AUTRE raison se dit encore.
-                p.status === "capturee" &&
-                p.lectureRefusee &&
-                p.lectureRefusee.motif !== "piece_personnelle" ? (
-                  <EtatDeLecture
-                    refus={p.lectureRefusee}
-                    vis={p.vis}
-                    lecture={p.lecture}
-                    motifDitAilleurs="piece_personnelle"
-                  />
-                ) : null
-              }
-              ouvrir={(p) =>
-                void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
-              }
-              choisis={choix}
-              basculer={basculer}
-              occupe={occupe}
-            />
+          {pieces.isPending && pieces.fetchStatus !== "paused" ? (
+            <p className="foot">{t("common.loading")}</p>
+          ) : !pieces.isSuccess && pieces.data === undefined ? null : privees.length === 0 &&
+            !pme.file.elements.some((e) => e.vis === "personnel") ? (
+            <div className="card">
+              <p>{t("pme.prive.vide")}</p>
+            </div>
+          ) : (
+            <>
+              {visibles.length === 0 && privees.length > 0 ? (
+                <p className="foot">{t("pme.prive.aucun")}</p>
+              ) : null}
+              <GrilleDesMois
+                papiers={visibles}
+                moisDe={moisDe}
+                titreDe={titreDe}
+                ligneDe={(p) => [rayonDe(p), jour(p), somme(p)].filter(Boolean).join(" · ")}
+                enPlus={(p) =>
+                  // Planche 10 : plus de « Non lue » en rouge sur un papier privé.
+                  // Seul un refus d'une AUTRE raison se dit encore.
+                  p.status === "capturee" &&
+                  p.lectureRefusee &&
+                  p.lectureRefusee.motif !== "piece_personnelle" ? (
+                    <EtatDeLecture
+                      refus={p.lectureRefusee}
+                      vis={p.vis}
+                      lecture={p.lecture}
+                      motifDitAilleurs="piece_personnelle"
+                    />
+                  ) : null
+                }
+                ouvrir={(p) =>
+                  void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: p.id } })
+                }
+                choisis={choix}
+                basculer={basculer}
+                occupe={occupe}
+              />
 
-            {visibles.length > 0 ? (
-              <div className="gestes">
-                <button
-                  type="button"
-                  className="pr"
-                  disabled={choix.length === 0 || occupe}
-                  onClick={() => mettre.mutate(choix)}
-                >
-                  {t("pme.coffre.mettre")}
-                </button>
-                <button
-                  type="button"
-                  disabled={!supprimables || occupe}
-                  onClick={() => setConfirmer(true)}
-                >
-                  {t("pme.coffre.supprimer")}
-                </button>
-                {choix.length > 0 ? (
-                  <button type="button" disabled={occupe} onClick={() => setRangerOuvert(true)}>
-                    {t("pme.prive.ranger")}
+              {visibles.length > 0 ? (
+                <div className="gestes">
+                  <button
+                    type="button"
+                    className="pr"
+                    disabled={choix.length === 0 || occupe}
+                    onClick={() => mettre.mutate(choix)}
+                  >
+                    {t("pme.coffre.mettre")}
                   </button>
-                ) : null}
-              </div>
-            ) : null}
-          </>
-        )}
+                  <button
+                    type="button"
+                    disabled={!supprimables || occupe}
+                    onClick={() => setConfirmer(true)}
+                  >
+                    {t("pme.coffre.supprimer")}
+                  </button>
+                  {choix.length > 0 ? (
+                    <button type="button" disabled={occupe} onClick={() => setRangerOuvert(true)}>
+                      {t("pme.prive.ranger")}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
 
       {rangerOuvert

@@ -1,0 +1,547 @@
+/*
+ * Les écrans de chiffres sur ordinateur — Charges, TVA, Échéances, Espace privé
+ * (maquette desktop validée, novembre 2026 : `Charges`, `Tva`, `Echeances`, `Prive`).
+ *
+ * Importée par `styles-espace-pme.css`, juste après `styles-pme.css` : elle arrive
+ * avec la surface et la suit dans la cascade. Tout le dessin vit sous
+ * `@media (min-width: 1024px)` : au téléphone, rien ne change. Les seules règles
+ * hors de cette requête CACHENT au téléphone ce qui n'existe que sur ordinateur
+ * (les compteurs et le calendrier des échéances).
+ *
+ * Aucune couleur écrite : seulement les jetons de la surface PME, qui ont déjà
+ * leur valeur claire et leur valeur sombre. Propriétés logiques partout : la
+ * même feuille sert l'arabe. Aucune ombre : `styles.css` les éteint toutes (doctrine
+ * Edition One) ; un filet est une bordure, un anneau un `outline`.
+ *
+ * Les enveloppes posées par les écrans (`.ch-*`, `.tv-*`, `.ec-liste`, `.pv-*`)
+ * sont des blocs sans style au téléphone ; ici, elles deviennent les colonnes.
+ */
+
+@media (max-width: 1023.98px) {
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs,
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cote {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* ------------------------------------------------ la page, commune aux quatre */
+  [data-surface="pme"]
+    :is([data-ecran="charges"], [data-ecran="tva"], [data-ecran="echeances"], [data-ecran="coffre"])
+    > .pad {
+    width: 100%;
+    max-width: 82.5rem;
+    margin-inline: auto;
+    box-sizing: border-box;
+    padding: 0.5rem 2rem 3rem;
+  }
+
+  /* ============================================================ CHARGES */
+
+  /* Le total à gauche, les mois à droite ; puis le tableau des classes et sa colonne. */
+  [data-surface="pme"] [data-ecran="charges"] .pad:has(> .ch-familles) {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .pad > .lede {
+    grid-column: 1 / span 4;
+    grid-row: 1;
+    align-self: end;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .pad > .lede .amt {
+    font-size: 2.75rem;
+  }
+  /* Les douze mois tiennent sur la ligne : plus de défilement, plus de marge négative. */
+  [data-surface="pme"] [data-ecran="charges"] .pad > .mths {
+    flex-wrap: wrap;
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+  /* À côté du total, les douze mois en deux rangées de six, à cases égales. */
+  [data-surface="pme"] [data-ecran="charges"] .pad:has(> .ch-familles) > .mths {
+    grid-column: 5 / -1;
+    grid-row: 1;
+    align-self: end;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .pad > .ceil {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: 1.5rem;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .pad > .ch-familles {
+    grid-column: 1 / span 8;
+    grid-row: 3;
+    margin-top: 1.5rem;
+    padding: 1.25rem 1.25rem 0.5rem;
+    border-radius: var(--r-md);
+    background: var(--d1);
+  }
+  [data-surface="pme"] [data-ecran="charges"] .pad > .ch-cote {
+    grid-column: 9 / -1;
+    grid-row: 3 / span 2;
+    margin-top: 1.5rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .pad > .ch-pied {
+    grid-column: 1 / span 8;
+    grid-row: 4;
+  }
+
+  /* Le tableau : classe, part, pour-cent, montant — une ligne par classe. */
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .sec:not(button):not(a) {
+    margin: 0 0 0.5rem;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .cls {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 3.5rem minmax(7rem, auto);
+    grid-template-areas: "nm bar pc vl";
+    align-items: center;
+    column-gap: 1rem;
+    margin: 0;
+    padding: 0.875rem 0.5rem;
+    border-radius: 0;
+    background: transparent;
+    border-top: 1px solid var(--dl);
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .cls .hd {
+    display: contents;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .cls .nm {
+    grid-area: nm;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .cls .bar {
+    grid-area: bar;
+    height: 8px;
+    background: var(--dl);
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .cls .pc {
+    grid-area: pc;
+    text-align: end;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .cls .vl {
+    grid-area: vl;
+    text-align: end;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .cls:focus-visible {
+    outline-offset: -2px;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles .tot {
+    margin-top: 0;
+    padding: 1rem 0.5rem;
+    border-top-color: var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-familles > .foot {
+    margin: 0.5rem 0 1rem;
+  }
+
+  /* La colonne de droite : les questions de Malica, puis ce que le palier suivant ouvrirait. */
+  [data-surface="pme"] [data-ecran="charges"] .ch-cote > .note,
+  [data-surface="pme"] [data-ecran="charges"] .ch-cote > .locks {
+    margin-top: 0;
+  }
+  [data-surface="pme"] [data-ecran="charges"] .ch-cote .locks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* ================================================================ TVA */
+
+  [data-surface="pme"] [data-ecran="tva"] .pad {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .tv-principal {
+    grid-column: 1 / span 8;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .tv-cote {
+    grid-column: 9 / -1;
+    padding-top: 1.0625rem;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .tv-cote > .sec:first-child {
+    margin-top: 0;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .pad .chiffre {
+    font-size: 2.75rem;
+  }
+  /* Collectée et déductible : deux cartes côte à côte. */
+  [data-surface="pme"] [data-ecran="tva"] .pad .bars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .pad .bars > div {
+    gap: 0.75rem;
+    padding: 1.125rem;
+    border-radius: var(--r-md);
+    background: var(--d1);
+  }
+  [data-surface="pme"] [data-ecran="tva"] .pad .bars .l {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .pad .bars .l b {
+    font-size: 1.375rem;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .pad .bars .b {
+    background: var(--dl);
+  }
+  /* Le détail et la déclaration en tableau : libellé, base, TVA. */
+  [data-surface="pme"] [data-ecran="tva"] .tv-principal .rw {
+    padding-inline: 0.5rem;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .tv-principal .rw .bd {
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, auto);
+    align-items: baseline;
+    column-gap: 1rem;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .tv-principal .rw .bd > span {
+    text-align: end;
+  }
+  [data-surface="pme"] [data-ecran="tva"] .tv-principal .rw .rt {
+    min-width: 7rem;
+  }
+
+  /* ========================================================== ÉCHÉANCES */
+
+  [data-surface="pme"] [data-ecran="echeances"] .pad {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .pad > * {
+    grid-column: 1 / -1;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .pad > .ec-liste,
+  [data-surface="pme"] [data-ecran="echeances"] .pad > .ec-liste ~ .card {
+    grid-column: 1 / span 8;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .pad > .ec-cote {
+    grid-column: 9 / -1;
+    grid-row: span 2;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .pad h1 {
+    font-size: 2rem;
+  }
+
+  /* Les quatre compteurs. */
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1.5rem 0 0;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs > div {
+    padding: 1rem;
+    border-radius: var(--r-sm);
+    background: var(--d1);
+    border: 1px solid var(--dl);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs dt {
+    font-size: 0.75rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs dd {
+    margin: 0.375rem 0 0;
+    font-family: var(--mono);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--tx);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs > div[data-ton="ve"] {
+    border-color: var(--ve);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs > div[data-ton="ve"] dd {
+    color: var(--ve);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs > div[data-ton="am"] {
+    border-color: var(--am);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-compteurs > div[data-ton="am"] dd {
+    color: var(--am);
+  }
+
+  /* La liste en tableau : date, signe, obligations, montant. */
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste {
+    margin-top: 1.5rem;
+    padding: 0.25rem 1.25rem 0.75rem;
+    border-radius: var(--r-md);
+    background: var(--d1);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .sec:not(button):not(a) {
+    margin: 1.25rem 0 0.25rem;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw {
+    display: grid;
+    grid-template-columns: 5.5rem 2.375rem minmax(0, 1fr) minmax(6rem, auto);
+    column-gap: 1rem;
+    align-items: center;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw .rt {
+    display: contents;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw > i,
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw > .bd,
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw .rt > * {
+    grid-row: 1;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw .dt {
+    grid-column: 1;
+    text-align: start;
+    font-family: var(--mono);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--tx);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw > i {
+    grid-column: 2;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw > .bd {
+    grid-column: 3;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw .vl {
+    grid-column: 4;
+    text-align: end;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw:has(> i.ve) .dt {
+    color: var(--ve);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste .rw:has(> i.am) .dt {
+    color: var(--am);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-liste > div:last-child > .rw:last-child {
+    border-bottom: 0;
+  }
+
+  /* Le mois en calendrier, à droite. */
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cote {
+    position: sticky;
+    top: 1.5rem;
+    margin-top: 1.5rem;
+    padding: 1.125rem;
+    border-radius: var(--r-md);
+    background: var(--d1);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal-tete {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal-tete h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal-tete button {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--r-sm);
+    background: var(--d2);
+    color: var(--t2);
+    cursor: pointer;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal-tete svg {
+    width: 16px;
+    height: 16px;
+  }
+  [dir="rtl"] [data-surface="pme"] [data-ecran="echeances"] .ec-cal-tete svg,
+  [data-surface="pme"][dir="rtl"] [data-ecran="echeances"] .ec-cal-tete svg {
+    transform: scaleX(-1);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 4px;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    text-align: center;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal th {
+    font-weight: 500;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal td {
+    height: 32px;
+    border-radius: 8px;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal td[data-ton="echeance"] {
+    background: var(--d2);
+    color: var(--tx);
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal td[data-ton="acc"] {
+    background: var(--d2);
+    color: var(--acc);
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal td[data-ton="ve"] {
+    background: var(--ve);
+    color: var(--bg);
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal td[data-ton="am"] {
+    background: var(--am);
+    color: var(--bg);
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-cal td[aria-current="date"] {
+    outline: 1.5px solid var(--tx);
+    outline-offset: -1.5px;
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-legende {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem 0.875rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.6875rem;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-legende li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-legende li::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-legende [data-ton="ve"]::before {
+    background: var(--ve);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-legende [data-ton="am"]::before {
+    background: var(--am);
+  }
+  [data-surface="pme"] [data-ecran="echeances"] .ec-legende [data-ton="jour"]::before {
+    border: 1.5px solid var(--tx);
+    box-sizing: border-box;
+  }
+
+  /* ====================================================== ESPACE PRIVÉ */
+
+  /* Les rayons à gauche, l'en-tête et la galerie à droite. */
+  [data-surface="pme"] [data-ecran="coffre"] .pad {
+    display: grid;
+    grid-template-columns: minmax(12rem, 3fr) minmax(0, 9fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pad > .pv-tete {
+    grid-column: 2;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 20rem);
+    column-gap: 1.5rem;
+    align-items: center;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pv-tete > * {
+    grid-column: 1 / -1;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pv-tete > h1 {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pv-tete > .rp-cherche {
+    grid-column: 2;
+    grid-row: 1;
+    margin-top: 1.0625rem;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pv-tete > .compte {
+    justify-self: start;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pad > .rp-grille {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: 1.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.375rem;
+    margin-top: 1.0625rem;
+  }
+  /* Le rayon montré : un anneau hors de la tuile, lisible sur toutes les teintes. */
+  [data-surface="pme"] [data-ecran="coffre"] .rp-grille .rp-tt[aria-pressed="true"] {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .rp-grille .rp-tt {
+    min-height: 44px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--r-sm);
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .rp-grille .rp-tt i {
+    position: static;
+    order: -1;
+    width: 1.25rem;
+    font-size: 0.875rem;
+    color: inherit;
+    opacity: 0.7;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .rp-grille .rp-tt b {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.875rem;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .rp-grille .rp-tt small {
+    order: 1;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pad > .pv-corps {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Les gestes sur la sélection montent au-dessus de la galerie, en barre. */
+  [data-surface="pme"] [data-ecran="coffre"] .pv-corps > .gestes {
+    order: -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: var(--r-sm);
+    background: var(--d1);
+    border: 1px solid var(--dl);
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pv-corps > .gestes button {
+    min-height: 40px;
+    padding: 0 1rem;
+    font-size: 0.875rem;
+  }
+  /* La galerie : quatre colonnes, la miniature au format d'une page. */
+  [data-surface="pme"] [data-ecran="coffre"] .pad .grille {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  [data-surface="pme"] [data-ecran="coffre"] .pad .ouvrir .apercu {
+    height: auto;
+    aspect-ratio: 3 / 4;
+  }
+}

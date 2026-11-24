@@ -271,383 +271,398 @@ function PmeTva() {
 
       <div className="pad">
         {/*
-         * 23 octobre 2026 (« trop d'écriture, simplifier sans rien perdre ») :
-         * la règle de rattachement et la source des montants, qui
-         * s'affichaient en permanence, sont derrière le ⓘ du mois.
+         * Deux enveloppes sans style au téléphone : sur ordinateur, la colonne
+         * du chiffre et de la déclaration, et celle de ce qui le ferait bouger
+         * (`styles-pme-bureau-chiffres.css`).
          */}
-        <h1>
-          {moisEtAnnee}
-          <Aide
-            titre={moisEtAnnee}
-            paragraphes={[{ texte: t("pme.tva.rangee") }, { texte: t("pme.tva.source") }]}
-          />
-        </h1>
-        <p className="sub">
-          {parSociete ? t("pme.tva.sousGroupe", { count: pme.dossiers.length }) : t("pme.tva.sous")}
-        </p>
-        {/* Sans comptabilité, la même mention qu'aux charges (24 novembre 2026). */}
-        {estimation ? (
-          <p className="sub" data-estimation>
-            {t("pme.charges.estimation")}
+        <div className="tv-principal">
+          {/*
+           * 23 octobre 2026 (« trop d'écriture, simplifier sans rien perdre ») :
+           * la règle de rattachement et la source des montants, qui
+           * s'affichaient en permanence, sont derrière le ⓘ du mois.
+           */}
+          <h1>
+            {moisEtAnnee}
+            <Aide
+              titre={moisEtAnnee}
+              paragraphes={[{ texte: t("pme.tva.rangee") }, { texte: t("pme.tva.source") }]}
+            />
+          </h1>
+          <p className="sub">
+            {parSociete
+              ? t("pme.tva.sousGroupe", { count: pme.dossiers.length })
+              : t("pme.tva.sous")}
           </p>
-        ) : null}
+          {/* Sans comptabilité, la même mention qu'aux charges (24 novembre 2026). */}
+          {estimation ? (
+            <p className="sub" data-estimation>
+              {t("pme.charges.estimation")}
+            </p>
+          ) : null}
 
-        {/*
-         * LE CHIFFRE. `.cr` quand le solde est un crédit reporté : la feuille
-         * le passe en `var(--acc)`. Le signe vient du moteur ; on le retire de
-         * l'affichage parce que l'unité dit déjà le sens.
-         */}
-        {/*
-         * Un dossier NON assujetti n'a ni TVA à reverser ni crédit à reporter
-         * (ANO-LIVE-001) : la TVA de ses achats est un coût, comprise dans ses
-         * charges. On le dit, au lieu d'un chiffre qu'il n'a pas.
-         */}
-        {nonAssujetti ? (
-          <p className="regle">
-            <IconeInfo />
-            <span>{t("pme.tva.nonAssujetti")}</span>
-          </p>
-        ) : (
-          <div className={sens === "credit" ? "chiffre cr" : "chiffre"}>
-            {sens === "inconnu" ? "—" : montant(solde!.replace(/^-/, ""), locale)}{" "}
-            <u>
-              {tva?.currency ?? pme.currency}{" "}
-              {sens === "inconnu"
-                ? t("pme.tva.soldeInconnu")
-                : sens === "nul"
-                  ? t("pme.tva.soldeNul")
-                  : sens === "du"
-                    ? t("pme.tva.aPayer")
-                    : t("pme.tva.credit")}
-            </u>
-          </div>
-        )}
-
-        {/*
-         * La comparaison avec le mois précédent n'est pas servie : la ligne
-         * disait « — » en permanence. Elle reviendra avec sa donnée.
-         */}
-
-        {isPending ? (
-          <p className="regle">
-            <span>{t("common.loading")}</span>
-          </p>
-        ) : !tva ? (
-          <div className="card">
-            <p>{t("pme.tva.empty")}</p>
-          </div>
-        ) : (
-          <>
-            {/*
-             * ─────────────────────────────────── L'HISTOGRAMME, ET SA LARGEUR
-             *
-             * Les deux LIBELLÉS et les deux MONTANTS sont servis : ce sont
-             * `totals.collectee` et `totals.deductible`, tels quels.
-             *
-             * La LARGEUR, elle, est une proportion entre ces deux montants, et
-             * R3 interdit de la calculer en JavaScript. Elle n'est donc pas
-             * calculée ici : les deux décimales gouvernées sont passées à la
-             * feuille comme propriétés personnalisées, et c'est `calc()` — le
-             * moteur de rendu — qui divise. Aucune arithmétique n'est écrite
-             * dans ce composant, et aucun nombre dérivé n'est affiché : la
-             * barre est un encodage visuel de deux valeurs citables.
-             *
-             * La collectée est la référence du dessin, à 100 % par
-             * construction (le dessin l'écrit ainsi) : ce n'est pas un calcul,
-             * c'est le haut de l'échelle. `min()` borne le dépassement si la
-             * déductible excède la collectée, et la barre n'est posée que si la
-             * référence est non nulle — une division par zéro ne rendrait rien.
-             *
-             * C'EST LE SEUL ARBITRAGE DE CETTE CONVERSION. Si la lecture de R3
-             * doit être plus stricte, la barre déductible se retire en
-             * supprimant le `<i className="d">` : les deux montants restent
-             * lisibles dans `.l b`, et l'écran ne perd aucun chiffre.
-             */}
-            <div className="bars">
-              <div>
-                <span className="l">
-                  <u>{t("pme.tva.collectee")}</u>
-                  <b>{montant(tva.totals.collectee, locale)}</b>
-                </span>
-                <span className="b">
-                  {Number(tva.totals.collectee) > 0 ? <i style={{ width: "100%" }} /> : null}
-                </span>
-              </div>
-              <div>
-                <span className="l">
-                  <u>{t("pme.tva.deductible")}</u>
-                  <b>{montant(tva.totals.deductible, locale)}</b>
-                </span>
-                <span className="b">
-                  {Number(tva.totals.collectee) > 0 ? (
-                    <i
-                      className="d"
-                      style={
-                        {
-                          "--col": tva.totals.collectee,
-                          "--ded": tva.totals.deductible,
-                          width: "min(100%, calc(var(--ded) / var(--col) * 100%))",
-                        } as CSSProperties
-                      }
-                    />
-                  ) : null}
-                </span>
-              </div>
+          {/*
+           * LE CHIFFRE. `.cr` quand le solde est un crédit reporté : la feuille
+           * le passe en `var(--acc)`. Le signe vient du moteur ; on le retire de
+           * l'affichage parce que l'unité dit déjà le sens.
+           */}
+          {/*
+           * Un dossier NON assujetti n'a ni TVA à reverser ni crédit à reporter
+           * (ANO-LIVE-001) : la TVA de ses achats est un coût, comprise dans ses
+           * charges. On le dit, au lieu d'un chiffre qu'il n'a pas.
+           */}
+          {nonAssujetti ? (
+            <p className="regle">
+              <IconeInfo />
+              <span>{t("pme.tva.nonAssujetti")}</span>
+            </p>
+          ) : (
+            <div className={sens === "credit" ? "chiffre cr" : "chiffre"}>
+              {sens === "inconnu" ? "—" : montant(solde!.replace(/^-/, ""), locale)}{" "}
+              <u>
+                {tva?.currency ?? pme.currency}{" "}
+                {sens === "inconnu"
+                  ? t("pme.tva.soldeInconnu")
+                  : sens === "nul"
+                    ? t("pme.tva.soldeNul")
+                    : sens === "du"
+                      ? t("pme.tva.aPayer")
+                      : t("pme.tva.credit")}
+              </u>
             </div>
+          )}
 
-            {/* ── le détail, par taux — un titre sans ligne ne dit rien ──── */}
-            {detail.length > 0 || refusees.length > 0 ? (
-              <div className="sec">
-                <h2>{t("pme.tva.detail")}</h2>
-                <span>{t("pme.tva.parTaux")}</span>
-              </div>
-            ) : null}
+          {/*
+           * La comparaison avec le mois précédent n'est pas servie : la ligne
+           * disait « — » en permanence. Elle reviendra avec sa donnée.
+           */}
 
-            {/*
-             * Une ligne par seau du moteur. Pas un `<button>` : aucun
-             * détail par taux n'est servi, et un bouton qui ne mène nulle part
-             * promet une pièce à voir qui n'existe pas. La feuille ne demande
-             * pas `button` — `.rw` est agnostique de l'élément.
-             */}
-            {detail.map(({ cote, sens, seau }) => (
-              // Un seau par taux ET par nature : la nature entre dans la clé.
-              <div className="rw" key={`${cote}-${seau.tax_code}-${seau.nature ?? ""}`}>
-                <i aria-hidden>
-                  <IconePiece />
-                </i>
-                <span className="bd">
-                  <b>
-                    {sens} {pourcent(seau.rate)}
-                  </b>
-                  <span>
-                    {t("cab.immo.base")} {montant(seau.base, locale)}
-                    {cote === "deductible" && ligneDuSeau(seau.ligne)
-                      ? ` · ${ligneDuSeau(seau.ligne)!.label}`
-                      : null}
-                  </span>
-                </span>
-                <span className="rt">
-                  <span className="vl">{montant(seau.vat, locale)}</span>
-                </span>
-              </div>
-            ))}
-
-            {/*
-             * « Non récupérable » du dessin. `refused[]` rend une RAISON et un
-             * `item_id` par ligne écartée — jamais un montant. Le compte est
-             * donc vrai, et la valeur s'écrit « — » : afficher « 0,000 »
-             * dirait que ces lignes ne portent pas de TVA, ce qu'on ne sait
-             * pas. Les raisons sont des codes techniques
-             * (`MISSING_TAX_RATE:…`) et ne sont pas montrées au dirigeant.
-             */}
-            {refusees.length > 0 ? (
-              <div className="rw">
-                <i aria-hidden>
-                  <IconePiece />
-                </i>
-                <span className="bd">
-                  <b>{t("pme.tva.nonRecuperable")}</b>
-                  <span>{t("pme.tva.refusees", { count: refusees.length })}</span>
-                </span>
-                <span className="rt">
-                  <span className="vl">—</span>
-                </span>
-              </div>
-            ) : null}
-
-            {/*
-             * Les pièces en devise hors du calcul : celles qui attendent leur
-             * cours (le cabinet le saisit, ou l'import l'apporte), et celles
-             * dont la conversion est à revoir par le cabinet. Leur TVA n'est
-             * pas perdue : elle n'est pas encore comptée. « — », jamais 0.
-             */}
-            {enAttenteDeCours.length > 0 ? (
-              <div className="rw">
-                <i aria-hidden>
-                  <IconePiece />
-                </i>
-                <span className="bd">
-                  <b className="flex items-center gap-1">
-                    {t("pme.tva.enAttenteDeCours")}
-                    <Aide
-                      titre={t("pme.tva.enAttenteDeCours")}
-                      paragraphes={[{ texte: t("pme.tva.enAttenteDeCours.aide") }]}
-                    />
-                  </b>
-                  <span>{t("pme.tva.piecesEnDevise", { count: enAttenteDeCours.length })}</span>
-                </span>
-                <span className="rt">
-                  <span className="vl">—</span>
-                </span>
-              </div>
-            ) : null}
-            {conversionsRefusees.length > 0 ? (
-              <div className="rw">
-                <i aria-hidden>
-                  <IconePiece />
-                </i>
-                <span className="bd">
-                  <b className="flex items-center gap-1">
-                    {t("pme.tva.conversionARevoir")}
-                    <Aide
-                      titre={t("pme.tva.conversionARevoir")}
-                      paragraphes={[{ texte: t("pme.tva.conversionARevoir.aide") }]}
-                    />
-                  </b>
-                  <span>{t("pme.tva.piecesEnDevise", { count: conversionsRefusees.length })}</span>
-                </span>
-                <span className="rt">
-                  <span className="vl">—</span>
-                </span>
-              </div>
-            ) : null}
-
-            {/*
-             * ── la déclaration, ligne par ligne ──────────────────────────
-             *
-             * Les lignes du référentiel, toutes, même à zéro : c'est la forme
-             * du formulaire. L'explication (la nature, et que ces lignes sont
-             * un défaut à confirmer) est dans le ⓘ, jamais dans la carte.
-             */}
-            {declaration.length > 0 ? (
-              <>
-                <div className="sec">
-                  <h2>
-                    {t("tva.declaration.titre")}
-                    <Aide
-                      titre={t("tva.declaration.titre")}
-                      paragraphes={[
-                        { texte: t("tva.declaration.aide") },
-                        ...(declaration.some((l) => l.incertain)
-                          ? [{ texte: t("tva.declaration.aConfirmer") }]
-                          : []),
-                      ]}
-                    />
-                  </h2>
-                </div>
-                {declaration.map((l) => (
-                  <div className="rw" key={l.code}>
-                    <i aria-hidden>
-                      <IconePiece />
-                    </i>
-                    <span className="bd">
-                      <b>{l.label}</b>
-                      <span>
-                        {t("cab.immo.base")} {montant(l.base, locale)}
-                      </span>
-                    </span>
-                    <span className="rt">
-                      <span className="vl">{montant(l.vat, locale)}</span>
-                    </span>
-                  </div>
-                ))}
-                {/*
-                 * Ce qui est rangé par défaut, faute d'avoir pu attribuer la
-                 * nature : compté et dit, jamais muet. Le montant est déjà
-                 * dans la ligne par défaut ; on n'en écrit pas un second.
-                 */}
-                {parDefaut > 0 ? (
-                  <div className="rw">
-                    <i aria-hidden>
-                      <IconeInfo />
-                    </i>
-                    <span className="bd">
-                      <b>
-                        {t("tva.declaration.parDefaut", { count: parDefaut })}
-                        <Aide
-                          titre={t("tva.declaration.parDefaut", { count: parDefaut })}
-                          paragraphes={[{ texte: t("tva.declaration.parDefaut.aide") }]}
-                        />
-                      </b>
-                    </span>
-                  </div>
-                ) : null}
-                {/* Un référentiel incomplet : compté dans les totaux, nommé à part. */}
-                {(tva?.sans_ligne.length ?? 0) > 0 ? (
-                  <div className="rw">
-                    <i aria-hidden>
-                      <IconeInfo />
-                    </i>
-                    <span className="bd">
-                      <b>
-                        {t("tva.declaration.sansLigne", { count: tva!.sans_ligne.length })}
-                        <Aide
-                          titre={t("tva.declaration.sansLigne", { count: tva!.sans_ligne.length })}
-                          paragraphes={[{ texte: t("tva.declaration.sansLigne.aide") }]}
-                        />
-                      </b>
-                    </span>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-          </>
-        )}
-
-        {/*
-         * ── ce qui changerait le chiffre ────────────────────────────────
-         *
-         * Le dessin y met « 3 pièces lues, pas transmises » et chiffre le
-         * contrefactuel (« vous payez 400,000 au lieu de 812,000 »). Ce
-         * chiffre est une SOUSTRACTION sur des pièces que le moteur n'a pas
-         * vues — il ne tourne que sur les extraits transmis — donc R3 l'exclut
-         * et aucune méthode ne le sert.
-         *
-         * Ce que la route sert vraiment, et qu'elle servait déjà, c'est
-         * `transmisesSansDate` : des pièces parties sans date d'envoi, qui ne
-         * pèsent dans AUCUN mois. Elles changent bel et bien le chiffre, et la
-         * phrase qui les explique est au dictionnaire, déjà traduite. La carte
-         * dit donc ce fait-là, et le montant qu'elles portent s'écrit « — ».
-         *
-         * Les deux boutons du dessin — « Les transmettre », « Les voir » — ne
-         * sont pas posés : aucun geste de transmission ni de filtre sur ces
-         * pièces n'est au contrat depuis cet écran.
-         */}
-        {sansDate.data ? (
-          <>
-            <div className="sec">
-              <h2>{t("pme.tva.ceQuiChange")}</h2>
-            </div>
+          {isPending ? (
+            <p className="regle">
+              <span>{t("common.loading")}</span>
+            </p>
+          ) : !tva ? (
             <div className="card">
-              <div className="hd">
-                <b>
-                  {t("pme.tva.sansDateCompte", { count: sansDate.data })}
-                  <Aide
-                    titre={t("pme.tva.ceQuiChange")}
-                    paragraphes={[{ texte: t("pme.tva.sansDate", { count: sansDate.data }) }]}
-                  />
-                </b>
-              </div>
+              <p>{t("pme.tva.empty")}</p>
             </div>
-          </>
-        ) : null}
+          ) : (
+            <>
+              {/*
+               * ─────────────────────────────────── L'HISTOGRAMME, ET SA LARGEUR
+               *
+               * Les deux LIBELLÉS et les deux MONTANTS sont servis : ce sont
+               * `totals.collectee` et `totals.deductible`, tels quels.
+               *
+               * La LARGEUR, elle, est une proportion entre ces deux montants, et
+               * R3 interdit de la calculer en JavaScript. Elle n'est donc pas
+               * calculée ici : les deux décimales gouvernées sont passées à la
+               * feuille comme propriétés personnalisées, et c'est `calc()` — le
+               * moteur de rendu — qui divise. Aucune arithmétique n'est écrite
+               * dans ce composant, et aucun nombre dérivé n'est affiché : la
+               * barre est un encodage visuel de deux valeurs citables.
+               *
+               * La collectée est la référence du dessin, à 100 % par
+               * construction (le dessin l'écrit ainsi) : ce n'est pas un calcul,
+               * c'est le haut de l'échelle. `min()` borne le dépassement si la
+               * déductible excède la collectée, et la barre n'est posée que si la
+               * référence est non nulle — une division par zéro ne rendrait rien.
+               *
+               * C'EST LE SEUL ARBITRAGE DE CETTE CONVERSION. Si la lecture de R3
+               * doit être plus stricte, la barre déductible se retire en
+               * supprimant le `<i className="d">` : les deux montants restent
+               * lisibles dans `.l b`, et l'écran ne perd aucun chiffre.
+               */}
+              <div className="bars">
+                <div>
+                  <span className="l">
+                    <u>{t("pme.tva.collectee")}</u>
+                    <b>{montant(tva.totals.collectee, locale)}</b>
+                  </span>
+                  <span className="b">
+                    {Number(tva.totals.collectee) > 0 ? <i style={{ width: "100%" }} /> : null}
+                  </span>
+                </div>
+                <div>
+                  <span className="l">
+                    <u>{t("pme.tva.deductible")}</u>
+                    <b>{montant(tva.totals.deductible, locale)}</b>
+                  </span>
+                  <span className="b">
+                    {Number(tva.totals.collectee) > 0 ? (
+                      <i
+                        className="d"
+                        style={
+                          {
+                            "--col": tva.totals.collectee,
+                            "--ded": tva.totals.deductible,
+                            width: "min(100%, calc(var(--ded) / var(--col) * 100%))",
+                          } as CSSProperties
+                        }
+                      />
+                    ) : null}
+                  </span>
+                </div>
+              </div>
 
-        {/*
-         * ── l'axe par société, et lui seul ──────────────────────────────
-         *
-         * C'est le SEUL bloc que le diff `tva.solo` / `tva.premium` montre, en
-         * plus du titre et du sous-titre. `basic`, `solo` et `team` sont
-         * identiques : rien d'autre n'est conditionné.
-         */}
-        {parSociete ? (
-          <>
-            <div className="sec">
-              <h2>{t("pme.tva.parSociete")}</h2>
-              <span>{pme.dossiers.length}</span>
-            </div>
-            {pme.dossiers.map((d) => (
-              <div className="rw" key={d.id}>
-                <i aria-hidden>
-                  <IconeHistogramme />
-                </i>
-                {/* Le solde par société n'est pas servi : le nom seul, sans « — » muet. */}
-                <span className="bd">
-                  <b>{d.name}</b>
-                </span>
+              {/* ── le détail, par taux — un titre sans ligne ne dit rien ──── */}
+              {detail.length > 0 || refusees.length > 0 ? (
+                <div className="sec">
+                  <h2>{t("pme.tva.detail")}</h2>
+                  <span>{t("pme.tva.parTaux")}</span>
+                </div>
+              ) : null}
+
+              {/*
+               * Une ligne par seau du moteur. Pas un `<button>` : aucun
+               * détail par taux n'est servi, et un bouton qui ne mène nulle part
+               * promet une pièce à voir qui n'existe pas. La feuille ne demande
+               * pas `button` — `.rw` est agnostique de l'élément.
+               */}
+              {detail.map(({ cote, sens, seau }) => (
+                // Un seau par taux ET par nature : la nature entre dans la clé.
+                <div className="rw" key={`${cote}-${seau.tax_code}-${seau.nature ?? ""}`}>
+                  <i aria-hidden>
+                    <IconePiece />
+                  </i>
+                  <span className="bd">
+                    <b>
+                      {sens} {pourcent(seau.rate)}
+                    </b>
+                    <span>
+                      {t("cab.immo.base")} {montant(seau.base, locale)}
+                      {cote === "deductible" && ligneDuSeau(seau.ligne)
+                        ? ` · ${ligneDuSeau(seau.ligne)!.label}`
+                        : null}
+                    </span>
+                  </span>
+                  <span className="rt">
+                    <span className="vl">{montant(seau.vat, locale)}</span>
+                  </span>
+                </div>
+              ))}
+
+              {/*
+               * « Non récupérable » du dessin. `refused[]` rend une RAISON et un
+               * `item_id` par ligne écartée — jamais un montant. Le compte est
+               * donc vrai, et la valeur s'écrit « — » : afficher « 0,000 »
+               * dirait que ces lignes ne portent pas de TVA, ce qu'on ne sait
+               * pas. Les raisons sont des codes techniques
+               * (`MISSING_TAX_RATE:…`) et ne sont pas montrées au dirigeant.
+               */}
+              {refusees.length > 0 ? (
+                <div className="rw">
+                  <i aria-hidden>
+                    <IconePiece />
+                  </i>
+                  <span className="bd">
+                    <b>{t("pme.tva.nonRecuperable")}</b>
+                    <span>{t("pme.tva.refusees", { count: refusees.length })}</span>
+                  </span>
+                  <span className="rt">
+                    <span className="vl">—</span>
+                  </span>
+                </div>
+              ) : null}
+
+              {/*
+               * Les pièces en devise hors du calcul : celles qui attendent leur
+               * cours (le cabinet le saisit, ou l'import l'apporte), et celles
+               * dont la conversion est à revoir par le cabinet. Leur TVA n'est
+               * pas perdue : elle n'est pas encore comptée. « — », jamais 0.
+               */}
+              {enAttenteDeCours.length > 0 ? (
+                <div className="rw">
+                  <i aria-hidden>
+                    <IconePiece />
+                  </i>
+                  <span className="bd">
+                    <b className="flex items-center gap-1">
+                      {t("pme.tva.enAttenteDeCours")}
+                      <Aide
+                        titre={t("pme.tva.enAttenteDeCours")}
+                        paragraphes={[{ texte: t("pme.tva.enAttenteDeCours.aide") }]}
+                      />
+                    </b>
+                    <span>{t("pme.tva.piecesEnDevise", { count: enAttenteDeCours.length })}</span>
+                  </span>
+                  <span className="rt">
+                    <span className="vl">—</span>
+                  </span>
+                </div>
+              ) : null}
+              {conversionsRefusees.length > 0 ? (
+                <div className="rw">
+                  <i aria-hidden>
+                    <IconePiece />
+                  </i>
+                  <span className="bd">
+                    <b className="flex items-center gap-1">
+                      {t("pme.tva.conversionARevoir")}
+                      <Aide
+                        titre={t("pme.tva.conversionARevoir")}
+                        paragraphes={[{ texte: t("pme.tva.conversionARevoir.aide") }]}
+                      />
+                    </b>
+                    <span>
+                      {t("pme.tva.piecesEnDevise", { count: conversionsRefusees.length })}
+                    </span>
+                  </span>
+                  <span className="rt">
+                    <span className="vl">—</span>
+                  </span>
+                </div>
+              ) : null}
+
+              {/*
+               * ── la déclaration, ligne par ligne ──────────────────────────
+               *
+               * Les lignes du référentiel, toutes, même à zéro : c'est la forme
+               * du formulaire. L'explication (la nature, et que ces lignes sont
+               * un défaut à confirmer) est dans le ⓘ, jamais dans la carte.
+               */}
+              {declaration.length > 0 ? (
+                <>
+                  <div className="sec">
+                    <h2>
+                      {t("tva.declaration.titre")}
+                      <Aide
+                        titre={t("tva.declaration.titre")}
+                        paragraphes={[
+                          { texte: t("tva.declaration.aide") },
+                          ...(declaration.some((l) => l.incertain)
+                            ? [{ texte: t("tva.declaration.aConfirmer") }]
+                            : []),
+                        ]}
+                      />
+                    </h2>
+                  </div>
+                  {declaration.map((l) => (
+                    <div className="rw" key={l.code}>
+                      <i aria-hidden>
+                        <IconePiece />
+                      </i>
+                      <span className="bd">
+                        <b>{l.label}</b>
+                        <span>
+                          {t("cab.immo.base")} {montant(l.base, locale)}
+                        </span>
+                      </span>
+                      <span className="rt">
+                        <span className="vl">{montant(l.vat, locale)}</span>
+                      </span>
+                    </div>
+                  ))}
+                  {/*
+                   * Ce qui est rangé par défaut, faute d'avoir pu attribuer la
+                   * nature : compté et dit, jamais muet. Le montant est déjà
+                   * dans la ligne par défaut ; on n'en écrit pas un second.
+                   */}
+                  {parDefaut > 0 ? (
+                    <div className="rw">
+                      <i aria-hidden>
+                        <IconeInfo />
+                      </i>
+                      <span className="bd">
+                        <b>
+                          {t("tva.declaration.parDefaut", { count: parDefaut })}
+                          <Aide
+                            titre={t("tva.declaration.parDefaut", { count: parDefaut })}
+                            paragraphes={[{ texte: t("tva.declaration.parDefaut.aide") }]}
+                          />
+                        </b>
+                      </span>
+                    </div>
+                  ) : null}
+                  {/* Un référentiel incomplet : compté dans les totaux, nommé à part. */}
+                  {(tva?.sans_ligne.length ?? 0) > 0 ? (
+                    <div className="rw">
+                      <i aria-hidden>
+                        <IconeInfo />
+                      </i>
+                      <span className="bd">
+                        <b>
+                          {t("tva.declaration.sansLigne", { count: tva!.sans_ligne.length })}
+                          <Aide
+                            titre={t("tva.declaration.sansLigne", {
+                              count: tva!.sans_ligne.length,
+                            })}
+                            paragraphes={[{ texte: t("tva.declaration.sansLigne.aide") }]}
+                          />
+                        </b>
+                      </span>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          )}
+        </div>
+
+        <div className="tv-cote">
+          {/*
+           * ── ce qui changerait le chiffre ────────────────────────────────
+           *
+           * Le dessin y met « 3 pièces lues, pas transmises » et chiffre le
+           * contrefactuel (« vous payez 400,000 au lieu de 812,000 »). Ce
+           * chiffre est une SOUSTRACTION sur des pièces que le moteur n'a pas
+           * vues — il ne tourne que sur les extraits transmis — donc R3 l'exclut
+           * et aucune méthode ne le sert.
+           *
+           * Ce que la route sert vraiment, et qu'elle servait déjà, c'est
+           * `transmisesSansDate` : des pièces parties sans date d'envoi, qui ne
+           * pèsent dans AUCUN mois. Elles changent bel et bien le chiffre, et la
+           * phrase qui les explique est au dictionnaire, déjà traduite. La carte
+           * dit donc ce fait-là, et le montant qu'elles portent s'écrit « — ».
+           *
+           * Les deux boutons du dessin — « Les transmettre », « Les voir » — ne
+           * sont pas posés : aucun geste de transmission ni de filtre sur ces
+           * pièces n'est au contrat depuis cet écran.
+           */}
+          {sansDate.data ? (
+            <>
+              <div className="sec">
+                <h2>{t("pme.tva.ceQuiChange")}</h2>
               </div>
-            ))}
-          </>
-        ) : null}
+              <div className="card">
+                <div className="hd">
+                  <b>
+                    {t("pme.tva.sansDateCompte", { count: sansDate.data })}
+                    <Aide
+                      titre={t("pme.tva.ceQuiChange")}
+                      paragraphes={[{ texte: t("pme.tva.sansDate", { count: sansDate.data }) }]}
+                    />
+                  </b>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {/*
+           * ── l'axe par société, et lui seul ──────────────────────────────
+           *
+           * C'est le SEUL bloc que le diff `tva.solo` / `tva.premium` montre, en
+           * plus du titre et du sous-titre. `basic`, `solo` et `team` sont
+           * identiques : rien d'autre n'est conditionné.
+           */}
+          {parSociete ? (
+            <>
+              <div className="sec">
+                <h2>{t("pme.tva.parSociete")}</h2>
+                <span>{pme.dossiers.length}</span>
+              </div>
+              {pme.dossiers.map((d) => (
+                <div className="rw" key={d.id}>
+                  <i aria-hidden>
+                    <IconeHistogramme />
+                  </i>
+                  {/* Le solde par société n'est pas servi : le nom seul, sans « — » muet. */}
+                  <span className="bd">
+                    <b>{d.name}</b>
+                  </span>
+                </div>
+              ))}
+            </>
+          ) : null}
+        </div>
       </div>
     </div>
   );

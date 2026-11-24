@@ -4929,6 +4929,8 @@ export const ar: Dict = {
   "pme.echeances.retardTexte":
     "لم ألاحظ مروره لأن أحدًا لم يخبرني: لم تصل أي وثيقة دفع. إن كنتم قد سدّدتموه، صوّروا الإشعار وسأطابق السطر.",
   "pme.echeances.retardGeste": "تصوير الإشعار",
+  "pme.echeances.moisPrecedent": "الشهر السابق",
+  "pme.echeances.moisSuivant": "الشهر التالي",
   "pme.bienvenue.barre": "شركتكم",
   "pme.bienvenue.carteBandeau": "الجمهورية التونسية · بطاقة التعريف الجبائي",
   "pme.bienvenue.ditTitre": "هذا معرّفكم الجبائي.",

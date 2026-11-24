@@ -5140,6 +5140,8 @@ export const en: Dict = {
   "pme.echeances.retardTexte":
     "I did not see it go by because no one told me: no payment document has arrived. If you paid it, photograph the notice and I will match the line.",
   "pme.echeances.retardGeste": "Photograph the notice",
+  "pme.echeances.moisPrecedent": "Previous month",
+  "pme.echeances.moisSuivant": "Next month",
   "pme.bienvenue.barre": "Your company",
   "pme.bienvenue.carteBandeau": "Republic of Tunisia · Tax identification card",
   "pme.bienvenue.ditTitre": "Here is your tax ID.",

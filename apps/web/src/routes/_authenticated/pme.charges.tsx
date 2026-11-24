@@ -605,212 +605,227 @@ function ChargesScreen() {
 
         {classeurDesMois}
 
-        {/* ── par classe ─────────────────────────────────────────────────── */}
-        <div className="sec">
-          <h2>{t("pme.charges.byFamille")}</h2>
-          <span>{t("pme.charges.classes", { count: familles.length })}</span>
+        {/*
+         * ── par classe ─────────────────────────────────────────────────────
+         *
+         * Trois enveloppes sans style au téléphone (des blocs, dont les marges
+         * se replient comme avant) : sur ordinateur, elles sont les colonnes du
+         * dessin — le tableau des classes, la colonne de droite, le pied
+         * (`styles-pme-bureau-chiffres.css`).
+         */}
+        <div className="ch-familles">
+          <div className="sec">
+            <h2>{t("pme.charges.byFamille")}</h2>
+            <span>{t("pme.charges.classes", { count: familles.length })}</span>
+          </div>
+
+          {familles.length > 0 ? (
+            <>
+              {familles.map((f) => {
+                const largeur = maxTotal > 0 ? (Number(f.total) / maxTotal) * 100 : 0;
+                return (
+                  <button
+                    key={f.code}
+                    type="button"
+                    className={attend(f.code) ? "cls att" : "cls"}
+                    onClick={() => setOpenFamille(f.code)}
+                  >
+                    <span className="hd">
+                      <span className="nm">{f.label}</span>
+                      <span className="pc">{part(f.share)}</span>
+                      <span className="vl">{montant(f.total, locale)}</span>
+                    </span>
+                    <span className="bar">
+                      <i style={{ width: `${largeur}%` }} />
+                    </span>
+                  </button>
+                );
+              })}
+
+              <div className="tot">
+                <b>{t("pme.charges.total")}</b>
+                <span>{totalLisible}</span>
+                <u>{pme.currency}</u>
+              </div>
+            </>
+          ) : (
+            <p className="foot">{t("pme.charges.empty")}</p>
+          )}
         </div>
 
-        {familles.length > 0 ? (
-          <>
-            {familles.map((f) => {
-              const largeur = maxTotal > 0 ? (Number(f.total) / maxTotal) * 100 : 0;
-              return (
-                <button
-                  key={f.code}
-                  type="button"
-                  className={attend(f.code) ? "cls att" : "cls"}
-                  onClick={() => setOpenFamille(f.code)}
-                >
-                  <span className="hd">
-                    <span className="nm">{f.label}</span>
-                    <span className="pc">{part(f.share)}</span>
-                    <span className="vl">{montant(f.total, locale)}</span>
-                  </span>
-                  <span className="bar">
-                    <i style={{ width: `${largeur}%` }} />
-                  </span>
-                </button>
-              );
-            })}
+        <div className="ch-cote">
+          {/*
+           * ──────────────────────────────── les questions de Malica ─────────
+           *
+           * Elle interroge, elle ne tranche pas. Les deux réponses ont le même
+           * poids visuel : aucune n'est présentée comme la bonne, parce
+           * qu'aucune ne l'est — seul le dirigeant sait s'il a fait un achat
+           * exceptionnel.
+           *
+           * Le dessin ne met qu'UN bouton dans `.note .bd`. Deux y entrent, et
+           * c'est délibéré : l'égalité des deux réponses est une règle de
+           * produit écrite avant le dessin, et la réduire à un bouton unique
+           * ferait de l'écran un conseil déguisé. Les deux portent donc la même
+           * pastille accent.
+           */}
+          {(result?.anomalies ?? []).map((a) => {
+            const faite = repondue.get(`${a.period}|${a.familleCode}`) ?? null;
+            return (
+              <div key={a.familleCode} className="note">
+                <img src={portraitMalica} alt="Malica" width={620} height={620} />
+                {/*
+                 * `.bd` est un `div` et non le `span` du dessin : il contient un
+                 * paragraphe, et un paragraphe dans un `span` n'est pas du HTML
+                 * valide. La feuille cible `.note .bd` — elle ne voit pas la
+                 * différence, le validateur si.
+                 */}
+                <div className="bd">
+                  <p>
+                    {t("pme.charges.question", {
+                      famille: a.label,
+                      value: pct(a.deviationRatio),
+                      baseline: montant(a.baseline, locale) + " " + pme.currency,
+                      observed: montant(a.observed, locale) + " " + pme.currency,
+                    })}
+                  </p>
+                  {faite ? (
+                    <p>
+                      {faite.par === "cabinet"
+                        ? t("pme.charges.answered.cabinet")
+                        : t("pme.charges.answered")}
+                    </p>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        disabled={answer.isPending}
+                        onClick={() =>
+                          answer.mutate({ familleCode: a.familleCode, reply: "exceptionnel" })
+                        }
+                      >
+                        {t("pme.charges.answer.exceptionnel")}
+                      </button>{" "}
+                      <button
+                        type="button"
+                        disabled={answer.isPending}
+                        onClick={() =>
+                          answer.mutate({ familleCode: a.familleCode, reply: "a_verifier" })
+                        }
+                      >
+                        {t("pme.charges.answer.verifier")}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
 
-            <div className="tot">
-              <b>{t("pme.charges.total")}</b>
-              <span>{totalLisible}</span>
-              <u>{pme.currency}</u>
-            </div>
-          </>
-        ) : (
-          <p className="foot">{t("pme.charges.empty")}</p>
-        )}
-
-        {/*
-         * ──────────────────────────────── les questions de Malica ─────────
-         *
-         * Elle interroge, elle ne tranche pas. Les deux réponses ont le même
-         * poids visuel : aucune n'est présentée comme la bonne, parce
-         * qu'aucune ne l'est — seul le dirigeant sait s'il a fait un achat
-         * exceptionnel.
-         *
-         * Le dessin ne met qu'UN bouton dans `.note .bd`. Deux y entrent, et
-         * c'est délibéré : l'égalité des deux réponses est une règle de
-         * produit écrite avant le dessin, et la réduire à un bouton unique
-         * ferait de l'écran un conseil déguisé. Les deux portent donc la même
-         * pastille accent.
-         */}
-        {(result?.anomalies ?? []).map((a) => {
-          const faite = repondue.get(`${a.period}|${a.familleCode}`) ?? null;
-          return (
-            <div key={a.familleCode} className="note">
+          {/*
+           * ───────────────────────────── ce qui attend sa date ──────────────
+           *
+           * Sous le total et hors de lui. Posé le 5 octobre 2026, avec la fin
+           * du repli sur le mois du scan. Le bloc dit trois choses, et les
+           * trois sont nécessaires : COMBIEN de pièces, POURQUOI elles ne
+           * comptent pas, et le MONTANT qu'elles représentent — sans quoi
+           * l'écart avec ce que la personne attend reste inexpliqué. Il ne
+           * s'affiche pas quand il n'y a rien : une information qui apparaît
+           * toujours cesse d'être lue.
+           *
+           * Le geste est un LIEN, pas un bouton : il mène ailleurs. Il ne porte
+           * donc pas la pastille de `.note .bd button`, qui ne vise que les
+           * boutons — c'est un écart assumé avec le dessin, préféré à un lien
+           * déguisé en bouton.
+           */}
+          {sansDate.data && sansDate.data.pieces > 0 ? (
+            <div className="note">
               <img src={portraitMalica} alt="Malica" width={620} height={620} />
-              {/*
-               * `.bd` est un `div` et non le `span` du dessin : il contient un
-               * paragraphe, et un paragraphe dans un `span` n'est pas du HTML
-               * valide. La feuille cible `.note .bd` — elle ne voit pas la
-               * différence, le validateur si.
-               */}
               <div className="bd">
                 <p>
-                  {t("pme.charges.question", {
-                    famille: a.label,
-                    value: pct(a.deviationRatio),
-                    baseline: montant(a.baseline, locale) + " " + pme.currency,
-                    observed: montant(a.observed, locale) + " " + pme.currency,
+                  {t("pme.charges.sansDate.titre", { count: sansDate.data.pieces })}
+                  {" — "}
+                  {t("pme.charges.sansDate.detail", {
+                    amount: `${montant(sansDate.data.totalHt ?? "0", locale)} ${pme.currency}`,
+                  })}
+                  {/* Le total ne compte pas une pièce en devise sans cours : on le dit. */}
+                  {sansDate.data.piecesSansCours > 0
+                    ? ` ${t("pme.charges.sansDate.horsDuTotal", { count: sansDate.data.piecesSansCours })}`
+                    : null}
+                </p>
+                <p>
+                  <Link to="/pme/list">{t("pme.charges.sansDate.action")}</Link>
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {sansCours.data && sansCours.data.pieces > 0 ? (
+            <div className="note">
+              <img src={portraitMalica} alt="Malica" width={620} height={620} />
+              <div className="bd">
+                <p>
+                  {t("pme.charges.sansCours.titre", { count: sansCours.data.pieces })}
+                  {" — "}
+                  {t("pme.charges.sansCours.detail", {
+                    devises: sansCours.data.devises.join(", "),
                   })}
                 </p>
-                {faite ? (
-                  <p>
-                    {faite.par === "cabinet"
-                      ? t("pme.charges.answered.cabinet")
-                      : t("pme.charges.answered")}
-                  </p>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      disabled={answer.isPending}
-                      onClick={() =>
-                        answer.mutate({ familleCode: a.familleCode, reply: "exceptionnel" })
-                      }
-                    >
-                      {t("pme.charges.answer.exceptionnel")}
-                    </button>{" "}
-                    <button
-                      type="button"
-                      disabled={answer.isPending}
-                      onClick={() =>
-                        answer.mutate({ familleCode: a.familleCode, reply: "a_verifier" })
-                      }
-                    >
-                      {t("pme.charges.answer.verifier")}
-                    </button>
-                  </>
-                )}
               </div>
             </div>
-          );
-        })}
+          ) : null}
 
-        {/*
-         * ───────────────────────────── ce qui attend sa date ──────────────
-         *
-         * Sous le total et hors de lui. Posé le 5 octobre 2026, avec la fin
-         * du repli sur le mois du scan. Le bloc dit trois choses, et les
-         * trois sont nécessaires : COMBIEN de pièces, POURQUOI elles ne
-         * comptent pas, et le MONTANT qu'elles représentent — sans quoi
-         * l'écart avec ce que la personne attend reste inexpliqué. Il ne
-         * s'affiche pas quand il n'y a rien : une information qui apparaît
-         * toujours cesse d'être lue.
-         *
-         * Le geste est un LIEN, pas un bouton : il mène ailleurs. Il ne porte
-         * donc pas la pastille de `.note .bd button`, qui ne vise que les
-         * boutons — c'est un écart assumé avec le dessin, préféré à un lien
-         * déguisé en bouton.
-         */}
-        {sansDate.data && sansDate.data.pieces > 0 ? (
-          <div className="note">
-            <img src={portraitMalica} alt="Malica" width={620} height={620} />
-            <div className="bd">
-              <p>
-                {t("pme.charges.sansDate.titre", { count: sansDate.data.pieces })}
-                {" — "}
-                {t("pme.charges.sansDate.detail", {
-                  amount: `${montant(sansDate.data.totalHt ?? "0", locale)} ${pme.currency}`,
-                })}
-                {/* Le total ne compte pas une pièce en devise sans cours : on le dit. */}
-                {sansDate.data.piecesSansCours > 0
-                  ? ` ${t("pme.charges.sansDate.horsDuTotal", { count: sansDate.data.piecesSansCours })}`
-                  : null}
-              </p>
-              <p>
-                <Link to="/pme/list">{t("pme.charges.sansDate.action")}</Link>
-              </p>
+          {/*
+           * ─────────────────────── ce que le palier suivant ouvrirait ───────
+           *
+           * Visibles, jamais masquées, et JAMAIS montrées à qui a déjà payé :
+           * `pme.forfait.ouvertures` décide, à un seul endroit du dépôt
+           * (`lib/forfait.ts`). Une offre non lue n'ouvre rien — les deux
+           * cartes restent alors verrouillées, et c'est la bonne façon de se
+           * tromper.
+           *
+           * Quand l'offre OUVRE l'axe, rien ne paraît ici : ni verrou — il
+           * serait faux — ni répartition — elle serait inventée. Les deux axes
+           * attendent leur donnée (voir l'en-tête du fichier).
+           */}
+          {!pme.forfait.ouvertures.sieges || !pme.forfait.ouvertures.societes ? (
+            <div className="locks">
+              {!pme.forfait.ouvertures.sieges ? (
+                <div className="lock">
+                  <IconeSieges />
+                  <b>{t("pme.charges.siegesTitre")}</b>
+                  <span>{t("pme.charges.siegesSous")}</span>
+                  <em>Team</em>
+                  {/* nom d'offre : ne se traduit pas */}
+                </div>
+              ) : null}
+              {!pme.forfait.ouvertures.societes ? (
+                <div className="lock">
+                  <IconeSocietes />
+                  <b>{t("pme.charges.groupeTitre")}</b>
+                  <span>{t("pme.charges.groupeSous")}</span>
+                  <em>Premium</em>
+                </div>
+              ) : null}
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
-        {sansCours.data && sansCours.data.pieces > 0 ? (
-          <div className="note">
-            <img src={portraitMalica} alt="Malica" width={620} height={620} />
-            <div className="bd">
-              <p>
-                {t("pme.charges.sansCours.titre", { count: sansCours.data.pieces })}
-                {" — "}
-                {t("pme.charges.sansCours.detail", { devises: sansCours.data.devises.join(", ") })}
-              </p>
-            </div>
-          </div>
-        ) : null}
+        <div className="ch-pied">
+          {/*
+           * L'échec d'une réponse se dit là où on l'a provoqué. Le dessin n'a
+           * pas de bloc pour cela : la classe utilitaire reste donc sur un
+           * élément qui n'appartient pas au dessin, et ne touche aucune de ses
+           * règles.
+           */}
+          {error ? (
+            <p role="alert" className="mt-3 text-xs text-signal-warn">
+              {error}
+            </p>
+          ) : null}
 
-        {/*
-         * ─────────────────────── ce que le palier suivant ouvrirait ───────
-         *
-         * Visibles, jamais masquées, et JAMAIS montrées à qui a déjà payé :
-         * `pme.forfait.ouvertures` décide, à un seul endroit du dépôt
-         * (`lib/forfait.ts`). Une offre non lue n'ouvre rien — les deux
-         * cartes restent alors verrouillées, et c'est la bonne façon de se
-         * tromper.
-         *
-         * Quand l'offre OUVRE l'axe, rien ne paraît ici : ni verrou — il
-         * serait faux — ni répartition — elle serait inventée. Les deux axes
-         * attendent leur donnée (voir l'en-tête du fichier).
-         */}
-        {!pme.forfait.ouvertures.sieges || !pme.forfait.ouvertures.societes ? (
-          <div className="locks">
-            {!pme.forfait.ouvertures.sieges ? (
-              <div className="lock">
-                <IconeSieges />
-                <b>{t("pme.charges.siegesTitre")}</b>
-                <span>{t("pme.charges.siegesSous")}</span>
-                <em>Team</em>
-                {/* nom d'offre : ne se traduit pas */}
-              </div>
-            ) : null}
-            {!pme.forfait.ouvertures.societes ? (
-              <div className="lock">
-                <IconeSocietes />
-                <b>{t("pme.charges.groupeTitre")}</b>
-                <span>{t("pme.charges.groupeSous")}</span>
-                <em>Premium</em>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/*
-         * L'échec d'une réponse se dit là où on l'a provoqué. Le dessin n'a
-         * pas de bloc pour cela : la classe utilitaire reste donc sur un
-         * élément qui n'appartient pas au dessin, et ne touche aucune de ses
-         * règles.
-         */}
-        {error ? (
-          <p role="alert" className="mt-3 text-xs text-signal-warn">
-            {error}
-          </p>
-        ) : null}
-
-        {estimation ? <p className="foot">{t("pme.charges.estimation")}</p> : null}
-        <p className="foot">{t("pme.charges.disclaimer")}</p>
+          {estimation ? <p className="foot">{t("pme.charges.estimation")}</p> : null}
+          <p className="foot">{t("pme.charges.disclaimer")}</p>
+        </div>
       </div>
     </div>
   );
