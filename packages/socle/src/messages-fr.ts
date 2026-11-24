@@ -5964,6 +5964,22 @@ export const fr = {
   "tour.cgv.valideDes": "En vigueur à partir du",
   "tour.cgv.publier": "Publier cette version",
   "tour.cgv.publiee": "Version publiée.",
+  "depart.etapes": "Étapes de l'arrivée",
+  "depart.etape.organisation": "Organisation",
+  "depart.etape.verifier": "Vérifier",
+  "depart.etape.forfait": "Forfait",
+  "depart.etape.comptabilite": "Comptabilité",
+  "portal.pme.aucune": "Aucune société rattachée",
+  "portal.pme.creer": "Créer ma société",
+  "portal.cabinet.aucun": "Aucune comptabilité rattachée",
+  "onboarding.apercu": "Aperçu",
+  "auth.parcours.photo": "Photo",
+  "auth.parcours.photo.texte": "Une photo, un geste.",
+  "auth.parcours.lecture": "Lecture",
+  "auth.parcours.lecture.texte": "Chaque montant cité.",
+  "auth.parcours.comptable": "Comptable",
+  "auth.parcours.comptable.texte": "Repris et validé.",
+  "pme.capture.etapes": "Étapes de l'ajout",
 } as const;
 
 export type MessageKey = keyof typeof fr;

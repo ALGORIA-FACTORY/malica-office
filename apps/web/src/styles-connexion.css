@@ -98,3 +98,34 @@
 .cx-alert { margin: 0; padding: 0.75rem 0.875rem; border: 1px solid var(--signal-warn); border-radius: 8px; font-size: 0.875rem; line-height: 1.45; color: var(--signal-warn) }
 .cx-kicker { font: 500 0.6875rem "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-foreground) }
 .cx-stack { display: flex; flex-direction: column; gap: 0.5rem }
+
+/* Poste de bureau : le parcours en trois temps, et le principe dans la voix de
+ * Malica. Sous 1 024 px, rien ne change. Le panneau est toujours à l'encre :
+ * tout dérive de `currentColor`. */
+.bp-parcours, .bp-voix { display: none }
+@media (min-width: 1024px) {
+  /* ---- La connexion : le parcours en trois temps, et la voix de Malica ----- */
+  .bp-parcours {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem;
+    max-width: 38.75rem; margin: 0; padding: 0; list-style: none;
+  }
+  .bp-parcours li {
+    display: grid; gap: .375rem; padding: .875rem; border-radius: 12px;
+    background: color-mix(in srgb, currentColor 7%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 12%, transparent);
+    font-size: .8125rem;
+  }
+  .bp-parcours-rang {
+    font: 500 .6875rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+    color: color-mix(in srgb, currentColor 72%, transparent);
+  }
+  .bp-voix {
+    display: flex; align-items: center; gap: .75rem;
+    max-width: 38.75rem; margin: 0; padding: .875rem 1rem; border-radius: 16px;
+    background: color-mix(in srgb, currentColor 7%, transparent);
+    font-size: .8125rem; line-height: 1.5;
+  }
+  .bp-voix img { flex: none; width: 44px; height: 44px; border-radius: 50%; object-fit: cover; object-position: 50% 18% }
+  /* Le principe est dit une fois : dans la voix de Malica, plus au pied du formulaire. */
+  .cx-foot .cx-principle { display: none }
+}

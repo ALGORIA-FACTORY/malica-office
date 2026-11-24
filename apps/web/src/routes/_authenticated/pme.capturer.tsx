@@ -13,6 +13,7 @@ import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { usePme } from "@/components/malica/pme-context";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { SocietesALaLigne } from "@/components/malica/societes-a-la-ligne";
+import { BandeauDEtapes } from "@/components/malica/etapes-du-depart";
 import { SourcesDeCapture } from "@/components/malica/sources-de-capture";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleDuRefus } from "@/lib/champ-lisible";
@@ -1058,6 +1059,13 @@ function PmeCapturer() {
               : t(PAS[etape] ?? "pme.capture.pas.fait")}
         </span>
         {!plusTard && etape > 0 ? (
+          <BandeauDEtapes
+            nom="pme.capture.etapes"
+            etapes={visibles.map((e) => PAS[e] ?? "pme.capture.pas.fait")}
+            rang={rangVisible - 1}
+          />
+        ) : null}
+        {!plusTard && etape > 0 ? (
           <span className="rang">
             {t("pme.capture.rang", { n: rangVisible, m: visibles.length })}
           </span>
@@ -1128,105 +1136,117 @@ function PmeCapturer() {
                 <h1 className="c-titre">{t("pme.capture.ajouter.titre")}</h1>
               </>
             ) : null}
-            {/* Les trois sources : le même dessin que la carte fiscale (`pme.fiche`). */}
-            <SourcesDeCapture
-              occupe={pme.capturing}
-              onPhotographier={pme.ouvrirScanner}
-              onImporter={pme.capture}
-            />
-            {pme.capturing ? <p className="c-sous">{t("pme.capture.preparation")}</p> : null}
+            {/* Sur poste de bureau : les sources à gauche, le lot à droite. */}
+            <div className="bp-deux bp-ajouter">
+              <div className="bp-colonne">
+                {/* Les trois sources : le même dessin que la carte fiscale (`pme.fiche`). */}
+                <SourcesDeCapture
+                  occupe={pme.capturing}
+                  onPhotographier={pme.ouvrirScanner}
+                  onImporter={pme.capture}
+                />
+                {pme.capturing ? <p className="c-sous">{t("pme.capture.preparation")}</p> : null}
+              </div>
 
-            {/* La bande : ce qui est entré, avec sa vraie page, et le petit menu
+              <div className="bp-colonne">
+                {/* La bande : ce qui est entré, avec sa vraie page, et le petit menu
                 de la vignette ouverte. */}
-            {lot.length > 0 ? (
-              <>
-                <p className="c-sous">{t("pme.capture.lot.nonLues", { count: lot.length })}</p>
-                <div className="bande">
-                  {lot.map((p) => (
-                    <button
-                      type="button"
-                      key={p.id}
-                      className={[
-                        "vg",
-                        exclues.includes(p.id) ? "pv" : "",
-                        choisie === p.id ? "sel" : "",
-                        partante === p.id ? "part" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      aria-label={p.emetteur ?? t("pme.capture.pieceNonLue")}
-                      onClick={() => setChoisie(choisie === p.id ? null : p.id)}
-                    >
-                      <ApercuDePiece pieceId={p.id} className="mini" />
-                      {exclues.includes(p.id) ? (
-                        <span className="bg">
-                          <Icone d={G.prive} />
-                        </span>
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-                {choisie ? (
-                  <div className="menu">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExclues((e) =>
-                          e.includes(choisie) ? e.filter((x) => x !== choisie) : [...e, choisie],
-                        )
-                      }
-                    >
-                      {exclues.includes(choisie)
-                        ? t("pme.capture.menu.societe")
-                        : t("pme.capture.menu.vous")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void navigate({ to: "/pme/piece/$pieceId", params: { pieceId: choisie } })
-                      }
-                    >
-                      {t("pme.capture.menu.ouvrir")}
-                    </button>
-                    {supprimer ? (
-                      <button
-                        type="button"
-                        className="sup"
-                        disabled={supprimer.isPending}
-                        onClick={() => {
-                          setPartante(choisie);
-                          supprimer.mutate();
-                        }}
-                      >
-                        {t("pme.capture.menu.supprimer")}
-                      </button>
+                {lot.length > 0 ? (
+                  <>
+                    <p className="c-sous">{t("pme.capture.lot.nonLues", { count: lot.length })}</p>
+                    <div className="bande">
+                      {lot.map((p) => (
+                        <button
+                          type="button"
+                          key={p.id}
+                          className={[
+                            "vg",
+                            exclues.includes(p.id) ? "pv" : "",
+                            choisie === p.id ? "sel" : "",
+                            partante === p.id ? "part" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          aria-label={p.emetteur ?? t("pme.capture.pieceNonLue")}
+                          onClick={() => setChoisie(choisie === p.id ? null : p.id)}
+                        >
+                          <ApercuDePiece pieceId={p.id} className="mini" />
+                          {exclues.includes(p.id) ? (
+                            <span className="bg">
+                              <Icone d={G.prive} />
+                            </span>
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                    {choisie ? (
+                      <div className="menu">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExclues((e) =>
+                              e.includes(choisie)
+                                ? e.filter((x) => x !== choisie)
+                                : [...e, choisie],
+                            )
+                          }
+                        >
+                          {exclues.includes(choisie)
+                            ? t("pme.capture.menu.societe")
+                            : t("pme.capture.menu.vous")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void navigate({
+                              to: "/pme/piece/$pieceId",
+                              params: { pieceId: choisie },
+                            })
+                          }
+                        >
+                          {t("pme.capture.menu.ouvrir")}
+                        </button>
+                        {supprimer ? (
+                          <button
+                            type="button"
+                            className="sup"
+                            disabled={supprimer.isPending}
+                            onClick={() => {
+                              setPartante(choisie);
+                              supprimer.mutate();
+                            }}
+                          >
+                            {t("pme.capture.menu.supprimer")}
+                          </button>
+                        ) : null}
+                      </div>
                     ) : null}
+                  </>
+                ) : null}
+
+                {enFile.length > 0 ? (
+                  <div className="flag">
+                    <i />
+                    <span>{t("pme.capture.file.attente", { count: enFile.length })}</span>
                   </div>
                 ) : null}
-              </>
-            ) : null}
 
-            {enFile.length > 0 ? (
-              <div className="flag">
-                <i />
-                <span>{t("pme.capture.file.attente", { count: enFile.length })}</span>
+                {lot.length > 0 ? (
+                  <div className="go">
+                    <button
+                      type="button"
+                      className="pr"
+                      onClick={() => {
+                        setFige(lot.map((p) => p.id));
+                        setEtape(1);
+                      }}
+                    >
+                      {t("pme.capture.repondre", { count: lot.length })}
+                    </button>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-
-            {lot.length > 0 ? (
-              <div className="go">
-                <button
-                  type="button"
-                  className="pr"
-                  onClick={() => {
-                    setFige(lot.map((p) => p.id));
-                    setEtape(1);
-                  }}
-                >
-                  {t("pme.capture.repondre", { count: lot.length })}
-                </button>
-              </div>
-            ) : null}
+            </div>
           </>
         ) : null}
 
@@ -1550,7 +1570,7 @@ function PmeCapturer() {
             le dossier de la pièce, où `capture.preciser` vit (R7 : une précision
             s'ajoute, elle n'écrase jamais). */}
         {!plusTard && etape === 4 && enVerification ? (
-          <>
+          <div className="bp-verifier">
             <div className="c-piece">
               <button
                 type="button"
@@ -1646,7 +1666,7 @@ function PmeCapturer() {
                 {t("pme.verifie.corriger")}
               </button>
             </div>
-          </>
+          </div>
         ) : null}
 
         {/* ═══════════════════════════════ 5 · LES QUESTIONS, UNE PAR ÉCRAN

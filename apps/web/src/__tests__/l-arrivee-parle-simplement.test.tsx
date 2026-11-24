@@ -180,6 +180,30 @@ describe("4.1 — choisissez votre espace", () => {
     expect(screen.queryByText("mandate")).toBeNull();
   });
 
+  // Décision du dirigeant, 24 novembre 2026 : deux choix clairs pour un client, la tour
+  // aux seuls opérateurs, en ligne discrète.
+  it("un client voit l'espace PME et l'espace comptabilité, jamais la tour", async () => {
+    monde.orgs = [SOCIETE];
+    rendre(composant(RouteOffice));
+    await screen.findByText("landing.surfaces.pme.title");
+    expect(screen.getByText("landing.surfaces.cabinet.title")).toBeTruthy();
+    expect(screen.getByText("portal.cabinet.aucun")).toBeTruthy();
+    expect(screen.getByText("portal.invitations.creer").closest("a")?.getAttribute("href")).toBe(
+      "/onboarding",
+    );
+    expect(screen.queryByText("tour.titre")).toBeNull();
+  });
+
+  it("un opérateur voit la tour sur une seule ligne, en plus des deux espaces", async () => {
+    monde.operateur = true;
+    monde.orgs = [SOCIETE];
+    rendre(composant(RouteOffice));
+    const tour = await screen.findByText("tour.titre");
+    expect(tour.closest("a")?.getAttribute("href")).toBe("/tour");
+    expect(screen.getByText("landing.surfaces.cabinet.title")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "tour.titre" })).toBeNull();
+  });
+
   it("un opérateur garde le bandeau du référentiel et le détail", async () => {
     monde.operateur = true;
     monde.orgs = [SOCIETE];

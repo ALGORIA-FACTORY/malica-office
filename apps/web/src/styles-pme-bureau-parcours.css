@@ -1,0 +1,119 @@
+/*
+ * « Le parcours » sur poste de bureau, dans la surface PME : la bienvenue, la
+ * suite (forfait, comptabilité), la fiche fiscale et « Ajouter des pièces ».
+ * Chargée par `styles-espace-pme.css`, juste après `styles-pme.css` : à
+ * spécificité égale, ces règles passent après la base.
+ *
+ * Tout est sous `@media (min-width: 1024px)` : sous 1 024 px, rien ne change.
+ * Les deux colonnes (`.bp-colonne`) et le bandeau d'étapes sont déclarés dans
+ * `styles.css`, parce que l'écran d'organisation, hors surface, les porte aussi.
+ * Aucune couleur écrite : seulement les jetons de la surface. Positions
+ * logiques partout : l'arabe se retourne sans règle à part.
+ */
+
+@media (min-width: 1024px) {
+  /* Dans la barre d'un écran de la surface : le titre cède la place au bandeau. */
+  :root [data-surface="pme"] .top .bp-etapes,
+  :root [data-surface="pme"] [data-ecran="capture"] .prog .bp-etapes { flex: none }
+  :root [data-surface="pme"] .top:has(.bp-etapes) .ttl,
+  :root [data-surface="pme"] [data-ecran="capture"] .prog:has(.bp-etapes) .ttl { flex: 0 1 auto }
+  :root [data-surface="pme"] [data-ecran="capture"] .prog:has(.bp-etapes) .rang { display: none }
+
+  /* ---- Deux colonnes : bienvenue, fiche, ajouter -------------------------- */
+  :root [data-surface="pme"] .bp-deux {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+    gap: 2.5rem;
+    width: 100%;
+    max-width: 77.5rem;
+    margin-inline: auto;
+    padding-block: 1rem 2.5rem;
+  }
+  :root [data-surface="pme"] .bp-deux > .bp-colonne { display: flex; flex-direction: column; min-width: 0 }
+  :root [data-surface="pme"] .bp-deux > .bp-colonne:empty { display: none }
+  :root [data-surface="pme"] .bp-deux:has(> .bp-colonne:empty) { grid-template-columns: minmax(0, 1fr); max-width: 45rem; margin-inline: 0 }
+
+  /* Bienvenue : la carte lue, en grand, et la voix de Malica dessous. */
+  :root [data-surface="pme"] [data-ecran="bienvenue"] .bp-deux { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+  :root [data-surface="pme"] [data-ecran="bienvenue"] .bp-deux .carte { width: 100%; max-width: 30rem; margin-top: .5rem }
+  :root [data-surface="pme"] [data-ecran="bienvenue"] .bp-colonne + .bp-colonne > .sec:first-child { margin-top: .5rem }
+  :root [data-surface="pme"] :is([data-ecran="bienvenue"], [data-ecran="fiche"]) .go {
+    grid-auto-flow: column; justify-content: start; align-items: center;
+  }
+  :root [data-surface="pme"] :is([data-ecran="bienvenue"], [data-ecran="fiche"], [data-ecran="suite"]) .go .pr { padding-inline: 1.75rem }
+
+  /* Fiche : la carte et sa prise de vue à gauche, la fiche dans un panneau à droite. */
+  :root [data-surface="pme"] [data-ecran="fiche"] .bp-fiche > .bp-colonne + .bp-colonne {
+    padding: .5rem 1.5rem 1.5rem; border-radius: var(--r-lg); background: var(--d1);
+  }
+  :root [data-surface="pme"] [data-ecran="fiche"] .bp-fiche > .bp-colonne + .bp-colonne .pan { background: var(--d0) }
+  :root [data-surface="pme"] [data-ecran="fiche"] .bp-fiche .c-sources .c-photo { min-height: 220px }
+  :root [data-surface="pme"] [data-ecran="fiche"] .bp-fiche > .bp-colonne:first-child { position: sticky; top: 1.5rem }
+
+  /* Suite : une colonne lisible, au centre. */
+  :root [data-surface="pme"] [data-ecran="suite"] .bp-suite {
+    width: 100%; max-width: 45rem; margin-inline: auto; padding-block: 1.5rem 2.5rem;
+  }
+  :root [data-surface="pme"] [data-ecran="suite"] .rw {
+    padding: 1.125rem 1.25rem; margin-top: .75rem; border: 0; border-radius: var(--r-md);
+    background: var(--d1);
+  }
+  :root [data-surface="pme"] [data-ecran="suite"] .go { justify-content: start }
+
+  /* ---- Ajouter des pièces ------------------------------------------------- */
+  :root [data-surface="pme"] [data-ecran="capture"] .prog { gap: 1rem; padding-block: .75rem }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); padding-block: .5rem 2rem }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter .c-photo { min-height: 360px; border-radius: var(--r-xl) }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter .c-deux button { min-height: 120px }
+  /* Le lot, dans son panneau : il se voit pendant qu'on ajoute. */
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter > .bp-colonne + .bp-colonne {
+    position: sticky; top: 1.5rem;
+    margin-top: 1.25rem; padding: 1.25rem; border-radius: var(--r-lg); background: var(--d1);
+  }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter .c-sous:first-child { margin-top: 0 }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter .bande { flex-wrap: wrap; overflow: visible }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter .vg { width: 72px; height: 94px }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter .go { margin-top: 1.25rem; padding-top: 0 }
+
+  /* Je lis : la liste devient des cartes. */
+  :root [data-surface="pme"] [data-ecran="capture"] .c-liste {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: .75rem;
+    background: none; border-radius: 0; overflow: visible;
+  }
+  :root [data-surface="pme"] [data-ecran="capture"] .c-liste > div {
+    align-content: start; padding: 1rem; border-radius: var(--r-md); background: var(--d1);
+  }
+  :root [data-surface="pme"] [data-ecran="capture"] .c-liste > div + div { box-shadow: none }
+  :root [data-surface="pme"] [data-ecran="capture"] .c-liste > .ko { background: color-mix(in srgb, var(--ve) 12%, var(--d1)) }
+  :root [data-surface="pme"] [data-ecran="capture"] .c-malica {
+    grid-auto-flow: column; justify-content: start; align-items: center; text-align: start;
+  }
+  :root [data-surface="pme"] [data-ecran="capture"] .c-malica .anneau,
+  :root [data-surface="pme"] [data-ecran="capture"] .c-malica img { width: 64px; height: 64px }
+
+  /* Les gestes de bas d'écran, côte à côte, au bord de départ. */
+  :root [data-surface="pme"] [data-ecran="capture"] .go {
+    grid-auto-flow: column; justify-content: start; align-items: center;
+  }
+  :root [data-surface="pme"] [data-ecran="capture"] .go .pr { padding-inline: 1.75rem }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-ajouter .go { grid-auto-flow: row; justify-content: stretch }
+
+  /* Vérifier : la pièce à gauche, ce qui en est lu à droite. */
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-verifier {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: auto auto 1fr; column-gap: 2.5rem; align-items: start;
+    padding-block: .75rem 2rem;
+  }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-verifier .c-piece { display: contents }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-verifier .c-grande {
+    grid-column: 1; grid-row: 1 / -1; width: 100%; height: auto; aspect-ratio: 3 / 4; border-radius: var(--r-md);
+  }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-verifier :is(.qui, .lu, .go) { grid-column: 2 }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-verifier .lu { margin-top: 1.5rem }
+  :root [data-surface="pme"] [data-ecran="capture"] .bp-verifier .go { margin-top: 1.5rem; padding-top: 0 }
+
+  /* Un seul bord de départ pour toutes les étapes ; une question garde une colonne lisible. */
+  :root [data-surface="pme"] [data-ecran="capture"] > .pad { width: 100%; max-width: 77.5rem; margin-inline: auto }
+  :root [data-surface="pme"] [data-ecran="capture"] > .pad > :not(.bp-ajouter, .bp-verifier, .c-liste) { max-width: 45rem }
+}

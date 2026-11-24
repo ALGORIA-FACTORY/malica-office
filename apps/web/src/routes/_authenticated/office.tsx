@@ -6,9 +6,11 @@
  * Quand un seul espace existe, on y entre directement, sans passer par cet écran ; dans la
  * coque mobile, on va toujours à l'espace du dirigeant.
  *
- * La carte de la tour de contrôle n'apparaît qu'aux opérateurs de la plateforme : elle suit
- * la même lecture que la tour elle-même (`tour.suisJePlateforme`). Les données viennent de
- * `identity.listMyOrganizations` et de la supervision du cabinet.
+ * Un client y voit deux choix, l'espace PME et l'espace comptabilité ; celui qu'il n'a pas
+ * encore se crée depuis sa carte. La tour de contrôle n'est qu'une ligne discrète, et aux
+ * seuls opérateurs de la plateforme : elle suit la même lecture que la tour elle-même
+ * (`tour.suisJePlateforme`). Les données viennent de `identity.listMyOrganizations` et de
+ * la supervision du cabinet.
  */
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -70,7 +72,7 @@ function OfficeHome() {
 
   /*
    * La tour s'ouvre d'ici, et d'ici seulement (décision du dirigeant, 5
-   * novembre 2026) : une carte aux seuls opérateurs d'ALGORIA, la même lecture
+   * novembre 2026) : une ligne aux seuls opérateurs d'ALGORIA, la même lecture
    * que la tour elle-même (`tour.suisJePlateforme` → `app.is_platform()`).
    * Un opérateur n'est donc jamais renvoyé d'office vers son seul espace.
    */
@@ -135,7 +137,7 @@ function OfficeHome() {
   ]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="bp-office min-h-screen bg-background text-foreground">
       <header className="rule-b">
         <div className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/" className="text-sm font-semibold uppercase tracking-[0.18em]">
@@ -193,40 +195,60 @@ function OfficeHome() {
             </Link>
           </div>
         ) : (
-          <section className="mt-8 grid gap-px border border-border bg-border md:grid-cols-2">
-            {pmeOrgs.length > 0 ? (
+          <>
+            {/*
+             * Deux choix, toujours (décision du dirigeant, 24 novembre 2026) : l'espace PME et
+             * l'espace comptabilité. Celui qui n'existe pas encore se crée depuis sa carte.
+             */}
+            <section className="bp-espaces mt-8 grid gap-px border border-border bg-border md:grid-cols-2">
               <AccessCard
-                to="/pme"
+                to={pmeOrgs.length > 0 ? "/pme" : "/onboarding"}
                 icon={<Smartphone className="h-5 w-5" aria-hidden />}
                 title={t("landing.surfaces.pme.title")}
                 body={t("landing.surfaces.pme.body")}
-                cta={t("pme.nav.capture")}
-                meta={`${t("portal.pme.count")} : ${pmeOrgs.length}`}
+                cta={pmeOrgs.length > 0 ? t("pme.nav.capture") : t("portal.pme.creer")}
+                meta={
+                  pmeOrgs.length > 0
+                    ? `${t("portal.pme.count")} : ${pmeOrgs.length}`
+                    : t("portal.pme.aucune")
+                }
                 tenants={pmeOrgs.map((o) => o.name)}
-                primary
+                primary={pmeOrgs.length > 0}
               />
-            ) : null}
-            {cabinetOrgs.length > 0 ? (
               <AccessCard
-                to="/cabinet"
+                to={cabinetOrgs.length > 0 ? "/cabinet" : "/onboarding"}
+                creerUnCabinet={cabinetOrgs.length === 0}
                 icon={<Building2 className="h-5 w-5" aria-hidden />}
                 title={t("landing.surfaces.cabinet.title")}
                 body={t("landing.surfaces.cabinet.body")}
-                cta={t("cab.brand")}
-                meta={`${t("portal.cabinet.count")} : ${compterLesMandatsActifs(clientsQuery.data ?? [])}`}
+                cta={cabinetOrgs.length > 0 ? t("cab.brand") : t("portal.invitations.creer")}
+                meta={
+                  cabinetOrgs.length > 0
+                    ? `${t("portal.cabinet.count")} : ${compterLesMandatsActifs(clientsQuery.data ?? [])}`
+                    : t("portal.cabinet.aucun")
+                }
                 tenants={cabinetOrgs.map((o) => o.name)}
+                primary={cabinetOrgs.length > 0 && pmeOrgs.length === 0}
               />
-            ) : null}
+            </section>
+            {/* La tour : une ligne discrète, aux seuls opérateurs de la plateforme. */}
             {operateur ? (
-              <AccessCard
+              <Link
                 to="/tour"
-                icon={<TowerControl className="h-5 w-5" aria-hidden />}
-                title={t("tour.titre")}
-                body={t("portal.tour.body")}
-                cta={t("portal.tour.cta")}
-              />
+                className="bp-tour mt-4 flex min-h-[48px] items-center gap-3 border border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <TowerControl className="h-4 w-4 flex-none" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-foreground">{t("tour.titre")}</span>
+                  {" — "}
+                  {t("portal.tour.body")}
+                </span>
+                <span className="num text-[11px] uppercase tracking-wide">
+                  {t("portal.tour.cta")}
+                </span>
+              </Link>
             ) : null}
-          </section>
+          </>
         )}
 
         {/* Le détail technique des organisations (rôle, mode de validation,
@@ -247,6 +269,7 @@ function OfficeHome() {
 
 function AccessCard({
   to,
+  creerUnCabinet,
   icon,
   title,
   body,
@@ -255,23 +278,26 @@ function AccessCard({
   tenants,
   primary,
 }: {
-  to: "/pme" | "/cabinet" | "/tour";
+  to: "/pme" | "/cabinet" | "/onboarding";
+  /** Aucune comptabilité encore : la création s'ouvre sur « comptabilité ». */
+  creerUnCabinet?: boolean;
   icon: ReactNode;
   title: string;
   body: string;
   cta: string;
-  meta?: string;
-  tenants?: string[];
-  primary?: boolean;
+  meta: string;
+  tenants: string[];
+  primary: boolean;
 }) {
   return (
     <Link
       to={to}
+      search={creerUnCabinet ? { nature: "cabinet" } : {}}
       // `min-w-0` : dans la grille, une carte prend sinon la largeur de sa plus
       // longue ligne. Recette du 7 novembre 2026 : avec 113 sociétés et des
       // dizaines de cabinets, la liste tronquée poussait la carte hors de
       // l'écran et cachait son bouton.
-      className="group flex min-h-[180px] min-w-0 flex-col justify-between bg-card p-5 transition-colors hover:bg-accent sm:p-6"
+      className="bp-carte group flex min-h-[180px] min-w-0 flex-col justify-between bg-card p-5 transition-colors hover:bg-accent sm:p-6"
     >
       <div>
         <div className="flex items-center justify-between gap-3">
@@ -289,14 +315,12 @@ function AccessCard({
         <h2 className="mt-5 text-xl font-semibold tracking-tight">{title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
       </div>
-      {meta ? (
-        <div className="mt-5 border-t border-border pt-3">
-          <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">{meta}</p>
-          {tenants && tenants.length > 0 ? (
-            <p className="mt-1 truncate text-[12px] text-foreground">{tenants.join(" · ")}</p>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="mt-5 border-t border-border pt-3">
+        <p className="num text-[11px] uppercase tracking-wide text-muted-foreground">{meta}</p>
+        {tenants.length > 0 ? (
+          <p className="mt-1 truncate text-[12px] text-foreground">{tenants.join(" · ")}</p>
+        ) : null}
+      </div>
     </Link>
   );
 }

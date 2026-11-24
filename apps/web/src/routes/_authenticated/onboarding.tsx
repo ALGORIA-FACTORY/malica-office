@@ -20,6 +20,7 @@ import { useState } from "react";
 
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
 import { AdresseAConfirmer } from "@/components/malica/AdresseAConfirmer";
+import { EtapesDuDepart } from "@/components/malica/etapes-du-depart";
 import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 import type { OrgKind } from "@malica/socle/ports/repositories";
@@ -121,147 +122,170 @@ function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="bp-org min-h-screen bg-background text-foreground">
       <header className="rule-b">
         <div className="flex w-full items-center justify-between px-4 py-4 sm:px-6 lg:px-9">
           <Link to="/office" className="text-sm font-semibold uppercase tracking-[0.18em]">
             {t("brand.name")}
           </Link>
+          {kind === "pme" ? <EtapesDuDepart courante="organisation" /> : null}
           <LanguageSwitcher />
         </div>
       </header>
 
       <main className="w-full px-4 py-8 sm:px-6 lg:px-9 lg:py-12">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t("onboarding.subtitle")}</p>
-        {/* Invité par un cabinet ou une société ? L'invitation attend l'adresse confirmée. */}
-        <AdresseAConfirmer />
+        <div className="bp-colonne">
+          <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("onboarding.subtitle")}</p>
+          {/* Invité par un cabinet ou une société ? L'invitation attend l'adresse confirmée. */}
+          <AdresseAConfirmer />
 
-        <form onSubmit={onSubmit} className="mt-8 grid items-start gap-6 lg:grid-cols-2">
-          <fieldset className="lg:col-span-2">
-            <legend className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("onboarding.kind")}
-            </legend>
-            <div className="mt-2 grid gap-px border border-border bg-border sm:grid-cols-2">
-              {(["pme", "cabinet"] as const).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setKind(k)}
-                  disabled={creee !== null}
-                  aria-pressed={kind === k}
-                  className={`bg-card p-4 text-start text-sm transition-colors ${
-                    kind === k ? "bg-foreground text-background" : "hover:bg-accent"
-                  }`}
-                >
-                  {k === "pme" ? t("onboarding.kind.pme") : t("onboarding.kind.cabinet")}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <form onSubmit={onSubmit} className="mt-8 grid items-start gap-6 lg:grid-cols-2">
+            <fieldset className="lg:col-span-2">
+              <legend className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("onboarding.kind")}
+              </legend>
+              <div className="mt-2 grid gap-px border border-border bg-border sm:grid-cols-2">
+                {(["pme", "cabinet"] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setKind(k)}
+                    disabled={creee !== null}
+                    aria-pressed={kind === k}
+                    className={`bg-card p-4 text-start text-sm transition-colors ${
+                      kind === k ? "bg-foreground text-background" : "hover:bg-accent"
+                    }`}
+                  >
+                    {k === "pme" ? t("onboarding.kind.pme") : t("onboarding.kind.cabinet")}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
 
-          {kind === "pme" ? (
-            <label className="block lg:col-span-2">
+            {kind === "pme" ? (
+              <label className="block lg:col-span-2">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t("onboarding.comptabilite")}
+                </span>
+                <input
+                  type="email"
+                  value={emailComptabilite}
+                  onChange={(e) => setEmailComptabilite(e.target.value)}
+                  autoComplete="email"
+                  inputMode="email"
+                  className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
+                />
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {t("onboarding.comptabilite.help")}
+                </span>
+              </label>
+            ) : null}
+
+            <label className="block">
               <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                {t("onboarding.comptabilite")}
+                {t("onboarding.jurisdiction")}
               </span>
-              <input
-                type="email"
-                value={emailComptabilite}
-                onChange={(e) => setEmailComptabilite(e.target.value)}
-                autoComplete="email"
-                inputMode="email"
+              <select
+                value={choisie}
+                onChange={(e) => setJurisdiction(e.target.value)}
+                required
+                disabled={juridictions.isPending}
                 className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
-              />
+              >
+                <option value="" disabled>
+                  {t("onboarding.jurisdiction.choose")}
+                </option>
+                {(juridictions.data ?? []).map((j) => (
+                  <option key={j.jurisdiction} value={j.jurisdiction}>
+                    {/* Le pays et la monnaie en mots, dans la langue de la
+                      personne (Intl) : « TN — TND » était du jargon (4.1). */}
+                    {t("onboarding.jurisdiction.option", {
+                      pays: nomDuPays(j.jurisdiction, locale),
+                      devise: nomDeLaDevise(j.currency, locale),
+                    })}
+                  </option>
+                ))}
+              </select>
               <span className="mt-1 block text-xs text-muted-foreground">
-                {t("onboarding.comptabilite.help")}
+                {t("onboarding.jurisdiction.help")}
               </span>
             </label>
-          ) : null}
 
-          <label className="block">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("onboarding.jurisdiction")}
-            </span>
-            <select
-              value={choisie}
-              onChange={(e) => setJurisdiction(e.target.value)}
-              required
-              disabled={juridictions.isPending}
-              className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("onboarding.name")}
+              </span>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("onboarding.legalId")}
+              </span>
+              <input
+                value={legalId}
+                onChange={(e) => setLegalId(e.target.value)}
+                className="num mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("onboarding.adresse")}
+              </span>
+              <input
+                value={adresse}
+                onChange={(e) => setAdresse(e.target.value)}
+                autoComplete="street-address"
+                className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
+              />
+            </label>
+
+            {error && (
+              <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop lg:col-span-2">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={pending}
+              className="w-full border border-foreground bg-foreground px-4 py-3 text-sm font-medium text-background transition-colors hover:bg-background hover:text-foreground disabled:opacity-50 lg:col-span-2 lg:justify-self-start lg:px-10"
             >
-              <option value="" disabled>
-                {t("onboarding.jurisdiction.choose")}
-              </option>
-              {(juridictions.data ?? []).map((j) => (
-                <option key={j.jurisdiction} value={j.jurisdiction}>
-                  {/* Le pays et la monnaie en mots, dans la langue de la
-                      personne (Intl) : « TN — TND » était du jargon (4.1). */}
-                  {t("onboarding.jurisdiction.option", {
-                    pays: nomDuPays(j.jurisdiction, locale),
-                    devise: nomDeLaDevise(j.currency, locale),
-                  })}
-                </option>
-              ))}
-            </select>
-            <span className="mt-1 block text-xs text-muted-foreground">
-              {t("onboarding.jurisdiction.help")}
-            </span>
-          </label>
+              {pending
+                ? t("auth.pending")
+                : creee
+                  ? t("onboarding.comptabilite.reessayer")
+                  : t("onboarding.submit")}
+            </button>
+          </form>
+        </div>
 
-          <label className="block">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("onboarding.name")}
-            </span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("onboarding.legalId")}
-            </span>
-            <input
-              value={legalId}
-              onChange={(e) => setLegalId(e.target.value)}
-              className="num mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("onboarding.adresse")}
-            </span>
-            <input
-              value={adresse}
-              onChange={(e) => setAdresse(e.target.value)}
-              autoComplete="street-address"
-              className="mt-1 w-full border border-input bg-card px-3 py-2 text-sm outline-none focus:border-foreground"
-            />
-          </label>
-
-          {error && (
-            <p className="border border-signal-stop px-3 py-2 text-xs text-signal-stop lg:col-span-2">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full border border-foreground bg-foreground px-4 py-3 text-sm font-medium text-background transition-colors hover:bg-background hover:text-foreground disabled:opacity-50 lg:col-span-2 lg:justify-self-start lg:px-10"
-          >
-            {pending
-              ? t("auth.pending")
-              : creee
-                ? t("onboarding.comptabilite.reessayer")
-                : t("onboarding.submit")}
-          </button>
-        </form>
+        {/* L'aperçu, sur poste de bureau : ce qui sera créé, lu dans le formulaire et le référentiel. */}
+        <aside className="bp-apercu" aria-label={t("onboarding.apercu")}>
+          <p className="bp-surtitre">{t("onboarding.apercu")}</p>
+          <p className="bp-nom">{name.trim() || "—"}</p>
+          <dl>
+            <div>
+              <dt>{t("onboarding.kind")}</dt>
+              <dd>{kind === "pme" ? t("onboarding.kind.pme") : t("onboarding.kind.cabinet")}</dd>
+            </div>
+            <div>
+              <dt>{t("app.jurisdiction")}</dt>
+              <dd>{choisie ? nomDuPays(choisie, locale) : "—"}</dd>
+            </div>
+            <div>
+              <dt>{t("app.currency")}</dt>
+              <dd>{devise ? nomDeLaDevise(devise, locale) : "—"}</dd>
+            </div>
+          </dl>
+        </aside>
       </main>
     </div>
   );

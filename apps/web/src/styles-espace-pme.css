@@ -20,6 +20,7 @@
 @reference "./styles.css";
 @import "./styles-pme.css";
 @import "./styles-pme-bureau-bibliotheque.css";
+@import "./styles-pme-bureau-parcours.css";
 
 :lang(ar) {
   font-family: "Noto Kufi Arabic", "Inter", ui-sans-serif, system-ui, sans-serif;
