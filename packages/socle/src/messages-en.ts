@@ -4510,6 +4510,15 @@ export const en: Dict = {
   "facture.pdf.objet": "SUBJECT",
   "facture.pdf.objet.texte": "Malica Office {offre} subscription, from {du} to {au}.",
   "facture.pdf.conditions": "PAYMENT TERMS",
+  "facture.pdf.objet.mois":
+    "Malica Office subscriptions of your clients, {mois}: each line shows its company, its plan and its dates.",
+  "facture.pdf.reglee": "Paid on {date} by {moyen}.",
+  "facture.pdf.reglee.ref": "Paid on {date} by {moyen}, ref. {reference}.",
+  "facture.pdf.moyen.carte": "bank card",
+  "facture.pdf.moyen.virement": "bank transfer",
+  "facture.pdf.moyen.cheque": "cheque",
+  "facture.pdf.moyen.especes": "cash",
+  "facture.pdf.moyen.autre": "another method",
   "facture.pdf.conditions.echeance": "Due by {date}.",
   "facture.pdf.banque": "BANK DETAILS — RIB",
   "facture.pdf.banque.titulaire": "Account holder",
@@ -5740,12 +5749,21 @@ export const en: Dict = {
     "To pay now: {ttc} {devise} incl. VAT and stamp duty, from {du} to {au}. Then: {plein} {devise} per month, VAT and stamp duty included.",
   "refus.abonnement.societe_inscrite_seule":
     "This company signed up on its own: its subscription is its own. Only the accounting firm that invited it to Malica can assign it one.",
+  "refus.facturation.coordonnees_incompletes":
+    "First complete the tax ID and address of the billed company: the invoice shows them.",
   "refus.cgv.non_acceptees": "Accept the terms of sale before paying.",
   "refus.cgv.version_perimee":
     "The terms of sale have changed: read the new version, then tick the box again.",
   "refus.cgv.mal_formees": "Enter the version date and the https:// address of the terms of sale.",
   "notif.kind.paiement.recu": "Your payment has been received.",
   "notif.kind.facture.reglee.pme": "Your subscription invoice is paid.",
+  "pme.payer.factureA.titre": "Billed to",
+  "pme.payer.factureA.duCompte": "Taken from your account: the invoice will show these details.",
+  "pme.payer.factureA.incomplet":
+    "The invoice shows the tax ID and address of the billed company. Complete them to pay: they are saved to your account.",
+  "pme.payer.factureA.matricule": "Tax ID",
+  "pme.payer.factureA.adresse": "Registered address",
+  "pme.payer.factureA.enregistrer": "Save",
   "pme.payer.cgv.avant": "I have read and accept the",
   "pme.payer.cgv.lien": "terms of sale",
   "pme.payer.cgv.version": "(version of {version}).",

@@ -4332,6 +4332,15 @@ export const ar: Dict = {
   "facture.pdf.objet": "الموضوع",
   "facture.pdf.objet.texte": "اشتراك Malica Office {offre}، من {du} إلى {au}.",
   "facture.pdf.conditions": "شروط الدفع",
+  "facture.pdf.objet.mois":
+    "اشتراكات Malica Office لحرفائكم، {mois}: يحمل كل سطر شركته وعرضه وتواريخه.",
+  "facture.pdf.reglee": "دُفعت يوم {date} عن طريق {moyen}.",
+  "facture.pdf.reglee.ref": "دُفعت يوم {date} عن طريق {moyen}، المرجع {reference}.",
+  "facture.pdf.moyen.carte": "البطاقة البنكية",
+  "facture.pdf.moyen.virement": "التحويل البنكي",
+  "facture.pdf.moyen.cheque": "الشيك",
+  "facture.pdf.moyen.especes": "نقدًا",
+  "facture.pdf.moyen.autre": "وسيلة أخرى",
   "facture.pdf.conditions.echeance": "تُدفع قبل {date}.",
   "facture.pdf.banque": "المعطيات البنكية — RIB",
   "facture.pdf.banque.titulaire": "صاحب الحساب",
@@ -5501,12 +5510,21 @@ export const ar: Dict = {
     "للدفع الآن: {ttc} {devise} شاملة الأداء والطابع، من {du} إلى {au}. بعد ذلك: {plein} {devise} شهريًا، شاملة الأداء والطابع.",
   "refus.abonnement.societe_inscrite_seule":
     "سجّلت هذه الشركة بنفسها: اشتراكها ملكها. لا يمكن أن تُسند لها اشتراكًا إلا المحاسبة التي دعتها إلى Malica.",
+  "refus.facturation.coordonnees_incompletes":
+    "أكملوا أولًا المعرّف الجبائي وعنوان الشركة المفوترة: تحملهما الفاتورة.",
   "refus.cgv.non_acceptees": "اقبلوا الشروط العامة للبيع قبل الدفع.",
   "refus.cgv.version_perimee":
     "تغيّرت الشروط العامة للبيع: اقرؤوا النسخة الجديدة، ثم أعيدوا تأشير الخانة.",
   "refus.cgv.mal_formees": "أدخلوا تاريخ النسخة وعنوان https:// للشروط العامة للبيع.",
   "notif.kind.paiement.recu": "تم استلام دفعتكم.",
   "notif.kind.facture.reglee.pme": "فاتورة اشتراككم مدفوعة.",
+  "pme.payer.factureA.titre": "الفاتورة باسم",
+  "pme.payer.factureA.duCompte": "مأخوذة من حسابكم: ستحمل الفاتورة هذه البيانات.",
+  "pme.payer.factureA.incomplet":
+    "تحمل الفاتورة المعرّف الجبائي وعنوان الشركة المفوترة. أكملوهما للدفع: يُحفظان في حسابكم.",
+  "pme.payer.factureA.matricule": "المعرّف الجبائي",
+  "pme.payer.factureA.adresse": "عنوان المقر",
+  "pme.payer.factureA.enregistrer": "حفظ",
   "pme.payer.cgv.avant": "قرأتُ وأقبل",
   "pme.payer.cgv.lien": "الشروط العامة للبيع",
   "pme.payer.cgv.version": "(نسخة {version}).",

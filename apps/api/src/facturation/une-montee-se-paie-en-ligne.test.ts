@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import pg from "pg";
+import { ADRESSE_D_ESSAI, matriculeDEssai } from "../matricule-d-essai.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
@@ -29,8 +30,9 @@ async function decor(db: pg.PoolClient, emetteur = true): Promise<Decor> {
   await personnesDEssai(db, operateur);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   const o = await db.query<{ id: string }>(
-    `insert into identity.organizations (kind, name, jurisdiction, currency)
-     values ('pme', 'Montée d''essai', 'TN', 'TND') returning id`,
+    `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
+     values ('pme', 'Montée d''essai', 'TN', 'TND', $1, $2) returning id`,
+    [matriculeDEssai(), ADRESSE_D_ESSAI],
   );
   const tenant = o.rows[0]!.id;
   await personnesDEssai(db, principal);
@@ -54,8 +56,9 @@ async function decor(db: pg.PoolClient, emetteur = true): Promise<Decor> {
   );
   if (emetteur) {
     const e = await db.query<{ id: string }>(
-      `insert into identity.organizations (kind, name, jurisdiction, currency)
-       values ('pme', 'ALGORIA Factory d''essai', 'TN', 'TND') returning id`,
+      `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
+       values ('pme', 'ALGORIA Factory d''essai', 'TN', 'TND', $1, $2) returning id`,
+      [matriculeDEssai(), ADRESSE_D_ESSAI],
     );
     await db.query(
       `insert into facturation.emetteurs (organisation_id, valide_des, designe_par)

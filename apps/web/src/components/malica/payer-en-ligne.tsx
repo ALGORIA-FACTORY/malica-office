@@ -11,6 +11,7 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { EnTeteCabinet } from "@/components/malica/office-ui";
 import { useChoixDuMoyen, useRetourDuPrestataire } from "@/hooks/use-paiement-en-ligne";
@@ -63,6 +64,83 @@ function CaseDesCgv({
     </div>
   );
 }
+/**
+ * À qui la facture s'adressera : le payeur, tel que son compte le porte (raison sociale, matricule
+ * fiscal, adresse). S'il en manque, on les demande ici et ils s'enregistrent dans son compte —
+ * la facture les reprendra. La base refuse de payer tant qu'ils manquent (20261231290000).
+ */
+function FactureA({
+  factureA,
+  completer,
+}: {
+  factureA: ReturnType<typeof useChoixDuMoyen>["factureA"];
+  completer: ReturnType<typeof useChoixDuMoyen>["completerFactureA"];
+}) {
+  const { t } = useI18n();
+  const [matricule, setMatricule] = useState("");
+  const [adresse, setAdresse] = useState("");
+  const f = factureA.data;
+  if (!f) return null;
+  const manque = !f.complet;
+  return (
+    <section className="facture-a" data-facture-a aria-labelledby="facture-a-titre">
+      <span className="kick" id="facture-a-titre">
+        {t("pme.payer.factureA.titre")}
+      </span>
+      <b>{f.nom}</b>
+      {f.matricule ? <span className="num">{t("facture.pdf.mf", { mf: f.matricule })}</span> : null}
+      {f.adresse ? <span className="whitespace-pre-line">{f.adresse}</span> : null}
+      {manque ? (
+        <form
+          className="space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            completer.mutate({ matricule: matricule.trim(), adresse: adresse.trim() });
+          }}
+        >
+          <p className="et" role="status">
+            {t("pme.payer.factureA.incomplet")}
+          </p>
+          {f.matricule ? null : (
+            <label className="block">
+              <span className="block text-sm">{t("pme.payer.factureA.matricule")}</span>
+              <input
+                className="w-full rounded-md border border-border bg-transparent px-2 py-1.5"
+                value={matricule}
+                onChange={(e) => setMatricule(e.target.value)}
+                autoComplete="off"
+                required
+              />
+            </label>
+          )}
+          {f.adresse ? null : (
+            <label className="block">
+              <span className="block text-sm">{t("pme.payer.factureA.adresse")}</span>
+              <textarea
+                className="w-full rounded-md border border-border bg-transparent px-2 py-1.5"
+                rows={2}
+                value={adresse}
+                onChange={(e) => setAdresse(e.target.value)}
+                autoComplete="street-address"
+                required
+              />
+            </label>
+          )}
+          <button
+            type="submit"
+            className="rounded-md border border-foreground px-3 py-1.5 text-sm font-medium disabled:opacity-40"
+            disabled={completer.isPending}
+          >
+            {t("pme.payer.factureA.enregistrer")}
+          </button>
+        </form>
+      ) : (
+        <span className="et">{t("pme.payer.factureA.duCompte")}</span>
+      )}
+    </section>
+  );
+}
+
 const routeCabinet = getRouteApi("/_authenticated/cabinet/payer/$paiementId");
 const OU_SOCIETE = "components/malica/payer-en-ligne#societe";
 const OU_CABINET = "components/malica/payer-en-ligne#cabinet";
@@ -97,6 +175,9 @@ export function PayerEnLigneSociete() {
     cgv,
     cgvAcceptees,
     accepterLesCgv,
+    factureA,
+    completerFactureA,
+    coordonneesCompletes,
   } = useChoixDuMoyen(paiementId, OU_SOCIETE);
 
   return (
@@ -156,7 +237,11 @@ export function PayerEnLigneSociete() {
 
             {prestataire ? null : <p className="et">{t("pme.reglages.paiement.ferme")}</p>}
 
-            <CaseDesCgv cgv={cgv} cochee={cgvAcceptees} cocher={accepterLesCgv} />
+            <FactureA factureA={factureA} completer={completerFactureA} />
+
+            {coordonneesCompletes ? (
+              <CaseDesCgv cgv={cgv} cochee={cgvAcceptees} cocher={accepterLesCgv} />
+            ) : null}
 
             <ul className="moyens">
               {(choix.data?.moyens ?? []).map((m) => {
@@ -167,7 +252,12 @@ export function PayerEnLigneSociete() {
                       type="button"
                       className="moyen"
                       data-moyen={m.code}
-                      disabled={pourquoi !== null || !cgvAcceptees || payer.isPending}
+                      disabled={
+                        pourquoi !== null ||
+                        !coordonneesCompletes ||
+                        !cgvAcceptees ||
+                        payer.isPending
+                      }
                       aria-describedby={pourquoi ? `moyen-${m.code}` : undefined}
                       onClick={() => payer.mutate(m.code)}
                     >
@@ -230,6 +320,9 @@ export function PayerEnLigneCabinet() {
     cgv,
     cgvAcceptees,
     accepterLesCgv,
+    factureA,
+    completerFactureA,
+    coordonneesCompletes,
   } = useChoixDuMoyen(paiementId, OU_CABINET);
   const qc = useQueryClient();
   const retour = useRetourDuPrestataire(true, OU_CABINET, async () => {
@@ -285,9 +378,15 @@ export function PayerEnLigneCabinet() {
             <p className="text-sm text-muted-foreground">{t("pme.reglages.paiement.ferme")}</p>
           )}
 
-          <div className="text-sm">
-            <CaseDesCgv cgv={cgv} cochee={cgvAcceptees} cocher={accepterLesCgv} />
+          <div className="space-y-1 rounded-lg border border-border p-4 text-sm [&_.kick]:block [&_.kick]:text-xs [&_.kick]:uppercase [&_.kick]:text-muted-foreground [&_b]:block [&>section>span]:block">
+            <FactureA factureA={factureA} completer={completerFactureA} />
           </div>
+
+          {coordonneesCompletes ? (
+            <div className="text-sm">
+              <CaseDesCgv cgv={cgv} cochee={cgvAcceptees} cocher={accepterLesCgv} />
+            </div>
+          ) : null}
 
           <ul className="space-y-2">
             {(choix.data?.moyens ?? []).map((m) => {
@@ -297,7 +396,9 @@ export function PayerEnLigneCabinet() {
                   <button
                     type="button"
                     data-moyen={m.code}
-                    disabled={pourquoi !== null || !cgvAcceptees || payer.isPending}
+                    disabled={
+                      pourquoi !== null || !coordonneesCompletes || !cgvAcceptees || payer.isPending
+                    }
                     aria-describedby={pourquoi ? `moyen-${m.code}` : undefined}
                     onClick={() => payer.mutate(m.code)}
                     className="flex w-full items-center gap-4 rounded-lg border border-border p-3 text-start hover:border-foreground disabled:cursor-default disabled:hover:border-border"

@@ -27,3 +27,9 @@ export function matriculeDEssai(tva = "A", categorie = "M", tirer: Tirage = rand
   const lettre = String.fromCharCode(65 + tirer(0, 26));
   return `${chiffres}${lettre}/${tva}/${categorie}/000`;
 }
+
+/**
+ * L'adresse d'une société d'essai : la facture porte celle du payeur, et la base refuse de payer
+ * sans elle ni son matricule (20261231290000).
+ */
+export const ADRESSE_D_ESSAI = "1 rue de l'Essai\n1000 Ville d'essai";

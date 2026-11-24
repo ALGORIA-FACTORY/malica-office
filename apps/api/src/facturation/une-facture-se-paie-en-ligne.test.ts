@@ -15,6 +15,7 @@ import { after, describe, it } from "node:test";
 import pg from "pg";
 
 import { facturation } from "../depots/facturation.ts";
+import { ADRESSE_D_ESSAI, matriculeDEssai } from "../matricule-d-essai.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
@@ -54,8 +55,9 @@ async function uneFacture(db: pg.PoolClient) {
   await personnesDEssai(db, operateur);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   const o = await db.query<{ id: string }>(
-    `insert into identity.organizations (kind, name, jurisdiction, currency)
-     values ('pme', 'Facture d''essai', 'TN', 'TND') returning id`,
+    `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
+     values ('pme', 'Facture d''essai', 'TN', 'TND', $1, $2) returning id`,
+    [matriculeDEssai(), ADRESSE_D_ESSAI],
   );
   const tenant = o.rows[0]!.id;
   await personnesDEssai(db, principal);
@@ -78,8 +80,9 @@ async function uneFacture(db: pg.PoolClient) {
     [licence, tenant],
   );
   const e = await db.query<{ id: string }>(
-    `insert into identity.organizations (kind, name, jurisdiction, currency)
-     values ('pme', 'Émetteur d''essai', 'TN', 'TND') returning id`,
+    `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
+     values ('pme', 'Émetteur d''essai', 'TN', 'TND', $1, $2) returning id`,
+    [matriculeDEssai(), ADRESSE_D_ESSAI],
   );
   await db.query(
     `insert into facturation.emetteurs (organisation_id, valide_des, designe_par)

@@ -78,6 +78,7 @@ const DETAIL: FactureDetaillee = {
   echeance_le: "2026-12-08",
   couvre_du: "2026-11-23",
   couvre_au: "2026-12-23",
+  periode: "2026-11-01",
   payeur_type: "titulaire",
   offre_code: "solo",
   offre_libelle: "Solo",
@@ -105,6 +106,7 @@ const DETAIL: FactureDetaillee = {
       montant_ht: "100.000",
     },
   ],
+  reglements: [],
   entete: {
     emetteur: {
       nom: "Émetteur d'essai",
@@ -168,6 +170,38 @@ describe("la facture prête à dessiner", () => {
 
   it("sans noms de la devise dans la langue, pas de lettres plutôt qu'une phrase fausse", () => {
     expect(factureImprimable(DETAIL, t as never, "ar").arretee).toBeNull();
+  });
+
+  it("réglée par carte : elle le dit, et n'imprime ni RIB ni échéance", () => {
+    const f = factureImprimable(
+      {
+        ...DETAIL,
+        etat: "payee",
+        reste_du: "0.000",
+        reglements: [
+          { moyen: "carte", reference: "flouci ESSAI-1", le: "2026-11-23", montant: "120.000" },
+        ],
+      },
+      t as never,
+      "fr",
+    );
+    expect(f.banque).toBeNull();
+    expect(f.signal).toBe("succes");
+    expect(f.conditions.lignes).toHaveLength(1);
+    expect(f.conditions.lignes[0]).toMatch(
+      /^facture\.pdf\.reglee\.ref .+ facture\.pdf\.moyen\.carte flouci ESSAI-1$/,
+    );
+  });
+
+  it("à régler (la facture du mois d'une comptabilité) : le RIB, l'échéance, l'objet du mois", () => {
+    const f = factureImprimable(
+      { ...DETAIL, payeur_type: "cabinet", couvre_du: null, couvre_au: null, offre_code: null },
+      t as never,
+      "fr",
+    );
+    expect(f.banque?.lignes.map((l) => l.libelle)).toContain("facture.pdf.banque.rib");
+    expect(f.conditions.lignes.at(-1)).toMatch(/^facture\.pdf\.conditions\.echeance /);
+    expect(f.objet.texte).toMatch(/^facture\.pdf\.objet\.mois .*2026/);
   });
 
   it("sans émetteur au jour de la facture, elle ne s'imprime pas", () => {

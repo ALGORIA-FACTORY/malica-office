@@ -43,4 +43,5 @@ export const METHODES_COMMERCIALES: ReadonlySet<string> = new Set([
   "repondreDescente",
   "maDescente",
   "annulerDescente",
+  "factureA",
 ]);

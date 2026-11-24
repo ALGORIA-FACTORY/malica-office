@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 
 import type pg from "pg";
 
+import { ADRESSE_D_ESSAI, matriculeDEssai } from "../matricule-d-essai.ts";
 import { inviteeParLaComptabilite, personnesDEssai } from "../personne-d-essai.ts";
 
 export interface Decor {
@@ -64,15 +65,17 @@ export async function uneOrganisation(
   kind: string,
   nom: string,
 ): Promise<string> {
+  // Un matricule et une adresse d'essai : la facture les porte, et la base refuse de payer sans
+  // eux (20261231290000).
   const { rows } = await db.query<{ id: string }>(
-    `insert into identity.organizations (kind, name, jurisdiction, currency)
-     select $1, $2, p.jurisdiction, p.currency
+    `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
+     select $1, $2, p.jurisdiction, p.currency, $3, $4
        from ref.jurisdiction_packs p
       where exists (select 1 from ref.tva_rates r where r.pack_version_id = p.id and r.code = 'TVA19')
       order by p.effective_from desc
       limit 1
      returning id`,
-    [kind, nom],
+    [kind, nom, matriculeDEssai(), ADRESSE_D_ESSAI],
   );
   return rows[0]!.id;
 }

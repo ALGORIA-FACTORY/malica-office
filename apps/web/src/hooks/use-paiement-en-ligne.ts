@@ -43,6 +43,36 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
     retry: false,
   });
 
+  // À qui la facture s'adressera : le payeur, lu dans son compte (20261231290000). Sans matricule
+  // ni adresse, la base refuse les CGV ; on les demande ici, par les portes d'organisation.
+  const qc = useQueryClient();
+  const factureA = useQuery({
+    queryKey: ["facture-a", paiementId],
+    queryFn: () => office().facturation.factureA(paiementId),
+    retry: false,
+  });
+  const completerFactureA = useMutation({
+    mutationFn: async (saisie: { matricule: string; adresse: string }) => {
+      const f = factureA.data;
+      if (!f) throw new Error("refus.facturation.coordonnees_incompletes");
+      if (!f.matricule) {
+        await office().identity.definirOrganisation({
+          tenantId: f.tenant_id,
+          name: f.nom,
+          legalId: saisie.matricule,
+          jurisdiction: f.juridiction,
+        });
+      }
+      if (!f.adresse) await office().identity.poserAdresse(f.tenant_id, saisie.adresse);
+    },
+    onSuccess: async () => {
+      setMessage(null);
+      await qc.invalidateQueries({ queryKey: ["facture-a", paiementId] });
+    },
+    onError: (e: unknown) => setMessage(texteDeLErreur(e, ou, t("common.error"))),
+  });
+  const coordonneesCompletes = factureA.data?.complet === true;
+
   // La case des CGV (CGV, art. 2) : aucun moyen ne se choisit tant qu'elle n'est pas cochée ;
   // la version cochée part avec le paiement, et la base la garde (20261231260000).
   const [cgvAcceptees, accepterLesCgv] = useState(false);
@@ -50,6 +80,7 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
 
   const payer = useMutation({
     mutationFn: (moyen: string) => {
+      if (!coordonneesCompletes) throw new Error("refus.facturation.coordonnees_incompletes");
       if (!cgv || !cgvAcceptees) throw new Error("refus.cgv.non_acceptees");
       return office().facturation.payerEnLigne(paiementId, moyen, cgv.id);
     },
@@ -76,6 +107,9 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
     cgv,
     cgvAcceptees,
     accepterLesCgv,
+    factureA,
+    completerFactureA,
+    coordonneesCompletes,
   };
 }
 

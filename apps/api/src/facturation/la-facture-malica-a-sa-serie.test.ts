@@ -7,7 +7,8 @@
  *   - les numéros déjà émis ne bougent pas ;
  *   - la facture se lit sous la RLS : son titulaire, l'opérateur — personne d'autre ;
  *   - chaque facture de PME avertit son titulaire (application + courriel) avec tous les
- *     jetons de ses gabarits ; la facture du mois du cabinet ne part toujours pas par courriel ;
+ *     jetons de ses gabarits ; la facture du mois du cabinet part à ses experts, application et
+ *     courriel (décision du 24 novembre 2026, 20261231280000) ;
  *   - la tour renvoie le courriel d'une facture : opérateur seul, une fois dans la fenêtre.
  *
  * Sur une vraie base migrée, dans des transactions ANNULÉES, sous les vrais rôles
@@ -432,7 +433,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
     });
   });
 
-  it("la facture du mois du cabinet ne part toujours pas par courriel", async () => {
+  it("la facture du mois du cabinet part à ses experts, application et courriel", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const p = await unePme(db);
@@ -473,9 +474,54 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
       );
       assert.deepEqual(
         envois.map((x) => [x.code, x.canal]),
-        [["facture.emise", "app"]],
-        "l'application seule, sous son genre d'avant",
+        [
+          ["facture.emise.cabinet", "app"],
+          ["facture.emise.cabinet", "email"],
+        ],
+        "l'application et le courriel, sous le genre du cabinet",
       );
+
+      // Le courriel se rend sans jeton orphelin, son bouton mène à la facturation du cabinet.
+      const { rows: file } = await db.query<{
+        email: string;
+        locale: string;
+        titre: string;
+        corps: string;
+        action_libelle: string;
+        action_route: string;
+        ton: string;
+        code: string;
+        organisation: string | null;
+        donnees: Record<string, unknown>;
+        sujet: string | null;
+        libelles: Record<string, string>;
+        carte: LigneDeCarte[] | null;
+      }>("select * from notif.reserver_courriels(1000000, interval '10 minutes')");
+      const courriel = file.find(
+        (x) => x.code === "facture.emise.cabinet" && x.email.includes(expert),
+      );
+      assert.ok(courriel, "la file rend le courriel de la facture du mois");
+      assert.equal(courriel.action_route, "/cabinet/clients?vue=facturation");
+      const message = courrielDeNotification({
+        locale: courriel.locale,
+        code: courriel.code,
+        titre: courriel.titre,
+        corps: courriel.corps,
+        action: {
+          libelle: courriel.action_libelle,
+          url: `https://essai.example${courriel.action_route}`,
+        },
+        ton: courriel.ton,
+        organisation: courriel.organisation,
+        urlPublique: "https://essai.example",
+        libelles: courriel.libelles,
+        donnees: courriel.donnees,
+        sujet: courriel.sujet,
+        carte: courriel.carte,
+      });
+      assert.ok(message.sujet.includes(facture.numero), message.sujet);
+      assert.ok(!message.html.includes("{{") && !message.texte.includes("{{"), message.texte);
+      assert.ok(message.texte.includes("virement"), message.texte);
 
       // Le renvoi n'est pas pour elle.
       await enPersonne(db, s.operateur);

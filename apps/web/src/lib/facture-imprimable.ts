@@ -58,6 +58,15 @@ export interface FactureImprimable {
   specimen: string | null;
 }
 
+/** Le moyen d'un encaissement, dit dans la langue du lecteur. */
+const MOYEN: Record<string, MessageKey> = {
+  carte: "facture.pdf.moyen.carte",
+  virement: "facture.pdf.moyen.virement",
+  cheque: "facture.pdf.moyen.cheque",
+  especes: "facture.pdf.moyen.especes",
+  autre: "facture.pdf.moyen.autre",
+};
+
 const SIGNAL: Record<EtatDeFacture, SignalDeFacture> = {
   payee: "succes",
   en_retard: "erreur",
@@ -116,7 +125,17 @@ export function factureImprimable(
     }
   }
 
-  const banque = d.entete.banque;
+  // Réglée : chaque encaissement se dit (« Réglée le … par carte bancaire, réf. … ») et la facture
+  // n'imprime pas de coordonnées bancaires — il n'y a rien à virer. À régler : l'échéance et le RIB.
+  const reglee = d.etat === "payee";
+  const reglements = (d.reglements ?? []).map((r) =>
+    t(r.reference ? "facture.pdf.reglee.ref" : "facture.pdf.reglee", {
+      date: jour(r.le),
+      moyen: t(MOYEN[r.moyen] ?? "facture.pdf.moyen.autre"),
+      ...(r.reference ? { reference: r.reference } : {}),
+    }),
+  );
+  const banque = reglee ? null : d.entete.banque;
   const ligneBanque = (libelle: MessageKey, valeur: string | null) =>
     valeur ? { libelle: t(libelle), valeur } : null;
 
@@ -185,19 +204,28 @@ export function factureImprimable(
     arretee: lettres ? t("facture.pdf.arretee", { lettres }) : null,
     objet: {
       titre: t("facture.pdf.objet"),
-      texte: t("facture.pdf.objet.texte", {
-        offre: d.offre_libelle ?? d.offre_code ?? "",
-        du: jour(d.couvre_du),
-        // `couvre_au` est exclu : le dernier jour couvert est la veille.
-        au: jour(veille(d.couvre_au)),
-      }),
+      // La facture du mois d'une comptabilité n'a pas UNE période : chaque ligne porte la sienne.
+      texte:
+        d.couvre_du && d.couvre_au
+          ? t("facture.pdf.objet.texte", {
+              offre: d.offre_libelle ?? d.offre_code ?? "",
+              du: jour(d.couvre_du),
+              // `couvre_au` est exclu : le dernier jour couvert est la veille.
+              au: jour(veille(d.couvre_au)),
+            })
+          : t("facture.pdf.objet.mois", {
+              mois: jourOuInstant(d.periode, locale, { month: "long", year: "numeric" }),
+            }),
     },
     conditions: {
       titre: t("facture.pdf.conditions"),
-      lignes: [
-        ...nonVides((d.entete.conditions_paiement ?? "").split("\n")),
-        t("facture.pdf.conditions.echeance", { date: jour(d.echeance_le) }),
-      ],
+      lignes: reglee
+        ? reglements
+        : [
+            ...nonVides((d.entete.conditions_paiement ?? "").split("\n")),
+            ...reglements,
+            t("facture.pdf.conditions.echeance", { date: jour(d.echeance_le) }),
+          ],
     },
     banque: banque
       ? {

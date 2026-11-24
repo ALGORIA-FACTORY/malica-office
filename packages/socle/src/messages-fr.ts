@@ -4642,6 +4642,15 @@ export const fr = {
   "facture.pdf.objet": "OBJET",
   "facture.pdf.objet.texte": "Abonnement Malica Office {offre}, du {du} au {au}.",
   "facture.pdf.conditions": "CONDITIONS DE PAIEMENT",
+  "facture.pdf.objet.mois":
+    "Abonnements Malica Office de vos clients, {mois} : chaque ligne porte sa société, son offre et ses dates.",
+  "facture.pdf.reglee": "Réglée le {date} par {moyen}.",
+  "facture.pdf.reglee.ref": "Réglée le {date} par {moyen}, réf. {reference}.",
+  "facture.pdf.moyen.carte": "carte bancaire",
+  "facture.pdf.moyen.virement": "virement",
+  "facture.pdf.moyen.cheque": "chèque",
+  "facture.pdf.moyen.especes": "espèces",
+  "facture.pdf.moyen.autre": "un autre moyen",
   "facture.pdf.conditions.echeance": "À régler avant le {date}.",
   "facture.pdf.banque": "COORDONNÉES BANCAIRES — RIB",
   "facture.pdf.banque.titulaire": "Titulaire",
@@ -5965,6 +5974,8 @@ export const fr = {
     "À régler maintenant : {ttc} {devise} TTC, timbre compris, du {du} au {au}. Ensuite : {plein} {devise} TTC par mois, TVA et timbre compris.",
   "refus.abonnement.societe_inscrite_seule":
     "Cette société s'est inscrite seule : son abonnement est le sien. Seule la comptabilité qui l'a invitée dans Malica peut lui en attribuer un.",
+  "refus.facturation.coordonnees_incompletes":
+    "Complétez d'abord le matricule fiscal et l'adresse de la société facturée : la facture les porte.",
   "refus.cgv.non_acceptees": "Acceptez les conditions générales de vente avant de payer.",
   "refus.cgv.version_perimee":
     "Les conditions générales de vente ont changé : relisez la nouvelle version, puis cochez à nouveau la case.",
@@ -5972,6 +5983,13 @@ export const fr = {
     "Indiquez la date de la version et l'adresse https:// des conditions générales de vente.",
   "notif.kind.paiement.recu": "Votre paiement est bien reçu.",
   "notif.kind.facture.reglee.pme": "Votre facture d’abonnement est réglée.",
+  "pme.payer.factureA.titre": "Facturé à",
+  "pme.payer.factureA.duCompte": "Repris de votre compte : la facture portera ces coordonnées.",
+  "pme.payer.factureA.incomplet":
+    "La facture porte le matricule fiscal et l'adresse de la société facturée. Complétez-les pour payer : ils s'enregistrent dans votre compte.",
+  "pme.payer.factureA.matricule": "Matricule fiscal",
+  "pme.payer.factureA.adresse": "Adresse du siège",
+  "pme.payer.factureA.enregistrer": "Enregistrer",
   "pme.payer.cgv.avant": "J'ai lu et j'accepte les",
   "pme.payer.cgv.lien": "conditions générales de vente",
   "pme.payer.cgv.version": "(version du {version}).",

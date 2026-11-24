@@ -1076,5 +1076,26 @@ reçoit aucun abonnement de sa comptabilité. Restent ouverts :
   événement n'est remonté dans Sentry, et le journal du conteneur de l'API n'est pas lisible depuis la CI. L'écran dit
   désormais « le service a été interrompu un instant », la panne part au journal sous sa référence ; la cause reste à
   lire dans `docker compose logs api` du pilote autour de 10 h 38 UTC.
-- **Le renvoi d'une facture déjà réglée** repart sous le genre `facture.emise.pme` (« à régler avant… ») : seule la
-  facture née d'un paiement d'abord se dit réglée.
+- ~~Le renvoi d'une facture déjà réglée~~ : réglé par `20261231280000` — une facture entièrement encaissée se dit
+  réglée, au renvoi comme à l'émission.
+
+### Une seule facture pour la comptabilité ; la facture dit à qui elle s'adresse (24 novembre 2026)
+
+Livré par `20261231280000` et `20261231290000`. Tranché par le dirigeant : la comptabilité ne paie rien en ligne pour
+activer ou monter un client ; tout ce qu'elle a activé, et chaque passage d'offre, est sur SA facture du mois, par
+virement (RIB sur la facture) ou en ligne. La PME qui paie elle-même paie d'abord, par carte, et sa facture naît
+réglée (« Réglée le … par carte bancaire, réf. … », sans RIB). Les coordonnées du payeur viennent de son compte.
+
+- **Une ligne par société ET par offre**, avec ses dates ; le passage se nomme (« Passage Solo → Team »). Les montants
+  gardent leur règle (jours × part ÷ jours du mois) ; l'arrondi se fait par ligne et non plus par licence : une
+  facture à passages peut différer d'un millime de l'ancien calcul. Aucun trou ni doublon : éprouvé jour par jour.
+- **La facture du mois part aux EXPERTS du cabinet** (application et courriel), plus aux collaborateurs.
+- **Le matricule fiscal et l'adresse du payeur sont exigés avant de payer** : la base refuse l'acceptation des CGV
+  sans eux ; la page de paiement les demande et les enregistre dans le compte. Les sociétés du pilote sans adresse
+  les saisiront à leur prochain paiement. La comptabilité qui ACTIVE un client n'est pas bloquée (rien ne se paie à
+  ce moment) : sa facture du mois imprime ce que son compte porte. À trancher : exiger aussi son matricule et son
+  adresse à l'activation.
+- **Le renvoi par la tour** reste réservé aux factures de PME ; la facture du mois d'un cabinet ne se renvoie pas
+  encore (plusieurs experts destinataires).
+- **Le RIB et le RNE d'ALGORIA** restent saisis une fois à la tour (Tour → Factures) ; ils ne se lisent pas encore dans
+  la fiche de l'organisation émettrice (son compte bancaire n'a qu'un libellé et un IBAN).
