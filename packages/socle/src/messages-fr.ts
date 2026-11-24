@@ -5990,6 +5990,8 @@ export const fr = {
     "Les conditions générales de vente ont changé : relisez la nouvelle version, puis cochez à nouveau la case.",
   "refus.cgv.mal_formees":
     "Indiquez la date de la version et l'adresse https:// des conditions générales de vente.",
+  "notif.kind.abonnement.descente_refusee":
+    "Votre changement d'offre n'a pas pu se faire : vous restez sur votre offre actuelle.",
   "notif.kind.paiement.recu": "Votre paiement est bien reçu.",
   "notif.kind.facture.reglee.pme": "Votre facture d’abonnement est réglée.",
   "pme.payer.payeur.titre": "Facturé à",

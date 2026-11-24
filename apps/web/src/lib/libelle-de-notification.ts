@@ -55,6 +55,8 @@ const GENRES: Record<string, MessageKey> = {
   "facture.reglee.pme": "notif.kind.facture.reglee.pme",
   "paiement.recu": "notif.kind.paiement.recu",
   "paiement.recu.cabinet": "notif.kind.paiement.recu",
+  // Une descente programmée que l'échéance refuse se dit (revue du 24 novembre 2026, T6).
+  "abonnement.descente_refusee": "notif.kind.abonnement.descente_refusee",
 };
 
 export function chaine(payload: Record<string, unknown>, cle: string): string | null {
@@ -185,11 +187,12 @@ export function seMontreIci(kind: string, coque: boolean): boolean {
   return !(coque && (kind.startsWith("acces.") || parleDAbonnement(kind)));
 }
 
-/** Les factures et les paiements de l'abonnement d'une société : ils mènent à l'abonnement. */
+/** Les factures, les paiements et les changements d'offre d'une société : ils mènent à l'abonnement. */
 const DE_L_ABONNEMENT: ReadonlySet<string> = new Set([
   "facture.emise.pme",
   "facture.reglee.pme",
   "paiement.recu",
+  "abonnement.descente_refusee",
 ]);
 
 function parleDAbonnement(kind: string): boolean {

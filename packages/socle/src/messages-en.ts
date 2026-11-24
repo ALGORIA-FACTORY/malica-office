@@ -5764,6 +5764,8 @@ export const en: Dict = {
   "refus.cgv.version_perimee":
     "The terms of sale have changed: read the new version, then tick the box again.",
   "refus.cgv.mal_formees": "Enter the version date and the https:// address of the terms of sale.",
+  "notif.kind.abonnement.descente_refusee":
+    "Your plan change could not be made: you stay on your current plan.",
   "notif.kind.paiement.recu": "Your payment has been received.",
   "notif.kind.facture.reglee.pme": "Your subscription invoice is paid.",
   "pme.payer.payeur.titre": "Billed to",

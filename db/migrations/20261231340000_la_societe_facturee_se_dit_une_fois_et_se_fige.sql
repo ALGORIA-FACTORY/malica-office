@@ -17,6 +17,12 @@
 --       rattachée QUI N'EST PAS ARCHIVÉE (une licence dont toutes les sociétés sont archivées
 --       retombe sur la première rattachée, pour ne jamais rendre nul).
 --
+--   T6  Une descente programmée que l'échéance refuse (trop de sociétés pour l'offre visée…) se
+--       disait seulement dans la table : le titulaire croyait payer moins. Elle se dit maintenant,
+--       en application et par courriel (genre `abonnement.descente_refusee`).
+--   T8  Un titulaire de plusieurs licences voyait son année, son report ou sa montée appliqués à
+--       la PREMIÈRE licence par identifiant. `facturation.ma_licence` tranche, ou demande laquelle.
+--
 -- Les factures déjà émises reçoivent une fois les coordonnées que leur PDF imprimait jusqu'ici
 -- (même règle) : leur rendu ne change pas, il cesse seulement de pouvoir changer.
 -- Le titulaire n'est pas touché : qui paie, qui voit, qui décide restent tels quels.
@@ -243,6 +249,11 @@ begin
     exception when others then
       update facturation.descentes_programmees
          set statut = 'refusee', traitee_le = now(), motif_fin = sqlerrm where id = r.id;
+      -- T6 : le refus se dit au titulaire ; il croyait payer moins.
+      perform notif.emettre(r.tenant, 'abonnement.descente_refusee',
+        jsonb_build_object('offre', coalesce((ref.offre_a(r.offre_code, r.effet_le)).libelle, r.offre_code),
+                           'le', to_char(r.effet_le, 'DD/MM/YYYY')),
+        r.titulaire, 'descente:' || r.id::text, interval '24 hours');
     end;
   end loop;
   perform set_config('request.jwt.claim.sub', v_rendu, true);
@@ -816,15 +827,8 @@ declare
   v_ht       numeric;
   v_ttc      jsonb;
 begin
-  if p_tenant is null then
-    select l.id into v_licence from facturation.licences l
-     where l.titulaire = auth.uid() order by l.id limit 1;
-  else
-    select l.id into v_licence
-      from facturation.licences l
-      join facturation.licence_organisations lo on lo.licence_id = l.id
-     where lo.tenant_id = p_tenant and l.titulaire = auth.uid();
-  end if;
+  -- T8 : la licence du titulaire, sans hasard ; titulaire de plusieurs, il dit laquelle (21000).
+  v_licence := facturation.ma_licence(p_tenant);
   if v_licence is null
      or not facturation.titulaire_de(v_licence)
      or not exists (select 1 from facturation.licence_organisations lo
@@ -1037,5 +1041,317 @@ end
 $function$
 
 ;
+
+-- ---------------------------------------------------------------- T6 : la descente refusée se dit
+insert into notif.gabarits
+  (code, canal, locale, sujet, titre, corps, action_libelle, action_route, effective_from, ton)
+values
+  ('abonnement.descente_refusee', 'app', 'fr', null,
+   'Passage à {{offre}} non effectué',
+   'Le passage à {{offre}} prévu le {{le}} n''a pas pu se faire : vous restez sur votre offre actuelle.',
+   null, null, date '2026-11-24', 'alerte'),
+  ('abonnement.descente_refusee', 'app', 'en', null,
+   'Switch to {{offre}} not made',
+   'The switch to {{offre}} planned for {{le}} could not be made: you stay on your current plan.',
+   null, null, date '2026-11-24', 'alerte'),
+  ('abonnement.descente_refusee', 'app', 'ar', null,
+   'لم يتمّ الانتقال إلى {{offre}}',
+   'تعذّر الانتقال إلى {{offre}} المقرّر يوم {{le}}: تبقون على عرضكم الحالي.',
+   null, null, date '2026-11-24', 'alerte'),
+  ('abonnement.descente_refusee', 'email', 'fr', 'Malica Office — passage à {{offre}} non effectué',
+   'Votre passage à {{offre}} n''a pas pu se faire',
+   'Le passage à {{offre}} prévu le {{le}} n''a pas pu se faire : votre abonnement ne remplit plus '
+   'une condition de cette offre (par exemple, plus de sociétés qu''elle n''en accepte). Vous restez '
+   'sur votre offre actuelle. Ouvrez votre abonnement pour voir ce qui bloque.',
+   'Voir mon abonnement', '/pme/reglages?page=abonnement', date '2026-11-24', 'alerte'),
+  ('abonnement.descente_refusee', 'email', 'en', 'Malica Office — switch to {{offre}} not made',
+   'Your switch to {{offre}} could not be made',
+   'The switch to {{offre}} planned for {{le}} could not be made: your subscription no longer meets '
+   'a condition of this plan (for example, more companies than it accepts). You stay on your '
+   'current plan. Open your subscription to see what blocks it.',
+   'View my subscription', '/pme/reglages?page=abonnement', date '2026-11-24', 'alerte'),
+  ('abonnement.descente_refusee', 'email', 'ar', 'Malica Office — لم يتمّ الانتقال إلى {{offre}}',
+   'تعذّر انتقالكم إلى {{offre}}',
+   'تعذّر الانتقال إلى {{offre}} المقرّر يوم {{le}}: لم يعد اشتراككم يستوفي أحد شروط هذا العرض '
+   '(مثلًا، شركات أكثر ممّا يقبله). تبقون على عرضكم الحالي. افتحوا اشتراككم لمعرفة ما يمنع ذلك.',
+   'عرض اشتراكي', '/pme/reglages?page=abonnement', date '2026-11-24', 'alerte');
+
+insert into notif.diffusions (code, canal, gabarit, valid_from) values
+  ('abonnement.descente_refusee', 'email', 'abonnement.descente_refusee', date '2026-11-24');
+
+insert into notif.cartes_courriel (code, rang, genre, libelle_cle, valeur_cle) values
+  ('abonnement.descente_refusee', 1, 'ligne', 'donnee.offre', 'valeur.offre'),
+  ('abonnement.descente_refusee', 2, 'ligne', 'donnee.passagePrevu', 'valeur.le');
+
+insert into notif.libelles_courriel (cle, locale, texte, effective_from) values
+  ('etiquette.abonnement', 'fr', 'Abonnement', date '2026-11-24'),
+  ('etiquette.abonnement', 'en', 'Subscription', date '2026-11-24'),
+  ('etiquette.abonnement', 'ar', 'الاشتراك', date '2026-11-24'),
+  ('raison.abonnement', 'fr',
+   'Vous recevez ce message parce que vous êtes le propriétaire principal de cet abonnement Malica Office.',
+   date '2026-11-24'),
+  ('raison.abonnement', 'en',
+   'You are receiving this message because you are the principal owner of this Malica Office subscription.',
+   date '2026-11-24'),
+  ('raison.abonnement', 'ar',
+   'تصلكم هذه الرسالة لأنكم المالك الرئيسي لهذا الاشتراك في Malica Office.',
+   date '2026-11-24'),
+  ('apercu.abonnement.descente_refusee', 'fr',
+   'Vous restez sur votre offre actuelle : le passage à {{offre}} n''a pas pu se faire.', date '2026-11-24'),
+  ('apercu.abonnement.descente_refusee', 'en',
+   'You stay on your current plan: the switch to {{offre}} could not be made.', date '2026-11-24'),
+  ('apercu.abonnement.descente_refusee', 'ar',
+   'تبقون على عرضكم الحالي: تعذّر الانتقال إلى {{offre}}.', date '2026-11-24'),
+  ('donnee.passagePrevu', 'fr', 'Passage prévu le', date '2026-11-24'),
+  ('donnee.passagePrevu', 'en', 'Switch planned on', date '2026-11-24'),
+  ('donnee.passagePrevu', 'ar', 'الانتقال المقرّر يوم', date '2026-11-24'),
+  ('valeur.le', 'fr', '{{le}}', date '2026-11-24'),
+  ('valeur.le', 'en', '{{le}}', date '2026-11-24'),
+  ('valeur.le', 'ar', '{{le}}', date '2026-11-24')
+on conflict do nothing;
+
+CREATE OR REPLACE FUNCTION public.mon_annuel(p_tenant uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_licence  uuid;
+  v_regle    jsonb := public.abonnement_reglage();
+  v_offerts  smallint := (v_regle ->> 'annuel_mois_offerts')::smallint;
+  v_courant  record;
+  v_en_cours facturation.engagements_annuels;
+  v_du       date;
+  v_prix     numeric;
+  v_ferme    text;
+begin
+  -- T8 : la licence du titulaire, sans hasard ; titulaire de plusieurs, il dit laquelle (21000).
+  v_licence := facturation.ma_licence(p_tenant);
+  if v_licence is null then
+    return null;   -- seul le propriétaire principal voit l'année : c'est lui qui paie.
+  end if;
+
+  -- L'échéance suivante d'une PME payée d'avance ; sinon le mois prochain.
+  select x.couvre_au into v_du
+    from facturation.factures x
+   where x.licence_id = v_licence and x.payeur_type = 'titulaire' and x.ancre is not null
+     and x.avoir_de is null and x.statut <> 'annulee'
+     and x.couvre_du <= current_date and x.couvre_au > current_date
+   order by x.couvre_au desc limit 1;
+  v_du := coalesce(v_du, (date_trunc('month', current_date) + interval '1 month')::date);
+
+  -- L'engagement en cours, ou celui qui commencera à la prochaine échéance.
+  select e.* into v_en_cours from facturation.engagements_annuels e
+   where e.licence_id = v_licence and e.au >= current_date
+   order by e.du desc limit 1;
+  if v_en_cours.id is not null then
+    return jsonb_build_object(
+      'en_cours', jsonb_build_object(
+        'du', v_en_cours.du, 'au', v_en_cours.au,
+        'offre', (facturation.annuel_de(v_licence, greatest(current_date, v_en_cours.du))).offre_code,
+        'montant_ht', v_en_cours.montant_ht, 'mois_offerts', v_en_cours.mois_offerts,
+        'ttc', coalesce(
+          (select p.montant_ttc::numeric from facturation.paiements_en_ligne p
+            where p.engagement_id = v_en_cours.id),
+          (public.prix_ttc(v_en_cours.montant_ht, v_en_cours.souscrit_le::date) ->> 'ttc')::numeric)));
+  end if;
+
+  select h.offre_code, h.offre_depuis into v_courant
+    from facturation.forfait_courant_v h where h.licence_id = v_licence;
+  select o.prix_mensuel_ht into v_prix from ref.offre_a(v_courant.offre_code, v_courant.offre_depuis) o;
+
+  v_ferme := case
+    when not coalesce((v_regle ->> 'annuel_ouvert')::boolean, false) then 'annuel_ferme'
+    when v_prix is null or v_prix <= 0 then 'offre_sans_prix'
+    when exists (select 1 from facturation.payeurs_v pv
+                  where pv.licence_id = v_licence and pv.payeur_type = 'cabinet'
+                    and (pv.au_exclu is null or pv.au_exclu > current_date)) then 'paye_par_un_cabinet'
+    when exists (select 1 from facturation.licences l
+                  where l.id = v_licence and l.statut <> 'active') then 'licence_inactive'
+    else null end;
+
+  -- La comptabilité paie : aucune proposition, donc aucun prix.
+  if v_ferme = 'paye_par_un_cabinet' then
+    return jsonb_build_object('en_cours', null, 'ferme', v_ferme, 'proposition', null);
+  end if;
+
+  return jsonb_build_object(
+    'en_cours', null,
+    'ferme', v_ferme,
+    'proposition', case when v_prix is null then null else jsonb_build_object(
+      'offre', v_courant.offre_code,
+      'du', v_du,
+      'au', (v_du + interval '12 months - 1 day')::date,
+      'prix_mensuel_ht', v_prix,
+      'mois_offerts', v_offerts,
+      'montant_ht', v_prix * (12 - v_offerts),
+      'ttc', (public.prix_ttc(v_prix * (12 - v_offerts)) ->> 'ttc')::numeric) end);
+end
+$function$;
+
+CREATE OR REPLACE FUNCTION public.mon_report(p_tenant uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_licence uuid;
+begin
+  if p_tenant is null then
+    -- T8 : la licence du titulaire, sans hasard ; titulaire de plusieurs, il dit laquelle.
+    v_licence := facturation.ma_licence(null);
+  else
+    select lo.licence_id into v_licence from facturation.licence_organisations lo
+     where lo.tenant_id = p_tenant and lo.tenant_id in (select app.member_orgs());
+  end if;
+  if v_licence is null then
+    return null;
+  end if;
+  return jsonb_build_object(
+    'report', facturation.report_de(v_licence, date_trunc('month', current_date)::date),
+    'actif', (public.abonnement_reglage() ->> 'report_mois')::int = 1);
+end
+$function$;
+
+CREATE OR REPLACE FUNCTION public.paiement_montee_preparer(p_tenant uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_licence  uuid;
+  r          record;
+  v_prec     record;
+  v_ecart    numeric;
+  v_jours    int;
+  v_restants int;
+  v_ht       numeric;
+  f          record;
+  v_id       uuid;
+  v_facture  uuid;
+  v_annee    facturation.engagement_montees;
+begin
+  -- T8 : la licence du titulaire, sans hasard ; titulaire de plusieurs, il dit laquelle.
+  v_licence := facturation.ma_licence(p_tenant);
+  -- La porte, nommée (`schema.test.ts`) : dirigeant d'une société de la
+  -- licence, ET son propriétaire principal.
+  if v_licence is null
+     or not exists (select 1 from facturation.licence_organisations lo
+                     where lo.licence_id = v_licence
+                       and app.has_org_role(lo.tenant_id, array['dirigeant']))
+     or not facturation.titulaire_de(v_licence) then
+    raise exception 'refus.reserve.proprietaire_principal' using errcode = '42501';
+  end if;
+
+  -- La montée en cours d'abord, puis celle que le forfait en cours garde.
+  for r in
+    select h.id, h.rang, h.offre_code, h.offre_depuis, h.effet_du, h.ecart_titulaire_ht
+      from facturation.forfait_historique c
+      join facturation.forfait_historique h
+        on h.id = c.id or (h.id = c.garde_forfait_id and c.garde_jusqu_au > current_date)
+     where c.licence_id = v_licence and c.effet_au is null and h.motif = 'montee'
+     order by (h.id = c.id) desc
+  loop
+    -- Déjà préparé : on le rend tel quel.
+    -- Une montée payée d'abord (`forfait_demander`) l'est par sa demande : elle ne se
+    -- repaie pas quand un changement suivant la relit.
+    select p.id into v_id from facturation.paiements_en_ligne p
+     where p.forfait_id = r.id
+        or p.montee_demandee_id = (select o.montee_id from facturation.montees_ouvertes o
+                                    where o.forfait_id = r.id);
+    if v_id is not null then
+      return (select to_jsonb(v) from facturation.paiements_en_ligne_v v where v.paiement_id = v_id);
+    end if;
+
+    -- Une montée pendant l'année, ou avant qu'elle commence (7.5) : l'écart
+    -- de l'année se règle le jour même, quel que soit le périmètre.
+    select m.* into v_annee from facturation.engagement_montees m where m.forfait_id = r.id;
+
+    if plateforme.facturation_auto_ouverte('pme') and v_annee.id is null then
+      perform facturation.facturer_sur_le_champ(v_licence, r.effet_du);
+      select x.id into v_facture
+        from facturation.factures x
+       where x.licence_id = v_licence and x.payeur_type = 'titulaire'
+         and x.payeur_personne = auth.uid() and x.ancre is not null
+         and x.couvre_du >= r.effet_du and x.avoir_de is null and x.statut <> 'annulee'
+       order by x.created_at desc, (x.nature = 'complement') desc
+       limit 1;
+      if v_facture is not null then
+        return public.paiement_facture_preparer(v_facture);
+      end if;
+      continue;   -- rien d'émis pour elle (déjà couvert, ou le passage réessaiera).
+    end if;
+
+    select h.offre_code, h.offre_depuis into v_prec
+      from facturation.forfait_historique h
+     where h.licence_id = v_licence and h.effet_au = r.effet_du and h.rang < r.rang
+     order by h.rang desc limit 1;
+    if v_prec.offre_code is null then
+      continue;
+    end if;
+    v_ecart := coalesce(
+      r.ecart_titulaire_ht,
+      (ref.offre_a(r.offre_code, r.offre_depuis)).prix_mensuel_ht
+        - (ref.offre_a(v_prec.offre_code, v_prec.offre_depuis)).prix_mensuel_ht);
+    -- La seule formule du prorata, la même que celle du devis (`montee_devis`).
+    select p.ht, p.restants, p.jours into v_ht, v_restants, v_jours
+      from facturation.montee_prorata(v_ecart, r.effet_du) p;
+    if v_annee.id is not null then
+      -- Les jours d'avant l'année restent au mois (sauf périmètre ouvert, où
+      -- le complément du jour les porte) ; ceux de l'année, par l'écart annuel.
+      v_ht := case when r.effet_du < (select e.du from facturation.engagements_annuels e
+                                         where e.id = v_annee.engagement_id)
+                    and not plateforme.facturation_auto_ouverte('pme')
+                   then coalesce(v_ht, 0) else 0 end
+              -- L'écart de cette montée, et ceux des montées de la même année
+              -- qu'elle remplace sans qu'ils aient été réglés ni facturés : un
+              -- acompte remplacé ne se paie plus, son écart passe ici, une fois.
+              + (select sum(m.montant_ht)
+                   from facturation.engagement_montees m
+                  where m.engagement_id = v_annee.engagement_id
+                    and (m.le, m.created_at) <= (v_annee.le, v_annee.created_at)
+                    and not exists (select 1 from facturation.facture_engagement_montees fm
+                                     where fm.montee_id = m.id)
+                    and not exists (select 1 from facturation.paiements_en_ligne p
+                                      join facturation.paiement_evenements ev
+                                        on ev.paiement_id = p.id and ev.etat = 'paye'
+                                     where p.forfait_id = m.forfait_id
+                                        or p.montee_demandee_id = (
+                                             select o.montee_id from facturation.montees_ouvertes o
+                                              where o.forfait_id = m.forfait_id)));
+    end if;
+    if v_ht is null or v_ht <= 0 then
+      continue;
+    end if;
+
+    -- Sans émetteur désigné, ALGORIA ne facture pas encore : rien ne se prépare,
+    -- et on ne suppose aucune TVA (R4). L'offre reste ouverte ; la tour désigne
+    -- l'émetteur, et le paiement suivra la facture.
+    if not exists (select 1 from facturation.emetteurs e where e.valide_des <= r.effet_du) then
+      return null;
+    end if;
+
+    select * into f from facturation.fiscalite_en_vigueur(r.effet_du);
+
+    insert into facturation.paiements_en_ligne
+      (licence_id, objet, forfait_id, libelle, montant_ht, taux_tva, montant_tva, montant_ttc,
+       devise, cree_par)
+    values
+      (v_licence, 'montee', r.id,
+       coalesce(v_annee.libelle,
+                'Passage ' || initcap(v_prec.offre_code) || ' → ' || initcap(r.offre_code)
+                  || ' — ' || v_restants || '/' || v_jours || ' jours'),
+       v_ht, f.taux, round(v_ht * f.taux, 3), v_ht + round(v_ht * f.taux, 3), f.devise, auth.uid())
+    returning id into v_id;
+
+    return (select to_jsonb(v) from facturation.paiements_en_ligne_v v where v.paiement_id = v_id);
+  end loop;
+
+  return null;   -- rien à payer maintenant : aucune montée due.
+end
+$function$;
 
 commit;

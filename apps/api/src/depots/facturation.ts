@@ -817,7 +817,7 @@ export const facturation = {
               (ref.offre_a(f.offre_code, f.emise_le)).libelle as offre_libelle,
               f.reference_abonne, f.montant_ht::text, f.taux_tva::text, f.montant_tva::text,
               f.timbre::text, f.montant_ttc::text, f.devise, e.etat, e.reste_du::text,
-              -- Le client tel que la facture l'a figé à son émission (20261231330000) : jamais
+              -- Le client tel que la facture l'a figé à son émission (20261231340000) : jamais
               -- relu dans la fiche de la société, qui peut changer depuis.
               jsonb_build_object(
                 'nom', f.client_nom,

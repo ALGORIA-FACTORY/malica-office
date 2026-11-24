@@ -1,6 +1,6 @@
 /**
  * La société facturée se désigne en un seul endroit, et la facture la fige à l'émission
- * (revue du 24 novembre 2026, trous T1, T4, T5 — 20261231330000).
+ * (revue du 24 novembre 2026, trous T1, T4, T5 — 20261231340000).
  *
  *   - une facture émise garde la raison sociale, le matricule et l'adresse du jour de son
  *     émission, même si la société modifie sa fiche ensuite ;

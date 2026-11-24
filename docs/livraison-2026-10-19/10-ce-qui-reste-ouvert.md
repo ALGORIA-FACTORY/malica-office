@@ -1107,7 +1107,7 @@ réglée (« Réglée le … par carte bancaire, réf. … », sans RIB). Les co
 Revue : projet MALICA OFFICE, `decisions/2026-11-24_revue-comptabilite-par-matricule.md`.
 
 - ~~T1 facture non figée~~, ~~T5 société facturée désignée à douze endroits dont trois au hasard~~, T4 en partie
-  (une société archivée n'est plus la société facturée) : réglés par `20261231330000`. La facture porte
+  (une société archivée n'est plus la société facturée) : réglés par `20261231340000`. La facture porte
   `client_nom`, `client_adresse` et `destinataire_legal_id` posés à l'émission ; `facturation.societe_facturee`
   est le seul endroit qui désigne la société d'une licence (une épreuve refuse tout retour en arrière).
 - Restent pour le lot 0 : T2 (une licence suivie par deux cabinets), T3 (périodes recalculées avec le nombre de
