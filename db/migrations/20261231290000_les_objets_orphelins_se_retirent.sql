@@ -1,0 +1,1143 @@
+-- Les objets orphelins se retirent : les sept schémas de l'amorçage, neuf vues sans lecteur, deux tables vides, deux fonctions sans appelant, deux colonnes jamais nommées.
+--
+-- ================================================================== POURQUOI
+--
+-- Préparé par l'audit du 6 novembre 2026 (docs/audit-2026-11-06/base.md, M2,
+-- M7, M8 ; preuve objet par objet dans docs/audit-2026-11-06/nettoyage-a-valider.sql,
+-- § 2), validé par le dirigeant le 24 novembre 2026, et relevé de nouveau ce
+-- jour-là sur une base montée jusqu'à 20261231270000.
+--
+-- La preuve, pour chaque objet : `git grep` sur tout le dépôt hors
+-- `db/migrations/` et `docs/`, PLUS les outils du corpus (`docs/Base de
+-- connaissance/*.py`, `verifier.sql`, et les scripts de l'archive
+-- `referentielmalica20260831.tar.gz` que `pipeline.sh` et
+-- `db/corpus/charger-depuis-l-archive.mjs` exécutent) ; dans la base, corps de
+-- fonction, définition de vue, politique, défaut, contrainte, déclencheur et
+-- `pg_depend`. Ce qui part n'a ni lecteur ni écrivain :
+--
+--   A. billing, catalog, pricing, commissions, payments, contracts, coffre —
+--      11 tables vides, 32 index, 50 politiques, 17 déclencheurs, et les trois
+--      fonctions billing.* (next_invoice_number, freeze_issued,
+--      freeze_issued_lines). La facturation vit dans facturation.*.
+--   B. neuf vues : public.ref_pack_rules_v, ref_charge_famille_rules_v,
+--      banque_rapprochements_v, agents_model_pricing_v, conformite_v,
+--      ref_grille_relations_v, agents.angles_morts,
+--      facturation.pieces_orphelines_v, facturation.repartition_v.
+--   E. plateforme.archives (la trace d'un paquet remis sur réquisition :
+--      aucune porte ne l'écrit, plateforme.servir_requisition inscrit sa remise
+--      dans audit.event_log) ; capture.piece_versions (aucune porte ne l'écrit
+--      depuis l'amorçage, aucune lecture ne la nomme ; l'effacement d'une pièce
+--      l'atteignait par la seule cascade de sa clé étrangère ; le déclencheur
+--      app.deny_mutation_hors_effacement_de_piece reste, il garde 22 autres
+--      tables) ; public.set_engagement_status (porte de l'amorçage : les
+--      mandats passent par les portes du cabinet) ;
+--      app.poser_le_destinataire_cabinet (fonction de déclencheur de
+--      collab.notifications, retirée avec elle par 20261226160000).
+--   D. agents.budgets.per_piece_cost_cap et per_piece_latency_ms : à leur
+--      défaut partout, lus par rien.
+--
+-- CE QUI RESTE, contre la liste préparée, parce que la vérification l'a
+-- trouvé vivant :
+--   - facturation.payeur_courant_v : notif.carte_d_invitation la lit ;
+--   - ref.entry_controls : lue par docs/Base de connaissance/verifier.sql, et
+--     ref.entry_templates.controle nomme 4 de ses 5 codes ;
+--   - ref.fiscal_scale_brackets : lue par verifier.sql ;
+--   - audit.journal_plateforme : db/maintenance/purge_metier.sql y inscrit son
+--     récit ;
+--   - notif.preferences.push_actif : notif.poster la lit ;
+--   - legal.documents.pages_sans_texte, langue_annoncee, besoin_ocr : écrites
+--     par ingerer.py, lue (besoin_ocr) par ocr.py (archive du corpus) ;
+--   - legal.article_versions.open_issues : le bloc COPY du corpus la nomme
+--     (charger-depuis-l-archive.mjs, CI epreuve-assistant et epreuve-conseil) ;
+--   - legal.sondages.langue_attendue, legal.banque_cas.vaut_au : semées par
+--     20260902170000 dès que le corpus est chargé (données, pas défauts).
+--
+-- LES GARDES. Aucune base vivante n'a été mesurée pour cette migration : elle
+-- porte ses mesures. Une table non vide, une colonne qui porte autre chose que
+-- son défaut, un droit accordé à un rôle que le dépôt ne connaît pas, et elle
+-- refuse — rien n'est retiré. Aucun `cascade` : un dépendant que cette preuve
+-- n'a pas vu fait échouer la migration au lieu de disparaître.
+--
+-- _Gardé par_ apps/api/src/la-base-tient-son-integrite.test.ts (les entrées
+-- billing.next_invoice_number et public.set_engagement_status quittent
+-- apps/api/src/verrous/integrite-de-la-base.json dans le même commit).
+
+-- Garde 1 — aucune ligne ne part.
+do $$
+declare
+  v_table text;
+  v_pleine boolean;
+begin
+  foreach v_table in array array[
+    'billing.invoice_lines', 'billing.invoices', 'billing.invoice_sequences',
+    'catalog.products', 'pricing.prices', 'pricing.price_lists',
+    'commissions.entries', 'commissions.rules', 'payments.payments',
+    'contracts.contracts', 'coffre.objects',
+    'plateforme.archives', 'capture.piece_versions'
+  ] loop
+    execute format('select exists (select 1 from %s)', v_table) into v_pleine;
+    if v_pleine then
+      raise exception 'refus.migration.table_non_vide:%', v_table;
+    end if;
+  end loop;
+end $$;
+
+-- Garde 2 — aucune valeur ne part : les deux colonnes ne portent que leur défaut.
+do $$
+begin
+  if exists (select 1 from agents.budgets where per_piece_cost_cap::numeric <> 0) then
+    raise exception 'refus.migration.colonne_non_vide:agents.budgets.per_piece_cost_cap';
+  end if;
+  if exists (select 1 from agents.budgets where per_piece_latency_ms <> 60000) then
+    raise exception 'refus.migration.colonne_non_vide:agents.budgets.per_piece_latency_ms';
+  end if;
+end $$;
+
+-- Garde 3 — aucun lecteur inconnu : sur ce qui part, aucun droit à un autre
+-- rôle que le propriétaire et authenticated.
+do $$
+declare
+  v_objet text;
+begin
+  select c.oid::regclass::text into v_objet
+    from pg_class c
+    cross join lateral aclexplode(c.relacl) a
+   where a.grantee not in (c.relowner, 'authenticated'::regrole)
+     and (c.relnamespace in ('billing'::regnamespace, 'catalog'::regnamespace, 'pricing'::regnamespace,
+                             'commissions'::regnamespace, 'payments'::regnamespace,
+                             'contracts'::regnamespace, 'coffre'::regnamespace)
+          or c.oid in ('public.ref_pack_rules_v'::regclass, 'public.ref_charge_famille_rules_v'::regclass,
+                       'public.banque_rapprochements_v'::regclass, 'public.agents_model_pricing_v'::regclass,
+                       'public.conformite_v'::regclass, 'public.ref_grille_relations_v'::regclass,
+                       'agents.angles_morts'::regclass, 'facturation.pieces_orphelines_v'::regclass,
+                       'facturation.repartition_v'::regclass, 'plateforme.archives'::regclass,
+                       'capture.piece_versions'::regclass))
+   limit 1;
+  if v_objet is null then
+    select p.oid::regprocedure::text into v_objet
+      from pg_proc p
+      cross join lateral aclexplode(p.proacl) a
+     where a.grantee not in (p.proowner, 'authenticated'::regrole)
+       and (p.pronamespace = 'billing'::regnamespace
+            or p.oid in ('public.set_engagement_status(uuid, text)'::regprocedure,
+                         'app.poser_le_destinataire_cabinet()'::regprocedure))
+     limit 1;
+  end if;
+  if v_objet is not null then
+    raise exception 'refus.migration.droit_inconnu:%', v_objet;
+  end if;
+end $$;
+
+-- A. Les sept schémas de l'amorçage. Une instruction pour les 11 tables : leurs
+-- 8 clés étrangères vont de l'une à l'autre ; index, politiques, déclencheurs
+-- et contraintes partent avec leur table. Puis les fonctions de billing, puis
+-- les schémas, vides.
+drop table billing.invoice_lines, billing.invoices, billing.invoice_sequences,
+           catalog.products, pricing.prices, pricing.price_lists,
+           commissions.entries, commissions.rules, payments.payments,
+           contracts.contracts, coffre.objects;
+drop function billing.next_invoice_number(uuid, smallint),
+              billing.freeze_issued(), billing.freeze_issued_lines();
+drop schema billing, catalog, pricing, commissions, payments, contracts, coffre;
+
+-- B. Les neuf vues sans lecteur.
+drop view public.ref_pack_rules_v, public.ref_charge_famille_rules_v,
+          public.banque_rapprochements_v, public.agents_model_pricing_v,
+          public.conformite_v, public.ref_grille_relations_v, agents.angles_morts,
+          facturation.pieces_orphelines_v, facturation.repartition_v;
+
+-- E. Deux tables vides et deux fonctions sans appelant.
+drop table plateforme.archives, capture.piece_versions;
+drop function public.set_engagement_status(uuid, text),
+              app.poser_le_destinataire_cabinet();
+
+-- D. Deux colonnes jamais nommées.
+alter table agents.budgets drop column per_piece_cost_cap, drop column per_piece_latency_ms;
+
+-- ================================================================== RETOUR
+--
+-- La migration de retour, à jouer telle quelle (sans les « -- » de tête).
+-- Relevée le 24 novembre 2026 sur une base montée jusqu'à 20261231270000,
+-- juste avant cette migration : pg_dump --schema-only des sept schémas, puis
+-- des neuf vues et des deux tables ; pg_get_functiondef des deux fonctions ;
+-- nettoyée des réglages de session et des commentaires de pg_dump. Les deux
+-- colonnes reviennent avec leur type, leur défaut et leur nullabilité, en
+-- dernière position de agents.budgets (après updated_at) — le seul écart que
+-- db/registre.sql relève après un aller-retour. Dans le même mouvement, hors
+-- SQL : rendre à apps/api/src/verrous/integrite-de-la-base.json ses deux
+-- entrées de portes_sans_appel, à ecritures-des-clients.json les deux chemins
+-- de public.set_engagement_status, et aux messages du socle la clé
+-- refus.mandat.statut_inconnu.
+--
+-- -- A. Les sept schémas de l'amorçage.
+-- CREATE SCHEMA billing;
+--
+-- ALTER SCHEMA billing OWNER TO postgres;
+--
+-- CREATE SCHEMA catalog;
+--
+-- ALTER SCHEMA catalog OWNER TO postgres;
+--
+-- CREATE SCHEMA coffre;
+--
+-- ALTER SCHEMA coffre OWNER TO postgres;
+--
+-- CREATE SCHEMA commissions;
+--
+-- ALTER SCHEMA commissions OWNER TO postgres;
+--
+-- CREATE SCHEMA contracts;
+--
+-- ALTER SCHEMA contracts OWNER TO postgres;
+--
+-- CREATE SCHEMA payments;
+--
+-- ALTER SCHEMA payments OWNER TO postgres;
+--
+-- CREATE SCHEMA pricing;
+--
+-- ALTER SCHEMA pricing OWNER TO postgres;
+--
+-- CREATE FUNCTION billing.freeze_issued() RETURNS trigger
+--     LANGUAGE plpgsql SECURITY DEFINER
+--     SET search_path TO ''
+--     AS $$
+-- begin
+--   if tg_op = 'DELETE' then
+--     if old.status = 'emise' then
+--       raise exception 'R7 : une facture emise ne peut pas etre supprimee'
+--         using errcode = 'restrict_violation';
+--     end if;
+--     return old;
+--   end if;
+--
+--   if old.status = 'emise' then
+--     if new.number is distinct from old.number
+--     or new.issued_on is distinct from old.issued_on
+--     or new.total_ht is distinct from old.total_ht
+--     or new.total_tva is distinct from old.total_tva
+--     or new.total_ttc is distinct from old.total_ttc
+--     or new.customer_name is distinct from old.customer_name
+--     or new.kind is distinct from old.kind
+--     or (new.status <> old.status and new.status <> 'annulee')
+--     then
+--       raise exception 'R7 : facture emise immuable — emettez un avoir'
+--         using errcode = 'restrict_violation';
+--     end if;
+--   end if;
+--   return new;
+-- end
+-- $$;
+--
+-- ALTER FUNCTION billing.freeze_issued() OWNER TO postgres;
+--
+-- CREATE FUNCTION billing.freeze_issued_lines() RETURNS trigger
+--     LANGUAGE plpgsql SECURITY DEFINER
+--     SET search_path TO ''
+--     AS $$
+-- declare v_status text;
+-- begin
+--   select i.status into v_status from billing.invoices i
+--     where i.id = coalesce(new.invoice_id, old.invoice_id);
+--   if v_status = 'emise' then
+--     raise exception 'R7 : les lignes d une facture emise sont immuables'
+--       using errcode = 'restrict_violation';
+--   end if;
+--   return coalesce(new, old);
+-- end
+-- $$;
+--
+-- ALTER FUNCTION billing.freeze_issued_lines() OWNER TO postgres;
+--
+-- CREATE FUNCTION billing.next_invoice_number(p_tenant uuid, p_year smallint) RETURNS text
+--     LANGUAGE plpgsql SECURITY DEFINER
+--     SET search_path TO ''
+--     AS $$
+-- declare
+--   v_prefix text;
+--   v_next   integer;
+-- begin
+--   if not exists (select 1 from app.member_orgs() m where m = p_tenant) then
+--     raise exception 'refus.geste.non_permis' using errcode = 'insufficient_privilege';
+--   end if;
+--
+--   insert into billing.invoice_sequences (tenant_id, year, last_number)
+--   values (p_tenant, p_year, 0)
+--   on conflict (tenant_id, year) do nothing;
+--
+--   update billing.invoice_sequences s
+--      set last_number = s.last_number + 1
+--    where s.tenant_id = p_tenant and s.year = p_year
+--   returning s.prefix, s.last_number into v_prefix, v_next;
+--
+--   return v_prefix || '-' || p_year::text || '-' || lpad(v_next::text, 6, '0');
+-- end
+-- $$;
+--
+-- ALTER FUNCTION billing.next_invoice_number(p_tenant uuid, p_year smallint) OWNER TO postgres;
+--
+-- CREATE TABLE billing.invoice_lines (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     invoice_id uuid NOT NULL,
+--     ordinal smallint NOT NULL,
+--     product_id uuid,
+--     libelle text NOT NULL,
+--     quantity numeric(18,6) NOT NULL,
+--     unit_price app.money_t NOT NULL,
+--     tax_code text,
+--     amount_ht app.money_t DEFAULT 0 NOT NULL,
+--     amount_tva app.money_t DEFAULT 0 NOT NULL,
+--     CONSTRAINT invoice_lines_quantity_check CHECK ((quantity > (0)::numeric)),
+--     CONSTRAINT invoice_lines_unit_price_check CHECK (((unit_price)::numeric >= (0)::numeric))
+-- );
+--
+-- ALTER TABLE ONLY billing.invoice_lines FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE billing.invoice_lines OWNER TO postgres;
+--
+-- CREATE TABLE billing.invoice_sequences (
+--     tenant_id uuid NOT NULL,
+--     year smallint NOT NULL,
+--     prefix text DEFAULT 'FA'::text NOT NULL,
+--     last_number integer DEFAULT 0 NOT NULL
+-- );
+--
+-- ALTER TABLE ONLY billing.invoice_sequences FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE billing.invoice_sequences OWNER TO postgres;
+--
+-- CREATE TABLE billing.invoices (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     entity_id uuid,
+--     number text,
+--     status text DEFAULT 'brouillon'::text NOT NULL,
+--     kind text DEFAULT 'facture'::text NOT NULL,
+--     reverses_id uuid,
+--     customer_name text NOT NULL,
+--     customer_legal_id text,
+--     currency text NOT NULL,
+--     issued_on date,
+--     due_on date,
+--     total_ht app.money_t DEFAULT 0 NOT NULL,
+--     total_tva app.money_t DEFAULT 0 NOT NULL,
+--     total_ttc app.money_t DEFAULT 0 NOT NULL,
+--     created_by uuid DEFAULT auth.uid() NOT NULL,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL,
+--     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+--     CONSTRAINT invoices_check CHECK (((status <> 'emise'::text) OR ((number IS NOT NULL) AND (issued_on IS NOT NULL)))),
+--     CONSTRAINT invoices_kind_check CHECK ((kind = ANY (ARRAY['facture'::text, 'avoir'::text]))),
+--     CONSTRAINT invoices_status_check CHECK ((status = ANY (ARRAY['brouillon'::text, 'emise'::text, 'annulee'::text])))
+-- );
+--
+-- ALTER TABLE ONLY billing.invoices FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE billing.invoices OWNER TO postgres;
+--
+-- CREATE TABLE catalog.products (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     sku text NOT NULL,
+--     name text NOT NULL,
+--     kind text NOT NULL,
+--     tax_code text,
+--     active boolean DEFAULT true NOT NULL,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL,
+--     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+--     CONSTRAINT products_kind_check CHECK ((kind = ANY (ARRAY['bien'::text, 'service'::text])))
+-- );
+--
+-- ALTER TABLE ONLY catalog.products FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE catalog.products OWNER TO postgres;
+--
+-- CREATE TABLE coffre.objects (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     bucket text NOT NULL,
+--     path text NOT NULL,
+--     sha256 text NOT NULL,
+--     bytes bigint NOT NULL,
+--     mime text NOT NULL,
+--     created_by uuid DEFAULT auth.uid() NOT NULL,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- ALTER TABLE ONLY coffre.objects FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE coffre.objects OWNER TO postgres;
+--
+-- CREATE TABLE commissions.entries (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     rule_id uuid NOT NULL,
+--     invoice_id uuid,
+--     beneficiary uuid,
+--     amount app.money_t NOT NULL,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- ALTER TABLE ONLY commissions.entries FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE commissions.entries OWNER TO postgres;
+--
+-- CREATE TABLE commissions.rules (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     code text NOT NULL,
+--     basis text NOT NULL,
+--     rate numeric(9,6),
+--     amount app.money_t,
+--     valid_from date DEFAULT CURRENT_DATE NOT NULL,
+--     valid_to date,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL,
+--     CONSTRAINT rules_basis_check CHECK ((basis = ANY (ARRAY['pourcentage'::text, 'fixe'::text]))),
+--     CONSTRAINT rules_check CHECK ((((basis = 'pourcentage'::text) AND (rate IS NOT NULL)) OR ((basis = 'fixe'::text) AND (amount IS NOT NULL)))),
+--     CONSTRAINT rules_rate_check CHECK (((rate IS NULL) OR ((rate >= (0)::numeric) AND (rate <= (1)::numeric))))
+-- );
+--
+-- ALTER TABLE ONLY commissions.rules FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE commissions.rules OWNER TO postgres;
+--
+-- CREATE TABLE contracts.contracts (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     code text NOT NULL,
+--     counterparty text NOT NULL,
+--     status text DEFAULT 'actif'::text NOT NULL,
+--     starts_on date DEFAULT CURRENT_DATE NOT NULL,
+--     ends_on date,
+--     amount app.money_t,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL,
+--     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+--     CONSTRAINT contracts_status_check CHECK ((status = ANY (ARRAY['brouillon'::text, 'actif'::text, 'suspendu'::text, 'termine'::text])))
+-- );
+--
+-- ALTER TABLE ONLY contracts.contracts FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE contracts.contracts OWNER TO postgres;
+--
+-- CREATE TABLE payments.payments (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     invoice_id uuid,
+--     method text NOT NULL,
+--     amount app.money_t NOT NULL,
+--     value_date date DEFAULT CURRENT_DATE NOT NULL,
+--     reference text,
+--     created_by uuid DEFAULT auth.uid() NOT NULL,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL,
+--     CONSTRAINT payments_amount_check CHECK (((amount)::numeric > (0)::numeric)),
+--     CONSTRAINT payments_method_check CHECK ((method = ANY (ARRAY['espece'::text, 'cheque'::text, 'virement'::text, 'carte'::text, 'traite'::text])))
+-- );
+--
+-- ALTER TABLE ONLY payments.payments FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE payments.payments OWNER TO postgres;
+--
+-- CREATE TABLE pricing.price_lists (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     code text NOT NULL,
+--     currency text NOT NULL,
+--     valid_from date DEFAULT CURRENT_DATE NOT NULL,
+--     valid_to date,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- ALTER TABLE ONLY pricing.price_lists FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE pricing.price_lists OWNER TO postgres;
+--
+-- CREATE TABLE pricing.prices (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     price_list_id uuid NOT NULL,
+--     product_id uuid NOT NULL,
+--     amount app.money_t NOT NULL,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL,
+--     CONSTRAINT prices_amount_check CHECK (((amount)::numeric >= (0)::numeric))
+-- );
+--
+-- ALTER TABLE ONLY pricing.prices FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE pricing.prices OWNER TO postgres;
+--
+-- ALTER TABLE ONLY billing.invoice_lines
+--     ADD CONSTRAINT invoice_lines_invoice_id_ordinal_key UNIQUE (invoice_id, ordinal);
+--
+-- ALTER TABLE ONLY billing.invoice_lines
+--     ADD CONSTRAINT invoice_lines_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY billing.invoice_sequences
+--     ADD CONSTRAINT invoice_sequences_pkey PRIMARY KEY (tenant_id, year);
+--
+-- ALTER TABLE ONLY billing.invoices
+--     ADD CONSTRAINT invoices_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY billing.invoices
+--     ADD CONSTRAINT invoices_tenant_id_number_key UNIQUE (tenant_id, number);
+--
+-- ALTER TABLE ONLY catalog.products
+--     ADD CONSTRAINT products_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY catalog.products
+--     ADD CONSTRAINT products_tenant_id_sku_key UNIQUE (tenant_id, sku);
+--
+-- ALTER TABLE ONLY coffre.objects
+--     ADD CONSTRAINT objects_bucket_path_key UNIQUE (bucket, path);
+--
+-- ALTER TABLE ONLY coffre.objects
+--     ADD CONSTRAINT objects_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY commissions.entries
+--     ADD CONSTRAINT entries_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY commissions.rules
+--     ADD CONSTRAINT rules_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY commissions.rules
+--     ADD CONSTRAINT rules_tenant_id_code_valid_from_key UNIQUE (tenant_id, code, valid_from);
+--
+-- ALTER TABLE ONLY contracts.contracts
+--     ADD CONSTRAINT contracts_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY contracts.contracts
+--     ADD CONSTRAINT contracts_tenant_id_code_key UNIQUE (tenant_id, code);
+--
+-- ALTER TABLE ONLY payments.payments
+--     ADD CONSTRAINT payments_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY pricing.price_lists
+--     ADD CONSTRAINT price_lists_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY pricing.price_lists
+--     ADD CONSTRAINT price_lists_tenant_id_code_valid_from_key UNIQUE (tenant_id, code, valid_from);
+--
+-- ALTER TABLE ONLY pricing.prices
+--     ADD CONSTRAINT prices_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY pricing.prices
+--     ADD CONSTRAINT prices_price_list_id_product_id_key UNIQUE (price_list_id, product_id);
+--
+-- CREATE INDEX invoice_lines_product_id_fk_idx ON billing.invoice_lines USING btree (product_id);
+--
+-- CREATE INDEX invoice_lines_tenant_invoice_idx ON billing.invoice_lines USING btree (tenant_id, invoice_id);
+--
+-- CREATE INDEX invoices_entity_id_fk_idx ON billing.invoices USING btree (entity_id);
+--
+-- CREATE INDEX invoices_reverses_id_fk_idx ON billing.invoices USING btree (reverses_id);
+--
+-- CREATE INDEX invoices_tenant_idx ON billing.invoices USING btree (tenant_id, status, issued_on DESC);
+--
+-- CREATE INDEX coffre_objects_tenant_recent_idx ON coffre.objects USING btree (tenant_id, created_at DESC);
+--
+-- CREATE INDEX commissions_entries_tenant_invoice_idx ON commissions.entries USING btree (tenant_id, invoice_id);
+--
+-- CREATE INDEX entries_invoice_id_fk_idx ON commissions.entries USING btree (invoice_id);
+--
+-- CREATE INDEX entries_rule_id_fk_idx ON commissions.entries USING btree (rule_id);
+--
+-- CREATE INDEX payments_invoice_id_fk_idx ON payments.payments USING btree (invoice_id);
+--
+-- CREATE INDEX payments_tenant_invoice_idx ON payments.payments USING btree (tenant_id, invoice_id);
+--
+-- CREATE INDEX prices_product_id_fk_idx ON pricing.prices USING btree (product_id);
+--
+-- CREATE INDEX prices_tenant_liste_idx ON pricing.prices USING btree (tenant_id, price_list_id);
+--
+-- CREATE TRIGGER invoice_lines_freeze BEFORE INSERT OR DELETE OR UPDATE ON billing.invoice_lines FOR EACH ROW EXECUTE FUNCTION billing.freeze_issued_lines();
+--
+-- CREATE TRIGGER invoices_freeze BEFORE DELETE OR UPDATE ON billing.invoices FOR EACH ROW EXECUTE FUNCTION billing.freeze_issued();
+--
+-- CREATE TRIGGER invoices_touch BEFORE UPDATE ON billing.invoices FOR EACH ROW EXECUTE FUNCTION app.touch_updated_at();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON billing.invoice_lines FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON billing.invoice_sequences FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON billing.invoices FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER products_touch BEFORE UPDATE ON catalog.products FOR EACH ROW EXECUTE FUNCTION app.touch_updated_at();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON catalog.products FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER coffre_objects_no_upd BEFORE DELETE OR UPDATE ON coffre.objects FOR EACH ROW EXECUTE FUNCTION app.deny_mutation();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON coffre.objects FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON commissions.entries FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON commissions.rules FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER contracts_touch BEFORE UPDATE ON contracts.contracts FOR EACH ROW EXECUTE FUNCTION app.touch_updated_at();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON contracts.contracts FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON payments.payments FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON pricing.price_lists FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON pricing.prices FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- ALTER TABLE ONLY billing.invoice_lines
+--     ADD CONSTRAINT invoice_lines_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES billing.invoices(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY billing.invoice_lines
+--     ADD CONSTRAINT invoice_lines_product_id_fkey FOREIGN KEY (product_id) REFERENCES catalog.products(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE ONLY billing.invoice_lines
+--     ADD CONSTRAINT invoice_lines_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY billing.invoice_sequences
+--     ADD CONSTRAINT invoice_sequences_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY billing.invoices
+--     ADD CONSTRAINT invoices_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES identity.entities(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE ONLY billing.invoices
+--     ADD CONSTRAINT invoices_reverses_id_fkey FOREIGN KEY (reverses_id) REFERENCES billing.invoices(id);
+--
+-- ALTER TABLE ONLY billing.invoices
+--     ADD CONSTRAINT invoices_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY catalog.products
+--     ADD CONSTRAINT products_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY coffre.objects
+--     ADD CONSTRAINT objects_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY commissions.entries
+--     ADD CONSTRAINT entries_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES billing.invoices(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE ONLY commissions.entries
+--     ADD CONSTRAINT entries_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES commissions.rules(id) ON DELETE RESTRICT;
+--
+-- ALTER TABLE ONLY commissions.entries
+--     ADD CONSTRAINT entries_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY commissions.rules
+--     ADD CONSTRAINT rules_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY contracts.contracts
+--     ADD CONSTRAINT contracts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY payments.payments
+--     ADD CONSTRAINT payments_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES billing.invoices(id) ON DELETE SET NULL;
+--
+-- ALTER TABLE ONLY payments.payments
+--     ADD CONSTRAINT payments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY pricing.price_lists
+--     ADD CONSTRAINT price_lists_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY pricing.prices
+--     ADD CONSTRAINT prices_price_list_id_fkey FOREIGN KEY (price_list_id) REFERENCES pricing.price_lists(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY pricing.prices
+--     ADD CONSTRAINT prices_product_id_fkey FOREIGN KEY (product_id) REFERENCES catalog.products(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY pricing.prices
+--     ADD CONSTRAINT prices_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- CREATE POLICY billing_invoice_lines_del ON billing.invoice_lines FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY billing_invoice_lines_ins ON billing.invoice_lines FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY billing_invoice_lines_sel ON billing.invoice_lines FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY billing_invoice_lines_upd ON billing.invoice_lines FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY billing_invoices_del ON billing.invoices FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY billing_invoices_ins ON billing.invoices FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY billing_invoices_sel ON billing.invoices FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY billing_invoices_upd ON billing.invoices FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- ALTER TABLE billing.invoice_lines ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE billing.invoice_sequences ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY invoice_sequences_sel ON billing.invoice_sequences FOR SELECT TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- ALTER TABLE billing.invoices ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY service_hors_perimetre ON billing.invoice_lines AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- CREATE POLICY service_hors_perimetre ON billing.invoice_sequences AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- CREATE POLICY service_hors_perimetre ON billing.invoices AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- CREATE POLICY catalog_products_del ON catalog.products FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY catalog_products_ins ON catalog.products FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY catalog_products_sel ON catalog.products FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY catalog_products_upd ON catalog.products FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- ALTER TABLE catalog.products ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY service_hors_perimetre ON catalog.products AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- CREATE POLICY coffre_objects_ins ON coffre.objects FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY coffre_objects_sel ON coffre.objects FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR app.plateforme_requise(tenant_id)));
+--
+-- ALTER TABLE coffre.objects ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY service_hors_perimetre ON coffre.objects AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- CREATE POLICY commissions_entries_del ON commissions.entries FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY commissions_entries_ins ON commissions.entries FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY commissions_entries_sel ON commissions.entries FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY commissions_entries_upd ON commissions.entries FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY commissions_rules_del ON commissions.rules FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY commissions_rules_ins ON commissions.rules FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY commissions_rules_sel ON commissions.rules FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY commissions_rules_upd ON commissions.rules FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- ALTER TABLE commissions.entries ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE commissions.rules ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY service_hors_perimetre ON commissions.entries AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- CREATE POLICY service_hors_perimetre ON commissions.rules AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- ALTER TABLE contracts.contracts ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY contracts_contracts_del ON contracts.contracts FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY contracts_contracts_ins ON contracts.contracts FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY contracts_contracts_sel ON contracts.contracts FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY contracts_contracts_upd ON contracts.contracts FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY service_hors_perimetre ON contracts.contracts AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- ALTER TABLE payments.payments ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY payments_payments_del ON payments.payments FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY payments_payments_ins ON payments.payments FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY payments_payments_sel ON payments.payments FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY payments_payments_upd ON payments.payments FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY service_hors_perimetre ON payments.payments AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- ALTER TABLE pricing.price_lists ENABLE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE pricing.prices ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY pricing_price_lists_del ON pricing.price_lists FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY pricing_price_lists_ins ON pricing.price_lists FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY pricing_price_lists_sel ON pricing.price_lists FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY pricing_price_lists_upd ON pricing.price_lists FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY pricing_prices_del ON pricing.prices FOR DELETE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY pricing_prices_ins ON pricing.prices FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY pricing_prices_sel ON pricing.prices FOR SELECT TO authenticated USING (((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR ( SELECT app.is_platform() AS is_platform)));
+--
+-- CREATE POLICY pricing_prices_upd ON pricing.prices FOR UPDATE TO authenticated USING ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs))) WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY service_hors_perimetre ON pricing.price_lists AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- CREATE POLICY service_hors_perimetre ON pricing.prices AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- GRANT USAGE ON SCHEMA billing TO authenticated;
+--
+-- GRANT USAGE ON SCHEMA catalog TO authenticated;
+--
+-- GRANT USAGE ON SCHEMA coffre TO authenticated;
+--
+-- GRANT USAGE ON SCHEMA commissions TO authenticated;
+--
+-- GRANT USAGE ON SCHEMA contracts TO authenticated;
+--
+-- GRANT USAGE ON SCHEMA payments TO authenticated;
+--
+-- GRANT USAGE ON SCHEMA pricing TO authenticated;
+--
+-- REVOKE ALL ON FUNCTION billing.freeze_issued() FROM PUBLIC;
+--
+-- REVOKE ALL ON FUNCTION billing.freeze_issued_lines() FROM PUBLIC;
+--
+-- REVOKE ALL ON FUNCTION billing.next_invoice_number(p_tenant uuid, p_year smallint) FROM PUBLIC;
+-- GRANT ALL ON FUNCTION billing.next_invoice_number(p_tenant uuid, p_year smallint) TO authenticated;
+--
+-- GRANT SELECT ON TABLE billing.invoice_lines TO authenticated;
+--
+-- GRANT SELECT ON TABLE billing.invoice_sequences TO authenticated;
+--
+-- GRANT SELECT ON TABLE billing.invoices TO authenticated;
+--
+-- GRANT SELECT ON TABLE catalog.products TO authenticated;
+--
+-- GRANT SELECT ON TABLE coffre.objects TO authenticated;
+--
+-- GRANT SELECT ON TABLE commissions.entries TO authenticated;
+--
+-- GRANT SELECT ON TABLE commissions.rules TO authenticated;
+--
+-- GRANT SELECT ON TABLE contracts.contracts TO authenticated;
+--
+-- GRANT SELECT ON TABLE payments.payments TO authenticated;
+--
+-- GRANT SELECT ON TABLE pricing.price_lists TO authenticated;
+--
+-- GRANT SELECT ON TABLE pricing.prices TO authenticated;
+--
+-- -- B et E. Les neuf vues, plateforme.archives et capture.piece_versions.
+-- CREATE VIEW agents.angles_morts WITH (security_invoker='true') AS
+--  SELECT tenant_id,
+--     message_id,
+--     attendu,
+--     created_at,
+--     ( SELECT count(*) AS count
+--            FROM agents.reponse_controles c
+--           WHERE (c.message_id = v.message_id)) AS controles_cedes
+--    FROM agents.reponse_verdicts v
+--   WHERE ((verdict = 'faux'::text) AND (NOT (EXISTS ( SELECT 1
+--            FROM agents.reponse_controles c
+--           WHERE ((c.message_id = v.message_id) AND (c.suite = 'retirer'::text))))));
+--
+-- ALTER VIEW agents.angles_morts OWNER TO postgres;
+--
+-- CREATE TABLE capture.piece_versions (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     piece_id uuid NOT NULL,
+--     ordinal smallint NOT NULL,
+--     storage_path text NOT NULL,
+--     sha256 text NOT NULL,
+--     created_by uuid DEFAULT auth.uid() NOT NULL,
+--     created_at timestamp with time zone DEFAULT now() NOT NULL
+-- );
+--
+-- ALTER TABLE ONLY capture.piece_versions FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE capture.piece_versions OWNER TO postgres;
+--
+-- CREATE VIEW facturation.pieces_orphelines_v WITH (security_invoker='true') AS
+--  SELECT p.id AS piece_id,
+--     p.tenant_id,
+--     p.created_by AS auteur,
+--     p.vis,
+--     p.status,
+--     p.created_at,
+--         CASE
+--             WHEN (m.user_id IS NULL) THEN 'auteur_parti'::text
+--             WHEN (p.entity_id IS NULL) THEN 'sans_etablissement'::text
+--             ELSE NULL::text
+--         END AS motif
+--    FROM (capture.pieces p
+--      LEFT JOIN identity.memberships m ON (((m.tenant_id = p.tenant_id) AND (m.user_id = p.created_by))))
+--   WHERE (((m.user_id IS NULL) AND (p.vis = 'personnel'::app.vis_t)) OR (p.entity_id IS NULL));
+--
+-- ALTER VIEW facturation.pieces_orphelines_v OWNER TO postgres;
+--
+-- COMMENT ON VIEW facturation.pieces_orphelines_v IS 'Les pièces que plus personne ne peut atteindre : celles d''un auteur parti restées personnelles, et celles dont l''établissement a été supprimé (entity_id ON DELETE SET NULL). À vider avant de révoquer un membre.';
+--
+-- CREATE VIEW facturation.repartition_v WITH (security_invoker='true') AS
+--  SELECT pv.licence_id,
+--     pv.du AS segment_du,
+--     pv.au_exclu AS segment_au_exclu,
+--     pv.au AS segment_au,
+--     pv.origine,
+--     pv.origine_cabinet,
+--     pv.canal,
+--     pv.offre_code,
+--     pv.offre_libelle,
+--     pv.offre_rang,
+--     pv.prix_total_ht,
+--     pv.part_cabinet_ht,
+--     pv.part_pme_ht,
+--     pv.cabinet_tenant_id,
+--     pv.acces_id,
+--     pv.acces_reference,
+--     pv.acces_offre_code,
+--     pv.plancher_offre_code,
+--     pv.plancher_rang,
+--     pv.facturable,
+--     pv.titulaire,
+--     pi.payeur_type AS payeur_initial_type,
+--     pi.payeur_tenant_id AS payeur_initial_tenant_id,
+--     pi.payeur_personne AS payeur_initial_personne,
+--     pi.depuis AS payeur_initial_depuis
+--    FROM (facturation.periodes_v pv
+--      LEFT JOIN facturation.payeur_initial_v pi ON ((pi.licence_id = pv.licence_id)))
+--   WHERE ((pv.du <= CURRENT_DATE) AND ((pv.au_exclu IS NULL) OR (pv.au_exclu > CURRENT_DATE)));
+--
+-- ALTER VIEW facturation.repartition_v OWNER TO postgres;
+--
+-- COMMENT ON VIEW facturation.repartition_v IS 'Pour une licence, aujourd''hui : qui était le payeur initial, qui paie, quelle part revient au cabinet, quelle part à la cliente, et quel est le plancher de dégradation. Les quatre réponses sortent de la base.';
+--
+-- CREATE TABLE plateforme.archives (
+--     id uuid DEFAULT gen_random_uuid() NOT NULL,
+--     requisition_id uuid NOT NULL,
+--     tenant_id uuid NOT NULL,
+--     fichiers integer NOT NULL,
+--     octets bigint NOT NULL,
+--     empreinte text NOT NULL,
+--     constituee_le timestamp with time zone DEFAULT now() NOT NULL,
+--     constituee_par uuid DEFAULT auth.uid() NOT NULL,
+--     remise_a text,
+--     remise_le timestamp with time zone,
+--     CONSTRAINT archives_empreinte_check CHECK ((empreinte ~ '^[0-9a-f]{64}$'::text)),
+--     CONSTRAINT archives_fichiers_check CHECK ((fichiers >= 0)),
+--     CONSTRAINT archives_octets_check CHECK ((octets >= 0))
+-- );
+--
+-- ALTER TABLE ONLY plateforme.archives FORCE ROW LEVEL SECURITY;
+--
+-- ALTER TABLE plateforme.archives OWNER TO postgres;
+--
+-- CREATE VIEW public.agents_model_pricing_v WITH (security_invoker='true') AS
+--  SELECT id,
+--     provider,
+--     model,
+--     role,
+--     price_in_per_mtok,
+--     price_out_per_mtok,
+--     currency,
+--     sovereign,
+--     effective_from,
+--     effective_to
+--    FROM agents.model_pricing;
+--
+-- ALTER VIEW public.agents_model_pricing_v OWNER TO postgres;
+--
+-- CREATE VIEW public.banque_rapprochements_v WITH (security_invoker='true') AS
+--  SELECT id,
+--     tenant_id,
+--     ligne_id,
+--     ecriture_id,
+--     score,
+--     ecart_montant,
+--     ecart_jours,
+--     reference_exacte,
+--     decided_by,
+--     motif_id,
+--     pack_version_id,
+--     created_at
+--    FROM banque.rapprochements;
+--
+-- ALTER VIEW public.banque_rapprochements_v OWNER TO postgres;
+--
+-- CREATE VIEW public.conformite_v WITH (security_invoker='true') AS
+--  SELECT id,
+--     tenant_id,
+--     piece_id,
+--     verdict,
+--     motif_id,
+--     note,
+--     pack_version_id,
+--     decided_by,
+--     decided_at
+--    FROM capture.conformite;
+--
+-- ALTER VIEW public.conformite_v OWNER TO postgres;
+--
+-- CREATE VIEW public.ref_charge_famille_rules_v WITH (security_invoker='true') AS
+--  SELECT id,
+--     pack_version_id,
+--     famille_code,
+--     match_kind,
+--     pattern,
+--     priority,
+--     valid_from,
+--     valid_to
+--    FROM ref.charge_famille_rules;
+--
+-- ALTER VIEW public.ref_charge_famille_rules_v OWNER TO postgres;
+--
+-- CREATE VIEW public.ref_grille_relations_v WITH (security_invoker='true') AS
+--  SELECT id,
+--     grille_id,
+--     vers,
+--     nature,
+--     cle
+--    FROM ref.grille_relations;
+--
+-- ALTER VIEW public.ref_grille_relations_v OWNER TO postgres;
+--
+-- CREATE VIEW public.ref_pack_rules_v WITH (security_invoker='true') AS
+--  SELECT id,
+--     pack_version_id,
+--     jurisdiction,
+--     kind,
+--     label,
+--     cadence,
+--     day_of_month,
+--     month_offset,
+--     legal_reference,
+--     valid_from,
+--     valid_to
+--    FROM ref.pack_rules;
+--
+-- ALTER VIEW public.ref_pack_rules_v OWNER TO postgres;
+--
+-- ALTER TABLE ONLY capture.piece_versions
+--     ADD CONSTRAINT piece_versions_piece_id_ordinal_key UNIQUE (piece_id, ordinal);
+--
+-- ALTER TABLE ONLY capture.piece_versions
+--     ADD CONSTRAINT piece_versions_pkey PRIMARY KEY (id);
+--
+-- ALTER TABLE ONLY plateforme.archives
+--     ADD CONSTRAINT archives_pkey PRIMARY KEY (id);
+--
+-- CREATE INDEX piece_versions_tenant_piece_recent_idx ON capture.piece_versions USING btree (tenant_id, piece_id, created_at DESC);
+--
+-- CREATE INDEX archives_requisition_idx ON plateforme.archives USING btree (requisition_id);
+--
+-- CREATE INDEX archives_tenant_idx ON plateforme.archives USING btree (tenant_id, constituee_le DESC);
+--
+-- CREATE TRIGGER capture_piece_versions_no_upd BEFORE DELETE OR UPDATE ON capture.piece_versions FOR EACH ROW EXECUTE FUNCTION app.deny_mutation_hors_effacement_de_piece();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON capture.piece_versions FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- CREATE TRIGGER service_hors_perimetre BEFORE INSERT OR DELETE OR UPDATE ON plateforme.archives FOR EACH STATEMENT EXECUTE FUNCTION app.service_hors_perimetre();
+--
+-- ALTER TABLE ONLY capture.piece_versions
+--     ADD CONSTRAINT piece_versions_piece_id_fkey FOREIGN KEY (piece_id) REFERENCES capture.pieces(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY capture.piece_versions
+--     ADD CONSTRAINT piece_versions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE CASCADE;
+--
+-- ALTER TABLE ONLY plateforme.archives
+--     ADD CONSTRAINT archives_requisition_id_fkey FOREIGN KEY (requisition_id) REFERENCES plateforme.requisitions(id) ON DELETE RESTRICT;
+--
+-- ALTER TABLE ONLY plateforme.archives
+--     ADD CONSTRAINT archives_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES identity.organizations(id) ON DELETE RESTRICT;
+--
+-- CREATE POLICY capture_piece_versions_ins ON capture.piece_versions FOR INSERT TO authenticated WITH CHECK ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)));
+--
+-- CREATE POLICY capture_piece_versions_sel ON capture.piece_versions FOR SELECT TO authenticated USING ((((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) OR (tenant_id IN ( SELECT app.engaged_orgs() AS engaged_orgs)) OR app.plateforme_requise(tenant_id) OR (EXISTS ( SELECT 1
+--    FROM capture.pieces pc
+--   WHERE ((pc.id = piece_versions.piece_id) AND (pc.created_by = auth.uid()))))) AND app.piece_lisible(piece_id)));
+--
+-- ALTER TABLE capture.piece_versions ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY service_hors_perimetre ON capture.piece_versions AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- ALTER TABLE plateforme.archives ENABLE ROW LEVEL SECURITY;
+--
+-- CREATE POLICY plateforme_archives_ins ON plateforme.archives FOR INSERT TO authenticated WITH CHECK ((( SELECT app.is_platform() AS is_platform) AND (EXISTS ( SELECT 1
+--    FROM plateforme.requisitions r
+--   WHERE ((r.id = archives.requisition_id) AND (r.tenant_id = archives.tenant_id))))));
+--
+-- CREATE POLICY plateforme_archives_sel ON plateforme.archives FOR SELECT TO authenticated USING ((( SELECT app.is_platform() AS is_platform) OR ((tenant_id IN ( SELECT app.member_orgs() AS member_orgs)) AND (EXISTS ( SELECT 1
+--    FROM plateforme.requisitions r
+--   WHERE ((r.id = archives.requisition_id) AND (NOT r.secret_impose)))))));
+--
+-- CREATE POLICY plateforme_archives_upd ON plateforme.archives FOR UPDATE TO authenticated USING (( SELECT app.is_platform() AS is_platform)) WITH CHECK (( SELECT app.is_platform() AS is_platform));
+--
+-- CREATE POLICY service_hors_perimetre ON plateforme.archives AS RESTRICTIVE FOR SELECT TO authenticated USING ((( SELECT app.service() AS service) IS NULL));
+--
+-- GRANT SELECT ON TABLE agents.angles_morts TO authenticated;
+--
+-- GRANT SELECT ON TABLE capture.piece_versions TO authenticated;
+--
+-- GRANT SELECT ON TABLE facturation.repartition_v TO authenticated;
+--
+-- GRANT SELECT ON TABLE plateforme.archives TO authenticated;
+--
+-- GRANT SELECT ON TABLE public.agents_model_pricing_v TO authenticated;
+--
+-- GRANT SELECT ON TABLE public.banque_rapprochements_v TO authenticated;
+--
+-- GRANT SELECT ON TABLE public.conformite_v TO authenticated;
+--
+-- GRANT SELECT ON TABLE public.ref_charge_famille_rules_v TO authenticated;
+--
+-- GRANT SELECT ON TABLE public.ref_grille_relations_v TO authenticated;
+--
+-- GRANT SELECT ON TABLE public.ref_pack_rules_v TO authenticated;
+--
+-- -- E. Les deux fonctions.
+-- CREATE OR REPLACE FUNCTION public.set_engagement_status(p_engagement uuid, p_status text)
+--  RETURNS void
+--  LANGUAGE plpgsql
+--  SECURITY DEFINER
+--  SET search_path TO ''
+-- AS $function$
+-- declare
+--   v_pme uuid;
+-- begin
+--   if p_status not in ('propose','actif','suspendu','termine') then
+--     raise exception 'refus.mandat.statut_inconnu' using errcode = '22023';
+--   end if;
+--
+--   update identity.engagements
+--      set status = p_status,
+--          ends_on = case when p_status = 'termine' then current_date else ends_on end
+--    where id = p_engagement
+--   returning pme_org_id into v_pme;
+--
+--   if v_pme is null then
+--     raise exception 'refus.introuvable.mandat' using errcode = '42501';
+--   end if;
+--
+--   insert into audit.event_log (tenant_id, action, object_schema, object_table,
+--                               object_id, payload)
+--   values (v_pme, 'engagement.status_changed', 'identity', 'engagements',
+--           p_engagement, jsonb_build_object('status', p_status));
+-- end $function$
+-- ;
+--
+-- ALTER FUNCTION public.set_engagement_status(p_engagement uuid, p_status text) OWNER TO portier;
+--
+-- REVOKE ALL ON FUNCTION public.set_engagement_status(p_engagement uuid, p_status text) FROM PUBLIC;
+-- GRANT ALL ON FUNCTION public.set_engagement_status(p_engagement uuid, p_status text) TO authenticated;
+--
+-- CREATE OR REPLACE FUNCTION app.poser_le_destinataire_cabinet()
+--  RETURNS trigger
+--  LANGUAGE plpgsql
+--  SECURITY DEFINER
+--  SET search_path TO ''
+-- AS $function$
+-- begin
+--   if new.cabinet_id is null then
+--     new.cabinet_id := coalesce(
+--       -- La charge nomme son engagement : c'est celui-là, même terminé.
+--       (select e.cabinet_org_id
+--          from identity.engagements e
+--         where e.id = app.uuid_ou_null(new.payload ->> 'engagement_id')
+--           and e.pme_org_id = new.tenant_id),
+--       (select e.cabinet_org_id
+--          from identity.engagements e
+--         where e.pme_org_id = new.tenant_id
+--           and app.engagement_en_vigueur(e.status, e.starts_on, e.ends_on)
+--         order by e.starts_on desc nulls last
+--         limit 1));
+--   end if;
+--   return new;
+-- end
+-- $function$
+-- ;
+--
+-- REVOKE ALL ON FUNCTION app.poser_le_destinataire_cabinet() FROM PUBLIC;
+--
+-- -- D. Les deux colonnes (en dernière position de agents.budgets).
+-- alter table agents.budgets add column per_piece_cost_cap app.money_t not null default 0,
+--                            add column per_piece_latency_ms integer not null default 60000;

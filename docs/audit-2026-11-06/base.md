@@ -430,6 +430,8 @@ app.relecture_de_nuit` de `20261130230000`, **copié octet pour octet** depuis
 
 ### M2 — Retirer les 10 vues mortes
 
+**Appliqué** (en partie) par `db/migrations/20261231290000_les_objets_orphelins_se_retirent.sql` : voir son en-tête.
+
 - **Preuve** : § 3.1 (0 lecteur, 0 dépendant).
 - **Risque** : faible. Un écran hors dépôt (Android ?) qui lirait une de ces vues
   par PostgREST n'existe plus (l'API est le seul client SQL) ; `android/` n'en
@@ -575,6 +577,8 @@ revoke execute on function public.capture_articles_persist(uuid, uuid, date, tex
 
 ### M7 — Retirer les schémas d'amorçage (décision, puis migration)
 
+**Appliqué** (en partie) par `db/migrations/20261231290000_les_objets_orphelins_se_retirent.sql` : voir son en-tête.
+
 - **Objets** : `billing`, `catalog`, `pricing`, `commissions`, `payments`, `contracts`, `coffre` (11 tables, 3 fonctions `billing.*` dont `billing.next_invoice_number`, 50 politiques, 17 déclencheurs).
 - **Preuve** : § 3.2. **Risque** : **données** — à lever par le comptage en production. Aussi : `db/maintenance/purge_metier.sql` les nomme (à mettre à jour) et le verrou d'intégrité (`portes_sans_appel.billing.next_invoice_number`) doit perdre son entrée dans le même commit.
 - **Up** : `drop schema billing, catalog, pricing, commissions, payments, contracts, coffre cascade;` — précédé d'un garde qui refuse si une table a des lignes :
@@ -582,6 +586,8 @@ revoke execute on function public.capture_articles_persist(uuid, uuid, date, tex
 - **Down** : le DDL de ces schémas relevé par `db/registre.sql` sur la base juste avant (tables, politiques, déclencheurs, droits). Il n'est pas recopié ici : 7 schémas, et le relevé doit être fait sur l'état exact qu'on retire.
 
 ### M8 — Colonnes métier mortes (par lot, après M7)
+
+**Appliqué** (en partie) par `db/migrations/20261231290000_les_objets_orphelins_se_retirent.sql` : voir son en-tête.
 
 - **Preuve** : § 3.4, première famille. **Risque** : moyen — méthode par nom
   (INCERTAIN du § 3.4) ; certaines tables portent un déclencheur R7 qui refuse

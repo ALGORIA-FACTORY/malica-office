@@ -2505,7 +2505,6 @@ export const ar: Dict = {
   "refus.organisation.supplement_a_accepter":
     "هذه الشركة غير مشمولة في عرضك: يجب قبول سعرها الإضافي.",
   "refus.organisation.juridiction_requise": "اختر ولاية المؤسسة.",
-  "refus.mandat.statut_inconnu": "حالة التكليف هذه غير موجودة.",
   "refus.etablissement.dernier": "هذه آخر منشأة مفتوحة لهذه الشركة: لا تُغلق.",
   "refus.pv.envoye": "أُرسل هذا المحضر إلى الحريف: لم يعد يُعدَّل. حرّر محضرًا جديدًا.",
   "refus.pv.geste_d_envoi": "يُرسل المحضر بإجراء الإرسال، لا بمجرّد تحديث.",

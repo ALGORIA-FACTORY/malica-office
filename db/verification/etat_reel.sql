@@ -42,9 +42,8 @@ select c.relnamespace::regnamespace::text as schema, c.relname as table_
  where c.relkind = 'r'
    and not c.relrowsecurity
    and c.relnamespace::regnamespace::text in
-       ('identity','capture','socle','immo','stocks','banque','collab','coffre',
-        'schedule','audit','agents','billing','pricing','payments','catalog',
-        'contracts','commissions','legal','sync','ref')
+       ('identity','capture','socle','immo','stocks','banque','collab',
+        'schedule','audit','agents','legal','sync','ref')
  order by 1,2;
 
 \echo '===== 5. VUES : security_invoker ====='

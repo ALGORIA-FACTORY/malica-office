@@ -90,7 +90,6 @@
         "public.piece_renvoyer",
         "public.pv_envoyer",
         "public.recu_attester_paiements",
-        "public.set_engagement_status",
         "public.socle_ecriture_book",
         "public.socle_ecriture_propose",
         "public.socle_ecriture_review",
@@ -425,11 +424,7 @@
     {
       "objet": "identity.engagements",
       "privilege": "UPDATE",
-      "chemins": [
-        "public.comptabilite_invitation_accepter",
-        "public.mandat_creer",
-        "public.set_engagement_status"
-      ]
+      "chemins": ["public.comptabilite_invitation_accepter", "public.mandat_creer"]
     },
     {
       "objet": "identity.entities",

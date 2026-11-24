@@ -2586,7 +2586,6 @@ export const en: Dict = {
   "refus.organisation.supplement_a_accepter":
     "This company is not included in your plan: its extra price must be accepted.",
   "refus.organisation.juridiction_requise": "Choose the organisation’s jurisdiction.",
-  "refus.mandat.statut_inconnu": "This engagement status does not exist.",
   "refus.etablissement.dernier":
     "This is the company’s last open establishment: it cannot be closed.",
   "refus.pv.envoye":
