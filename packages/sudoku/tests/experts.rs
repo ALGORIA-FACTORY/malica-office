@@ -120,6 +120,23 @@ fn l_anneau_3_lit_derriere_le_repere_et_signale_le_libelle_colle() {
     let o = resoudre(colle, grille(), pack_essai());
     assert_eq!(o["champs"]["numero"]["statut"], "signale", "{o}");
 
+    // « FACTURE N°F-2026-2408 » (photo synthétique 019, 24 novembre 2026) : le mot d'avant,
+    // tout près, COMPLÈTE le libellé collé en un repère entier du même champ, « Facture N° ».
+    // Ce n'est pas le milieu d'une phrase : la valeur se lit.
+    let mut phrase = facture(1, None);
+    phrase.push(jeton(7, "FACTURE", 0.05, 0.05, &[]));
+    phrase.push(jeton(8, "N°F-2026-2408", 0.26, 0.05, &[]));
+    let o = resoudre(phrase, grille(), pack_essai());
+    assert_eq!(o["champs"]["numero"]["valeur"], "F-2026-2408", "{o}");
+    assert_eq!(o["champs"]["numero"]["statut"], "conforme");
+    // Le contre-cas reste tenu : « Contrat N° » n'est pas un repère du numéro, et le libellé
+    // collé au milieu d'une phrase n'est pas pris (« Contrat Entreprise n°ENT-55821 », 50/07).
+    let mut contrat = facture(1, None);
+    contrat.push(jeton(7, "Contrat", 0.05, 0.05, &[]));
+    contrat.push(jeton(8, "N°ENT-55821", 0.26, 0.05, &[]));
+    let o = resoudre(contrat, grille(), pack_essai());
+    assert!(o["champs"]["numero"]["valeur"].is_null(), "{o}");
+
     // une liste sans domaine : « Statut » imprimé n'est pas une valeur
     let mut st = facture(1, None);
     st.push(jeton(7, "Statut", 0.05, 0.05, &[]));
