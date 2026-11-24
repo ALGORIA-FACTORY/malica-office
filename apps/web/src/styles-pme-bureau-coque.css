@@ -22,6 +22,31 @@
     --largeur-barre: 248px;
     padding-inline-start: var(--largeur-barre);
   }
+  /*
+   * La colonne de la barre est peinte par la page, sur TOUTE sa hauteur : la barre est fixée
+   * (toujours la hauteur de la fenêtre, défilement interne), mais une page plus longue que la
+   * fenêtre — rendue d'un tenant, capture pleine page — montrait sous elle une bande sans fond
+   * ni filet. Un dégradé à arrêts francs, à la largeur de la barre : le fond, puis le filet.
+   * Ni ombre (la doctrine de `styles.css` les éteint toutes), ni pseudo-élément positionné
+   * (`.app` deviendrait le repère de ses descendants). Le sens d'un dégradé est physique : en
+   * arabe, il part de la droite. À l'écran seulement : une page imprimée en paysage passe
+   * 1024 px et n'a pas de barre.
+   */
+  @media screen {
+    [data-surface="pme"] .app {
+      --sens-de-la-barre: to right;
+      background-image: linear-gradient(
+        var(--sens-de-la-barre),
+        var(--bg) calc(var(--largeur-barre) - 1px),
+        var(--hr) 0 var(--largeur-barre),
+        transparent 0
+      );
+    }
+    [dir="rtl"] [data-surface="pme"] .app,
+    [data-surface="pme"][dir="rtl"] .app {
+      --sens-de-la-barre: to left;
+    }
+  }
 
   /* ───────────────────────────────────────────────────────── la barre latérale */
   [data-surface="pme"] .nav {
@@ -37,9 +62,10 @@
     margin: 0;
     padding: 1.25rem 0.875rem;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Le fond et le filet sont ceux de la colonne, peinte par `.app`. */
     border: 0;
-    border-inline-end: 1px solid var(--hr);
-    background: var(--bg);
+    background: none;
   }
   /* L'obturateur est celui du téléphone : le poste a son bouton « Ajouter une pièce ». */
   [data-surface="pme"] .nav .ajout {
@@ -379,7 +405,8 @@
     letter-spacing: -0.02em;
     line-height: 1.1;
   }
-  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .mois .v u {
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis :is(.mois, .ligne) .v u {
+    text-decoration: none;
     font-family: var(--sans);
     font-size: 0.75rem;
     font-weight: 400;
@@ -396,9 +423,14 @@
     font-weight: 400;
     color: var(--t2);
   }
-  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ligne span {
-    font-size: 1.0625rem;
-    font-weight: 600;
+  /* Sous le total des charges, son sens et, sans comptabilité, la mention d'estimation. */
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ligne span:not(.v) {
+    flex: none;
+    font-size: 0.75rem;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ligne .v {
+    flex: none;
     color: var(--tx);
   }
   [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ligne .ar {

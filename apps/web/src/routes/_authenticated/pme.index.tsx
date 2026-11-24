@@ -37,6 +37,8 @@ import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
 import { AccueilConsolide } from "@/components/malica/accueil-consolide";
 import { usePme } from "@/components/malica/pme-context";
 import { useAccueil } from "@/hooks/use-accueil";
+import { useBureau } from "@/hooks/use-bureau";
+import { useChiffreDeLaSociete } from "@/hooks/use-chiffres-par-societe";
 import { libelleDOffre, useCatalogueDesOffres } from "@/hooks/use-offres";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
 import { currentPeriod } from "@/hooks/use-tva";
@@ -449,6 +451,10 @@ function PmeHome() {
   // jusqu'à ce que la personne la referme, et ne disparaît pas avec son compteur.
   const [exportMonte, setExportMonte] = useState(false);
   if (!exportMonte && aExporter.length > 0) setExportMonte(true);
+
+  // L'indicateur « Vos charges » n'existe qu'au bureau : le téléphone ne lit rien de plus.
+  const bureau = useBureau();
+  const charges = useChiffreDeLaSociete("charges", periode, bureau);
   /*
    * 24 octobre 2026, Wissem : « rien ne dit que la lecture casse ». Une pièce
    * dont la lecture a échoué se voit ici, en rouge, avec sa raison ; la carte
@@ -653,9 +659,22 @@ function PmeHome() {
               </>
             )}
           </Link>
-          {/* Les charges, et leur sens : la tuile d'hier, en une ligne sous le chiffre. */}
+          {/* Les charges, et leur sens : la tuile d'hier, en une ligne sous le chiffre. Au bureau,
+            l'indicateur porte le total HT du mois : la lecture de l'écran Charges (sa ligne sous
+            « Toutes les sociétés »), jamais un calcul d'ici ; absent, « — », jamais « 0 ». */}
           <Link to="/pme/charges" className="ligne">
             <b>{t("pme.home.card.charges")}</b>
+            {bureau ? (
+              <span className="v" aria-busy={charges.etat === "enCours" || undefined}>
+                {charges.etat === "calcule" ? (
+                  <>
+                    {montant(charges.montant, locale)} <u>{charges.devise}</u>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </span>
+            ) : null}
             <span>
               {a.chargesEcart === null
                 ? t("pme.home.charges.sous")
@@ -663,6 +682,8 @@ function PmeHome() {
                   ? t("pme.home.charges.baisse", { pourcent: Math.abs(Math.round(a.chargesEcart)) })
                   : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })}
             </span>
+            {/* Sans comptabilité, le chiffre vient de la lecture : la mention de l'écran Charges. */}
+            {bureau && sansComptabilite ? <span>{t("pme.charges.estimation")}</span> : null}
             <Chevron className="g ar" />
           </Link>
           <Link

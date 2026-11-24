@@ -1075,6 +1075,7 @@ export const capture = {
       for (const c of corrections) mettreLaValeur(p, c.champ, c.valeur);
       return p;
     })();
+    const duCabinet = versMontantsDuCabinet((montants as Record<string, unknown>[])[0]?.["m"]);
     return {
       piece: versPiece(brut),
       extraction: extraction
@@ -1098,11 +1099,17 @@ export const capture = {
        * 462,720 »). Le jugement la retient ; la fiche la montre avec le dû avant elle, et le
        * TTC imprimé devient le net à payer. Les montants viennent du moteur (R3), en décimales
        * de la devise de la pièce ; `null` sans retenue ou sans jugement qui ferme.
+       *
+       * `null` aussi quand les montants sont ceux de l'écriture du cabinet, comme dans la liste
+       * (`listAvecLectureDesSocietes`) : son TTC est HT + TVA + droits, le dû AVANT retenue, et
+       * la fiche l'aurait titré « Net à payer » à côté d'une retenue qui ne s'en déduit pas.
        */
-      retenue: retenueJugee(
-        (juge as Record<string, unknown>[])[0],
-        (exposant as Record<string, unknown>[])[0]?.["exposant"],
-      ),
+      retenue: duCabinet
+        ? null
+        : retenueJugee(
+            (juge as Record<string, unknown>[])[0],
+            (exposant as Record<string, unknown>[])[0]?.["exposant"],
+          ),
       // La base qu'un taux nul prouverait sans la saisie qui ne tient pas : un geste la prend.
       baseProposee:
         ((juge as Record<string, unknown>[])[0]?.["base_proposee"] as string | null | undefined) ??
@@ -1114,7 +1121,7 @@ export const capture = {
       archive: archive[0]?.a ?? null,
       suivi: suivi[0] ? versSuivi(suivi[0] as Record<string, unknown>) : null,
       circuit: circuit[0] ? versCircuit(circuit[0] as Record<string, unknown>) : null,
-      montantsDuCabinet: versMontantsDuCabinet((montants as Record<string, unknown>[])[0]?.["m"]),
+      montantsDuCabinet: duCabinet,
       ecritureIllisible: ecritureIllisible((montants as Record<string, unknown>[])[0]?.["m"]),
       lectureRefusee: ((refus as Record<string, unknown>[])[0]?.["lecture_refusee"] ?? null) as {
         motif: string;
