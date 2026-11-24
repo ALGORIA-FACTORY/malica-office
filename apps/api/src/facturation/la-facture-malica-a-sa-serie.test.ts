@@ -26,7 +26,11 @@ import pg from "pg";
 import { facturation } from "../depots/facturation.ts";
 import { tour } from "../depots/tour.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
-import { courrielDeNotification, type LigneDeCarte } from "../relances/courriel-de-notification.ts";
+import {
+  courrielDeNotification,
+  routeDuBouton,
+  type LigneDeCarte,
+} from "../relances/courriel-de-notification.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 3 }) : null;
@@ -501,7 +505,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
         (x) => x.code === "facture.emise.cabinet" && x.email.includes(expert),
       );
       assert.ok(courriel, "la file rend le courriel de la facture du mois");
-      assert.equal(courriel.action_route, "/cabinet/clients?vue=facturation");
+      assert.equal(courriel.action_route, "/cabinet/regler/{{facture_id}}");
       const message = courrielDeNotification({
         locale: courriel.locale,
         code: courriel.code,
@@ -509,7 +513,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
         corps: courriel.corps,
         action: {
           libelle: courriel.action_libelle,
-          url: `https://essai.example${courriel.action_route}`,
+          url: `https://essai.example${routeDuBouton(courriel.action_route, courriel.donnees)}`,
         },
         ton: courriel.ton,
         organisation: courriel.organisation,
@@ -522,6 +526,10 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
       assert.ok(message.sujet.includes(facture.numero), message.sujet);
       assert.ok(!message.html.includes("{{") && !message.texte.includes("{{"), message.texte);
       assert.ok(message.texte.includes("virement"), message.texte);
+      assert.ok(
+        message.html.includes(`/cabinet/regler/${facture.facture_id}`),
+        "le bouton ouvre le paiement de cette facture",
+      );
 
       // Le renvoi n'est pas pour elle.
       await enPersonne(db, s.operateur);

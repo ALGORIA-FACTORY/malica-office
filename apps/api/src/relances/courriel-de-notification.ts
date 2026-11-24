@@ -173,6 +173,22 @@ function tonConnu(ton: string): Ton {
   throw new Error(`ton de courriel inconnu : ${ton}`);
 }
 
+/**
+ * L'adresse du bouton d'un courriel : la route du gabarit, ses jetons (`{{facture_id}}`)
+ * remplacés par les données de la notification, chacun encodé pour l'URL. Un jeton sans valeur
+ * ne laisse pas un lien cassé : pas de bouton (`null`).
+ */
+export function routeDuBouton(
+  route: string,
+  donnees: Record<string, unknown> | null,
+): string | null {
+  const rendue = route.replace(/\{\{(\w+)\}\}/g, (jeton, cle: string) => {
+    const v = donnees?.[cle];
+    return v === undefined || v === null || v === "" ? jeton : encodeURIComponent(String(v));
+  });
+  return rendue.includes("{{") ? null : rendue;
+}
+
 export function courrielDeNotification(n: Notification): {
   sujet: string;
   html: string;

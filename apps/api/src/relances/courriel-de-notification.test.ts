@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { corpsBrevo } from "../courriel/brevo.ts";
-import { courrielDeNotification, TONS } from "./courriel-de-notification.ts";
+import { courrielDeNotification, routeDuBouton, TONS } from "./courriel-de-notification.ts";
 import { libellesDEssai } from "../courriel/libelles-d-essai.ts";
 
 /** Le courriel, avec les textes que les migrations écrivent pour sa langue. */
@@ -251,5 +251,22 @@ describe("le gabarit commun du courriel", () => {
     assert.equal(corps.subject, BASE.titre);
     assert.equal(corps.to[0]!.email, "destinataire@essai.local");
     assert.equal(corps.htmlContent, message.html);
+  });
+});
+
+describe("l'adresse du bouton", () => {
+  it("prend ses jetons dans les données, encodés pour l'URL", () => {
+    assert.equal(
+      routeDuBouton("/cabinet/regler/{{facture_id}}", { facture_id: "a b/c" }),
+      "/cabinet/regler/a%20b%2Fc",
+    );
+    assert.equal(
+      routeDuBouton("/pme/reglages?page=abonnement", null),
+      "/pme/reglages?page=abonnement",
+    );
+  });
+
+  it("un jeton sans valeur ne laisse pas de lien cassé", () => {
+    assert.equal(routeDuBouton("/cabinet/regler/{{facture_id}}", {}), null);
   });
 });

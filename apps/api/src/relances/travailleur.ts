@@ -24,6 +24,7 @@ import { consigner } from "../observabilite/journal.ts";
 
 import {
   courrielDeNotification,
+  routeDuBouton,
   type LigneDeCarte,
   type Palier,
 } from "./courriel-de-notification.ts";
@@ -106,10 +107,12 @@ export async function tourDeRelances(d: Dependances) {
           repondreA: /^no-?reply@/i.test(config.expediteur.email) ? null : config.expediteur.email,
           titre: c.titre,
           corps: c.corps,
-          action:
-            c.action_libelle && c.action_route
-              ? { libelle: c.action_libelle, url: `${config.urlPublique}${c.action_route}` }
-              : null,
+          action: (() => {
+            const route = c.action_route ? routeDuBouton(c.action_route, c.donnees) : null;
+            return c.action_libelle && route
+              ? { libelle: c.action_libelle, url: `${config.urlPublique}${route}` }
+              : null;
+          })(),
           ton: c.ton,
         });
         await envoyer({

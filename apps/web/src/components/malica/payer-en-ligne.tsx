@@ -9,9 +9,9 @@
  * pages partagent leur logique (`hooks/use-paiement-en-ligne.ts`) et gardent
  * l'habillage de leur surface.
  */
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { EnTeteCabinet } from "@/components/malica/office-ui";
 import { useChoixDuMoyen, useRetourDuPrestataire } from "@/hooks/use-paiement-en-ligne";
@@ -20,6 +20,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres, montant, montantEtDevise } from "@/lib/lisible";
 import { libelleDuPaiement } from "@/lib/paiement";
 import { useRevenir } from "@/hooks/use-revenir";
+import { office } from "@/verticals/malica-office/composition";
 
 const routeSociete = getRouteApi("/_authenticated/pme/payer/$paiementId");
 
@@ -458,6 +459,66 @@ export function PayerEnLigneCabinet() {
           {retour.retour ?? message}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+const routeRegler = getRouteApi("/_authenticated/cabinet/regler/$factureId");
+const OU_REGLER = "components/malica/payer-en-ligne#regler";
+
+/**
+ * Le bouton « Payer la facture » du courriel de la facture du mois (20261231280000) : il ouvre
+ * ICI, connecté, le paiement de CETTE facture — son reste dû, préparé par la base — puis la page
+ * de choix (case des CGV, payeur, Flouci). Pas de lien de prestataire dans le courriel : il
+ * expirerait, et passerait outre ce que la base exige avant de payer. Déjà réglée : on le dit.
+ */
+export function ReglerLaFactureDuCabinet() {
+  const { t } = useI18n();
+  const { factureId } = routeRegler.useParams();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const preparer = useMutation({
+    mutationFn: () => office().facturation.payerFacture(factureId),
+    onSuccess: async (p) => {
+      await qc.invalidateQueries({ queryKey: ["mes-paiements"] });
+      await navigate({
+        to: "/cabinet/payer/$paiementId",
+        params: { paiementId: p.paiement_id },
+        replace: true,
+      });
+    },
+  });
+  const { mutate, isIdle } = preparer;
+  useEffect(() => {
+    if (isIdle) mutate();
+  }, [isIdle, mutate]);
+
+  const reglee = String((preparer.error as Error | null)?.message ?? "").startsWith(
+    "refus.paiement.facture_rien_a_regler",
+  );
+  return (
+    <div className="space-y-6">
+      <EnTeteCabinet surtitre={<>{t("cab.payer.kicker")}</>} titre={<>{t("cab.regler.titre")}</>} />
+      {preparer.isError ? (
+        <div className="space-y-3">
+          <p className="text-sm" role={reglee ? "status" : "alert"}>
+            {reglee
+              ? t("cab.regler.dejaReglee")
+              : texteDeLErreur(preparer.error, OU_REGLER, t("common.error"))}
+          </p>
+          <Link
+            to="/cabinet/clients"
+            search={{ vue: "facturation" }}
+            className="inline-block rounded-md border border-foreground px-3 py-1.5 text-sm font-medium"
+          >
+            {t("cab.regler.voir")}
+          </Link>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground" aria-busy>
+          {t("cab.regler.prepare")}
+        </p>
+      )}
     </div>
   );
 }

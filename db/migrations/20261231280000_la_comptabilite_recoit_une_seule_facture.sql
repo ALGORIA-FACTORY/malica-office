@@ -21,7 +21,10 @@
 --   3. Le courriel : la facture du mois ne partait qu'en application, au genre générique
 --      `facture.emise`, vers tous les membres du cabinet. Elle part maintenant au genre
 --      `facture.emise.cabinet` (gabarit courriel livré le 23 octobre, enfin diffusé), vers
---      ses EXPERTS seulement — la facture n'est pas l'affaire des collaborateurs.
+--      ses EXPERTS seulement — la facture n'est pas l'affaire des collaborateurs. Son bouton
+--      « Payer la facture » ouvre Malica sur le paiement de CETTE facture (`/cabinet/regler/<id>`) :
+--      la case des CGV, le payeur, puis la page Flouci. Pas de lien Flouci brut dans le courriel :
+--      il expirerait, et il passerait outre les CGV et les coordonnées que la base exige.
 --
 -- Et la PME : une facture entièrement réglée se dit réglée (`facture.reglee.pme`), y compris
 -- quand la tour la renvoie — le renvoi d'une facture payée disait « à régler avant le … ».
@@ -283,20 +286,23 @@ values
    'Votre facture du mois {{numero}}',
    'Les abonnements de vos clients pour {{periode}}, et chaque passage d''offre du mois, sur une '
    'seule facture : {{abonnements}} abonnement(s), {{ttc}} {{devise}} TTC, à régler avant le '
-   '{{echeance}}. Réglez-la par virement (coordonnées bancaires sur la facture) ou en ligne.',
-   'Voir la facture', '/cabinet/clients?vue=facturation', date '2026-11-24', 'neutre'),
+   '{{echeance}}. Réglez-la en ligne, par carte via Flouci, en un clic depuis ce message, ou par '
+   'virement (coordonnées bancaires sur la facture).',
+   'Payer la facture', '/cabinet/regler/{{facture_id}}', date '2026-11-24', 'neutre'),
   ('facture.emise.cabinet', 'email', 'en', 'Malica Office — invoice {{numero}}',
    'Your monthly invoice {{numero}}',
    'Your clients'' subscriptions for {{periode}}, and every plan change of the month, on a '
    'single invoice: {{abonnements}} subscription(s), {{ttc}} {{devise}} incl. VAT, due by '
-   '{{echeance}}. Pay it by bank transfer (bank details on the invoice) or online.',
-   'View the invoice', '/cabinet/clients?vue=facturation', date '2026-11-24', 'neutre'),
+   '{{echeance}}. Pay it online, by card via Flouci, in one click from this message, or by '
+   'bank transfer (bank details on the invoice).',
+   'Pay the invoice', '/cabinet/regler/{{facture_id}}', date '2026-11-24', 'neutre'),
   ('facture.emise.cabinet', 'email', 'ar', 'Malica Office — الفاتورة {{numero}}',
    'فاتورتكم الشهرية {{numero}}',
    'اشتراكات حرفائكم عن {{periode}}، وكل تغيير للعرض خلال الشهر، في فاتورة واحدة: '
    '{{abonnements}} اشتراك(ات)، {{ttc}} {{devise}} شامل الأداء، تُدفع قبل {{echeance}}. '
-   'ادفعوها بتحويل بنكي (البيانات البنكية على الفاتورة) أو عبر الإنترنت.',
-   'عرض الفاتورة', '/cabinet/clients?vue=facturation', date '2026-11-24', 'neutre');
+   'ادفعوها عبر الإنترنت بالبطاقة عن طريق Flouci بنقرة واحدة من هذه الرسالة، أو بتحويل بنكي '
+   '(البيانات البنكية على الفاتورة).',
+   'دفع الفاتورة', '/cabinet/regler/{{facture_id}}', date '2026-11-24', 'neutre');
 
 insert into notif.diffusions (code, canal, gabarit, valid_from) values
   ('facture.emise.cabinet', 'email', 'facture.emise.cabinet', date '2026-11-24');
