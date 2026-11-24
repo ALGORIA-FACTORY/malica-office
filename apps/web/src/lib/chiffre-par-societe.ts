@@ -29,6 +29,7 @@ import { finDuMois, moisDeLExercice } from "@malica/socle/exercice";
 import { moisLocal } from "@/lib/lisible";
 import { sensDuSolde } from "@/lib/sens-du-solde";
 import { office } from "@/verticals/malica-office/composition";
+import { extraitsDeLaTvaDuMois } from "./extraits-de-la-tva-du-mois";
 
 /** Le seuil d'écart des charges : le même code que l'écran « Vos charges ». */
 const SEUIL_DES_CHARGES = "FAMILLE_CONSO";
@@ -89,12 +90,8 @@ export async function chiffreTva(
   const decimales = params?.moneyDecimals;
   if (typeof decimales !== "number") return { etat: "referentielIncomplet" };
 
-  // Comme l'écran de la société : avec un mandat, les pièces TRANSMISES du mois ; sans, les
-  // pièces comptabilisées.
-  const lignes =
-    cabinet !== null
-      ? await office().office.extraitsTransmis(s.id, du, au)
-      : await office().office.bookedExtracts(s.id, du, au);
+  // Comme l'écran de la société (`extraits-de-la-tva-du-mois.ts`).
+  const { lignes } = await extraitsDeLaTvaDuMois(s.id, cabinet !== null, du, au);
 
   const tva = tvaDesExtraits({
     period: periode,
