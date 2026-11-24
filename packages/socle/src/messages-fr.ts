@@ -3332,6 +3332,7 @@ export const fr = {
   "pme.echeances.sous.avenir#one": "Dans un jour. Je vous le rappellerai à temps.",
   "pme.echeances.sous.avenir#other": "Dans {count} jours. Je vous le rappellerai à temps.",
   "pme.echeances.reglee": "Déposée",
+  "pme.echeances.deposees": "Déposées",
   "pme.echeances.source": "Dates dérivées du pack de juridiction en vigueur.",
   "fiche.champ.forme": "Forme juridique",
   "fiche.champ.mode": "Mode de dépôt",

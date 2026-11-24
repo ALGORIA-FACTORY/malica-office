@@ -3088,6 +3088,7 @@ export const ar: Dict = {
   "pme.echeances.sous.avenir#one": "خلال يوم واحد. سأذكّرك في الوقت.",
   "pme.echeances.sous.avenir#other": "خلال {count} يوم. سأذكّرك في الوقت.",
   "pme.echeances.reglee": "مودَعة",
+  "pme.echeances.deposees": "مودَعة",
   "pme.echeances.source": "تواريخ مستخرجة من حزمة الاختصاص السارية.",
   "fiche.champ.forme": "الشكل القانوني",
   "fiche.champ.mode": "طريقة الإيداع",

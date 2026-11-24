@@ -18,9 +18,8 @@ import { CalendrierDesEcheances } from "@/components/malica/calendrier-des-echea
 import { OrigineDEcheance } from "@/components/malica/origine-d-echeance";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
-import { regrouperParJour } from "@/lib/echeances-par-jour";
+import { regrouperParJour, tranchesDesEcheances } from "@/lib/echeances-par-jour";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { trancheDEcheance } from "@/lib/portefeuille-actif";
 import { office } from "@/verticals/malica-office/composition";
 import { useRevenir } from "@/hooks/use-revenir";
 
@@ -235,29 +234,16 @@ function PmeEcheances() {
    * une tranche vide ne s'affiche pas dans la liste : un titre de section suivi
    * de rien ferait croire à une perte.
    */
+  // Une échéance déposée va sous « Déposées », hors des compteurs (`tranchesDesEcheances`).
+  const parTranche = tranchesDesEcheances(parJour, today);
   const toutesLesTranches = [
-    {
-      titre: t("relation.echeances.retard"),
-      lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "retard"),
-      ton: "ve",
-    },
-    {
-      titre: t("relation.echeances.semaine"),
-      lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "semaine"),
-      ton: "am",
-    },
-    {
-      titre: t("relation.echeances.mois"),
-      lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "mois"),
-      ton: "",
-    },
-    {
-      titre: t("pme.echeances.aVenir"),
-      lignes: parJour.filter((j) => trancheDEcheance(j.dueDate, today) === "suite"),
-      ton: "",
-    },
+    { titre: t("relation.echeances.retard"), lignes: parTranche.retard, ton: "ve" },
+    { titre: t("relation.echeances.semaine"), lignes: parTranche.semaine, ton: "am" },
+    { titre: t("relation.echeances.mois"), lignes: parTranche.mois, ton: "" },
+    { titre: t("pme.echeances.aVenir"), lignes: parTranche.suite, ton: "" },
   ];
-  const tranches = toutesLesTranches.filter((tr) => tr.lignes.length > 0);
+  const deposees = { titre: t("pme.echeances.deposees"), lignes: parTranche.deposees, ton: "" };
+  const tranches = [...toutesLesTranches, deposees].filter((tr) => tr.lignes.length > 0);
 
   return (
     <div

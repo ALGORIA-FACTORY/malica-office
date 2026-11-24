@@ -3235,6 +3235,7 @@ export const en: Dict = {
   "pme.echeances.sous.avenir#one": "In one day. I will remind you in time.",
   "pme.echeances.sous.avenir#other": "In {count} days. I will remind you in time.",
   "pme.echeances.reglee": "Filed",
+  "pme.echeances.deposees": "Filed",
   "pme.echeances.source": "Dates derived from the active jurisdiction pack.",
   "fiche.champ.forme": "Legal form",
   "fiche.champ.mode": "Filing mode",
