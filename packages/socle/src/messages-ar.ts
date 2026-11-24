@@ -4929,6 +4929,8 @@ export const ar: Dict = {
   "pme.echeances.retardTexte":
     "لم ألاحظ مروره لأن أحدًا لم يخبرني: لم تصل أي وثيقة دفع. إن كنتم قد سدّدتموه، صوّروا الإشعار وسأطابق السطر.",
   "pme.echeances.retardGeste": "تصوير الإشعار",
+  "pme.echeances.moisPrecedent": "الشهر السابق",
+  "pme.echeances.moisSuivant": "الشهر التالي",
   "pme.bienvenue.barre": "شركتكم",
   "pme.bienvenue.carteBandeau": "الجمهورية التونسية · بطاقة التعريف الجبائي",
   "pme.bienvenue.ditTitre": "هذا معرّفكم الجبائي.",
@@ -4962,6 +4964,8 @@ export const ar: Dict = {
     "بعد ذلك: اختاروا باقتكم. إن دعوتم محاسبكم فقد وصلته دعوتكم، وإلا فادعوه متى شئتم. تعمل الشركة دون وكالة: أنتم تلتقطون وتقرؤون وتصدّرون.",
   "pme.tva.barreGroupe": "الأداء على القيمة المضافة للمجموعة",
   "pme.tva.sous": "محاسبكم هو من يودع هذا التصريح.",
+  "pme.tva.sousSansCabinet":
+    "تودعون هذا التصريح بأنفسكم؛ هذه الأرقام تقديرية ما دام لم يراجعها أي محاسب.",
   "pme.tva.sousGroupe": "عدد الشركات: {count} — كل واحدة تصرّح عن نفسها.",
   "pme.tva.sousGroupe#one": "شركة واحدة — تصرّح عن نفسها.",
   "pme.tva.sousGroupe#other": "عدد الشركات: {count} — كل واحدة تصرّح عن نفسها.",

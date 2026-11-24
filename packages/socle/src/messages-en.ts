@@ -5140,6 +5140,8 @@ export const en: Dict = {
   "pme.echeances.retardTexte":
     "I did not see it go by because no one told me: no payment document has arrived. If you paid it, photograph the notice and I will match the line.",
   "pme.echeances.retardGeste": "Photograph the notice",
+  "pme.echeances.moisPrecedent": "Previous month",
+  "pme.echeances.moisSuivant": "Next month",
   "pme.bienvenue.barre": "Your company",
   "pme.bienvenue.carteBandeau": "Republic of Tunisia · Tax identification card",
   "pme.bienvenue.ditTitre": "Here is your tax ID.",
@@ -5174,6 +5176,8 @@ export const en: Dict = {
     "Next: choose your plan. Your accountant, if you invited them, has received your invitation; otherwise, invite them whenever you like. A company without an engagement works: you capture, you read, you export.",
   "pme.tva.barreGroupe": "Group VAT",
   "pme.tva.sous": "Your accountant files this return.",
+  "pme.tva.sousSansCabinet":
+    "You file this return yourself; these figures are an estimate until an accountant has reviewed them.",
   "pme.tva.sousGroupe": "{count} companies — each files for itself.",
   "pme.tva.sousGroupe#one": "{count} company — it files for itself.",
   "pme.tva.sousGroupe#other": "{count} companies — each files for itself.",
