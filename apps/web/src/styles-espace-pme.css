@@ -24,6 +24,7 @@
 /* La coque de bureau, APRÈS la feuille qu'elle surcharge : importée depuis une route, elle partait
  * dans le morceau chargé au démarrage, avant la surface, et perdait chaque égalité de spécificité. */
 @import "./styles-pme-bureau-coque.css";
+@import "./styles-pme-bureau-reglages.css";
 
 :lang(ar) {
   font-family: "Noto Kufi Arabic", "Inter", ui-sans-serif, system-ui, sans-serif;

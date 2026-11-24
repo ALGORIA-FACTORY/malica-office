@@ -1,0 +1,573 @@
+/* ══════════════════════════════════════════════════════════════════════════
+ * RÉGLAGES ET PAIEMENT — LE DESSIN DE BUREAU (maquettes NavReglages,
+ * ReglagesCompte, Reglages, ReglagesSocietes, ReglagesUtilisateurs,
+ * ReglagesPreferences, Paiement)
+ *
+ * Le téléphone ne change pas d'un pixel : tout le dessin vit sous
+ * `(min-width: 1024px)`. Seule exception, les deux classes d'aiguillage —
+ * `.rg-bureau-seul` (ce que seul l'ordinateur montre) et `.rg-mobile-seul`
+ * (ce que la colonne des sections remplace) —, qui doivent bien se cacher
+ * quelque part. Aucune couleur écrite : les jetons de la surface PME portent
+ * déjà le clair et le sombre.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/* Les groupes n'existent que pour l'ordinateur : au téléphone, ils ne
+ * dessinent aucune boîte, et l'écran reste ce qu'il était. */
+[data-surface="pme"] [data-ecran="parametres"][data-rubrique] :is(.rg-corps, .rg-groupe) {
+  display: contents;
+}
+
+/* L'aiguillage doit gagner contre toute règle d'affichage de l'élément qu'il
+ * porte (`.sec:not(button):not(a)` pèse (0,5,0), `.rw` (0,3,0)) : une classe
+ * d'aiguillage ne peut pas se mettre au poids de chacune. `!important`, ici seulement. */
+@media not all and (min-width: 1024px) {
+  [data-surface="pme"] .rg-bureau-seul {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-surface="pme"] .rg-mobile-seul {
+    display: none !important;
+  }
+
+  /* ─────────────────────────────── deux colonnes : sections, contenu */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] {
+    display: grid;
+    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    column-gap: 2.5rem;
+    align-items: start;
+    width: 100%;
+    max-width: 82.5rem;
+    margin-inline: auto;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] > .top {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0 0 0.5rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] > h1 {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0.5rem 0 1rem;
+    padding-inline: 0.75rem;
+    font-size: 1.25rem;
+    letter-spacing: -0.03em;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] > .rg-corps {
+    display: block;
+    grid-column: 2;
+    grid-row: 1 / -1;
+    min-width: 0;
+    padding-bottom: 3rem;
+  }
+
+  /* Une rubrique à la fois : le compte, ou les préférences. */
+  [data-surface="pme"]
+    [data-ecran="parametres"]:not([data-rubrique="compte"])
+    .rg-groupe[data-pour="compte"],
+  [data-surface="pme"]
+    [data-ecran="parametres"]:not([data-rubrique="preferences"])
+    .rg-groupe[data-pour="preferences"] {
+    display: none;
+  }
+
+  /* Le premier titre de chaque rubrique est le titre de la page. */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .sec.rg-tete:not(button):not(a) {
+    margin: 0.5rem 0 1.25rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .sec.rg-tete h2 {
+    font-size: 1.625rem;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .sec.rg-tete > span {
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    color: var(--t2);
+  }
+
+  /* ─────────────────────────────── la colonne des sections */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-nav {
+    grid-column: 1;
+    grid-row: 3;
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-nav .gr {
+    margin: 0.875rem 0 0.375rem;
+    padding-inline: 0.75rem;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-nav .gr:first-child {
+    margin-top: 0;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-nav .it {
+    display: grid;
+    gap: 0.125rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--r-sm);
+    color: var(--tx);
+    text-decoration: none;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-nav .it b {
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-nav .it span {
+    font-size: 0.75rem;
+    color: var(--t3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-nav .it[aria-current="page"] {
+    background: var(--me);
+    color: var(--me-tx);
+  }
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    .rg-nav
+    .it[aria-current="page"]
+    span {
+    color: var(--me-tx);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-nav .it:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+  }
+
+  /* ─────────────────────────────── compte : la photo en grand */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .profil {
+    grid-template-columns: 96px minmax(0, 1fr) minmax(12rem, auto);
+    justify-items: start;
+    align-items: center;
+    column-gap: 1.5rem;
+    row-gap: 0.25rem;
+    text-align: start;
+    padding: 1.5rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .profil > .av {
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    width: 96px;
+    height: 96px;
+    margin: 0;
+    font-size: 2.25rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .profil > b {
+    grid-column: 2;
+    font-size: 1.375rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .profil > :is(.ml, .pills, .ro) {
+    grid-column: 2;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .profil .pills {
+    justify-content: flex-start;
+    margin-top: 0.25rem;
+  }
+  /* Changer et retirer la photo, à droite de la personne. */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .profil > .grid {
+    grid-column: 3;
+    grid-row: 1 / span 4;
+    justify-self: stretch;
+    margin-top: 0;
+  }
+  /* Le nom, l'espace quitté, la déconnexion : sous la personne. */
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    .profil
+    > :is(div:not(.grid), a, button, form) {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .profil > :is(a, button).btn {
+    width: auto;
+  }
+
+  /* Langue et apparence : deux cartes côte à côte. */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique="compte"] .rg-corps {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1rem;
+    align-content: start;
+  }
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique="compte"]
+    .rg-groupe[data-pour="compte"]:first-child
+    > * {
+    grid-column: 1 / -1;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] :is(.rg-langue, .rg-apparence) {
+    display: block;
+    margin-top: 1rem;
+    padding: 0 1.25rem 1.25rem;
+    border-radius: var(--r-md);
+    background: var(--d1);
+  }
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    :is(.rg-langue, .rg-apparence)
+    .sec:not(button):not(a) {
+    margin: 1.25rem 0 0.875rem;
+  }
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    :is(.rg-langue, .rg-apparence)
+    .sec
+    h2 {
+    font-size: 0.9375rem;
+    letter-spacing: -0.015em;
+  }
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    :is(.rg-langue, .rg-apparence)
+    .seg {
+    flex-wrap: nowrap;
+  }
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    :is(.rg-langue, .rg-apparence)
+    .seg
+    button {
+    flex: 1;
+    min-height: 40px;
+    border-radius: var(--r-sm);
+    font-size: 0.8125rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-apparence .seg button {
+    display: grid;
+    gap: 0.5rem;
+    justify-items: center;
+    padding: 0.5rem;
+    background: none;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-apparence .seg button.on {
+    background: none;
+    color: var(--tx);
+  }
+
+  /* Les vignettes : le clair et le sombre dessinés, quel que soit le thème
+   * affiché. En clair, le papier est `--bg` et l'encre `--tx` ; en sombre,
+   * c'est l'inverse : on les échange, sans écrire une couleur. */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .vg {
+    --rg-papier: var(--bg);
+    --rg-encre: var(--tx);
+    position: relative;
+    width: 100%;
+    height: 5.5rem;
+    border-radius: var(--r-sm);
+    box-shadow: inset 0 0 0 1px var(--dl);
+    background:
+      linear-gradient(var(--rg-fond-encre, var(--rg-encre)), var(--rg-fond-encre, var(--rg-encre)))
+        0.75rem 0.75rem / 45% 0.5rem no-repeat,
+      linear-gradient(var(--acc), var(--acc)) 0.75rem 1.75rem / 30% 1.125rem no-repeat,
+      var(--rg-fond, var(--rg-papier));
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .vg[data-apparence="ink"] {
+    --rg-fond: var(--rg-encre);
+    --rg-fond-encre: var(--rg-papier);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .vg[data-apparence="systeme"] {
+    background: linear-gradient(to right, var(--rg-papier) 50%, var(--rg-encre) 50%);
+  }
+  [dir="rtl"]
+    [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    .vg[data-apparence="systeme"] {
+    background: linear-gradient(to left, var(--rg-papier) 50%, var(--rg-encre) 50%);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .seg button.on .vg {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+  }
+  .dark [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .vg {
+    --rg-papier: var(--tx);
+    --rg-encre: var(--bg);
+  }
+
+  /* ─────────────────────────────── abonnement */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .abo.hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 2rem;
+    padding: 1.5rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .abo.hero > :not(.nm) {
+    grid-column: 1 / -1;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .abo.hero .nm b {
+    font-size: 2.5rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .abo.hero .det {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-offres > .grid {
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.75rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-offres > .grid > :not(.offre) {
+    grid-column: 1 / -1;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .rg-offres .offre {
+    align-content: start;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .paliers {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .regler .ln .acts .btn,
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .fac .btn {
+    width: auto;
+  }
+  /* Le verdict du prestataire au retour (validé ou refusé), en carte. */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] p[data-a-regler] {
+    margin: 1rem 0 0;
+    padding: 1rem 1.25rem;
+    border-radius: var(--r-md);
+    background: var(--d1);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--tx);
+  }
+
+  /* ─────────────────────────────── sociétés : un tableau */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .societes {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .societes > :not(.az) {
+    grid-column: 1;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .societes .az {
+    grid-column: 2;
+    grid-row: 3 / span 2;
+    position: sticky;
+    top: 6rem;
+    inset-inline-end: auto;
+    transform: none;
+    align-self: start;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .societes .cherche {
+    max-width: 28rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste {
+    padding-inline-end: 0;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] :is(.az-tete, .pe-tete) {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+    padding: 0.25rem 0.875rem;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-tete,
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) minmax(6rem, auto);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so {
+    display: grid;
+    gap: 0.125rem 1rem;
+    align-items: center;
+    min-height: 56px;
+    padding: 0.625rem 0.875rem;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so .bd {
+    display: contents;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so .bd b {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  /* Sans matricule dessous, le nom se centre sur la ligne. */
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    .az-liste
+    .so
+    .bd:not(:has(.mat))
+    b {
+    grid-row: 1 / span 2;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so .mat {
+    grid-column: 1;
+    grid-row: 2;
+    font-family: var(--mono);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so .cab {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    font-size: 0.8125rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so .cab.sans {
+    color: var(--am);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so em {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    justify-self: start;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .az-liste .so:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: -2px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    [data-surface="pme"]
+      [data-ecran="parametres"][data-rubrique]
+      :is(.az-liste .so, .personnes .pe, .rg-nav .it:not([aria-current="page"])):hover {
+      background: var(--d2);
+    }
+  }
+
+  /* ─────────────────────────────── utilisateurs : un tableau */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .pe-tete {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(4rem, auto);
+    padding-inline-start: calc(0.875rem + 38px + 1rem);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe {
+    display: grid;
+    gap: 0.125rem 1rem;
+    align-items: center;
+    grid-template-columns: 38px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(4rem, auto);
+    min-height: 60px;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe .av {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe .bd {
+    display: contents;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe .bd b {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  /* Sans adresse dessous, le nom se centre sur la ligne. */
+  [data-surface="pme"]
+    [data-ecran="parametres"][data-rubrique]
+    .personnes
+    .pe
+    .bd:not(:has(.ml))
+    b {
+    grid-row: 1 / span 2;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe .ml {
+    grid-column: 2;
+    grid-row: 2;
+    font-family: var(--mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe .ro {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    font-size: 0.8125rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe .nb {
+    grid-column: 4;
+    grid-row: 1 / span 2;
+    font-size: 0.8125rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe em {
+    grid-column: 5;
+    grid-row: 1 / span 2;
+    justify-self: start;
+  }
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique] .personnes .pe:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: -2px;
+  }
+
+  /* ─────────────────────────────── préférences : des cartes, une colonne lisible */
+  [data-surface="pme"] [data-ecran="parametres"][data-rubrique="preferences"] .rg-corps {
+    max-width: 48rem;
+  }
+
+  /* ─────────────────────────────── paiement : les moyens, puis le récapitulatif */
+  [data-surface="pme"] [data-ecran="paiement"] .corps:has(> .du) {
+    width: 100%;
+    max-width: 72rem;
+    box-sizing: border-box;
+    margin-inline: auto;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+    grid-template-rows: repeat(4, auto) 1fr;
+    column-gap: 2rem;
+    align-items: start;
+    padding: 1.5rem 2rem 3rem;
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .corps:has(> .du) > * {
+    grid-column: 1;
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .corps:has(> .du) > .du {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    position: sticky;
+    top: 1.5rem;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border-radius: var(--r-lg);
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .du .kick {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .corps > .du b {
+    font-size: 1.25rem;
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .recap {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .recap div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .recap dd {
+    margin: 0;
+    font-family: var(--mono);
+    color: var(--tx);
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .recap .tot {
+    margin-top: 0.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--dl);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--tx);
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .recap .tot dd {
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+  [data-surface="pme"] [data-ecran="paiement"] .moyens .moyen {
+    min-height: 72px;
+    padding: 1rem 1.25rem;
+  }
+}

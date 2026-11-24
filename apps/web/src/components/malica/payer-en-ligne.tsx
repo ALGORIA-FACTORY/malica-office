@@ -16,7 +16,7 @@ import { EnTeteCabinet } from "@/components/malica/office-ui";
 import { useChoixDuMoyen, useRetourDuPrestataire } from "@/hooks/use-paiement-en-ligne";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { dateEnLettres, montant } from "@/lib/lisible";
+import { dateEnLettres, montant, montantEtDevise } from "@/lib/lisible";
 import { libelleDuPaiement } from "@/lib/paiement";
 import { useRevenir } from "@/hooks/use-revenir";
 
@@ -129,13 +129,29 @@ export function PayerEnLigneSociete() {
         ) : (
           <>
             <div className="du">
+              <span className="kick rg-bureau-seul">{t("pme.payer.recap")}</span>
               <b>{libelleDuPaiement(paiement, t)}</b>
-              <span className="px">
+              <span className="px rg-mobile-seul">
                 {t("pme.reglages.paiement.montant", {
                   ttc: montant(paiement.montant_ttc, locale),
                   devise: paiement.devise,
                 })}
               </span>
+              {/* Sur ordinateur, le détail que la base a calculé, sans rien recalculer. */}
+              <dl className="recap rg-bureau-seul">
+                <div>
+                  <dt>{t("pme.payer.recap.ht")}</dt>
+                  <dd>{montant(paiement.montant_ht, locale)}</dd>
+                </div>
+                <div>
+                  <dt>{t("pme.payer.recap.tva")}</dt>
+                  <dd>{montant(paiement.montant_tva, locale)}</dd>
+                </div>
+                <div className="tot">
+                  <dt>{t("pme.payer.recap.ttc")}</dt>
+                  <dd>{montantEtDevise(montant(paiement.montant_ttc, locale), paiement.devise)}</dd>
+                </div>
+              </dl>
             </div>
 
             {prestataire ? null : <p className="et">{t("pme.reglages.paiement.ferme")}</p>}
