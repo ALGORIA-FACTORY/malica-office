@@ -12,7 +12,7 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApercuDePiece } from "@/components/malica/apercu-de-piece";
 import { CarteDeGroupe, IconeCalendrier } from "@/components/malica/carte-de-groupe";
@@ -30,8 +30,8 @@ import { RailDesDossiers } from "@/components/malica/rail-des-dossiers";
 import { useI18n } from "@/i18n";
 import { motifDeLEtat, refusDuPlafond } from "@/lib/champ-lisible";
 import { piecesALire, statutDeLaPieceLue } from "@/lib/lecture";
-import { statutDuCircuit, TON_PME } from "@malica/socle/statut-d-envoi";
-import { motDuStatut } from "@/lib/statut";
+import { statutDuCircuit, TON_PME, type StatutPme } from "@malica/socle/statut-d-envoi";
+import { MOT_PME, motDuStatut } from "@/lib/statut";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { LectureLaPlusBasse } from "@/components/malica/lecture-la-plus-basse";
 import { nombre } from "@/lib/forfait";
@@ -44,7 +44,9 @@ import { usePiecesDesSocietes } from "@/hooks/use-pieces-des-societes";
 import { useDossiers } from "@/hooks/use-dossiers";
 import { useParTranches } from "@/hooks/use-par-tranches";
 import { useRevenir } from "@/hooks/use-revenir";
-import { dossierDeLaPiece, moisDeLaPiece } from "@/lib/dossiers";
+import { dossierDeLaPiece, etendueDesPeriodes, moisDeLaPiece } from "@/lib/dossiers";
+import { groupesParMois } from "@/lib/ordre-de-la-bibliotheque";
+import { useBureau } from "@/hooks/use-bureau";
 import { partieLeVers, partieVers } from "@/lib/envoi";
 import { EcranEnvoye, PasEncoreParti } from "@/components/malica/envoye";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -290,6 +292,7 @@ function Bibliotheque() {
   useEffect(() => setChoix(null), [ouvert]);
   const revenir = useRevenir();
   const [tout, setTout] = useState(false);
+  const bureau = useBureau();
 
   // -------------------------------------------------------------- les groupes
   const sieges = parSieges(ici);
@@ -305,15 +308,8 @@ function Bibliotheque() {
         ? nomDeSociete(toutes.find((x) => x.piece.auteurId === id)?.societe ?? "")
         : null,
   }));
-  const mois = useMemo(() => {
-    const carte = new Map<string, PieceLue[]>();
-    for (const p of ici) {
-      const cle = moisDeLaPiece(p);
-      carte.set(cle, [...(carte.get(cle) ?? []), p]);
-    }
-    // Le plus récent devant.
-    return [...carte].sort(([a], [b]) => b.localeCompare(a));
-  }, [ici]);
+  // Le plus récent devant : l'ordre que la pièce ouverte suit aussi (J / K).
+  const mois = useMemo(() => groupesParMois(ici), [ici]);
 
   const nomDuMois = (p: string) =>
     new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
@@ -378,6 +374,25 @@ function Bibliotheque() {
   const jour = (p: PieceLue) =>
     jourOuInstant(p.dateDocument ?? p.createdAt, locale, { day: "2-digit", month: "short" });
 
+  /** Le titre ne ment pas : sans émetteur, une pièce LUE dit « sans émetteur », pas « pas encore lue ». */
+  const nomDe = (p: PieceLue) =>
+    p.emetteur ?? (p.status === "capturee" ? t("pme.list.nonLue") : t("pme.list.sansEmetteur"));
+
+  /*
+   * Une pièce non lue n'est pas une pièce qui attend : au plafond, elle dit
+   * pourquoi elle n'a pas été lue. Lue, le statut : un mot et une couleur —
+   * jamais une écriture.
+   */
+  const etatDe = (p: PieceLue) =>
+    p.status === "capturee" ? (
+      <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} lecture={p.lecture} />
+    ) : (
+      <span className={cn("tag", TON_PME[statutDeLaPieceLue(p)])}>
+        <i aria-hidden />
+        {motDuStatut(statutDuCircuit(p), nomDuCabinet, t)}
+      </span>
+    );
+
   const f = pme.forfait.ligne;
   /*
    * Sous « Toutes les sociétés », le compteur n'est plus celui de la société ouverte : chaque
@@ -399,6 +414,15 @@ function Bibliotheque() {
   );
 
   const vusDansLaListe = tout ? mois : mois.slice(0, PREMIERS);
+
+  const lesSieges =
+    parSiege && rangee.length > 0 ? (
+      <RangeeDesSieges
+        sieges={rangee}
+        choisi={null}
+        choisir={(id) => (id ? ouvrir({ genre: "siege", cle: id }) : setOuvert(null))}
+      />
+    ) : null;
 
   return (
     /*
@@ -540,16 +564,7 @@ function Bibliotheque() {
                     <VignetteDeLaPiece piece={p} />
                     <span className="cps">
                       <span className="hd">
-                        {/*
-                         * Le titre ne ment pas : sans émetteur, une pièce LUE
-                         * dit « sans émetteur », pas « pas encore lue ».
-                         */}
-                        <span className="nm">
-                          {p.emetteur ??
-                            (p.status === "capturee"
-                              ? t("pme.list.nonLue")
-                              : t("pme.list.sansEmetteur"))}
-                        </span>
+                        <span className="nm">{nomDe(p)}</span>
                         {/* Sans montant : « — », jamais « 0,000 », qui serait un fait comptable. */}
                         <span className={cn("vl", p.kind === "facture_vente" && "rec")}>
                           {p.total === null
@@ -570,19 +585,7 @@ function Bibliotheque() {
                           .filter((x): x is string => !!x)
                           .join(" · ")}
                       </span>
-                      {/*
-                       * Une pièce non lue n'est pas une pièce qui attend : au
-                       * plafond, elle dit pourquoi elle n'a pas été lue.
-                       */}
-                      {p.status === "capturee" ? (
-                        <EtatDeLecture refus={p.lectureRefusee} vis={p.vis} lecture={p.lecture} />
-                      ) : (
-                        // Le statut, un mot et une couleur — jamais une écriture.
-                        <span className={cn("tag", TON_PME[statutDeLaPieceLue(p)])}>
-                          <i aria-hidden />
-                          {motDuStatut(statutDuCircuit(p), nomDuCabinet, t)}
-                        </span>
-                      )}
+                      {etatDe(p)}
                     </span>
                   </>
                 );
@@ -621,6 +624,25 @@ function Bibliotheque() {
               {tranches.reste ? <span ref={tranches.sentinelle} aria-hidden /> : null}
             </div>
           </>
+        ) : bureau ? (
+          /*
+           * Au bureau, un seul tableau (maquette « Bibliothèque — desktop ») :
+           * les dossiers en puces, les filtres, puis toutes les pièces par mois,
+           * cochables, avec le résumé à droite. Les sièges restent au-dessus.
+           */
+          <>
+            {lesSieges}
+            <TableauDuBureau
+              pieces={ici}
+              sommes={sommes}
+              nomDuMois={nomDuMois}
+              nomDe={nomDe}
+              etatDe={etatDe}
+              jour={jour}
+              societesDuLot={societesDuLot}
+              ouvrirSaSociete={ouvrirSaSociete}
+            />
+          </>
         ) : (
           <>
             {/* ------------------------------------------------ les dossiers */}
@@ -645,13 +667,7 @@ function Bibliotheque() {
              * par siège poussait les mois hors de l'écran dès qu'une organisation
              * en comptait quelques dizaines. Choisir un siège ouvre ses pièces.
              */}
-            {parSiege && rangee.length > 0 ? (
-              <RangeeDesSieges
-                sieges={rangee}
-                choisi={null}
-                choisir={(id) => (id ? ouvrir({ genre: "siege", cle: id }) : setOuvert(null))}
-              />
-            ) : null}
+            {lesSieges}
 
             {/* --------------------------------------------------- les mois */}
             <div className="sec">
@@ -693,4 +709,351 @@ function Bibliotheque() {
 function VignetteDeLaPiece({ piece }: { piece: PieceLue }) {
   const ton = piece.status === "capturee" ? "neutre" : TON_PME[statutDeLaPieceLue(piece)];
   return <ApercuDePiece pieceId={piece.id} className="vignette" ton={ton} />;
+}
+
+/**
+ * La Bibliothèque au bureau (maquette « Bibliothèque — desktop », validée par le
+ * dirigeant) : les dossiers en puces, une barre de filtres, un tableau dense par
+ * mois — total par mois et total général —, la sélection multiple et le résumé
+ * à droite.
+ *
+ * Les colonnes sont celles que la liste porte : le net à payer (le montant de la
+ * pièce), et, quand une retenue est tranchée, le TTC avant elle et la retenue.
+ * La liste ne porte ni la base HT ni la TVA : le tableau ne les invente pas, la
+ * fiche de la pièce les dit.
+ */
+function TableauDuBureau({
+  pieces,
+  sommes,
+  nomDuMois,
+  nomDe,
+  etatDe,
+  jour,
+  societesDuLot,
+  ouvrirSaSociete,
+}: {
+  pieces: readonly PieceLue[];
+  sommes: (ps: readonly PieceLue[]) => ReactNode;
+  nomDuMois: (cle: string) => string;
+  nomDe: (p: PieceLue) => string;
+  etatDe: (p: PieceLue) => ReactNode;
+  jour: (p: PieceLue) => string;
+  societesDuLot: (lot: readonly PieceLue[]) => SocieteExportee[];
+  ouvrirSaSociete: (pieceId: string) => void;
+}) {
+  const { t, locale } = useI18n();
+  const sept = useDossiers();
+  const [dossier, setDossier] = useState<string | null>(null);
+  const [moisChoisi, setMois] = useState<string | null>(null);
+  const [etat, setEtat] = useState<StatutPme | null>(null);
+  const [avecRetenue, setAvecRetenue] = useState(false);
+  const [coches, setCoches] = useState<ReadonlySet<string>>(new Set());
+
+  const dossierDe = (p: PieceLue) => dossierDeLaPiece(p, sept.types);
+  const etatDeLaPiece = (p: PieceLue) =>
+    p.status === "capturee" ? null : statutDuCircuit(p).statut;
+  const choisi = sept.parCode(dossier);
+
+  const duDossier = dossier === null ? pieces : pieces.filter((p) => dossierDe(p) === dossier);
+  const filtrees = duDossier.filter(
+    (p) =>
+      (moisChoisi === null || moisDeLaPiece(p) === moisChoisi) &&
+      (etat === null || etatDeLaPiece(p) === etat) &&
+      (!avecRetenue || Boolean(p.retenue)),
+  );
+  const groupes = groupesParMois(filtrees);
+  const moisPresents = groupesParMois(duDossier).map(([cle]) => cle);
+  const etatsPresents = [
+    ...new Set(duDossier.map(etatDeLaPiece).filter((s): s is StatutPme => s !== null)),
+  ];
+  const cochees = filtrees.filter((p) => coches.has(p.id));
+  const toutCoche = filtrees.length > 0 && cochees.length === filtrees.length;
+
+  // Des centaines de pièces se dessinent par tranches, comme un groupe ouvert.
+  const tranches = useParTranches(
+    filtrees,
+    60,
+    `${dossier}:${moisChoisi}:${etat}:${avecRetenue}:${pieces.length}`,
+  );
+  const visibles = new Set(tranches.visibles.map((p) => p.id));
+
+  const cocher = (id: string, oui: boolean) =>
+    setCoches((c) => {
+      const suivant = new Set(c);
+      if (oui) suivant.add(id);
+      else suivant.delete(id);
+      return suivant;
+    });
+
+  // Un montant garde son signe devant lui, en arabe aussi : il s'écrit de gauche à droite.
+  const chiffre = (v: string | null) =>
+    v === null ? "—" : <span dir="ltr">{montant(v, locale)}</span>;
+  const etendue = etendueDesPeriodes(
+    groupes.map(([cle]) => cle),
+    false,
+    (cle, avecAnnee) =>
+      new Intl.DateTimeFormat(locale, {
+        month: "short",
+        ...(avecAnnee ? { year: "numeric" } : {}),
+        timeZone: "UTC",
+      }).format(new Date(`${cle}-01T00:00:00Z`)),
+  );
+  const titre = choisi?.libelle ?? t("pme.home.bibliotheque");
+  // Imprimer et exporter portent la sélection, ou, sans elle, tout ce que les filtres montrent.
+  const lot = cochees.length > 0 ? cochees : filtrees;
+  const cleDuLot = lot.map((p) => p.id).join(",");
+
+  return (
+    <div className="b-biblio">
+      <div className="b-puces" role="group" aria-label={t("pme.home.dossiers")}>
+        <button
+          type="button"
+          className="b-puce"
+          aria-pressed={dossier === null}
+          onClick={() => setDossier(null)}
+        >
+          {t("pme.list.bureau.tous")}
+          <span className="n">{pieces.length}</span>
+        </button>
+        {sept.dossiers.map((d) => (
+          <button
+            key={d.code}
+            type="button"
+            className="b-puce"
+            data-teinte={d.teinte}
+            aria-pressed={dossier === d.code}
+            onClick={() => {
+              setDossier(d.code);
+              setMois(null);
+              setEtat(null);
+            }}
+          >
+            <i aria-hidden />
+            {d.libelle}
+            <span className="n">{pieces.filter((p) => dossierDe(p) === d.code).length}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="b-grille">
+        <section className="b-table" aria-label={titre}>
+          <div className="b-filtres" role="group" aria-label={t("pme.list.bureau.filtres")}>
+            <label>
+              <span>{t("pme.vue.mois")}</span>
+              <select
+                value={moisChoisi ?? ""}
+                onChange={(e) => setMois(e.target.value === "" ? null : e.target.value)}
+              >
+                <option value="">{t("pme.list.bureau.tous")}</option>
+                {moisPresents.map((cle) => (
+                  <option key={cle} value={cle}>
+                    {nomDuMois(cle)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>{t("pme.list.bureau.etat")}</span>
+              <select
+                value={etat ?? ""}
+                onChange={(e) => setEtat(etatsPresents.find((s) => s === e.target.value) ?? null)}
+              >
+                <option value="">{t("pme.list.bureau.tous")}</option>
+                {etatsPresents.map((s) => (
+                  <option key={s} value={s}>
+                    {t(MOT_PME[s])}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="b-bascule"
+              aria-pressed={avecRetenue}
+              onClick={() => setAvecRetenue((v) => !v)}
+            >
+              {t("pme.list.bureau.avecRetenue")}
+            </button>
+            <span className="b-actions">
+              <ImprimerDepuisLaPme
+                key={`imprimer:${cleDuLot}`}
+                pieces={lot.map((p) => p.id)}
+                portee={cochees.length > 0 ? "selection" : "dossier"}
+                nom={titre}
+                libelle={
+                  cochees.length > 0
+                    ? t("cab.biblio.imprimer.selection", { n: cochees.length })
+                    : t("cab.biblio.imprimer.tout", { n: filtrees.length })
+                }
+                classe="b-act"
+                classeDuTexte="sub"
+              />
+              <ExporterDepuisLaPme
+                key={`exporter:${cleDuLot}`}
+                pieces={lot.map((p) => p.id)}
+                societes={societesDuLot(lot)}
+                titre={
+                  cochees.length > 0
+                    ? t("pme.export.selection", { n: cochees.length })
+                    : t("pme.export.titre", { mois: titre })
+                }
+                libelle={
+                  cochees.length > 0
+                    ? t("pme.export.selection", { n: cochees.length })
+                    : t("pme.list.bureau.exporter")
+                }
+                classe="b-act pr"
+                classeDuTexte="sub"
+              />
+            </span>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" className="ck">
+                  <input
+                    type="checkbox"
+                    checked={toutCoche}
+                    disabled={filtrees.length === 0}
+                    aria-label={t("pme.list.bureau.toutCocher")}
+                    onChange={(e) =>
+                      setCoches(e.target.checked ? new Set(filtrees.map((p) => p.id)) : new Set())
+                    }
+                  />
+                </th>
+                <th scope="col">{t("pme.piece.title")}</th>
+                <th scope="col">{t("pme.extract.date")}</th>
+                <th scope="col" className="nb">
+                  {t("pme.extract.ttc")}
+                </th>
+                <th scope="col" className="nb">
+                  {t("pme.extract.retenue")}
+                </th>
+                <th scope="col" className="nb">
+                  {t("pme.extract.netAPayer")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtrees.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="vide">
+                    {pieces.length === 0 ? t("pme.list.empty") : t("pme.list.bureau.aucune")}
+                  </td>
+                </tr>
+              ) : null}
+              {groupes.map(([cle, ps]) => {
+                const montrees = ps.filter((p) => visibles.has(p.id));
+                if (montrees.length === 0) return null;
+                return (
+                  <Fragment key={cle}>
+                    <tr className="mo">
+                      <th scope="colgroup" colSpan={3}>
+                        {nomDuMois(cle)}
+                        <span>{t("pme.doc.compte", { count: ps.length })}</span>
+                      </th>
+                      <td colSpan={3} className="nb">
+                        {sommes(ps)}
+                      </td>
+                    </tr>
+                    {montrees.map((p) => {
+                      const net = p.total === null ? null : montantDeLaPiece(p, sept.types);
+                      return (
+                        <tr key={p.id} className={cn(p.status === "capturee" && "dim")}>
+                          <td className="ck">
+                            <input
+                              type="checkbox"
+                              checked={coches.has(p.id)}
+                              aria-label={t("cab.biblio.imprimer.cocher", { nom: nomDe(p) })}
+                              onChange={(e) => cocher(p.id, e.target.checked)}
+                            />
+                          </td>
+                          <td>
+                            <Link
+                              to="/pme/piece/$pieceId"
+                              params={{ pieceId: p.id }}
+                              onClick={() => ouvrirSaSociete(p.id)}
+                              className={cn("pc b-piece", p.status === "capturee" && "dim")}
+                            >
+                              <VignetteDeLaPiece piece={p} />
+                              <span className="cps">
+                                <span className="nm">{nomDe(p)}</span>
+                                <span className="mt">
+                                  {sept.parCode(dossierDe(p))?.libelle ?? null}
+                                  {etatDe(p)}
+                                </span>
+                              </span>
+                            </Link>
+                          </td>
+                          <td className="dt">{jour(p)}</td>
+                          <td className="nb">{chiffre(p.retenue ? p.retenue.totalTtc : net)}</td>
+                          <td className={cn("nb", p.retenue && "ras")}>
+                            {p.retenue ? (
+                              <span dir="ltr">−{montant(p.retenue.montant, locale)}</span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className={cn("nb net", p.kind === "facture_vente" && "rec")}>
+                            {chiffre(net)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+            {filtrees.length > 0 ? (
+              <tfoot>
+                <tr>
+                  <th scope="row" colSpan={3}>
+                    {t("pme.list.bureau.total")}
+                    <span>{t("pme.doc.compte", { count: filtrees.length })}</span>
+                  </th>
+                  <td colSpan={3} className="nb">
+                    {sommes(filtrees)}
+                  </td>
+                </tr>
+              </tfoot>
+            ) : null}
+          </table>
+          {tranches.reste ? <span ref={tranches.sentinelle} aria-hidden /> : null}
+        </section>
+
+        <aside className="b-cote">
+          <section className="b-resume" data-teinte={choisi?.teinte}>
+            <span className="k">{[titre, etendue].filter(Boolean).join(" · ")}</span>
+            <b>{sommes(filtrees)}</b>
+            <span>
+              {t("pme.doc.compte", { count: filtrees.length })} ·{" "}
+              {t("pme.home.dossier.faites", {
+                count: filtrees.filter((p) => statutDeLaPieceLue(p) === "prise_en_charge").length,
+              })}
+            </span>
+            {choisi ? (
+              <Link to="/pme/dossier/$type" params={{ type: choisi.code }}>
+                {t("pme.list.bureau.ouvrirDossier", { dossier: choisi.libelle })}
+              </Link>
+            ) : null}
+          </section>
+          <section className="b-sel">
+            <b>{t("pme.list.bureau.selection")}</b>
+            <span>
+              {cochees.length > 0
+                ? t("pme.list.bureau.cochees", { count: cochees.length })
+                : t("pme.list.bureau.selection.aide")}
+            </span>
+            {cochees.length > 0 ? (
+              <button type="button" onClick={() => setCoches(new Set())}>
+                {t("pme.list.bureau.decocher")}
+              </button>
+            ) : null}
+            <span className="k">{t("pme.list.bureau.raccourci")}</span>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
 }
