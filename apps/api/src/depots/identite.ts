@@ -787,6 +787,14 @@ export const identite = {
    * Le cabinet se décrit. La devise n'est pas passée : la base la lit dans le
    * pack de la juridiction, et refuse une juridiction sans pack (R4).
    */
+  async poserAdresse(db: Requete, tenantId: string, adresse: string) {
+    const { rows } = await db.query<{ r: { id: string; adresse: string | null } }>(
+      `select public.organisation_adresse_poser($1, $2) as r`,
+      [tenantId, adresse],
+    );
+    return rows[0]!.r;
+  },
+
   async definirOrganisation(
     db: Requete,
     input: { tenantId: string; name: string; legalId: string | null; jurisdiction: string },

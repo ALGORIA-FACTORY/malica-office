@@ -194,6 +194,8 @@ export interface IdentityRepository {
    * Le cabinet se décrit : nom, identifiant fiscal, juridiction. La devise
    * n'est pas demandée, elle suit le pack de la juridiction (R4).
    */
+  /** L'adresse du siège, que la facture porte ; vide l'efface. Dirigeant ou expert. */
+  poserAdresse(tenantId: string, adresse: string): Promise<{ id: string; adresse: string | null }>;
   definirOrganisation(input: {
     tenantId: string;
     name: string;
@@ -4439,6 +4441,8 @@ export interface FacturationRepository {
   maDescente(tenantId?: string): Promise<DescenteProgrammee | null>;
   /** Le titulaire revient sur sa descente : son offre reste. */
   annulerDescente(tenantId?: string): Promise<boolean>;
+  /** À qui la facture de ce paiement s'adressera, et si ses coordonnées sont complètes. */
+  payeurDuPaiement(paiementId: string): Promise<PayeurDuPaiement>;
 
   paliersDeRecharge(): Promise<PalierDeRecharge[]>;
   mesRecharges(): Promise<RechargeDeLaLicence[]>;
@@ -4805,8 +4809,11 @@ export interface FactureDetaillee {
   numero: string;
   emise_le: string;
   echeance_le: string;
-  couvre_du: string;
-  couvre_au: string;
+  /** La période couverte ; nulle sur la facture du mois d'une comptabilité (une par ligne). */
+  couvre_du: string | null;
+  couvre_au: string | null;
+  /** Le mois de la facture (le premier du mois). */
+  periode: string;
   payeur_type: "titulaire" | "cabinet";
   offre_code: string | null;
   /** Le nom de l'offre à la date d'émission (`ref.offre_a`). */
@@ -4829,7 +4836,31 @@ export interface FactureDetaillee {
     adresse: string | null;
   };
   lignes: LigneDeFactureDetaillee[];
+  /** Les encaissements vivants de la facture, dans l'ordre (moyen : `carte`, `virement`…). */
+  reglements: ReglementDeFacture[];
   entete: EnteteDeFacture;
+}
+
+/**
+ * Le payeur d'un paiement, tel que sa facture le portera : la société de la licence, ou la
+ * comptabilité qui paie. `complet` : matricule fiscal et adresse saisis (la base l'exige avant
+ * d'accepter les CGV).
+ */
+export interface PayeurDuPaiement {
+  tenant_id: string;
+  nom: string;
+  matricule: string | null;
+  adresse: string | null;
+  juridiction: string;
+  complet: boolean;
+}
+
+/** Un encaissement d'une facture, tel que la facture imprimée le dit. */
+export interface ReglementDeFacture {
+  moyen: string;
+  reference: string | null;
+  le: string;
+  montant: string;
 }
 
 /** Ce que la tour règle des factures (`plateforme.reglages_factures`). */

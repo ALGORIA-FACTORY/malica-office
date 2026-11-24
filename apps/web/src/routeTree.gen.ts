@@ -68,6 +68,7 @@ import { Route as AuthenticatedCabinetDossierClientIdRouteImport } from './route
 import { Route as AuthenticatedCabinetFactureFactureIdRouteImport } from './routes/_authenticated/cabinet.facture.$factureId'
 import { Route as AuthenticatedCabinetPayerPaiementIdRouteImport } from './routes/_authenticated/cabinet.payer.$paiementId'
 import { Route as AuthenticatedCabinetPiecePieceIdRouteImport } from './routes/_authenticated/cabinet.piece.$pieceId'
+import { Route as AuthenticatedCabinetReglerFactureIdRouteImport } from './routes/_authenticated/cabinet.regler.$factureId'
 import { Route as AuthenticatedPmeComptabiliteCabinetIdRouteImport } from './routes/_authenticated/pme.comptabilite.$cabinetId'
 import { Route as AuthenticatedPmeDossierTypeRouteImport } from './routes/_authenticated/pme.dossier.$type'
 import { Route as AuthenticatedPmePayerPaiementIdRouteImport } from './routes/_authenticated/pme.payer.$paiementId'
@@ -402,6 +403,12 @@ const AuthenticatedCabinetPiecePieceIdRoute =
     path: '/piece/$pieceId',
     getParentRoute: () => AuthenticatedCabinetRoute,
   } as any)
+const AuthenticatedCabinetReglerFactureIdRoute =
+  AuthenticatedCabinetReglerFactureIdRouteImport.update({
+    id: '/regler/$factureId',
+    path: '/regler/$factureId',
+    getParentRoute: () => AuthenticatedCabinetRoute,
+  } as any)
 const AuthenticatedPmeComptabiliteCabinetIdRoute =
   AuthenticatedPmeComptabiliteCabinetIdRouteImport.update({
     id: '/comptabilite/$cabinetId',
@@ -498,6 +505,7 @@ export interface FileRoutesByFullPath {
   '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/cabinet/regler/$factureId': typeof AuthenticatedCabinetReglerFactureIdRoute
   '/pme/comptabilite/$cabinetId': typeof AuthenticatedPmeComptabiliteCabinetIdRoute
   '/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
@@ -561,6 +569,7 @@ export interface FileRoutesByTo {
   '/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/cabinet/regler/$factureId': typeof AuthenticatedCabinetReglerFactureIdRoute
   '/pme/comptabilite/$cabinetId': typeof AuthenticatedPmeComptabiliteCabinetIdRoute
   '/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
@@ -629,6 +638,7 @@ export interface FileRoutesById {
   '/_authenticated/cabinet/facture/$factureId': typeof AuthenticatedCabinetFactureFactureIdRoute
   '/_authenticated/cabinet/payer/$paiementId': typeof AuthenticatedCabinetPayerPaiementIdRoute
   '/_authenticated/cabinet/piece/$pieceId': typeof AuthenticatedCabinetPiecePieceIdRoute
+  '/_authenticated/cabinet/regler/$factureId': typeof AuthenticatedCabinetReglerFactureIdRoute
   '/_authenticated/pme/comptabilite/$cabinetId': typeof AuthenticatedPmeComptabiliteCabinetIdRoute
   '/_authenticated/pme/dossier/$type': typeof AuthenticatedPmeDossierTypeRoute
   '/_authenticated/pme/payer/$paiementId': typeof AuthenticatedPmePayerPaiementIdRoute
@@ -697,6 +707,7 @@ export interface FileRouteTypes {
     | '/cabinet/facture/$factureId'
     | '/cabinet/payer/$paiementId'
     | '/cabinet/piece/$pieceId'
+    | '/cabinet/regler/$factureId'
     | '/pme/comptabilite/$cabinetId'
     | '/pme/dossier/$type'
     | '/pme/payer/$paiementId'
@@ -760,6 +771,7 @@ export interface FileRouteTypes {
     | '/cabinet/facture/$factureId'
     | '/cabinet/payer/$paiementId'
     | '/cabinet/piece/$pieceId'
+    | '/cabinet/regler/$factureId'
     | '/pme/comptabilite/$cabinetId'
     | '/pme/dossier/$type'
     | '/pme/payer/$paiementId'
@@ -827,6 +839,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cabinet/facture/$factureId'
     | '/_authenticated/cabinet/payer/$paiementId'
     | '/_authenticated/cabinet/piece/$pieceId'
+    | '/_authenticated/cabinet/regler/$factureId'
     | '/_authenticated/pme/comptabilite/$cabinetId'
     | '/_authenticated/pme/dossier/$type'
     | '/_authenticated/pme/payer/$paiementId'
@@ -1260,6 +1273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCabinetPiecePieceIdRouteImport
       parentRoute: typeof AuthenticatedCabinetRoute
     }
+    '/_authenticated/cabinet/regler/$factureId': {
+      id: '/_authenticated/cabinet/regler/$factureId'
+      path: '/regler/$factureId'
+      fullPath: '/cabinet/regler/$factureId'
+      preLoaderRoute: typeof AuthenticatedCabinetReglerFactureIdRouteImport
+      parentRoute: typeof AuthenticatedCabinetRoute
+    }
     '/_authenticated/pme/comptabilite/$cabinetId': {
       id: '/_authenticated/pme/comptabilite/$cabinetId'
       path: '/comptabilite/$cabinetId'
@@ -1331,6 +1351,7 @@ interface AuthenticatedCabinetRouteChildren {
   AuthenticatedCabinetFactureFactureIdRoute: typeof AuthenticatedCabinetFactureFactureIdRoute
   AuthenticatedCabinetPayerPaiementIdRoute: typeof AuthenticatedCabinetPayerPaiementIdRoute
   AuthenticatedCabinetPiecePieceIdRoute: typeof AuthenticatedCabinetPiecePieceIdRoute
+  AuthenticatedCabinetReglerFactureIdRoute: typeof AuthenticatedCabinetReglerFactureIdRoute
 }
 
 const AuthenticatedCabinetRouteChildren: AuthenticatedCabinetRouteChildren = {
@@ -1365,6 +1386,8 @@ const AuthenticatedCabinetRouteChildren: AuthenticatedCabinetRouteChildren = {
   AuthenticatedCabinetPayerPaiementIdRoute:
     AuthenticatedCabinetPayerPaiementIdRoute,
   AuthenticatedCabinetPiecePieceIdRoute: AuthenticatedCabinetPiecePieceIdRoute,
+  AuthenticatedCabinetReglerFactureIdRoute:
+    AuthenticatedCabinetReglerFactureIdRoute,
 }
 
 const AuthenticatedCabinetRouteWithChildren =

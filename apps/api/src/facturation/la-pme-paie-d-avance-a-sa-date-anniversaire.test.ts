@@ -19,6 +19,7 @@ import { after, describe, it } from "node:test";
 
 import pg from "pg";
 
+import { ADRESSE_D_ESSAI, matriculeDEssai } from "../matricule-d-essai.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
 
 import type { BilanDuJour } from "./demarrer-la-facturation.ts";
@@ -75,8 +76,9 @@ async function socle(db: pg.PoolClient): Promise<Socle> {
   await personnesDEssai(db, operateur, intrus);
   await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
   const { rows: em } = await db.query<{ id: string }>(
-    `insert into identity.organizations (kind, name, jurisdiction, currency)
-     values ('pme', 'Emetteur d''essai', 'TN', 'TND') returning id`,
+    `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
+     values ('pme', 'Emetteur d''essai', 'TN', 'TND', $1, $2) returning id`,
+    [matriculeDEssai(), ADRESSE_D_ESSAI],
   );
   await db.query(
     `insert into facturation.emetteurs (organisation_id, valide_des, designe_par)
@@ -119,8 +121,9 @@ async function unePme(db: pg.PoolClient, depuis: string, offre = "solo", places 
     "Selim Ben Amor",
   ]);
   const { rows: o } = await db.query<{ id: string }>(
-    `insert into identity.organizations (kind, name, jurisdiction, currency)
-     values ('pme', 'PME anniversaire', 'TN', 'TND') returning id`,
+    `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
+     values ('pme', 'PME anniversaire', 'TN', 'TND', $1, $2) returning id`,
+    [matriculeDEssai(), ADRESSE_D_ESSAI],
   );
   const tenant = o[0]!.id;
   await db.query(
@@ -156,8 +159,9 @@ async function unCabinetPaie(db: pg.PoolClient, p: Pme, depuis: string, offre = 
   const expert = randomUUID();
   await personnesDEssai(db, expert);
   const { rows: c } = await db.query<{ id: string }>(
-    `insert into identity.organizations (kind, name, jurisdiction, currency)
-     values ('cabinet', 'Cabinet du mois', 'TN', 'TND') returning id`,
+    `insert into identity.organizations (kind, name, jurisdiction, currency, legal_id, adresse)
+     values ('cabinet', 'Cabinet du mois', 'TN', 'TND', $1, $2) returning id`,
+    [matriculeDEssai(), ADRESSE_D_ESSAI],
   );
   const cabinet = c[0]!.id;
   await db.query(

@@ -15,7 +15,7 @@ import pg from "pg";
 import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { identite } from "../depots/identite.ts";
-import { matriculeDEssai } from "../matricule-d-essai.ts";
+import { ADRESSE_D_ESSAI, matriculeDEssai } from "../matricule-d-essai.ts";
 import { inviteeParLaComptabilite, personnesDEssai } from "../personne-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
@@ -47,6 +47,13 @@ describe("la facture du cabinet se paie en ligne", { skip: !BASE_CONFIGUREE }, (
       });
     pme = await creer(dirigeant, "pme", `PME ${marque}`, legalId);
     cabinet = await creer(expert, "cabinet", `COMPTA ${marque}`, null);
+    // La facture porte le matricule et l'adresse du payeur : la base refuse de payer sans eux.
+    await admin.query(
+      `update identity.organizations
+          set legal_id = coalesce(legal_id, $2), adresse = $3
+        where id = $1`,
+      [cabinet, matriculeDEssai(), ADRESSE_D_ESSAI],
+    );
     await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, legalId));
     const [propose] = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
     await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, propose!.id, true));

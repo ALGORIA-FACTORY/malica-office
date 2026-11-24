@@ -15,7 +15,11 @@
  * `public.siege_inviter`, qui refuse la place de trop.
  */
 
-import type { EtatDeFacture, PlaceComptable } from "@malica/socle/ports/repositories";
+import type {
+  EtatDeFacture,
+  PayeurDuPaiement,
+  PlaceComptable,
+} from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
 import { enUnitesExactes } from "@malica/socle/somme-decimale";
@@ -746,6 +750,19 @@ export const facturation = {
     return rows[0]?.d ?? null;
   },
 
+  /**
+   * À qui la facture de ce paiement s'adressera (le payeur : la société, ou la comptabilité qui
+   * paie), lu dans son compte, et si c'est complet (20261231290000). La base refuse d'accepter
+   * les CGV — donc d'ouvrir la page de carte — tant que le matricule ou l'adresse manquent.
+   */
+  async payeurDuPaiement(db: Requete, paiementId: string) {
+    const { rows } = await db.query<{ f: PayeurDuPaiement }>(
+      `select public.paiement_facture_a($1) as f`,
+      [paiementId],
+    );
+    return rows[0]!.f;
+  },
+
   /** Le titulaire revient sur sa descente programmée : son offre reste. */
   async annulerDescente(db: Requete, tenantId?: string) {
     await db.query(`select public.descente_annuler($1)`, [tenantId ?? null]);
@@ -795,7 +812,7 @@ export const facturation = {
     }
     const { rows } = await db.query(
       `select f.id as facture_id, f.numero, f.emise_le::text, f.echeance_le::text,
-              f.couvre_du::text, f.couvre_au::text, f.payeur_type, f.offre_code,
+              f.couvre_du::text, f.couvre_au::text, f.periode::text, f.payeur_type, f.offre_code,
               (ref.offre_a(f.offre_code, f.emise_le)).libelle as offre_libelle,
               f.reference_abonne, f.montant_ht::text, f.taux_tva::text, f.montant_tva::text,
               f.timbre::text, f.montant_ttc::text, f.devise, e.etat, e.reste_du::text,
@@ -809,7 +826,18 @@ export const facturation = {
                           'quantite', l.quantite::text, 'prix_unitaire', l.prix_unitaire::text,
                           'montant_ht', l.montant_ht::text) order by l.ordinal)
                           from facturation.facture_lignes l where l.facture_id = f.id),
-                       '[]'::jsonb) as lignes
+                       '[]'::jsonb) as lignes,
+              -- Comment elle a été réglée : les encaissements vivants (une annulation les retire),
+              -- dans l'ordre. La facture payée par carte le dit, et n'imprime pas de RIB.
+              coalesce((select jsonb_agg(jsonb_build_object(
+                          'moyen', x.moyen, 'reference', x.reference,
+                          'le', x.encaisse_le::text, 'montant', x.montant::text)
+                          order by x.encaisse_le, x.created_at)
+                          from facturation.encaissements x
+                         where x.facture_id = f.id and x.annule_id is null
+                           and not exists (select 1 from facturation.encaissements y
+                                            where y.annule_id = x.id)),
+                       '[]'::jsonb) as reglements
          from facturation.factures f
          left join facturation.encours_v e on e.facture_id = f.id
          left join lateral (
