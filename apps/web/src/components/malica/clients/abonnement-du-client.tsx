@@ -168,6 +168,17 @@ export function OngletAbonnement({
     );
   }
 
+  // Venue seule sur Malica, la société garde son abonnement : la comptabilité tient ses livres,
+  // elle ne lui en attribue pas (20261231250000). Un abonnement déjà pris en charge reste
+  // visible plus bas : on peut le rendre, pas le faire monter.
+  if (etat && !etat.inviteeParNous && !etat.accesId) {
+    return (
+      <section className="rounded-xl border border-border p-4 text-[13px]" data-inscrite-seule>
+        <span className="text-muted-foreground">{t("cab.cli.abo.inscriteSeule")}</span>
+      </section>
+    );
+  }
+
   return (
     <div className="space-y-4 text-[13px]">
       <section className="flex items-center justify-between gap-3 rounded-xl border border-border p-4">

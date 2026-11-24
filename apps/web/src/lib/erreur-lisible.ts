@@ -117,6 +117,19 @@ export function texteDeLErreur(raison: unknown, ou: string, defaut: string): str
     const phrase = phraseDeLaCle(raison.message);
     if (phrase !== null) return phrase;
   }
+  /*
+   * 502, 503, 504 : la passerelle n'a pas eu de réponse — l'API redémarrait, ou ne répondait
+   * plus (recette Flouci du 24 novembre 2026 : « Une erreur est survenue » au premier essai de
+   * paiement, le second passait). Ce n'est pas l'écran qui a échoué : on le dit, et la panne
+   * part quand même au journal, sous sa référence.
+   */
+  if (raison instanceof ErreurApi && [502, 503, 504].includes(raison.statut))
+    return direLaPanne(raison, ou, dictionnaire()["common.serviceInterrompu"] ?? defaut);
+  return direLaPanne(raison, ou, defaut);
+}
+
+/** Une panne : la phrase prévue, sa référence gardée, et le détail au journal. */
+function direLaPanne(raison: unknown, ou: string, defaut: string): string {
   if (typeof raison === "object" && raison !== null) {
     const deja = references.get(raison);
     if (deja !== undefined) return avecReference(defaut, deja);

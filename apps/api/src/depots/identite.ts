@@ -250,7 +250,7 @@ export const identite = {
               invitation_envoyee::text, invitation_expiree, acces_id, acces_statut,
               acces_offre, descente_offre, licence_id, titulaire_nom, forfait_offre,
               organisations, organisations_incluses, sieges_occupes, sieges_inclus,
-              places_en_attente
+              places_en_attente, invitee_par_nous
          from public.clients_du_cabinet_etat($1)`,
       [cabinetId],
     );
@@ -273,6 +273,7 @@ export const identite = {
       siegesOccupes: (r["sieges_occupes"] as number | null) ?? null,
       siegesInclus: (r["sieges_inclus"] as number | null) ?? null,
       placesEnAttente: (r["places_en_attente"] as number | null) ?? 0,
+      inviteeParNous: Boolean(r["invitee_par_nous"]),
     }));
   },
 

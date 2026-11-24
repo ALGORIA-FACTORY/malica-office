@@ -16,7 +16,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { identite } from "../depots/identite.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
-import { personnesDEssai } from "../personne-d-essai.ts";
+import { inviteeParLaComptabilite, personnesDEssai } from "../personne-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -50,6 +50,8 @@ describe("la facture du cabinet se paie en ligne", { skip: !BASE_CONFIGUREE }, (
     await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, legalId));
     const [propose] = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
     await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, propose!.id, true));
+    // La comptabilité a invité son client dans Malica : elle peut lui attribuer un abonnement.
+    await inviteeParLaComptabilite(admin, pme, expert.id);
     // Le cabinet attribue Team ; la PME accepte : le cabinet devient payeur.
     const acces = await sousIdentite(expert.id, async (db) => {
       const { rows } = await db.query<{ id: string }>(
@@ -137,7 +139,7 @@ describe("la facture du cabinet se paie en ligne", { skip: !BASE_CONFIGUREE }, (
   const payer = (db: pg.PoolClient, qui: string, paiement: string) =>
     sous(db, qui, async () => {
       await db.query(
-        "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'CAB-1', 'https://test.clictopay.com/pay/CAB-1', '{}', 'visa')",
+        "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'CAB-1', 'https://test.clictopay.com/pay/CAB-1', '{}', 'visa') from cgv",
         [paiement],
       );
       await db.query(

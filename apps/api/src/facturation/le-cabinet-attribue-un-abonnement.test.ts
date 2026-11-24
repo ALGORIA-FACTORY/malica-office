@@ -15,7 +15,7 @@ import { creerCompte, type Utilisateur } from "../auth.ts";
 import { fermerLePool, sousIdentite } from "../db.ts";
 import { identite } from "../depots/identite.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
-import { personnesDEssai } from "../personne-d-essai.ts";
+import { inviteeParLaComptabilite, personnesDEssai } from "../personne-d-essai.ts";
 
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
@@ -62,6 +62,8 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
     await sousIdentite(expert.id, (db) => identite.proposerMandat(db, cabinet, legalId));
     const [propose] = await sousIdentite(dirigeant.id, (db) => identite.mandatsProposes(db, pme));
     await sousIdentite(dirigeant.id, (db) => identite.repondreAuMandat(db, propose!.id, true));
+    // La comptabilité a invité son client dans Malica : elle peut lui attribuer un abonnement.
+    await inviteeParLaComptabilite(admin, pme, expert.id);
   });
 
   after(async () => {

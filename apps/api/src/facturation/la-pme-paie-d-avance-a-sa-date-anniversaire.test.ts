@@ -632,7 +632,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       await enPersonne(db, p.titulaire);
       const id = r[0]!.r.paiement.paiement_id;
       await db.query(
-        "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa')",
+        "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa') from cgv",
         [id],
       );
       await db.query(
@@ -678,7 +678,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       const id = r[0]!.r.paiement.paiement_id;
       await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
       await db.query(
-        "select public.paiement_inscrire($1, 'lien_cree', 'simulateur', 'sim-1', 'https://staging.exemple.tn/?simulateur=1', '{}', 'visa')",
+        "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', 'simulateur', 'sim-1', 'https://staging.exemple.tn/?simulateur=1', '{}', 'visa') from cgv",
         [id],
       );
       await db.query("select public.paiement_inscrire($1, 'paye', 'simulateur', 'sim-1')", [id]);
@@ -719,7 +719,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       assert.equal(autres.length, 0);
       assert.equal(annee!.emise_le, du);
       assert.equal(annee!.couvre_du, du);
-      assert.match(annee!.libelle, /^Abonnement annuel solo — du /);
+      assert.match(annee!.libelle, /^Abonnement annuel Solo — du /);
       assert.ok(!annee!.libelle.includes("|"), "une ligne : l'offre du mois est dans l'année");
       assert.equal(annee!.montant_ht, millimes(Number(m[0]!.r.proposition.montant_ht)));
 

@@ -17,6 +17,7 @@ import { lireLaPieceDEssai } from "./lecture-d-essai.ts";
 import { office } from "./depots/office.ts";
 import { supervision } from "./depots/supervision.ts";
 import { matriculeDEssai } from "./matricule-d-essai.ts";
+import { inviteeParLaComptabilite } from "./personne-d-essai.ts";
 import { executerRpc } from "./rpc.ts";
 
 export const BASE_CONFIGUREE = Boolean(
@@ -68,6 +69,11 @@ export interface SocieteDEssai {
    * Sans `lignes`, une écriture exonérée de 100 (601 / 401).
    */
   priseEnCharge: (pieceId: string, lignes?: LigneDEssai[]) => Promise<string>;
+  /**
+   * La comptabilité a invité le dirigeant dans Malica. La société de ce circuit est venue
+   * seule ; une épreuve qui fait attribuer un abonnement par la comptabilité le dit d'abord.
+   */
+  inviteeParLaComptabilite: () => Promise<void>;
   /** Archive les organisations d'essai et ferme le pool d'administration. */
   fermer: () => Promise<void>;
 }
@@ -200,6 +206,7 @@ export async function monterUneSociete(marque: string): Promise<SocieteDEssai> {
     deposer,
     lire,
     priseEnCharge,
+    inviteeParLaComptabilite: () => inviteeParLaComptabilite(admin, pme, gens.expert.id),
     fermer,
   };
 }

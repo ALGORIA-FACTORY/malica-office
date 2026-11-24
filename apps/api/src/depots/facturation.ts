@@ -720,12 +720,36 @@ export const facturation = {
     // ne s'ouvre qu'au paiement confirmé — la base rend le paiement à régler, et
     // `change` reste faux. Une descente, une montée pendant l'année ou sous la
     // facturation immédiate gardent leur chemin : le forfait d'abord.
-    const { rows } = await db.query<{ r: { change: boolean; paiement: PaiementLu | null } }>(
-      `select public.forfait_demander($1, $2) as r`,
-      [offre, tenantId ?? null],
-    );
+    // Une descente pendant une période payée d'avance attend l'échéance (CGV, art. 8) :
+    // la base la programme et le dit (`descente`).
+    const { rows } = await db.query<{
+      r: {
+        change: boolean;
+        paiement: PaiementLu | null;
+        descente?: { offre: string; le: string } | { annulee: true; offre: string };
+      };
+    }>(`select public.forfait_demander($1, $2) as r`, [offre, tenantId ?? null]);
     const r = rows[0]?.r;
-    return { change: Boolean(r?.change), paiement: r?.paiement ?? null };
+    return {
+      change: Boolean(r?.change),
+      paiement: r?.paiement ?? null,
+      descente: r?.descente ?? null,
+    };
+  },
+
+  /** La descente qui attend l'échéance payée (20261231240000), ou `null`. */
+  async maDescente(db: Requete, tenantId?: string) {
+    const { rows } = await db.query<{ d: { offre: string; le: string } | null }>(
+      `select public.ma_descente($1) as d`,
+      [tenantId ?? null],
+    );
+    return rows[0]?.d ?? null;
+  },
+
+  /** Le titulaire revient sur sa descente programmée : son offre reste. */
+  async annulerDescente(db: Requete, tenantId?: string) {
+    await db.query(`select public.descente_annuler($1)`, [tenantId ?? null]);
+    return true;
   },
 
   /**
@@ -833,7 +857,7 @@ export const facturation = {
    * prestataire n'est ouvert dans cet environnement : l'offre reste ouverte,
    * et la facture du mois suit.
    */
-  async payerEnLigne(db: Requete, paiementId: string, moyen: string) {
+  async payerEnLigne(db: Requete, paiementId: string, moyen: string, cgvId: string) {
     await verrouiller(db, paiementId);
     let p = await lirePaiement(db, paiementId);
     if (p.etat === "paye") return { ouvert: true, lien: null, paiement: p };
@@ -875,6 +899,10 @@ export const facturation = {
       [moyen, env.prestataire.code, p.devise],
     );
     const devise = rows[0]!.d;
+    // Les CGV en vigueur, acceptées pour CE paiement, avant d'ouvrir la page de carte
+    // (CGV, art. 2). La base refuse une version périmée ; elle refuse aussi d'inscrire le
+    // lien sans elles (`paiement_inscrire`).
+    await db.query(`select public.paiement_cgv_accepter($1, $2)`, [paiementId, cgvId]);
     // Le paiement d'une facture porte son reste dû : s'il a changé depuis (un
     // encaissement saisi entre-temps), la base refuse par une clé.
     await db.query(`select public.paiement_encore_du($1)`, [paiementId]);
@@ -929,7 +957,16 @@ export const facturation = {
         order by m.rang`,
       [locale, code],
     );
-    if (!code) return { prestataire: null, moyens };
+    // La version des CGV que le client accepte en cochant la case, et son adresse publique.
+    const { rows: c } = await db.query<{
+      cgv: { id: string; version: string; url: string } | null;
+    }>(
+      `select case when c.id is null then null
+                   else jsonb_build_object('id', c.id, 'version', c.version::text, 'url', c.url) end as cgv
+         from plateforme.cgv_en_vigueur() c`,
+    );
+    const cgv = c[0]?.cgv ?? null;
+    if (!code) return { prestataire: null, moyens, cgv };
     const { rows: p } = await db.query(
       `select p.code, p.logo, coalesce(demandee.value, francais.value, p.code) as libelle
          from facturation.prestataires_paiement p
@@ -942,7 +979,7 @@ export const facturation = {
         where p.code = $1`,
       [code, locale],
     );
-    return { prestataire: p[0] ?? null, moyens };
+    return { prestataire: p[0] ?? null, moyens, cgv };
   },
 
   /**

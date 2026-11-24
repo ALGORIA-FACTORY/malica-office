@@ -43,8 +43,16 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
     retry: false,
   });
 
+  // La case des CGV (CGV, art. 2) : aucun moyen ne se choisit tant qu'elle n'est pas cochée ;
+  // la version cochée part avec le paiement, et la base la garde (20261231260000).
+  const [cgvAcceptees, accepterLesCgv] = useState(false);
+  const cgv = choix.data?.cgv ?? null;
+
   const payer = useMutation({
-    mutationFn: (moyen: string) => office().facturation.payerEnLigne(paiementId, moyen),
+    mutationFn: (moyen: string) => {
+      if (!cgv || !cgvAcceptees) throw new Error("refus.cgv.non_acceptees");
+      return office().facturation.payerEnLigne(paiementId, moyen, cgv.id);
+    },
     onSuccess: (r) => {
       if (r.paiement.etat === "paye") setMessage(t(phraseDuPaye(r.paiement)));
       else if (!r.ouvert) setMessage(t("pme.reglages.paiement.ferme"));
@@ -65,6 +73,9 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
     payer,
     message,
     empechement,
+    cgv,
+    cgvAcceptees,
+    accepterLesCgv,
   };
 }
 

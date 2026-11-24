@@ -51,6 +51,10 @@ const GENRES: Record<string, MessageKey> = {
   // La facture d'abonnement émise par Malica Office (23 novembre 2026) : elle mène à
   // l'abonnement, où elle se télécharge.
   "facture.emise.pme": "notif.kind.facture.emise.pme",
+  // Payée d'abord, la facture naît réglée ; tout paiement confirmé se dit (24 novembre 2026).
+  "facture.reglee.pme": "notif.kind.facture.reglee.pme",
+  "paiement.recu": "notif.kind.paiement.recu",
+  "paiement.recu.cabinet": "notif.kind.paiement.recu",
 };
 
 export function chaine(payload: Record<string, unknown>, cle: string): string | null {
@@ -141,7 +145,7 @@ export function gesteDeLaQuestion(
   const ouverte = payload["tranchee"] === undefined;
   if (kind === "acces.propose" || kind === "acces.descente_demandee")
     return ouverte ? "proposition" : "abonnement";
-  if (kind === "acces.monte" || kind === "acces.arrete" || kind === "facture.emise.pme")
+  if (kind === "acces.monte" || kind === "acces.arrete" || parleDAbonnement(kind))
     return "abonnement";
   if (kind === "mandat.propose") return ouverte ? "mandat" : null;
   return null;
@@ -178,5 +182,16 @@ export function attendUnGeste(n: { kind: string; readAt: string | null }): boole
  * (`facture.emise.pme`, 23 novembre 2026) non plus : elle mène à l'abonnement.
  */
 export function seMontreIci(kind: string, coque: boolean): boolean {
-  return !(coque && (kind.startsWith("acces.") || kind === "facture.emise.pme"));
+  return !(coque && (kind.startsWith("acces.") || parleDAbonnement(kind)));
+}
+
+/** Les factures et les paiements de l'abonnement d'une société : ils mènent à l'abonnement. */
+const DE_L_ABONNEMENT: ReadonlySet<string> = new Set([
+  "facture.emise.pme",
+  "facture.reglee.pme",
+  "paiement.recu",
+]);
+
+function parleDAbonnement(kind: string): boolean {
+  return DE_L_ABONNEMENT.has(kind);
 }

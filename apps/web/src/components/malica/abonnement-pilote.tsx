@@ -339,7 +339,25 @@ export function ChangerDOffre() {
     retry: false,
   });
   const [armee, setArmee] = useState<string | null>(null);
-  const [retour, setRetour] = useState<string | null>(null);
+  // Le retour se dit SOUS la carte du geste, pas au pied de la liste où personne ne le voit
+  // (recette Flouci du 24 novembre 2026, point 2) ; un refus se dit comme un refus.
+  const [retour, setRetour] = useState<{ offre: string; texte: string; refus: boolean } | null>(
+    null,
+  );
+  // Une descente pendant une période payée attend l'échéance (CGV, art. 8).
+  const descente = useQuery({
+    queryKey: ["ma-descente", pme.tenantId],
+    queryFn: () => office().facturation.maDescente(pme.tenantId),
+    enabled: principal,
+    retry: false,
+  });
+  const annuler = useMutation({
+    mutationFn: () => office().facturation.annulerDescente(pme.tenantId),
+    onSuccess: async () => {
+      await descente.refetch();
+      await invalider();
+    },
+  });
   // Le devis se lit au premier geste, avant que le second n'engage : la base le calcule
   // avec la formule de la préparation du paiement, l'écran ne calcule rien (R3).
   const devis = useQuery({
@@ -366,18 +384,26 @@ export function ChangerDOffre() {
         });
         return;
       }
-      setRetour(
-        !r.change && r.paiement
-          ? t("pme.reglages.offres.payerPourOuvrir", { offre })
-          : r.paiement
-            ? t("pme.reglages.offres.aRegler", { offre })
-            : t("pme.reglages.offres.fait", { offre }),
-      );
+      const texte =
+        r.descente && "le" in r.descente
+          ? t("pme.reglages.offres.descenteProgrammee", {
+              offre,
+              date: dateEnLettres(r.descente.le, locale),
+            })
+          : r.descente
+            ? t("pme.reglages.offres.descenteAnnulee", { offre })
+            : !r.change && r.paiement
+              ? t("pme.reglages.offres.payerPourOuvrir", { offre })
+              : r.paiement
+                ? t("pme.reglages.offres.aRegler", { offre })
+                : t("pme.reglages.offres.fait", { offre });
+      setRetour({ offre: code, texte, refus: false });
+      await descente.refetch();
       await invalider();
     },
-    onError: (e: unknown) => {
+    onError: (e: unknown, code) => {
       setArmee(null);
-      setRetour(refus(e, t));
+      setRetour({ offre: code, texte: refus(e, t), refus: true });
     },
   });
 
@@ -405,6 +431,24 @@ export function ChangerDOffre() {
 
   return (
     <div className="grid gap-2">
+      {descente.data ? (
+        <div className="card" data-descente-programmee role="status">
+          <p className="t-body">
+            {t("pme.reglages.offres.descenteEnAttente", {
+              offre: libelleDOffre(catalogue, descente.data.offre),
+              date: dateEnLettres(descente.data.le, locale),
+            })}
+          </p>
+          <button
+            type="button"
+            className="btn btn-sec"
+            disabled={annuler.isPending}
+            onClick={() => annuler.mutate()}
+          >
+            {t("pme.reglages.offres.descenteAnnuler")}
+          </button>
+        </div>
+      ) : null}
       {comptabilite ? (
         <p className="t-body">{t("pme.reglages.offres.complement", { comptabilite })}</p>
       ) : null}
@@ -448,21 +492,40 @@ export function ChangerDOffre() {
                 </p>
               ) : null}
               {armee === o.code &&
-              devis.data?.a_regler_ttc != null &&
+              devis.data?.rien_a_regler &&
               devis.data.prix_plein_ttc != null ? (
                 <p className="t-body" data-devis-de-montee aria-live="polite">
-                  {t(
-                    (devis.data.timbre ?? 0) > 0
-                      ? "pme.reglages.offres.devis.timbre"
-                      : "pme.reglages.offres.devis",
-                    {
-                      ttc: aLEchelle(devis.data.a_regler_ttc),
-                      jours: String(devis.data.jours_restants),
-                      total: String(devis.data.jours_du_mois),
-                      plein: aLEchelle(devis.data.prix_plein_ttc),
-                      devise: devis.data.devise ?? pme.currency,
-                    },
-                  )}
+                  {t("pme.reglages.offres.devis.rien", {
+                    offre: o.libelle,
+                    au: dateEnLettres(devis.data.au, locale),
+                    plein: aLEchelle(devis.data.prix_plein_ttc),
+                    devise: pme.currency,
+                  })}
+                </p>
+              ) : armee === o.code &&
+                devis.data?.a_regler_ttc != null &&
+                devis.data.prix_plein_ttc != null ? (
+                <p className="t-body" data-devis-de-montee aria-live="polite">
+                  {devis.data.du && devis.data.au
+                    ? t("pme.reglages.offres.devis.periode", {
+                        ttc: aLEchelle(devis.data.a_regler_ttc),
+                        du: dateEnLettres(devis.data.du, locale),
+                        au: dateEnLettres(devis.data.au, locale),
+                        plein: aLEchelle(devis.data.prix_plein_ttc),
+                        devise: devis.data.devise ?? pme.currency,
+                      })
+                    : t(
+                        (devis.data.timbre ?? 0) > 0
+                          ? "pme.reglages.offres.devis.timbre"
+                          : "pme.reglages.offres.devis",
+                        {
+                          ttc: aLEchelle(devis.data.a_regler_ttc),
+                          jours: String(devis.data.jours_restants),
+                          total: String(devis.data.jours_du_mois),
+                          plein: aLEchelle(devis.data.prix_plein_ttc),
+                          devise: devis.data.devise ?? pme.currency,
+                        },
+                      )}
                 </p>
               ) : null}
               {o.empechement ? (
@@ -481,15 +544,19 @@ export function ChangerDOffre() {
                     : t("pme.reglages.offres.passer", { offre: o.libelle })}
                 </button>
               )}
+              {retour?.offre === o.code ? (
+                <p
+                  className={retour.refus ? "warn" : "t-body"}
+                  role={retour.refus ? "alert" : "status"}
+                  data-retour-de-l-offre
+                >
+                  {retour.texte}
+                </p>
+              ) : null}
             </div>
           );
         })}
       {offres.error ? <p className="warn">{refus(offres.error, t)}</p> : null}
-      {retour ? (
-        <p className="t-body" aria-live="polite">
-          {retour}
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -102,7 +102,7 @@ async function unPaiement(db: pg.PoolClient) {
 
 const lien = (db: pg.PoolClient, paiement: string, prestataire: string, moyen: string | null) =>
   db.query(
-    `select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-1', 'https://test.clictopay.com/pay/REF-1', '{}', $3)`,
+    `with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-1', 'https://test.clictopay.com/pay/REF-1', '{}', $3) from cgv`,
     [paiement, prestataire, moyen],
   );
 

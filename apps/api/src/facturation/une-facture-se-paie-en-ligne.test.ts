@@ -116,7 +116,7 @@ const lienPuisPaye = (db: pg.PoolClient, qui: string, paiement: string, prestata
       await db.query("select set_config('malica.paiement_simulateur', 'oui', true)");
     }
     await db.query(
-      "select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-9', 'https://test.clictopay.com/pay/REF-9', '{}', 'visa')",
+      "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-9', 'https://test.clictopay.com/pay/REF-9', '{}', 'visa') from cgv",
       [paiement, prestataire],
     );
     await db.query(
@@ -187,7 +187,7 @@ describe("une facture se paie en ligne", { skip: !ADMIN }, () => {
       const p = await preparer(db, d.principal, d.facture);
       await sous(db, d.principal, () =>
         db.query(
-          "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-9', 'https://test.clictopay.com/pay/REF-9', '{}', 'visa')",
+          "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-9', 'https://test.clictopay.com/pay/REF-9', '{}', 'visa') from cgv",
           [p.paiement_id],
         ),
       );
@@ -223,7 +223,7 @@ describe("une facture se paie en ligne", { skip: !ADMIN }, () => {
       await assert.rejects(
         sous(db, d.principal, () =>
           db.query(
-            "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'R', 'https://test.clictopay.com/pay/R', '{}', 'visa')",
+            "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'R', 'https://test.clictopay.com/pay/R', '{}', 'visa') from cgv",
             [p.paiement_id],
           ),
         ),

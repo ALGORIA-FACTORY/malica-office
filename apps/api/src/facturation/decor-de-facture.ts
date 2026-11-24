@@ -11,7 +11,7 @@ import { randomUUID } from "node:crypto";
 
 import type pg from "pg";
 
-import { personnesDEssai } from "../personne-d-essai.ts";
+import { inviteeParLaComptabilite, personnesDEssai } from "../personne-d-essai.ts";
 
 export interface Decor {
   operateur: string;
@@ -59,7 +59,11 @@ export async function enPersonne<T>(
  * porte la TVA des factures d'abonnement. Aucune juridiction ni devise n'est
  * écrite ici (R4) : elles se lisent dans le référentiel.
  */
-async function uneOrganisation(db: pg.PoolClient, kind: string, nom: string): Promise<string> {
+export async function uneOrganisation(
+  db: pg.PoolClient,
+  kind: string,
+  nom: string,
+): Promise<string> {
   const { rows } = await db.query<{ id: string }>(
     `insert into identity.organizations (kind, name, jurisdiction, currency)
      select $1, $2, p.jurisdiction, p.currency
@@ -146,8 +150,16 @@ export async function decor(
   };
 }
 
-/** Une comptabilité, son expert, et son mandat actif sur la PME depuis le premier du mois. */
-export async function uneComptabilite(db: pg.PoolClient, d: Decor): Promise<Comptabilite> {
+/**
+ * Une comptabilité, son expert, et son mandat actif sur la PME depuis le premier du mois.
+ * Par défaut, elle a invité son client dans Malica ; `invitee: false` décrit une société
+ * venue seule, sur l'abonnement de laquelle la comptabilité n'a aucun droit.
+ */
+export async function uneComptabilite(
+  db: pg.PoolClient,
+  d: Decor,
+  { invitee = true }: { invitee?: boolean } = {},
+): Promise<Comptabilite> {
   const expert = randomUUID();
   await personnesDEssai(db, expert);
   const cabinet = await uneOrganisation(db, "cabinet", "Comptabilité d'essai");
@@ -160,6 +172,8 @@ export async function uneComptabilite(db: pg.PoolClient, d: Decor): Promise<Comp
      values ($1, $2, 'actif', $3::date)`,
     [d.tenant, cabinet, d.mois],
   );
+  // La comptabilité a invité son client : elle peut lui attribuer un abonnement.
+  if (invitee) await inviteeParLaComptabilite(db, d.tenant, expert);
   return { cabinet, expert };
 }
 
@@ -217,7 +231,7 @@ export const monteeARegler = (db: pg.PoolClient, d: Decor) =>
 export async function regler(db: pg.PoolClient, d: Decor, paiement: string): Promise<void> {
   await enPersonne(db, d.titulaire, async () => {
     await db.query(
-      "select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa')",
+      "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa') from cgv",
       [paiement],
     );
     await db.query(
