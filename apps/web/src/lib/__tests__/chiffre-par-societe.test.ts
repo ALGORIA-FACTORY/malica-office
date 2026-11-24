@@ -83,12 +83,14 @@ describe("chiffreTva — une société à la fois, le moteur du Socle", () => {
     o.referential.declarationTva.mockResolvedValue({ natureParDefaut: "x", lignes: [] });
     o.identity.monCabinet.mockResolvedValue(null);
     o.office.bookedExtracts.mockResolvedValue([]);
+    o.office.extraitsTransmis.mockResolvedValue([]);
     const r = await chiffreTva(SN, "2026-02", "ar");
     expect(o.referential.activePack).toHaveBeenCalledWith("SN");
     expect(o.referential.taxRates).toHaveBeenCalledWith("p-sn", "SN", "ar");
-    // Sans mandat : les pièces comptabilisées ; la fin de février vient du Socle.
+    // Sans mandat : les pièces comptabilisées ET celles qui tiennent, en estimation
+    // (24 novembre 2026) ; la fin de février vient du Socle.
     expect(o.office.bookedExtracts).toHaveBeenCalledWith("soc-sn", "2026-02-01", "2026-02-28");
-    expect(o.office.extraitsTransmis).not.toHaveBeenCalled();
+    expect(o.office.extraitsTransmis).toHaveBeenCalledWith("soc-sn", "2026-02-01", "2026-02-28");
     expect(r).toMatchObject({ etat: "calcule", devise: "XOF" });
   });
 

@@ -16,6 +16,7 @@ import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { moisLocal } from "@/lib/lisible";
 import { useDecimales } from "./use-decimales";
+import { extraitsDeLaTvaDuMois } from "@/lib/extraits-de-la-tva-du-mois";
 import { office } from "@/verticals/malica-office/composition";
 import { tvaDesExtraits } from "@malica/socle/engines/tva/des-extraits";
 import { useDeclarationTva } from "./use-declaration-tva";
@@ -40,6 +41,8 @@ export function currentPeriod(): string {
 export function useTvaPeriod(period: string): {
   tva: TvaV1 | null;
   count: number;
+  /** Sans comptabilité, au moins une pièce compte sur sa seule lecture. */
+  estimation: boolean;
   isPending: boolean;
 } {
   const pme = usePme();
@@ -65,10 +68,9 @@ export function useTvaPeriod(period: string): {
       from,
       to,
     ],
-    queryFn: () =>
-      pme.aUnCabinet
-        ? office().office.extraitsTransmis(pme.tenantId, from, to)
-        : office().office.bookedExtracts(pme.tenantId, from, to),
+    // Sans comptabilité, les pièces qui tiennent comptent aussi, en estimation, comme aux
+    // charges (`extraits-de-la-tva-du-mois.ts`, 24 novembre 2026).
+    queryFn: () => extraitsDeLaTvaDuMois(pme.tenantId, pme.aUnCabinet, from, to),
   });
 
   const rates = useQuery({
@@ -89,13 +91,14 @@ export function useTvaPeriod(period: string): {
       currency: { code: pme.currency, decimals: decimales },
       taux: rates.data,
       declaration: declaration.data,
-      rows: extracts.data,
+      rows: extracts.data.lignes,
     });
   }, [extracts.data, rates.data, declaration.data, decimales, period, pme.currency]);
 
   return {
     tva,
-    count: extracts.data?.length ?? 0,
+    count: extracts.data?.lignes.length ?? 0,
+    estimation: extracts.data?.estimation ?? false,
     isPending: extracts.isPending || rates.isPending || declaration.isPending,
   };
 }

@@ -144,7 +144,7 @@ function PmeTva() {
   const revenir = useRevenir();
   const periode = Route.useSearch().mois ?? currentPeriod();
 
-  const { tva, isPending } = useTvaPeriod(periode);
+  const { tva, estimation, isPending } = useTvaPeriod(periode);
 
   // Les pièces parties sans date d'envoi : elles ne sont dans aucun mois, et
   // l'écran doit pouvoir le dire plutôt que de les laisser disparaître.
@@ -285,6 +285,12 @@ function PmeTva() {
         <p className="sub">
           {parSociete ? t("pme.tva.sousGroupe", { count: pme.dossiers.length }) : t("pme.tva.sous")}
         </p>
+        {/* Sans comptabilité, la même mention qu'aux charges (24 novembre 2026). */}
+        {estimation ? (
+          <p className="sub" data-estimation>
+            {t("pme.charges.estimation")}
+          </p>
+        ) : null}
 
         {/*
          * LE CHIFFRE. `.cr` quand le solde est un crédit reporté : la feuille
