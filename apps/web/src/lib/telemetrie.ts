@@ -31,6 +31,13 @@ import { CIBLE_COQUE, estNatif, versionClient } from "@/capabilities/coque";
 /** Le canal de la cible : staging, pilote, production — « atelier » sans build de coque. */
 export const CANAL = (import.meta.env["VITE_CANAL_OTA"] as string | undefined) ?? "atelier";
 
+/**
+ * La coque suit-elle un canal de mise à jour en vol ? Oui, sauf si sa cible dit `0`
+ * (`.env.coque-emulateur`) : l'émulateur de la CI ne parle pas à Capgo, sans quoi chaque
+ * passage y comptait un appareil neuf (24 novembre 2026, forfait dépassé).
+ */
+export const MISE_A_JOUR_EN_VOL = import.meta.env["VITE_MISE_A_JOUR_EN_VOL"] !== "0";
+
 const DSN = (import.meta.env["VITE_SENTRY_DSN"] as string | undefined) ?? "";
 
 /** La version du dépôt, posée au build ; « 0.0.0 » dans l'atelier. */

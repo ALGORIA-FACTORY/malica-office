@@ -21,7 +21,7 @@ import { SECOURS, type LangueDeSecours } from "@/lib/error-page";
 import { installerJournalAtelier, noterAuJournal } from "@/lib/journal-atelier";
 import { rapporterPlantage } from "@/lib/rapport-plantage";
 import { fermerLaDerniereSuperposition } from "@/lib/superpositions";
-import { CANAL, demarrerLaTelemetrie } from "@/lib/telemetrie";
+import { CANAL, demarrerLaTelemetrie, MISE_A_JOUR_EN_VOL } from "@/lib/telemetrie";
 import { oublierLeCache } from "@/lib/cache-de-l-appareil";
 import { ecouterLaDeconnexion } from "@/lib/transport/etat";
 
@@ -410,6 +410,7 @@ function RootComponent() {
   // s'inscrit sur le canal de mise à jour en vol de sa cible.
   useEffect(() => {
     void coque().demarrage.pret();
+    if (!MISE_A_JOUR_EN_VOL) return;
     void coque()
       .misesAJour.suivreLeCanal(CANAL)
       .catch((raison) => noterAuJournal("canal de mise à jour", raison));
