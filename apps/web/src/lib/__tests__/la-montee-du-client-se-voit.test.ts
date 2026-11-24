@@ -38,6 +38,7 @@ function etat(accesOffre: string, forfaitOffre: string): EtatDuClient {
     siegesOccupes: 0,
     siegesInclus: 2,
     placesEnAttente: 0,
+    inviteeParNous: true,
   };
 }
 

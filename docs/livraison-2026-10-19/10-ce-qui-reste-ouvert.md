@@ -1056,3 +1056,25 @@ Tranché par défaut, à confirmer par le dirigeant :
   numéro, mentions du RNE, du timbre), à faire relire par l'expert-comptable avant la première facture envoyée.
 - **Hors périmètre** : les factures `ALG-…` déjà émises gardent leur numéro (R7) ; leur PDF sort sous le nouveau
   modèle, avec leur numéro d'origine.
+
+### La recette Flouci du pilote, et les CGV publiées confrontées au produit (24 novembre 2026)
+
+Livré par `20261231240000` à `20261231270000`. Tranché par le dirigeant le 24 novembre : la descente garde les droits
+payés jusqu'à l'échéance ; la case des CGV est obligatoire et l'acceptation gardée ; « la société inscrite seule » ne
+reçoit aucun abonnement de sa comptabilité. Restent ouverts :
+
+- **La résiliation depuis l'espace du client** (CGV, art. 8 : « à tout moment, depuis l'espace du client, sans frais ;
+  elle prend effet à la fin de la période payée ; les données restent exportables 90 jours ») **n'existe pas dans le
+  produit**. Aucun geste ne la porte côté PME, aucune durée d'export après la fin n'est tenue. À livrer, ou à retirer
+  des CGV — au dirigeant de trancher.
+- **Le texte des CGV publiées décrit encore la facturation au mois** (art. 6 : « au prorata des jours d'accès
+  ouverts ; la facture est payable à réception ») alors que la facturation d'avance, ouverte sur le pilote, facture
+  d'avance à la date anniversaire, sans prorata, payable sous quinze jours. L'année (art. 8) commence « le premier jour
+  du mois suivant la souscription » dans les CGV, à l'échéance suivante dans le produit. Le site se corrige hors de
+  ce dépôt.
+- **La 502 du premier paiement** (recette du 24 novembre) n'a pas de cause établie : le second appel est passé, aucun
+  événement n'est remonté dans Sentry, et le journal du conteneur de l'API n'est pas lisible depuis la CI. L'écran dit
+  désormais « le service a été interrompu un instant », la panne part au journal sous sa référence ; la cause reste à
+  lire dans `docker compose logs api` du pilote autour de 10 h 38 UTC.
+- **Le renvoi d'une facture déjà réglée** repart sous le genre `facture.emise.pme` (« à régler avant… ») : seule la
+  facture née d'un paiement d'abord se dit réglée.

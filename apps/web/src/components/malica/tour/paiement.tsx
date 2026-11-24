@@ -15,6 +15,7 @@ import { useI18n } from "@/i18n";
 import { office } from "@/verticals/malica-office/composition";
 
 import { BOUTON, CARTE, CHAMP, TEXTE, TITRE, useRetour } from "./commun";
+import { dateCourte } from "./donnees";
 
 export function ReglerLePaiement() {
   const { t, locale } = useI18n();
@@ -117,6 +118,98 @@ export function ReglerLePaiement() {
           onClick={() => regler.mutate()}
         >
           {t("tour.enregistrer")}
+        </button>
+      </div>
+      {retour ? (
+        <p className={TEXTE} aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * La carte « Conditions générales de vente » de la tour (20261231260000). Chaque client
+ * accepte la version en vigueur en cochant la case avant de payer ; l'acceptation est gardée
+ * avec le paiement. Une version mise en ligne sur le site se publie ici, sans déploiement :
+ * datée (aujourd'hui ou plus tard), motivée, en ajout seul.
+ */
+export function ReglerLesCgv() {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const { retour, setRetour, echec } = useRetour();
+  const cgv = useQuery({ queryKey: ["tour-cgv"], queryFn: () => office().tour.cgvEnVigueur() });
+  const [version, setVersion] = useState("");
+  const [url, setUrl] = useState("");
+  const [valideDes, setValideDes] = useState("");
+  const [motif, setMotif] = useState("");
+
+  const publier = useMutation({
+    mutationFn: () => office().tour.reglerCgv(version, url.trim(), valideDes, motif),
+    onSuccess: async () => {
+      setRetour(t("tour.cgv.publiee"));
+      setMotif("");
+      await qc.invalidateQueries({ queryKey: ["tour-cgv"] });
+    },
+    onError: echec,
+  });
+
+  return (
+    <div className={CARTE}>
+      <h2 className={TITRE}>{t("tour.cgv.titre")}</h2>
+      {cgv.data ? (
+        <p className={TEXTE}>
+          {t("tour.cgv.enVigueur", {
+            version: dateCourte(cgv.data.version, locale),
+            url: cgv.data.url,
+            depuis: dateCourte(cgv.data.valide_des, locale),
+          })}
+        </p>
+      ) : null}
+      <p className={TEXTE}>{t("tour.cgv.aide")}</p>
+      <div className="mt-2 flex flex-col gap-2">
+        <label className={TEXTE}>
+          {t("tour.cgv.version")}
+          <input
+            type="date"
+            value={version}
+            onChange={(e) => setVersion(e.target.value)}
+            className={CHAMP}
+          />
+        </label>
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder={t("tour.cgv.url")}
+          aria-label={t("tour.cgv.url")}
+          className={CHAMP}
+        />
+        <label className={TEXTE}>
+          {t("tour.cgv.valideDes")}
+          <input
+            type="date"
+            value={valideDes}
+            onChange={(e) => setValideDes(e.target.value)}
+            className={CHAMP}
+          />
+        </label>
+        <input
+          value={motif}
+          onChange={(e) => setMotif(e.target.value)}
+          placeholder={t("common.motif")}
+          aria-label={t("common.motif")}
+          className={CHAMP}
+        />
+        <button
+          type="button"
+          className={BOUTON}
+          disabled={
+            publier.isPending || !version || !url.trim() || !valideDes || motif.trim() === ""
+          }
+          onClick={() => publier.mutate()}
+        >
+          {t("tour.cgv.publier")}
         </button>
       </div>
       {retour ? (

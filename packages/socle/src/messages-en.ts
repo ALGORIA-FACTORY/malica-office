@@ -5681,4 +5681,38 @@ export const en: Dict = {
   "pme.descente.accepter": "Accept",
   "pme.descente.refuser": "Keep my plan",
   "pme.descente.ok": "Answer sent to your accounting firm",
+  "pme.reglages.offres.descenteProgrammee":
+    "Noted: you will move to {offre} on {date}. Until then, you keep the plan you paid for.",
+  "pme.reglages.offres.descenteAnnulee": "Noted: you stay on {offre}.",
+  "pme.reglages.offres.descenteEnAttente":
+    "Move to {offre} planned on {date}. Until then, you keep everything you paid for.",
+  "pme.reglages.offres.descenteAnnuler": "Cancel this change",
+  "pme.reglages.offres.devis.rien":
+    "Nothing to pay: your paid period already covers {offre} until {au}. Then: {plein} {devise} per month, VAT and stamp duty included.",
+  "pme.reglages.offres.devis.periode":
+    "To pay now: {ttc} {devise} incl. VAT and stamp duty, from {du} to {au}. Then: {plein} {devise} per month, VAT and stamp duty included.",
+  "refus.abonnement.societe_inscrite_seule":
+    "This company signed up on its own: its subscription is its own. Only the accounting firm that invited it to Malica can assign it one.",
+  "refus.cgv.non_acceptees": "Accept the terms of sale before paying.",
+  "refus.cgv.version_perimee":
+    "The terms of sale have changed: read the new version, then tick the box again.",
+  "refus.cgv.mal_formees": "Enter the version date and the https:// address of the terms of sale.",
+  "notif.kind.paiement.recu": "Your payment has been received.",
+  "notif.kind.facture.reglee.pme": "Your subscription invoice is paid.",
+  "pme.payer.cgv.avant": "I have read and accept the",
+  "pme.payer.cgv.lien": "terms of sale",
+  "pme.payer.cgv.version": "(version of {version}).",
+  "pme.payer.cgv.requise": "Tick the box above to choose a payment method.",
+  "cab.cli.abo.inscriteSeule":
+    "This company signed up to Malica on its own: its subscription is its own, and it chooses it. You keep its books; you do not assign it a subscription.",
+  "common.serviceInterrompu": "The service was briefly interrupted: try again in a few seconds.",
+  "tour.cgv.titre": "Terms of sale",
+  "tour.cgv.enVigueur": "In force: version of {version}, published at {url} — since {depuis}.",
+  "tour.cgv.aide":
+    "Every customer accepts this version by ticking the box before paying; the acceptance is kept with the payment. Publish here any new version put online.",
+  "tour.cgv.version": "Version date",
+  "tour.cgv.url": "Public address (https://)",
+  "tour.cgv.valideDes": "In force from",
+  "tour.cgv.publier": "Publish this version",
+  "tour.cgv.publiee": "Version published.",
 };

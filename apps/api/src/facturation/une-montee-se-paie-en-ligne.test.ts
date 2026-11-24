@@ -97,7 +97,7 @@ type Paiement = {
  */
 const lien = (db: pg.PoolClient, paiement: string, prestataire: string) =>
   db.query(
-    "select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa')",
+    "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', $2, 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa') from cgv",
     [paiement, prestataire],
   );
 

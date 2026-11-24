@@ -16,11 +16,53 @@ import { EnTeteCabinet } from "@/components/malica/office-ui";
 import { useChoixDuMoyen, useRetourDuPrestataire } from "@/hooks/use-paiement-en-ligne";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
-import { montant } from "@/lib/lisible";
+import { dateEnLettres, montant } from "@/lib/lisible";
 import { libelleDuPaiement } from "@/lib/paiement";
 import { useRevenir } from "@/hooks/use-revenir";
 
 const routeSociete = getRouteApi("/_authenticated/pme/payer/$paiementId");
+
+/**
+ * La case des conditions générales de vente (CGV publiées, art. 2 : « le client les accepte en
+ * cochant la case prévue avant de payer »). La version et son adresse viennent de la base ;
+ * la version cochée part avec le paiement, qui la garde (20261231260000).
+ */
+function CaseDesCgv({
+  cgv,
+  cochee,
+  cocher,
+}: {
+  cgv: { id: string; version: string; url: string } | null;
+  cochee: boolean;
+  cocher: (v: boolean) => void;
+}) {
+  const { t, locale } = useI18n();
+  if (!cgv) return null;
+  return (
+    <div className="cgv" data-cgv>
+      <label className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          checked={cochee}
+          onChange={(e) => cocher(e.target.checked)}
+          aria-describedby={cochee ? undefined : "cgv-requise"}
+        />
+        <span>
+          {t("pme.payer.cgv.avant")}{" "}
+          <a href={cgv.url} target="_blank" rel="noopener noreferrer" className="underline">
+            {t("pme.payer.cgv.lien")}
+          </a>{" "}
+          {t("pme.payer.cgv.version", { version: dateEnLettres(cgv.version, locale) })}
+        </span>
+      </label>
+      {cochee ? null : (
+        <p className="et" id="cgv-requise">
+          {t("pme.payer.cgv.requise")}
+        </p>
+      )}
+    </div>
+  );
+}
 const routeCabinet = getRouteApi("/_authenticated/cabinet/payer/$paiementId");
 const OU_SOCIETE = "components/malica/payer-en-ligne#societe";
 const OU_CABINET = "components/malica/payer-en-ligne#cabinet";
@@ -44,10 +86,18 @@ export function PayerEnLigneSociete() {
   const { t, locale } = useI18n();
   const revenir = useRevenir();
   const { paiementId } = routeSociete.useParams();
-  const { paiements, choix, paiement, prestataire, payer, message, empechement } = useChoixDuMoyen(
-    paiementId,
-    OU_SOCIETE,
-  );
+  const {
+    paiements,
+    choix,
+    paiement,
+    prestataire,
+    payer,
+    message,
+    empechement,
+    cgv,
+    cgvAcceptees,
+    accepterLesCgv,
+  } = useChoixDuMoyen(paiementId, OU_SOCIETE);
 
   return (
     <div data-ecran="paiement" className="-mx-4 -my-5 flex min-h-0 flex-1 flex-col">
@@ -90,6 +140,8 @@ export function PayerEnLigneSociete() {
 
             {prestataire ? null : <p className="et">{t("pme.reglages.paiement.ferme")}</p>}
 
+            <CaseDesCgv cgv={cgv} cochee={cgvAcceptees} cocher={accepterLesCgv} />
+
             <ul className="moyens">
               {(choix.data?.moyens ?? []).map((m) => {
                 const pourquoi = empechement(m);
@@ -99,7 +151,7 @@ export function PayerEnLigneSociete() {
                       type="button"
                       className="moyen"
                       data-moyen={m.code}
-                      disabled={pourquoi !== null || payer.isPending}
+                      disabled={pourquoi !== null || !cgvAcceptees || payer.isPending}
                       aria-describedby={pourquoi ? `moyen-${m.code}` : undefined}
                       onClick={() => payer.mutate(m.code)}
                     >
@@ -151,10 +203,18 @@ export function PayerEnLigneSociete() {
 export function PayerEnLigneCabinet() {
   const { t, locale } = useI18n();
   const { paiementId } = routeCabinet.useParams();
-  const { paiements, choix, paiement, prestataire, payer, message, empechement } = useChoixDuMoyen(
-    paiementId,
-    OU_CABINET,
-  );
+  const {
+    paiements,
+    choix,
+    paiement,
+    prestataire,
+    payer,
+    message,
+    empechement,
+    cgv,
+    cgvAcceptees,
+    accepterLesCgv,
+  } = useChoixDuMoyen(paiementId, OU_CABINET);
   const qc = useQueryClient();
   const retour = useRetourDuPrestataire(true, OU_CABINET, async () => {
     await qc.invalidateQueries({ queryKey: ["cab-abo-factures"] });
@@ -209,6 +269,10 @@ export function PayerEnLigneCabinet() {
             <p className="text-sm text-muted-foreground">{t("pme.reglages.paiement.ferme")}</p>
           )}
 
+          <div className="text-sm">
+            <CaseDesCgv cgv={cgv} cochee={cgvAcceptees} cocher={accepterLesCgv} />
+          </div>
+
           <ul className="space-y-2">
             {(choix.data?.moyens ?? []).map((m) => {
               const pourquoi = empechement(m);
@@ -217,7 +281,7 @@ export function PayerEnLigneCabinet() {
                   <button
                     type="button"
                     data-moyen={m.code}
-                    disabled={pourquoi !== null || payer.isPending}
+                    disabled={pourquoi !== null || !cgvAcceptees || payer.isPending}
                     aria-describedby={pourquoi ? `moyen-${m.code}` : undefined}
                     onClick={() => payer.mutate(m.code)}
                     className="flex w-full items-center gap-4 rounded-lg border border-border p-3 text-start hover:border-foreground disabled:cursor-default disabled:hover:border-border"

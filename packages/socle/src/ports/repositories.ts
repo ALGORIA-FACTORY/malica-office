@@ -396,6 +396,12 @@ export interface EtatDuClient {
   siegesInclus: number | null;
   /** Les invitations à une place, envoyées et pas encore acceptées. */
   placesEnAttente: number;
+  /**
+   * La comptabilité a invité la société dans Malica (elle a créé son dossier, ou invité son
+   * dirigeant). Sinon, la société est venue seule : son abonnement est le sien, la
+   * comptabilité ne lui en attribue pas (20261231250000).
+   */
+  inviteeParNous: boolean;
 }
 
 /** Le résultat de la vérification d'une ligne à importer. */
@@ -4416,11 +4422,23 @@ export interface FacturationRepository {
   souscrireAnnuel(
     tenantId?: string,
   ): Promise<{ engagement: string; paiement: PaiementEnLigne | null }>;
-  /** Propriétaire principal seul ; un refus revient en `refus.forfait.empeche?motif=<code>&…`. */
+  /**
+   * Propriétaire principal seul ; un refus revient en `refus.forfait.empeche?motif=<code>&…`.
+   * Une descente pendant une période payée d'avance ne change rien aujourd'hui : elle se
+   * programme pour l'échéance (`descente`), ou s'annule quand on revient à l'offre en cours.
+   */
   changerForfait(
     offre: string,
     tenantId?: string,
-  ): Promise<{ change: boolean; paiement: PaiementEnLigne | null }>;
+  ): Promise<{
+    change: boolean;
+    paiement: PaiementEnLigne | null;
+    descente: DescenteProgrammee | { annulee: true; offre: string } | null;
+  }>;
+  /** La descente qui attend l'échéance payée, ou `null`. */
+  maDescente(tenantId?: string): Promise<DescenteProgrammee | null>;
+  /** Le titulaire revient sur sa descente : son offre reste. */
+  annulerDescente(tenantId?: string): Promise<boolean>;
 
   paliersDeRecharge(): Promise<PalierDeRecharge[]>;
   mesRecharges(): Promise<RechargeDeLaLicence[]>;
@@ -4441,10 +4459,15 @@ export interface FacturationRepository {
   factureDetail(factureId: string): Promise<FactureDetaillee>;
   /** Préparer le paiement en ligne du reste dû d'une facture (en entier). */
   payerFacture(factureId: string): Promise<PaiementEnLigne>;
-  /** `ouvert: false` : aucun prestataire dans cet environnement — l'offre reste ouverte. */
+  /**
+   * `ouvert: false` : aucun prestataire dans cet environnement — l'offre reste ouverte.
+   * `cgvId` : la version des CGV que le client a acceptée en cochant la case (CGV, art. 2) ;
+   * la base refuse une version périmée, et toute page de paiement sans elle.
+   */
   payerEnLigne(
     paiementId: string,
     moyen: string,
+    cgvId: string,
   ): Promise<{ ouvert: boolean; lien: string | null; paiement: PaiementEnLigne }>;
   /** La page de choix : les moyens, leur logo, et s'ils sont payables ici. */
   moyensDePaiementEnLigne(locale: string): Promise<MoyensDePaiement>;
@@ -4575,8 +4598,22 @@ export interface OffreAuCatalogue {
   recharges_permises: boolean;
 }
 
+/** Une descente demandée pendant une période payée : elle prend effet le `le` (CGV, art. 8). */
+export interface DescenteProgrammee {
+  offre: string;
+  le: string;
+}
+
 export interface DevisDeMontee {
   offre: string;
+  /**
+   * Vrai quand la période payée couvre déjà l'offre demandée : elle s'ouvre sans rien faire
+   * payer (`au` dit jusqu'à quand la période payée court).
+   */
+  rien_a_regler?: boolean;
+  /** Les jours que le montant couvre (périmètre « PME » ouvert), AAAA-MM-JJ, `au` inclus. */
+  du?: string | null;
+  au?: string | null;
   /** `null` quand rien ne se chiffre (périmètre « PME » ouvert, sans facture d'avance qui couvre le jour). */
   ecart_mensuel_ht: number | null;
   /** Les montants à régler sont `null` quand ils ne se devinent pas (périmètre « PME » ouvert, sans émetteur). */
@@ -4873,6 +4910,8 @@ export interface MoyensDePaiement {
   /** `null` : le paiement en ligne est fermé dans cet environnement. */
   prestataire: { code: string; libelle: string; logo: string | null } | null;
   moyens: MoyenDePaiement[];
+  /** Les CGV en vigueur, à accepter avant de payer ; `null` si aucune n'est publiée. */
+  cgv: { id: string; version: string; url: string } | null;
 }
 
 /** Un prestataire parmi lesquels la tour choisit (`facturation.prestataires_paiement`). */
@@ -5339,6 +5378,10 @@ export interface TourRepository {
     urlRetour: string | null,
     motif: string,
   ): Promise<unknown>;
+  /** Les CGV en vigueur (version, adresse publique, depuis quand), ou `null`. */
+  cgvEnVigueur(): Promise<{ version: string; url: string; valide_des: string } | null>;
+  /** Publier une version des CGV : datée, motivée ; refus `refus.cgv.mal_formees`. */
+  reglerCgv(version: string, url: string, valideDes: string, motif: string): Promise<unknown>;
   emetteur(): Promise<OrganisationEmettrice | null>;
   chercherOrganisations(texte: string): Promise<OrganisationEmettrice[]>;
   /** Les membres d'une organisation et le titulaire de sa licence (plateforme, lecture). */

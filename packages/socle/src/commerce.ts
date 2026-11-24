@@ -41,4 +41,6 @@ export const METHODES_COMMERCIALES: ReadonlySet<string> = new Set([
   "arreterAbonnement",
   "descentePourMoi",
   "repondreDescente",
+  "maDescente",
+  "annulerDescente",
 ]);

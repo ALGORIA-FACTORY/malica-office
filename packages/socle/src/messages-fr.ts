@@ -5907,6 +5907,42 @@ export const fr = {
   "pme.descente.accepter": "Accepter",
   "pme.descente.refuser": "Garder mon offre",
   "pme.descente.ok": "Réponse envoyée à votre comptabilité",
+  "pme.reglages.offres.descenteProgrammee":
+    "C'est noté : vous passerez à {offre} le {date}. D'ici là, vous gardez l'offre que vous avez payée.",
+  "pme.reglages.offres.descenteAnnulee": "C'est noté : vous restez en {offre}.",
+  "pme.reglages.offres.descenteEnAttente":
+    "Passage à {offre} prévu le {date}. D'ici là, vous gardez tout ce que vous avez payé.",
+  "pme.reglages.offres.descenteAnnuler": "Annuler ce passage",
+  "pme.reglages.offres.devis.rien":
+    "Rien à régler : votre période payée couvre déjà {offre} jusqu'au {au}. Ensuite : {plein} {devise} TTC par mois, TVA et timbre compris.",
+  "pme.reglages.offres.devis.periode":
+    "À régler maintenant : {ttc} {devise} TTC, timbre compris, du {du} au {au}. Ensuite : {plein} {devise} TTC par mois, TVA et timbre compris.",
+  "refus.abonnement.societe_inscrite_seule":
+    "Cette société s'est inscrite seule : son abonnement est le sien. Seule la comptabilité qui l'a invitée dans Malica peut lui en attribuer un.",
+  "refus.cgv.non_acceptees": "Acceptez les conditions générales de vente avant de payer.",
+  "refus.cgv.version_perimee":
+    "Les conditions générales de vente ont changé : relisez la nouvelle version, puis cochez à nouveau la case.",
+  "refus.cgv.mal_formees":
+    "Indiquez la date de la version et l'adresse https:// des conditions générales de vente.",
+  "notif.kind.paiement.recu": "Votre paiement est bien reçu.",
+  "notif.kind.facture.reglee.pme": "Votre facture d’abonnement est réglée.",
+  "pme.payer.cgv.avant": "J'ai lu et j'accepte les",
+  "pme.payer.cgv.lien": "conditions générales de vente",
+  "pme.payer.cgv.version": "(version du {version}).",
+  "pme.payer.cgv.requise": "Cochez la case ci-dessus pour choisir un moyen de paiement.",
+  "cab.cli.abo.inscriteSeule":
+    "Cette société s'est inscrite seule sur Malica : son abonnement est le sien, et c'est elle qui le choisit. Vous tenez ses livres ; vous ne lui attribuez pas d'abonnement.",
+  "common.serviceInterrompu":
+    "Le service a été interrompu un instant : réessayez dans quelques secondes.",
+  "tour.cgv.titre": "Conditions générales de vente",
+  "tour.cgv.enVigueur": "En vigueur : version du {version}, publiée à {url} — depuis le {depuis}.",
+  "tour.cgv.aide":
+    "Chaque client accepte cette version en cochant la case avant de payer ; l'acceptation est gardée avec le paiement. Publiez ici toute nouvelle version mise en ligne.",
+  "tour.cgv.version": "Date de la version",
+  "tour.cgv.url": "Adresse publique (https://)",
+  "tour.cgv.valideDes": "En vigueur à partir du",
+  "tour.cgv.publier": "Publier cette version",
+  "tour.cgv.publiee": "Version publiée.",
 } as const;
 
 export type MessageKey = keyof typeof fr;

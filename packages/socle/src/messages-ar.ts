@@ -5443,4 +5443,38 @@ export const ar: Dict = {
   "pme.descente.accepter": "قبول",
   "pme.descente.refuser": "الإبقاء على عرضي",
   "pme.descente.ok": "أُرسل الردّ إلى محاسبتكم",
+  "pme.reglages.offres.descenteProgrammee":
+    "تمّ التسجيل: ستنتقلون إلى {offre} يوم {date}. وحتى ذلك الحين، تحتفظون بالعرض الذي دفعتم ثمنه.",
+  "pme.reglages.offres.descenteAnnulee": "تمّ التسجيل: تبقون على {offre}.",
+  "pme.reglages.offres.descenteEnAttente":
+    "الانتقال إلى {offre} مُقرّر يوم {date}. وحتى ذلك الحين، تحتفظون بكل ما دفعتم ثمنه.",
+  "pme.reglages.offres.descenteAnnuler": "إلغاء هذا الانتقال",
+  "pme.reglages.offres.devis.rien":
+    "لا شيء للدفع: فترتكم المدفوعة تغطي {offre} حتى {au}. بعد ذلك: {plein} {devise} شهريًا، شاملة الأداء والطابع.",
+  "pme.reglages.offres.devis.periode":
+    "للدفع الآن: {ttc} {devise} شاملة الأداء والطابع، من {du} إلى {au}. بعد ذلك: {plein} {devise} شهريًا، شاملة الأداء والطابع.",
+  "refus.abonnement.societe_inscrite_seule":
+    "سجّلت هذه الشركة بنفسها: اشتراكها ملكها. لا يمكن أن تُسند لها اشتراكًا إلا المحاسبة التي دعتها إلى Malica.",
+  "refus.cgv.non_acceptees": "اقبلوا الشروط العامة للبيع قبل الدفع.",
+  "refus.cgv.version_perimee":
+    "تغيّرت الشروط العامة للبيع: اقرؤوا النسخة الجديدة، ثم أعيدوا تأشير الخانة.",
+  "refus.cgv.mal_formees": "أدخلوا تاريخ النسخة وعنوان https:// للشروط العامة للبيع.",
+  "notif.kind.paiement.recu": "تم استلام دفعتكم.",
+  "notif.kind.facture.reglee.pme": "فاتورة اشتراككم مدفوعة.",
+  "pme.payer.cgv.avant": "قرأتُ وأقبل",
+  "pme.payer.cgv.lien": "الشروط العامة للبيع",
+  "pme.payer.cgv.version": "(نسخة {version}).",
+  "pme.payer.cgv.requise": "أشّروا الخانة أعلاه لاختيار وسيلة الدفع.",
+  "cab.cli.abo.inscriteSeule":
+    "سجّلت هذه الشركة في Malica بنفسها: اشتراكها ملكها وهي من تختاره. أنتم تمسكون حساباتها، ولا تُسندون لها اشتراكًا.",
+  "common.serviceInterrompu": "انقطعت الخدمة لحظة: أعيدوا المحاولة بعد بضع ثوانٍ.",
+  "tour.cgv.titre": "الشروط العامة للبيع",
+  "tour.cgv.enVigueur": "السارية: نسخة {version}، منشورة على {url} — منذ {depuis}.",
+  "tour.cgv.aide":
+    "يقبل كل عميل هذه النسخة بتأشير الخانة قبل الدفع، ويُحفظ القبول مع الدفعة. انشروا هنا كل نسخة جديدة توضع على الإنترنت.",
+  "tour.cgv.version": "تاريخ النسخة",
+  "tour.cgv.url": "العنوان العمومي (https://)",
+  "tour.cgv.valideDes": "سارية ابتداءً من",
+  "tour.cgv.publier": "نشر هذه النسخة",
+  "tour.cgv.publiee": "نُشرت النسخة.",
 };

@@ -312,6 +312,32 @@ export const tour = {
     return rows[0]?.r ?? null;
   },
 
+  /**
+   * Les CGV en vigueur, que chaque client accepte en cochant la case avant de payer
+   * (20261231260000) : la version, son adresse publique, depuis quand.
+   */
+  async cgvEnVigueur(db: Requete) {
+    const { rows } = await db.query<{
+      version: string | null;
+      url: string | null;
+      valide_des: string | null;
+    }>(
+      `select c.version::text as version, c.url, c.valide_des::text as valide_des
+         from plateforme.cgv_en_vigueur() c`,
+    );
+    const c = rows[0];
+    return c?.version ? { version: c.version, url: c.url!, valide_des: c.valide_des! } : null;
+  },
+
+  /** La tour publie une version des CGV : datée (aujourd'hui ou plus tard), motivée. */
+  async reglerCgv(db: Requete, version: string, url: string, valideDes: string, motif: string) {
+    const { rows } = await db.query<{ r: unknown }>(
+      `select plateforme.cgv_regler($1::date, $2, $3::date, $4) as r`,
+      [version, url, valideDes, motif],
+    );
+    return rows[0]?.r ?? null;
+  },
+
   /** Le réglage de l'abonnement en vigueur : le report d'un mois (0 ou 1). */
   async reglageAbonnement(db: Requete) {
     const { rows } = await db.query<{ r: Record<string, unknown> }>(

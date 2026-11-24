@@ -84,6 +84,7 @@ describe("une alerte tranchée n'est plus à traiter", { skip: !BASE_CONFIGUREE 
   });
 
   it("l'alerte d'une prise en charge dit qu'elle a démarré", async () => {
+    await s.inviteeParLaComptabilite();
     const { id } = (await s.fait(
       "expert",
       "facturation.proposerAbonnement",

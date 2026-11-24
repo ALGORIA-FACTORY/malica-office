@@ -110,7 +110,13 @@ async function unLienOuvert(db: pg.PoolClient, minutes: number) {
 }
 
 const payer = (db: pg.PoolClient, d: Decor, paiement: string) =>
-  enPersonne(db, d.titulaire, () => facturation.payerEnLigne(db, paiement, "visa"));
+  enPersonne(db, d.titulaire, async () => {
+    // La version des CGV en vigueur, que le client a cochée avant de payer.
+    const { rows } = await db.query<{ id: string }>(
+      "select (plateforme.cgv_en_vigueur()).id as id",
+    );
+    return facturation.payerEnLigne(db, paiement, "visa", rows[0]!.id);
+  });
 
 const ttl = async (db: pg.PoolClient) =>
   Number(

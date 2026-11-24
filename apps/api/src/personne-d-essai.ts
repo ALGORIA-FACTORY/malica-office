@@ -24,3 +24,24 @@ export async function personnesDEssai(
     [ids],
   );
 }
+
+/**
+ * La comptabilité a invité le dirigeant de la société dans Malica : une invitation acceptée,
+ * envoyée par un membre de la comptabilité. C'est ce qui lui donne le droit d'attribuer un
+ * abonnement à son client (`facturation.comptabilite_a_invite`, 20261231250000) ; une société
+ * venue seule ne l'a pas.
+ */
+export async function inviteeParLaComptabilite(
+  db: Pick<pg.ClientBase, "query">,
+  pme: string,
+  membreDeLaComptabilite: string,
+): Promise<void> {
+  await db.query(
+    `insert into identity.invitations
+       (tenant_id, email, role, token_hash, invited_by, expires_at, accepted_at)
+     values ($1::uuid, 'dirigeant-' || $1::text || '@essai.local', 'dirigeant',
+             encode(sha256(gen_random_uuid()::text::bytea), 'hex'), $2::uuid,
+             now() + interval '7 days', now())`,
+    [pme, membreDeLaComptabilite],
+  );
+}

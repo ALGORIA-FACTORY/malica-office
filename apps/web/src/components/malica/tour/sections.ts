@@ -52,7 +52,7 @@ import { LesFonctionsDuProduit } from "./fonctions";
 import { LaGrille } from "./grille";
 import { LeJournalDesPannes } from "./journal-des-pannes";
 import { LesLicences } from "./licences";
-import { ReglerLePaiement } from "./paiement";
+import { ReglerLePaiement, ReglerLesCgv } from "./paiement";
 import { LaPasseDeNuit, LeCompteDeService } from "./passe-de-nuit";
 import { ReglerLePlafondIa } from "./plafond-des-modeles";
 import { ReglerLesRelances } from "./relances";
@@ -67,7 +67,11 @@ interface Section {
 /** Les sections de réglage, par leur segment d'adresse (`/tour/$section`). */
 export const SECTIONS = {
   grille: { libelle: "tour.menu.grille", icone: LayoutGrid, cartes: [LaGrille, ReglerLAbonnement] },
-  paiement: { libelle: "tour.menu.paiement", icone: CreditCard, cartes: [ReglerLePaiement] },
+  paiement: {
+    libelle: "tour.menu.paiement",
+    icone: CreditCard,
+    cartes: [ReglerLePaiement, ReglerLesCgv],
+  },
   emetteur: { libelle: "tour.menu.emetteur", icone: FileSignature, cartes: [DesignerLEmetteur] },
   facturation: {
     libelle: "tour.menu.facturation",
