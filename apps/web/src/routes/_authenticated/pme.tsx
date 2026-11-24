@@ -11,13 +11,15 @@ import {
 import { CalendarClock, Home as HomeIcon, Library, Lock, Plus, Settings } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { CIBLE_COQUE } from "@/capabilities/coque";
+import portraitMalica from "@/assets/malica.webp";
+import { CIBLE_COQUE, COMMERCE } from "@/capabilities/coque";
 import { usePhotosDeProfil } from "@/hooks/use-photos-de-profil";
 import { FichierNonPdf, files, type PickedFile } from "@/capabilities/files";
 import { BandeauHorsLigne } from "@/components/malica/bandeau-hors-ligne";
 import { EntetePme } from "@/components/malica/entete-pme";
 import { useAbonnementSuitLesAlertes } from "@/hooks/use-relire-l-abonnement";
-import { MalicaAvatar } from "@/components/malica/office-ui";
+import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
+import { MalicaAvatar, MarqueRg } from "@/components/malica/office-ui";
 import { useTransitionDEcran } from "@/components/malica/mouvement";
 import {
   PmeProvider,
@@ -25,13 +27,17 @@ import {
   type PieceARemplacer,
 } from "@/components/malica/pme-context";
 import { QuestionDuType } from "@/components/malica/question-du-type";
+import { SelecteurDeSociete } from "@/components/malica/selecteur-de-societe";
 import { SurfacePme } from "@/components/malica/surface-pme";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
-import { useCatalogueDesOffres } from "@/hooks/use-offres";
+import { libelleDOffre, useCatalogueDesOffres } from "@/hooks/use-offres";
+import { useRaccourcisDuBureau } from "@/hooks/use-raccourcis-du-bureau";
 import { usePriseDeVue } from "@/hooks/use-prise-de-vue";
 import { useI18n, type MessageKey } from "@/i18n";
 import { libelleHorsArbre } from "@/i18n/dictionnaires";
-import { ouverturesDuForfait } from "@/lib/forfait";
+import { LIBELLE_DE_RUBRIQUE, lettreDuRaccourci, rubriqueDuChemin } from "@/lib/coque-du-bureau";
+import { nombre, ouverturesDuForfait } from "@/lib/forfait";
+import { roleLisible } from "@/lib/role-lisible";
 import { visibiliteALaCapture } from "@/lib/visibilite-a-la-capture";
 import {
   readActiveOrgId,
@@ -641,6 +647,69 @@ function PmeLayout() {
       : null,
   };
 
+  /*
+   * Le sélecteur de société, quand il y en a plusieurs : dans l'en-tête sur le téléphone, en
+   * tête de la barre latérale sur le poste de bureau (une seule description, deux places).
+   */
+  const selecteur =
+    org && pmeOrgs.length > 1
+      ? {
+          societes: pmeOrgs.map((o) => ({
+            id: o.id,
+            name: o.name,
+            matricule: o.legalId ?? null,
+          })),
+          /*
+           * Planche 13 (approuvée le 8 novembre 2026) : choisir une
+           * société OUVRE son accueil, le même qu'aujourd'hui ; les
+           * filtres de la bibliothèque n'en dépendent pas.
+           * « Toutes les sociétés » ouvre l'écran « Mes sociétés ».
+           */
+          ouverte: org.id,
+          surMesSocietes: path.startsWith("/pme/societes") || consolidee,
+          /*
+           * 9 novembre 2026 : sur la bibliothèque, ses dossiers et les
+           * échéances, l'en-tête choisit ce que l'écran montre, et l'on
+           * y reste. Ailleurs, choisir une société ouvre son accueil, et
+           * « Toutes les sociétés » l'écran « Mes sociétés »
+           * (planche 13).
+           */
+          onOuvrir: (id: string) => {
+            afficherSociete(id);
+            if (
+              sousToutes === "inchangee" ||
+              sousToutes === "laSocieteDeLaPiece" ||
+              path.startsWith("/pme/societes")
+            )
+              void navigate({ to: "/pme" });
+          },
+          // L'écran ouvert ne change pas : il dit ce qu'il fait de « Toutes ».
+          onToutes: () => setConsolidee(true),
+        }
+      : undefined;
+
+  /*
+   * Ajouter une pièce : l'obturateur du téléphone, le bouton de la barre latérale et la
+   * touche N du poste mènent au même écran (planche 9). Depuis Privé, « Pour moi » sera
+   * pré-choisi.
+   */
+  const ouvrirLAjout = () => {
+    setNumeroAjout((n) => n + 1);
+    void navigate({
+      to: "/pme/capturer",
+      search: path.startsWith("/pme/coffre") ? { pour: "moi" } : {},
+    });
+  };
+  useRaccourcisDuBureau(
+    { ajouter: ouvrirLAjout, malica: () => void navigate({ to: "/pme/malica" }) },
+    Boolean(org) && !capture.isPending,
+  );
+
+  // Les lectures du mois, comptées comme l'accueil et les Réglages : restantes sur le droit.
+  const lecturesRestantes = nombre(forfaitQuery.data?.lectures_restantes);
+  const lecturesDroit = nombre(forfaitQuery.data?.lectures_droit);
+  const offre = forfaitQuery.data?.offre ? libelleDOffre(catalogue, forfaitQuery.data.offre) : null;
+
   const navItems = [
     { to: "/pme", icon: HomeIcon, label: t("pme.nav.home"), active: path === "/pme" },
     {
@@ -660,8 +729,8 @@ function PmeLayout() {
      *
      * `app` est le nom que la feuille habille déjà : la colonne et sa mesure,
      * les encoches des quatre côtés, `100dvh`, et — à partir de 1024 px — la
-     * grille `15rem / 32rem / 1fr` qui fait du bas de l'écran un rail à
-     * gauche. Tout cela était écrit et n'atteignait rien, parce qu'aucun
+     * coque de bureau (`styles-pme-bureau-coque.css`) qui fait de la barre du
+     * bas une barre latérale. Tout cela était écrit et n'atteignait rien, parce qu'aucun
      * élément ne portait le nom. On renomme l'arbre, on ne repointe pas la
      * feuille : le dessin n'a qu'une source.
      *
@@ -711,43 +780,8 @@ function PmeLayout() {
           initiale={initiale}
           photo={maPhoto}
           cloche={cloche}
-          societe={
-            org && pmeOrgs.length > 1
-              ? {
-                  societes: pmeOrgs.map((o) => ({
-                    id: o.id,
-                    name: o.name,
-                    matricule: o.legalId ?? null,
-                  })),
-                  /*
-                   * Planche 13 (approuvée le 8 novembre 2026) : choisir une
-                   * société OUVRE son accueil, le même qu'aujourd'hui ; les
-                   * filtres de la bibliothèque n'en dépendent pas.
-                   * « Toutes les sociétés » ouvre l'écran « Mes sociétés ».
-                   */
-                  ouverte: org.id,
-                  surMesSocietes: path.startsWith("/pme/societes") || consolidee,
-                  /*
-                   * 9 novembre 2026 : sur la bibliothèque, ses dossiers et les
-                   * échéances, l'en-tête choisit ce que l'écran montre, et l'on
-                   * y reste. Ailleurs, choisir une société ouvre son accueil, et
-                   * « Toutes les sociétés » l'écran « Mes sociétés »
-                   * (planche 13).
-                   */
-                  onOuvrir: (id: string) => {
-                    afficherSociete(id);
-                    if (
-                      sousToutes === "inchangee" ||
-                      sousToutes === "laSocieteDeLaPiece" ||
-                      path.startsWith("/pme/societes")
-                    )
-                      void navigate({ to: "/pme" });
-                  },
-                  // L'écran ouvert ne change pas : il dit ce qu'il fait de « Toutes ».
-                  onToutes: () => setConsolidee(true),
-                }
-              : undefined
-          }
+          societe={selecteur}
+          ariane={t(LIBELLE_DE_RUBRIQUE[rubriqueDuChemin(path)])}
         />
 
         <main className="flex min-h-0 flex-1 flex-col px-4 py-5">
@@ -840,8 +874,8 @@ function PmeLayout() {
          * En paysage court, la feuille la rend au flux pour de bon : fixée, elle
          * prenait 102 px sur 390 — 26 % de l'écran debout dans un entrepôt.
          *
-         * À partir de 1024 px, la même classe la sort du bas et en fait le rail
-         * collant de gauche : une barre d'onglets au bas d'un écran de 27
+         * À partir de 1024 px, la même classe la sort du bas et en fait la barre
+         * latérale fixe de 248 px : une barre d'onglets au bas d'un écran de 27
          * pouces est un portage, pas un produit.
          */}
         <nav aria-label={t("pme.nav.aria")} className="nav" data-plus={coteDuPlus}>
@@ -850,8 +884,30 @@ function PmeLayout() {
            * Bibliothèque · Privé, puis « + » à DROITE, plus grand et plein — sous
            * le pouce, et séparé d'un filet : c'est une action, pas un quatrième
            * écran. À droite aussi en arabe (sa décision) : la feuille l'y tient.
-           * Sur poste, la même liste devient le rail, « Ajouter » en bas.
+           *
+           * Sur poste (maquette desktop du 24 novembre 2026), la même liste devient
+           * la barre latérale : la marque et la société en tête, « Ajouter une
+           * pièce » sous elles, les rubriques, Malica, puis les lectures du mois et
+           * le compte. Les blocs `nav-desktop` n'existent pas sur le téléphone.
            */}
+          <div className="nav-desktop tete">
+            <MarqueRg aria-hidden className="mk" />
+            <div className="qui">
+              {selecteur ? <SelecteurDeSociete {...selecteur} /> : <b>{org?.name}</b>}
+              {COMMERCE && offre ? <span>{offre}</span> : null}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="nav-desktop ajouter"
+            disabled={!org || capture.isPending}
+            aria-keyshortcuts={lettreDuRaccourci("ajouter")}
+            onClick={ouvrirLAjout}
+          >
+            <Plus aria-hidden />
+            {t("pme.nav.add")}
+            <kbd aria-hidden>{lettreDuRaccourci("ajouter")}</kbd>
+          </button>
           <NavItem {...navItems[0]} />
           <NavItem
             to="/pme/list"
@@ -875,6 +931,56 @@ function PmeLayout() {
               label={t("pme.reglages.titre")}
               active={path === "/pme/reglages"}
             />
+          </div>
+          <div className="nav-desktop">
+            <Link
+              to="/pme/malica"
+              className="malica"
+              data-on={path.startsWith("/pme/malica")}
+              aria-current={path.startsWith("/pme/malica") ? "page" : undefined}
+              aria-keyshortcuts={lettreDuRaccourci("malica")}
+            >
+              <img src={portraitMalica} alt="" width={32} height={32} />
+              <span className="bd">
+                <b>{t("pme.bureau.malica")}</b>
+                <span>{t("pme.bureau.malica.sous")}</span>
+              </span>
+              <kbd aria-hidden>{lettreDuRaccourci("malica")}</kbd>
+            </Link>
+          </div>
+          <div className="nav-desktop pied">
+            <div className="lectures">
+              <span className="ln">
+                <span>{t("pme.home.lectures")}</span>
+                <b>
+                  {lecturesRestantes ?? "—"} / {lecturesDroit ?? "—"}
+                </b>
+              </span>
+              {lecturesRestantes !== null && lecturesDroit ? (
+                <span className="bar">
+                  <i
+                    style={{
+                      width: `${Math.min(100, (lecturesRestantes / lecturesDroit) * 100)}%`,
+                    }}
+                  />
+                </span>
+              ) : null}
+              {COMMERCE ? (
+                <Link to="/pme/reglages" search={{ page: "abonnement" }}>
+                  {t("pme.reglages.offres")}
+                </Link>
+              ) : null}
+            </div>
+            <div className="compte">
+              <Link to="/pme/reglages" className="titulaire">
+                <span className="av">{maPhoto ? <img src={maPhoto} alt="" /> : initiale}</span>
+                <span className="bd">
+                  <b>{nomDeLaPersonne(profil.data) ?? user.email}</b>
+                  {org?.role ? <span>{roleLisible(org.role, t)}</span> : null}
+                </span>
+              </Link>
+              <LanguageSwitcher />
+            </div>
           </div>
           <div className="ajout">
             {/*
@@ -902,18 +1008,12 @@ function PmeLayout() {
                   appuiLong.current.parti = false;
                   return;
                 }
-                setNumeroAjout((n) => n + 1);
-                // Depuis Privé, « Pour moi » sera pré-choisi (planche 9).
-                void navigate({
-                  to: "/pme/capturer",
-                  search: path.startsWith("/pme/coffre") ? { pour: "moi" } : {},
-                });
+                ouvrirLAjout();
               }}
               aria-label={t("pme.nav.add")}
               className="obtur grid h-16 w-16 place-items-center"
             >
               <Plus className="h-7 w-7" aria-hidden />
-              <span className="nav-desktop">{t("pme.nav.add")}</span>
             </button>
           </div>
         </nav>
@@ -953,8 +1053,8 @@ function NavItem({
   /*
    * `data-on` plutôt qu'une classe de couleur : c'est le marqueur que la
    * feuille lit (`.nav a[data-on="true"]`), et c'est elle qui tient la
-   * couleur, la hauteur de cible (56 px) et le passage en rangée dans le
-   * rail de bureau. Deux sources de couleur pour un seul état en feraient
+   * couleur, la hauteur de cible (56 px) et le passage en rangée dans la
+   * barre latérale du bureau. Deux sources de couleur pour un seul état en feraient
    * diverger une.
    */
   return (

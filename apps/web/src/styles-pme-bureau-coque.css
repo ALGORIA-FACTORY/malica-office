@@ -1,0 +1,668 @@
+/*
+ * La coque de bureau de l'espace PME — maquette desktop validée le 24 novembre 2026
+ * (Sidebar, en-tête et accueil de Main).
+ *
+ * Tout vit à partir de 1024 px : le téléphone et la coque Android ne voient rien de cette
+ * feuille, sauf les enveloppes de l'accueil, qui n'existent pas pour la mise en page sous
+ * 1024 px (`display: contents`) — l'accueil du téléphone reste pixel pour pixel.
+ *
+ * Aucune couleur écrite : les jetons de la surface (`styles-pme.css`), qui ont leur valeur
+ * claire et leur valeur sombre. Les propriétés sont logiques, l'arabe se miroite seul.
+ */
+
+[data-surface="pme"]
+  [data-ecran="accueil"]
+  :is(.bureau-kpis, .bureau-corps, .bureau-principal, .bureau-cote, .bureau-bloc) {
+  display: contents;
+}
+
+@media (min-width: 1024px) {
+  /* ───────────────────────────────────────────── la page : barre latérale + colonne */
+  [data-surface="pme"] .app {
+    --largeur-barre: 248px;
+    padding-inline-start: var(--largeur-barre);
+  }
+
+  /* ───────────────────────────────────────────────────────── la barre latérale */
+  [data-surface="pme"] .nav {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 20;
+    width: var(--largeur-barre);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 1.25rem 0.875rem;
+    overflow-y: auto;
+    border: 0;
+    border-inline-end: 1px solid var(--hr);
+    background: var(--bg);
+  }
+  /* L'obturateur est celui du téléphone : le poste a son bouton « Ajouter une pièce ». */
+  [data-surface="pme"] .nav .ajout {
+    display: none;
+  }
+  [data-surface="pme"] .nav > .nav-desktop:not(.tete, .ajouter, .pied) {
+    display: block;
+  }
+
+  [data-surface="pme"] .nav a {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    min-height: 40px;
+    padding: 0 0.75rem;
+    border-radius: var(--r-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: var(--t2);
+  }
+  [data-surface="pme"] .nav a svg {
+    width: 18px;
+    height: 18px;
+  }
+  [data-surface="pme"] .nav a[data-on="true"] {
+    background: var(--me);
+    color: var(--me-tx);
+  }
+
+  /* La marque et la société ouverte. */
+  [data-surface="pme"] .nav .tete {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 3.25rem;
+    padding: 0.5rem;
+    border-radius: var(--r-sm);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+  }
+  [data-surface="pme"] .nav .tete .mk {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    color: var(--tx);
+  }
+  [data-surface="pme"] .nav .tete .qui {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 0.125rem;
+  }
+  [data-surface="pme"] .nav .tete .qui > b {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  [data-surface="pme"] .nav .tete .qui > span {
+    font-size: 0.6875rem;
+    color: var(--t3);
+  }
+  [data-surface="pme"] .nav .tete .selsoc {
+    display: block;
+    min-width: 0;
+  }
+  [data-surface="pme"] .nav .tete .selsoc .puce {
+    width: 100%;
+    height: auto;
+    min-height: 1.75rem;
+    padding: 0;
+    border-radius: var(--r-sm);
+    background: none;
+    box-shadow: none;
+  }
+  [data-surface="pme"] .nav .tete .selsoc .puce .nom {
+    flex: 1;
+  }
+  [data-surface="pme"] .nav .tete .selsoc .puce .g {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: var(--t3);
+  }
+
+  /* Ajouter une pièce, et sa touche. */
+  [data-surface="pme"] .nav .ajouter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    margin-block: 1rem 0.75rem;
+    border: 0;
+    border-radius: var(--r-sm);
+    background: var(--acc);
+    color: var(--on-acc);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  [data-surface="pme"] .nav .ajouter svg {
+    width: 18px;
+    height: 18px;
+  }
+  [data-surface="pme"] .nav .ajouter[disabled] {
+    opacity: 0.4;
+    cursor: default;
+  }
+  [data-surface="pme"] .nav kbd {
+    margin-inline-start: 0.375rem;
+    padding: 0.0625rem 0.375rem;
+    border-radius: 6px;
+    background: color-mix(in srgb, currentColor 14%, transparent);
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+  }
+
+  /* Demander à Malica. */
+  [data-surface="pme"] .nav a.malica {
+    min-height: 52px;
+    margin-top: 1rem;
+    padding: 0.625rem;
+    background: var(--me);
+    color: var(--me-tx);
+  }
+  [data-surface="pme"] .nav .malica img {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: 50% 18%;
+  }
+  [data-surface="pme"] .nav .malica .bd {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+  }
+  [data-surface="pme"] .nav .malica .bd b {
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  [data-surface="pme"] .nav .malica .bd span {
+    font-size: 0.6875rem;
+  }
+
+  /* En pied : les lectures du mois, puis le compte et la langue. */
+  [data-surface="pme"] .nav .pied {
+    margin-top: auto;
+    padding-top: 1.25rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+  [data-surface="pme"] .nav .lectures {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: var(--r-sm);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+    font-size: 0.75rem;
+  }
+  [data-surface="pme"] .nav .lectures .ln {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] .nav .lectures .ln b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--tx);
+  }
+  [data-surface="pme"] .nav .lectures .bar {
+    height: 4px;
+  }
+  [data-surface="pme"] .nav .lectures a {
+    min-height: 0;
+    padding: 0;
+    font-size: 0.75rem;
+    color: var(--acc);
+  }
+  [data-surface="pme"] .nav .compte {
+    display: grid;
+    gap: 0.5rem;
+  }
+  [data-surface="pme"] .nav .compte a.titulaire {
+    min-width: 0;
+    padding: 0.25rem;
+    color: var(--tx);
+  }
+  [data-surface="pme"] .nav .compte .av {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: var(--acc);
+    color: var(--on-acc);
+    font-weight: 700;
+  }
+  [data-surface="pme"] .nav .compte .av img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  [data-surface="pme"] .nav .compte .bd {
+    min-width: 0;
+    display: grid;
+  }
+  [data-surface="pme"] .nav .compte .bd b {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  [data-surface="pme"] .nav .compte .bd span {
+    font-size: 0.6875rem;
+    color: var(--t3);
+  }
+  /* Le sélecteur de langue partagé, à la mesure de la barre. */
+  [data-surface="pme"] .nav .compte > div > div {
+    border: 0;
+    gap: 0.125rem;
+  }
+  [data-surface="pme"] .nav .compte button[aria-pressed] {
+    padding: 0.125rem 0.3125rem;
+    border-radius: 5px;
+    background: none;
+    color: var(--t3);
+    font-family: var(--mono);
+    font-size: 0.625rem;
+  }
+  [data-surface="pme"] .nav .compte button[aria-pressed="true"] {
+    background: var(--d2);
+    color: var(--tx);
+  }
+
+  /* ─────────────────────────────────────────────────────────────── la barre du haut */
+  [data-surface="pme"] .appbar {
+    top: 0;
+    min-height: 64px;
+    gap: 1rem;
+    padding: 0 2rem;
+  }
+  /* La marque et la société sont en tête de la barre latérale. */
+  [data-surface="pme"] .appbar :is(.mk, .selsoc, .org) {
+    display: none;
+  }
+  [data-surface="pme"] .appbar .ariane {
+    display: block;
+    flex: 1;
+    min-width: 0;
+  }
+  [data-surface="pme"] .appbar .ariane ol {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  [data-surface="pme"] .appbar .ariane li {
+    font-size: 0.8125rem;
+    color: var(--t2);
+  }
+  [data-surface="pme"] .appbar :is(.cloche, .cloche .cl, .me) {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* ───────────────────────────────────────────────────────────────────── l'accueil */
+  [data-surface="pme"] [data-ecran="accueil"] .pad {
+    width: 100%;
+    max-width: 1320px;
+    margin-inline: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .pad > .date {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .pad > h1 {
+    margin: 0.375rem 0 0;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  /* La bande des quatre indicateurs. */
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis > a {
+    min-height: 0;
+    margin: 0;
+    padding: 1.125rem;
+    border: 0;
+    border-radius: var(--r-md);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.625rem;
+    color: var(--tx);
+    text-decoration: none;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .k {
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis :is(.mois .v b:not(.t), .v) {
+    font-family: var(--mono);
+    font-size: 1.625rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .mois .v u {
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .mois .dt,
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .s {
+    font-size: 0.75rem;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ligne b {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ligne span {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--tx);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ligne .ar {
+    display: none;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ech-kpi[data-retard] {
+    box-shadow: inset 0 0 0 1px var(--ve);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .ech-kpi[data-retard] .v {
+    color: var(--ve);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis .remettre-kpi[data-attente] .v {
+    color: var(--am);
+  }
+
+  /* Deux colonnes : huit douzièmes pour le travail, quatre pour ce qui vient. */
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-corps {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.75rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-principal {
+    grid-column: span 8;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote {
+    grid-column: span 4;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-bloc {
+    display: block;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-principal > .hero {
+    order: -1;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-principal > .sec:first-child {
+    margin-top: 1.75rem;
+  }
+
+  /* La carte Malica, à l'horizontale. */
+  [data-surface="pme"] [data-ecran="accueil"] .hero {
+    min-height: 0;
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    border-inline-start: 0;
+    border-radius: var(--r-lg);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+    gap: 1.25rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-principal .hero :is(.amb, .stack) {
+    display: none;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero .por {
+    position: static;
+    transform: none;
+    width: 56px;
+    height: 56px;
+    flex: none;
+    border: 0;
+    box-shadow: 0 0 0 2px var(--acc);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero .in {
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 1.25rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero .in > :not(.gestes) {
+    grid-column: 1;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero .sig {
+    color: var(--acc);
+    font-family: var(--mono);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero h3 {
+    margin-top: 0.25rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero p {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero .gestes {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: center;
+    margin: 0;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero .cta {
+    min-height: 40px;
+    padding: 0 1rem;
+    border-radius: var(--r-sm);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  /* Les dossiers, en grille de quatre. */
+  [data-surface="pme"] [data-ecran="accueil"] .dossiers-accueil .rail {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .dossiers-accueil .poch {
+    width: auto;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .dossiers-accueil .poch .cv {
+    width: 100%;
+    height: 112px;
+    border-radius: var(--r-md);
+  }
+
+  /* Récemment lues : un tableau. */
+  [data-surface="pme"] [data-ecran="accueil"] .recentes {
+    display: none;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau {
+    display: block;
+    overflow-x: auto;
+    border-radius: var(--r-md);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau :is(th, td) {
+    padding: 0.75rem 1rem;
+    text-align: start;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau th {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau tbody tr {
+    border-top: 1px solid var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau td {
+    color: var(--t2);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau td a {
+    color: var(--tx);
+    font-weight: 500;
+    text-decoration: none;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau .mono {
+    font-family: var(--mono);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau :is(.mono, .net) {
+    white-space: nowrap;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau .net {
+    text-align: end;
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--tx);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .recentes-tableau .puce {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 0.5rem;
+    border-radius: var(--r-pill);
+    background: var(--d2);
+    font-size: 0.6875rem;
+    color: var(--t2);
+  }
+
+  /* La colonne de droite : les échéances en liste, puis l'offre. */
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote > .bureau-bloc {
+    padding: 1.25rem;
+    border-radius: var(--r-lg);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .sec {
+    margin: 0 0 0.5rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .rail {
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .ech {
+    width: auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    column-gap: 0.875rem;
+    row-gap: 0.125rem;
+    padding: 0.625rem 0;
+    border: 0;
+    border-top: 1px solid var(--hr);
+    border-radius: 0;
+    background: none;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .ech > span:not(.j, :last-child) {
+    font-size: 0.75rem;
+    color: var(--t3);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .ech .j {
+    grid-row: 1 / span 3;
+    align-self: center;
+    font-size: 0.9375rem;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .ech.pro .j {
+    color: var(--am);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .ech.ret .j {
+    color: var(--ve);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .ligne.abo {
+    min-height: 0;
+    margin: 0;
+    padding: 1.25rem;
+    border: 0;
+    border-radius: var(--r-lg);
+    background: var(--d1);
+    box-shadow: inset 0 0 0 1px var(--hr);
+    flex-wrap: wrap;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-cote .ligne.abo b {
+    flex-basis: 100%;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--acc);
+  }
+}
+
+/* Entre 1024 et 1279 px, la colonne n'a pas la largeur de la maquette (1440) : les indicateurs
+ * passent sur deux rangées, la colonne de droite sous le travail, les gestes de Malica sous sa
+ * phrase. */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  [data-surface="pme"] [data-ecran="accueil"] .bureau-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-surface="pme"] [data-ecran="accueil"] :is(.bureau-principal, .bureau-cote) {
+    grid-column: 1 / -1;
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero .in {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-surface="pme"] [data-ecran="accueil"] .hero .gestes {
+    grid-column: 1;
+    grid-row: auto;
+    margin-top: 0.875rem;
+  }
+}

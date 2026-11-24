@@ -604,56 +604,8 @@
   [data-surface="pme"] .app > main { min-width: 0 }
 }
 
+/* La coque de bureau (barre latérale, en-tête, accueil) : styles-pme-bureau-coque.css. */
 @media (min-width: 1024px) {
-  [data-surface="pme"] .app {
-    display: grid;
-    grid-template-columns: 13rem minmax(0, 1fr);
-    align-items: start;
-    align-content: start;
-    column-gap: clamp(1rem, 2vw, 2.5rem);
-    padding: 1.5rem clamp(1rem, 2vw, 3rem);
-  }
-  [data-surface="pme"] .app > :not(.nav) { grid-column: 2; min-width: 0 }
-  [data-surface="pme"] .nav {
-    grid-column: 1;
-    grid-row: 1 / span 3;
-    position: sticky;
-    top: 1.5rem;
-    bottom: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: .25rem;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  [data-surface="pme"] .nav .nav-desktop { display: flex; flex-direction: column }
-  [data-surface="pme"] .nav a {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: .75rem;
-    padding: .75rem;
-    border-radius: var(--r-sm);
-    font-size: .875rem;
-    min-height: 44px;
-  }
-  [data-surface="pme"] .nav a[data-on="true"] { background: var(--d1) }
-  /* Sur le rail, « Ajouter » ferme la liste, sans filet ni ordre forcé. */
-  [data-surface="pme"] .nav .ajout,
-  [dir="rtl"] [data-surface="pme"] .nav .ajout,
-  [data-surface="pme"][dir="rtl"] .nav .ajout {
-    order: 0; display: block; padding: 0; border: 0; margin-top: .5rem;
-  }
-  [data-surface="pme"] .nav .obtur {
-    width: 100%;
-    height: auto;
-    min-height: 48px;
-    display: flex;
-    justify-content: flex-start;
-    gap: .75rem;
-    padding: .75rem;
-  }
   [data-surface="pme"] [data-ecran="parametres"] .det {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3027,7 +2979,6 @@ html.dark:has([data-surface="pme"]),
 @keyframes selsoc-voile{from{opacity:0}to{opacity:1}}
 @keyframes selsoc-monte{from{transform:translateY(100%)}to{transform:none}}
 @media (min-width:1024px){
-  [data-surface="pme"] .appbar .selsoc{justify-content:flex-start;padding-inline-start:1rem}
   [data-surface="pme"] .selsoc .voile{background:transparent}
   [data-surface="pme"] .selsoc .feuille{position:fixed;top:var(--haut);bottom:auto;left:var(--gauche);right:auto;width:400px;max-height:520px;border-radius:20px;padding:.75rem;box-shadow:0 30px 70px -20px rgba(0,0,0,.45),inset 0 0 0 1px var(--hr);animation:selsoc-tombe .22s cubic-bezier(.2,1,.3,1) both}
   [data-surface="pme"] .selsoc .poignee{display:none}

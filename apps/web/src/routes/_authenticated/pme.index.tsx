@@ -421,6 +421,9 @@ function PmeHome() {
   // Une pièce se nomme par son dossier, comme sa carte et sa tuile de capture.
   const nomDuDossier = (p: PieceLue) => sept.parCode(dossierDeLaPiece(p, sept.types))?.libelle;
   const jour = (iso: string) => jourOuInstant(iso, locale);
+  // Le montant d'une pièce lue et sa devise : la carte du téléphone et le tableau du poste.
+  const montantLu = (p: PieceLue) =>
+    p.total ? `${montant(montantDeLaPiece(p, sept.types), locale)} ${p.devise ?? a.devise}` : "—";
 
   // Ce qui attend la personne : ce que Malica a lu et qui reste à envoyer, et
   // ce que le cabinet a renvoyé — les deux comptes de la carte, en pages.
@@ -472,6 +475,14 @@ function PmeHome() {
     new Date().toISOString().slice(0, 10),
     RANGEE,
   );
+  const quand = (jours: number) =>
+    jours < 0
+      ? t("pme.home.ech.retard")
+      : jours === 0
+        ? t("pme.home.ech.aujourdhui")
+        : t("pme.home.ech.dans", { count: jours });
+  // L'indicateur du poste : la prochaine échéance à venir, quand rien n'est en retard.
+  const prochaine = prochaines.find((e) => e.jours >= 0) ?? null;
 
   /*
    * « EN ORDRE » NE SE DIT PLUS PAR-DESSUS UN RETARD (pilote, 22 novembre 2026) : la carte
@@ -544,6 +555,15 @@ function PmeHome() {
        */}
 
       <div className="pad">
+        {/* Le jour, au-dessus du salut, sur le poste de bureau. */}
+        <span className="nav-desktop date">
+          {new Intl.DateTimeFormat(locale, {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }).format(new Date())}
+        </span>
         {/* Le salut, avec le prénom quand la personne l'a écrit. */}
         <h1>{salut}</h1>
 
@@ -576,295 +596,368 @@ function PmeHome() {
          * les vraies pages, lues dans la base (`ApercuDePiece`).
          */}
 
-        {/* ── 1. le chiffre du mois ─────────────────────────────────────── */}
-        <Link
-          to="/pme/tva"
-          search={{ mois: a.tva.periode }}
-          className="mois"
-          aria-busy={a.tvaEnCours || undefined}
-        >
-          <span className="k">{kickerTva}</span>
-          {nonAssujetti ? (
-            <span className="v">
-              <b className="t">{t("pme.home.tva.nonAssujetti")}</b>
-            </span>
-          ) : (
-            <>
+        {/*
+         * ── 1. le chiffre du mois ───────────────────────────────────────
+         * Sur le poste, la bande des quatre indicateurs : la TVA, les charges, les
+         * échéances et ce qui reste à remettre. Les deux derniers n'existent que là ;
+         * le téléphone les lit plus bas, dans ses rangées.
+         */}
+        <div className="bureau-kpis">
+          <Link
+            to="/pme/tva"
+            search={{ mois: a.tva.periode }}
+            className="mois"
+            aria-busy={a.tvaEnCours || undefined}
+          >
+            <span className="k">{kickerTva}</span>
+            {nonAssujetti ? (
               <span className="v">
-                <b>{a.tva.solde === null ? "—" : montant(a.tva.solde.replace(/^-/, ""), locale)}</b>
-                {/* En chargement, aucun sens : « à confirmer » serait déjà un état. */}
-                <u>
-                  {a.devise}{" "}
-                  {a.tvaEnCours
-                    ? null
-                    : a.tva.aucunePiece
-                      ? t("pme.tva.aucunePiece")
-                      : sensDuSolde(a.tva.solde) === "inconnu"
-                        ? t("pme.tva.soldeInconnu")
-                        : sensDuSolde(a.tva.solde) === "nul"
-                          ? t("pme.tva.soldeNul")
-                          : sensDuSolde(a.tva.solde) === "du"
-                            ? t("pme.home.reverser")
-                            : t("pme.home.credit")}
-                </u>
+                <b className="t">{t("pme.home.tva.nonAssujetti")}</b>
               </span>
-              <span className="dt">
-                <span>
-                  {t("pme.tva.col.collectee")}{" "}
-                  <b>{a.tva.collectee === null ? "—" : montant(a.tva.collectee, locale)}</b>
+            ) : (
+              <>
+                <span className="v">
+                  <b>
+                    {a.tva.solde === null ? "—" : montant(a.tva.solde.replace(/^-/, ""), locale)}
+                  </b>
+                  {/* En chargement, aucun sens : « à confirmer » serait déjà un état. */}
+                  <u>
+                    {a.devise}{" "}
+                    {a.tvaEnCours
+                      ? null
+                      : a.tva.aucunePiece
+                        ? t("pme.tva.aucunePiece")
+                        : sensDuSolde(a.tva.solde) === "inconnu"
+                          ? t("pme.tva.soldeInconnu")
+                          : sensDuSolde(a.tva.solde) === "nul"
+                            ? t("pme.tva.soldeNul")
+                            : sensDuSolde(a.tva.solde) === "du"
+                              ? t("pme.home.reverser")
+                              : t("pme.home.credit")}
+                  </u>
                 </span>
-                <span>
-                  {t("pme.tva.col.deductible")}{" "}
-                  <b>{a.tva.recuperee === null ? "—" : montant(a.tva.recuperee, locale)}</b>
-                </span>
-                {/* Une pièce que la TVA ne compte pas se dit : le chiffre est incomplet. */}
-                {a.tva.horsDuCalcul > 0 ? (
-                  <span>{t("pme.home.tva.horsCalcul", { count: a.tva.horsDuCalcul })}</span>
-                ) : null}
-              </span>
-            </>
-          )}
-        </Link>
-        {/* Les charges, et leur sens : la tuile d'hier, en une ligne sous le chiffre. */}
-        <Link to="/pme/charges" className="ligne">
-          <b>{t("pme.home.card.charges")}</b>
-          <span>
-            {a.chargesEcart === null
-              ? t("pme.home.charges.sous")
-              : a.chargesEcart < 0
-                ? t("pme.home.charges.baisse", { pourcent: Math.abs(Math.round(a.chargesEcart)) })
-                : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })}
-          </span>
-          <Chevron className="g ar" />
-        </Link>
-
-        {/* ── 2. ce qu'elle a préparé : les vraies pages, qui défilent ──── */}
-        {aTraiter.length > 0 ? (
-          <>
-            <div className="sec">
-              <h2>{t("pme.home.prepare")}</h2>
-              <Link to="/pme/list">
-                {t("common.toutVoir")} <Chevron className="g fl" />
-              </Link>
-            </div>
-            <div className="rail">
-              {aTraiter.map((p) => (
-                <Link
-                  key={p.id}
-                  to="/pme/piece/$pieceId"
-                  params={{ pieceId: p.id }}
-                  className="doc"
-                >
-                  <span className="pg">
-                    <ApercuDePiece pieceId={p.id} />
-                    {/* Le mot du statut, ambre : à envoyer, ou revenue du cabinet. */}
-                    <span className="etq">
-                      <i />
-                      {motDuStatut(statutDuCircuit(p), cabinet.data?.name ?? null, t)}
-                    </span>
-                  </span>
-                  <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>
+                <span className="dt">
                   <span>
-                    {[nomDuDossier(p), jour(p.dateDocument ?? p.createdAt)]
-                      .filter(Boolean)
-                      .join(" · ")}
+                    {t("pme.tva.col.collectee")}{" "}
+                    <b>{a.tva.collectee === null ? "—" : montant(a.tva.collectee, locale)}</b>
                   </span>
-                  {p.total ? <em>{montant(montantDeLaPiece(p, sept.types), locale)}</em> : null}
-                </Link>
-              ))}
-            </div>
-          </>
-        ) : null}
-
-        {/* ── 3. Malica, au cœur de l'écran ─────────────────────────────── */}
-        <div className="hero">
-          <span className="amb" aria-hidden="true" />
-          {/*
-           * Le portrait de Malica, 620 px de côté : le dessin le peint à 134 px,
-           * soit 268 px sur un écran à densité 2. La cible tient à moins de
-           * 40 Ko en WebP.
-           */}
-          <span className="por">
-            <img src={portraitMalica} alt="Malica" width={620} height={620} />
-          </span>
-          <span className="in">
-            <span className="sig">
-              <i />
-              {t("malica.chat.her")}
+                  <span>
+                    {t("pme.tva.col.deductible")}{" "}
+                    <b>{a.tva.recuperee === null ? "—" : montant(a.tva.recuperee, locale)}</b>
+                  </span>
+                  {/* Une pièce que la TVA ne compte pas se dit : le chiffre est incomplet. */}
+                  {a.tva.horsDuCalcul > 0 ? (
+                    <span>{t("pme.home.tva.horsCalcul", { count: a.tva.horsDuCalcul })}</span>
+                  ) : null}
+                </span>
+              </>
+            )}
+          </Link>
+          {/* Les charges, et leur sens : la tuile d'hier, en une ligne sous le chiffre. */}
+          <Link to="/pme/charges" className="ligne">
+            <b>{t("pme.home.card.charges")}</b>
+            <span>
+              {a.chargesEcart === null
+                ? t("pme.home.charges.sous")
+                : a.chargesEcart < 0
+                  ? t("pme.home.charges.baisse", { pourcent: Math.abs(Math.round(a.chargesEcart)) })
+                  : t("pme.home.charges.hausse", { pourcent: Math.round(a.chargesEcart) })}
             </span>
-            <h3>{titreHero}</h3>
-            <p>{sousHero}</p>
-            <span className="gestes">
-              {aRegler || aVerifier ? (
-                <button
-                  type="button"
-                  className="cta"
-                  onClick={() => void navigate({ to: aRegler ? "/pme/regler" : "/pme/list" })}
-                >
-                  {t("doc.open")}
-                  <FlecheDroite />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="cta"
-                  disabled={pme.capturing}
-                  // Planche 9 : « Ajouter des pièces », pas l'appareil directement.
-                  onClick={() => void navigate({ to: "/pme/capturer" })}
-                >
-                  {t("pme.capture.photo")}
-                  <FlecheDroite />
-                </button>
-              )}
-              {aLire.length > 0 ? (
-                <Link to="/pme/a-lire" className="cta sec2 a-lire">
-                  {t("pme.home.aLire.titre")} · {aLire.length}
-                </Link>
-              ) : null}
-              {/* La conversation reste accessible depuis la carte Malica. */}
-              <button type="button" className="cta sec2" onClick={allerALaConversation}>
-                {t("pme.home.demander")}
-              </button>
+            <Chevron className="g ar" />
+          </Link>
+          <Link
+            to="/pme/echeances"
+            className="nav-desktop ech-kpi"
+            data-retard={enRetard > 0 || undefined}
+          >
+            <span className="k">{t("pme.home.card.echeances")}</span>
+            <span className="v">
+              {enRetard > 0
+                ? t("pme.bureau.kpi.enRetard", { count: enRetard })
+                : prochaine
+                  ? jour(prochaine.dueDate)
+                  : "—"}
             </span>
-          </span>
-          <span className="stack" aria-hidden="true">
-            <svg viewBox="0 0 48 48" className="g" style={{ strokeWidth: 2 }}>
-              <rect x="17" y="7" width="24" height="31" rx="4" transform="rotate(11 29 22.5)" />
-              <g transform="rotate(-6 20 27.5)">
-                <rect x="8" y="12" width="24" height="31" rx="4" />
-                <path className="ln" d="M14 22h12M14 27.5h12M14 33h7" />
-              </g>
-            </svg>
-          </span>
+            {prochaine ? (
+              <span className="s">
+                {prochaine.seule ?? t("pme.home.ech.groupe", { count: prochaine.n })} ·{" "}
+                {quand(prochaine.jours)}
+              </span>
+            ) : null}
+          </Link>
+          <Link
+            to="/pme/list"
+            className="nav-desktop remettre-kpi"
+            data-attente={(sansComptabilite ? aExporter.length : a.enAttente) > 0 || undefined}
+          >
+            <span className="k">
+              {sansComptabilite ? t("pme.bureau.kpi.aRemettre") : t("statut.pme.a_envoyer")}
+            </span>
+            <span className="v">
+              {t("pme.home.dossier.pieces", {
+                count: sansComptabilite ? aExporter.length : a.enAttente,
+              })}
+            </span>
+          </Link>
         </div>
 
-        {/* ── 3 bis. à exporter : une société sans comptabilité remet ses pièces ─── */}
-        {exportMonte || remisLe ? (
-          <div className="exp-home" data-testid="a-exporter">
-            {exportMonte ? (
+        <div className="bureau-corps">
+          <div className="bureau-principal">
+            {/* ── 2. ce qu'elle a préparé : les vraies pages, qui défilent ──── */}
+            {aTraiter.length > 0 ? (
               <>
-                {aExporter.length > 0 ? (
-                  <p>
-                    <b>{t("pme.accueil.aExporter", { count: aExporter.length })}</b>{" "}
-                    {t("pme.accueil.aExporterTexte")}
-                  </p>
-                ) : null}
-                <ExporterDepuisLaPme
-                  quandFerme={() => setExportMonte(false)}
-                  pieces={aExporter.map((p) => p.id)}
-                  societes={[{ id: pme.tenantId, nom: pme.orgName, n: aExporter.length }]}
-                  titre={t("pme.accueil.exporter")}
-                  libelle={t("pme.accueil.exporter")}
-                  classe="more"
-                  classeDuTexte="sub"
-                />
+                <div className="sec">
+                  <h2>{t("pme.home.prepare")}</h2>
+                  <Link to="/pme/list">
+                    {t("common.toutVoir")} <Chevron className="g fl" />
+                  </Link>
+                </div>
+                <div className="rail">
+                  {aTraiter.map((p) => (
+                    <Link
+                      key={p.id}
+                      to="/pme/piece/$pieceId"
+                      params={{ pieceId: p.id }}
+                      className="doc"
+                    >
+                      <span className="pg">
+                        <ApercuDePiece pieceId={p.id} />
+                        {/* Le mot du statut, ambre : à envoyer, ou revenue du cabinet. */}
+                        <span className="etq">
+                          <i />
+                          {motDuStatut(statutDuCircuit(p), cabinet.data?.name ?? null, t)}
+                        </span>
+                      </span>
+                      <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>
+                      <span>
+                        {[nomDuDossier(p), jour(p.dateDocument ?? p.createdAt)]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                      {p.total ? <em>{montant(montantDeLaPiece(p, sept.types), locale)}</em> : null}
+                    </Link>
+                  ))}
+                </div>
               </>
             ) : null}
-            {remisLe ? (
-              <p className="sub">{t("pme.accueil.remisLe", { date: jour(remisLe) })}</p>
+
+            {/* ── 3. Malica, au cœur de l'écran ─────────────────────────────── */}
+            <div className="hero">
+              <span className="amb" aria-hidden="true" />
+              {/*
+               * Le portrait de Malica, 620 px de côté : le dessin le peint à 134 px,
+               * soit 268 px sur un écran à densité 2. La cible tient à moins de
+               * 40 Ko en WebP.
+               */}
+              <span className="por">
+                <img src={portraitMalica} alt="Malica" width={620} height={620} />
+              </span>
+              <span className="in">
+                <span className="sig">
+                  <i />
+                  {t("malica.chat.her")}
+                </span>
+                <h3>{titreHero}</h3>
+                <p>{sousHero}</p>
+                <span className="gestes">
+                  {aRegler || aVerifier ? (
+                    <button
+                      type="button"
+                      className="cta"
+                      onClick={() => void navigate({ to: aRegler ? "/pme/regler" : "/pme/list" })}
+                    >
+                      {t("doc.open")}
+                      <FlecheDroite />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="cta"
+                      disabled={pme.capturing}
+                      // Planche 9 : « Ajouter des pièces », pas l'appareil directement.
+                      onClick={() => void navigate({ to: "/pme/capturer" })}
+                    >
+                      {t("pme.capture.photo")}
+                      <FlecheDroite />
+                    </button>
+                  )}
+                  {aLire.length > 0 ? (
+                    <Link to="/pme/a-lire" className="cta sec2 a-lire">
+                      {t("pme.home.aLire.titre")} · {aLire.length}
+                    </Link>
+                  ) : null}
+                  {/* La conversation reste accessible depuis la carte Malica. */}
+                  <button type="button" className="cta sec2" onClick={allerALaConversation}>
+                    {t("pme.home.demander")}
+                  </button>
+                </span>
+              </span>
+              <span className="stack" aria-hidden="true">
+                <svg viewBox="0 0 48 48" className="g" style={{ strokeWidth: 2 }}>
+                  <rect x="17" y="7" width="24" height="31" rx="4" transform="rotate(11 29 22.5)" />
+                  <g transform="rotate(-6 20 27.5)">
+                    <rect x="8" y="12" width="24" height="31" rx="4" />
+                    <path className="ln" d="M14 22h12M14 27.5h12M14 33h7" />
+                  </g>
+                </svg>
+              </span>
+            </div>
+
+            {/* ── 3 bis. à exporter : une société sans comptabilité remet ses pièces ─── */}
+            {exportMonte || remisLe ? (
+              <div className="exp-home" data-testid="a-exporter">
+                {exportMonte ? (
+                  <>
+                    {aExporter.length > 0 ? (
+                      <p>
+                        <b>{t("pme.accueil.aExporter", { count: aExporter.length })}</b>{" "}
+                        {t("pme.accueil.aExporterTexte")}
+                      </p>
+                    ) : null}
+                    <ExporterDepuisLaPme
+                      quandFerme={() => setExportMonte(false)}
+                      pieces={aExporter.map((p) => p.id)}
+                      societes={[{ id: pme.tenantId, nom: pme.orgName, n: aExporter.length }]}
+                      titre={t("pme.accueil.exporter")}
+                      libelle={t("pme.accueil.exporter")}
+                      classe="more"
+                      classeDuTexte="sub"
+                    />
+                  </>
+                ) : null}
+                {remisLe ? (
+                  <p className="sub">{t("pme.accueil.remisLe", { date: jour(remisLe) })}</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* ── 4. vos dossiers : les sept, toujours (`ref.dossiers`) ──────── */}
+            {sept.dossiers.length > 0 ? (
+              <div className="bureau-bloc dossiers-accueil">
+                <div className="sec">
+                  <h2>{t("pme.home.dossiers")}</h2>
+                  <Link to="/pme/list">
+                    {t("common.toutVoir")} <Chevron className="g fl" />
+                  </Link>
+                </div>
+                <RailDesDossiers pieces={lesLues} />
+              </div>
+            ) : null}
+
+            {/* ── 5. récemment lues ─────────────────────────────────────────── */}
+            {recentes.length > 0 ? (
+              <div className="bureau-bloc">
+                <div className="sec">
+                  <h2>{t("pme.home.recentes")}</h2>
+                  <Link to="/pme/list">
+                    {t("common.toutVoir")} <Chevron className="g fl" />
+                  </Link>
+                </div>
+                <div className="recentes">
+                  {recentes.map((p) => (
+                    <Link key={p.id} to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
+                      <ApercuDePiece pieceId={p.id} className="mini" />
+                      <span className="bd">
+                        <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>
+                        <span>{montantLu(p)}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+                <div className="nav-desktop recentes-tableau">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">{t("pme.bloc.achats.fournisseur")}</th>
+                        <th scope="col">{t("pme.bureau.col.dossier")}</th>
+                        <th scope="col">{t("pme.extract.date")}</th>
+                        <th scope="col">{t("pme.bloc.ech.etat")}</th>
+                        <th scope="col" className="net">
+                          {t("pme.extract.netAPayer")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentes.map((p) => (
+                        <tr key={p.id}>
+                          <td>
+                            <Link to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
+                              {p.emetteur ?? t("pme.list.sansEmetteur")}
+                            </Link>
+                          </td>
+                          <td>{nomDuDossier(p) ?? "—"}</td>
+                          <td className="mono">{jour(p.dateDocument ?? p.createdAt)}</td>
+                          <td>
+                            <span className="puce">
+                              {motDuStatut(statutDuCircuit(p), cabinet.data?.name ?? null, t)}
+                            </span>
+                          </td>
+                          <td className="net">{montantLu(p)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : null}
           </div>
-        ) : null}
 
-        {/* ── 4. vos dossiers : les sept, toujours (`ref.dossiers`) ──────── */}
-        {sept.dossiers.length > 0 ? (
-          <>
-            <div className="sec">
-              <h2>{t("pme.home.dossiers")}</h2>
-              <Link to="/pme/list">
-                {t("common.toutVoir")} <Chevron className="g fl" />
-              </Link>
-            </div>
-            <RailDesDossiers pieces={lesLues} />
-          </>
-        ) : null}
+          <div className="bureau-cote">
+            {/* ── 6. les échéances ──────────────────────────────────────────── */}
+            {prochaines.length > 0 ? (
+              <div className="bureau-bloc">
+                <div className="sec">
+                  <h2>{t("pme.home.card.echeances")}</h2>
+                  <Link to="/pme/echeances">
+                    {t("common.toutVoir")} <Chevron className="g fl" />
+                  </Link>
+                </div>
+                <div className="rail">
+                  {prochaines.map((e) => (
+                    <Link
+                      key={e.cle}
+                      to="/pme/echeances"
+                      className={e.jours < 0 ? "ech ret" : e.jours <= 7 ? "ech pro" : "ech"}
+                    >
+                      <span className="j">{jour(e.dueDate)}</span>
+                      <b>{e.seule ?? t("pme.home.ech.groupe", { count: e.n })}</b>
+                      {/* Plusieurs sociétés : l'échéance dit la sienne. */}
+                      {societes.length > 1 ? (
+                        <span>{pme.dossiers.find((d) => d.id === e.tenantId)?.name ?? ""}</span>
+                      ) : null}
+                      <span>{quand(e.jours)}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
-        {/* ── 5. récemment lues ─────────────────────────────────────────── */}
-        {recentes.length > 0 ? (
-          <>
-            <div className="sec">
-              <h2>{t("pme.home.recentes")}</h2>
-              <Link to="/pme/list">
-                {t("common.toutVoir")} <Chevron className="g fl" />
-              </Link>
-            </div>
-            <div className="recentes">
-              {recentes.map((p) => (
-                <Link key={p.id} to="/pme/piece/$pieceId" params={{ pieceId: p.id }}>
-                  <ApercuDePiece pieceId={p.id} className="mini" />
-                  <span className="bd">
-                    <b>{p.emetteur ?? t("pme.list.sansEmetteur")}</b>
-                    <span>
-                      {p.total
-                        ? `${montant(montantDeLaPiece(p, sept.types), locale)} ${p.devise ?? a.devise}`
-                        : "—"}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </>
-        ) : null}
-
-        {/* ── 6. les échéances ──────────────────────────────────────────── */}
-        {prochaines.length > 0 ? (
-          <>
-            <div className="sec">
-              <h2>{t("pme.home.card.echeances")}</h2>
-              <Link to="/pme/echeances">
-                {t("common.toutVoir")} <Chevron className="g fl" />
-              </Link>
-            </div>
-            <div className="rail">
-              {prochaines.map((e) => (
-                <Link
-                  key={e.cle}
-                  to="/pme/echeances"
-                  className={e.jours < 0 ? "ech ret" : e.jours <= 7 ? "ech pro" : "ech"}
-                >
-                  <span className="j">{jour(e.dueDate)}</span>
-                  <b>{e.seule ?? t("pme.home.ech.groupe", { count: e.n })}</b>
-                  {/* Plusieurs sociétés : l'échéance dit la sienne. */}
-                  {societes.length > 1 ? (
-                    <span>{pme.dossiers.find((d) => d.id === e.tenantId)?.name ?? ""}</span>
-                  ) : null}
-                  <span>
-                    {e.jours < 0
-                      ? t("pme.home.ech.retard")
-                      : e.jours === 0
-                        ? t("pme.home.ech.aujourdhui")
-                        : t("pme.home.ech.dans", { count: e.jours })}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </>
-        ) : null}
-
-        {/* ── 7. l'abonnement, en une ligne : les trois cartes d'hier ───── */}
-        {/* Planche 4 : l'abonnement a sa page ; elle n'existe pas dans la coque. */}
-        <Link
-          to="/pme/reglages"
-          search={COMMERCE ? { page: "abonnement" } : {}}
-          className="ligne abo"
-        >
-          <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : "—"}</b>
-          <span>
-            {/*
-             * Les mêmes comptes que la bibliothèque et les Réglages (pilote, 22 novembre 2026) :
-             * l'accueil disait « 10 / 30 lectures » (consommées) quand la bibliothèque disait
-             * « 20 / 30 restantes », et « 0 / 0 utilisateurs » quand les Réglages disaient
-             * « 1 / 1 » — le titulaire compte (`utilisateursInclus`).
-             */}
-            {t("pme.home.abo.ligne", {
-              reste: compte(f?.lectures_restantes),
-              droit: compte(f?.lectures_droit),
-              occupes: compte(utilisateursInclus(f)?.occupes),
-              inclus: compte(utilisateursInclus(f)?.inclus),
-            })}
-          </span>
-          <Chevron className="g ar" />
-        </Link>
+            {/* ── 7. l'abonnement, en une ligne : les trois cartes d'hier ───── */}
+            {/* Planche 4 : l'abonnement a sa page ; elle n'existe pas dans la coque. */}
+            <Link
+              to="/pme/reglages"
+              search={COMMERCE ? { page: "abonnement" } : {}}
+              className="ligne abo"
+            >
+              <b>{f?.offre ? libelleDOffre(catalogue, f.offre) : "—"}</b>
+              <span>
+                {/*
+                 * Les mêmes comptes que la bibliothèque et les Réglages (pilote, 22 novembre 2026) :
+                 * l'accueil disait « 10 / 30 lectures » (consommées) quand la bibliothèque disait
+                 * « 20 / 30 restantes », et « 0 / 0 utilisateurs » quand les Réglages disaient
+                 * « 1 / 1 » — le titulaire compte (`utilisateursInclus`).
+                 */}
+                {t("pme.home.abo.ligne", {
+                  reste: compte(f?.lectures_restantes),
+                  droit: compte(f?.lectures_droit),
+                  occupes: compte(utilisateursInclus(f)?.occupes),
+                  inclus: compte(utilisateursInclus(f)?.inclus),
+                })}
+              </span>
+              <Chevron className="g ar" />
+            </Link>
+          </div>
+        </div>
         {pme.captureError ? (
           <p
             role="alert"
