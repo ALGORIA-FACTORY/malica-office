@@ -15,12 +15,11 @@ on:
   # n'est moins vérifié — toute PR passe la CI entière, et main aussi.
   push:
     branches: [main]
+  # Toute PR, documentation comprise (24 novembre 2026). `main` exige désormais ses
+  # cinq contrôles (api, web, atelier, epreuves, image-ocr) sur une branche à jour :
+  # une PR qui ne toucherait que la documentation, sans CI, attendrait des contrôles
+  # qui ne viennent jamais, et ne se fusionnerait plus.
   pull_request:
-    # Une PR qui ne touche que la documentation ne change aucun comportement.
-    # Le moindre fichier hors de ces chemins relance toute la CI.
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
 
 # Une nouvelle poussée annule la vérification en cours de la même branche :
 # seul le dernier état compte, et la file ne s'allonge pas pour rien.
