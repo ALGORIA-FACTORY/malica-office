@@ -66,3 +66,30 @@ Le plan proposé, en trois lots mesurés au banc :
    grille ; ses champs vont dans `capture.champs_lus`. Aucune écriture n'est proposée :
    l'écran la montre « lue, à classer ».
 3. **Proposer**, type par type, quand le Socle sait en tirer une écriture.
+
+## Mesuré — banc du moteur sur la branche, 24 novembre 2026
+
+411 pièces (ALGORIA, synthétique, dirigeant), sans aucun modèle, OCR relu à neuf.
+
+|                                     | `main` (run #12) | branche |
+| ----------------------------------- | ---------------: | ------: |
+| Pièces prouvées (plafond)           |              309 |     309 |
+| Valeurs justes                      |            7 120 |   7 130 |
+| Valeurs fausses ou inventées        |                0 |       0 |
+| Références (numéro…) lues justes    |              215 |     225 |
+| **Production : pièces sans modèle** | non mesuré (50)¹ |  **57** |
+
+¹ La production n'était pas mesurée sur `main` ; 50 est le chiffre de la branche avant le
+correctif du numéro, à moteur égal à `main`.
+
+**Ce qui oblige encore une pièce à appeler un modèle**, en pièces (dont : seule exigence
+manquante) : nom de l'émetteur 276 (17), matricule de l'émetteur 237 (9), sens 199,
+numéro 179 (31), date 135 (9), montants 111 (3). Le levier suivant est l'anneau 2 (les
+parties), puis la lecture OCR des lignes bilingues (français et arabe sur la même ligne),
+que PaddleOCR perd : « FACTURE N° … / فاتورة عدد » disparaît du relevé de la pièce
+synthétique 071.
+
+La relecture des cellules ne fait gagner aucune pièce « sans modèle » au banc : les lignes
+d'articles ne sont pas une exigence de l'écriture. Elle sert la nuit et l'écran (« lu,
+vérifié » au lieu de « lu, non vérifié »), et sa règle de rétention n'a retenu aucune
+relecture sur ce banc, ce qui confirme qu'elle ne déplace rien.
