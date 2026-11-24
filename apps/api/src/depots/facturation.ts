@@ -846,7 +846,7 @@ export const facturation = {
             where x.id = coalesce(f.payeur_tenant_id,
                                   (select lo.tenant_id from facturation.licence_organisations lo
                                     where lo.licence_id = f.licence_id
-                                    order by lo.tenant_id limit 1))
+                                    order by lo.rattachee_le, lo.tenant_id limit 1))
          ) o on true
         where f.id = $1`,
       [factureId],
