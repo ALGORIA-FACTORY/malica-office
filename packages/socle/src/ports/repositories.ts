@@ -4287,6 +4287,11 @@ export interface MonForfait {
   lectures_droit: number | string | null;
   lectures_consommees: number | string | null;
   lectures_restantes: number | string | null;
+  /**
+   * Vrai quand le reste est au plus la part d'alerte que la tour a réglée
+   * (`plateforme.reglages_abonnement.alerte_lectures_part`). La base tranche ; l'écran lit.
+   */
+  lectures_basses?: boolean | null;
   organisations: number | string | null;
   sieges_occupes: number | string | null;
   sieges_inclus: number | string | null;

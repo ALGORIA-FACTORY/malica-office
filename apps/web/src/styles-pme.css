@@ -1566,14 +1566,14 @@
 [data-surface="pme"] [data-ecran="charges"] .lede .trd{margin-top:.75rem;display:inline-flex;align-items:center;gap:.5rem;font-size:.875rem; font-weight:500;color:var(--acc)}
 [data-surface="pme"] [data-ecran="charges"] .lede .trd i{width:9px;height:9px;border-radius:50%;background:var(--acc);flex:none}
 [data-surface="pme"] [data-ecran="charges"] .lede .mta{margin-top:.5rem;font-family:var(--mono);font-size:.75rem;color:var(--t3);letter-spacing:-.01em}
-[data-surface="pme"] [data-ecran="charges"] .mths{display:flex;gap:.4375rem;overflow-x:auto;scrollbar-width:none; margin:1.375rem -1.25rem 0;padding:0 1.25rem}
-[data-surface="pme"] [data-ecran="charges"] .mths::-webkit-scrollbar{display:none}
+[data-surface="pme"] :is([data-ecran="charges"], [data-ecran="tva"]) .mths{display:flex;gap:.4375rem;overflow-x:auto;scrollbar-width:none; margin:1.375rem -1.25rem 0;padding:0 1.25rem}
+[data-surface="pme"] :is([data-ecran="charges"], [data-ecran="tva"]) .mths::-webkit-scrollbar{display:none}
 /* Douze pastilles de mois mesurees a 25 px de haut : on vise un mois, on en
  * ouvre un autre. 34 px est le plancher de pilule de la feuille (`.seg`). */
-[data-surface="pme"] [data-ecran="charges"] .mths button{flex:none;border:0;cursor:pointer;font-family:var(--mono);font-size:.6875rem; font-weight:600;letter-spacing:.09em;text-transform:uppercase;padding:.5625rem .8125rem; border-radius:999px;background:var(--d2);color:var(--t2);transition:background .18s,color .18s;min-height:34px}
-@media (hover: hover) and (pointer: fine){[data-surface="pme"] [data-ecran="charges"] .mths button:hover{background:#ECEEEE}}
-[data-surface="pme"] [data-ecran="charges"] .mths button.on{background:var(--acc);color:var(--on-acc)}
-[data-surface="pme"] [data-ecran="charges"] .mths button[disabled]{background:transparent;color:#B6BAC0;cursor:default; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+[data-surface="pme"] :is([data-ecran="charges"], [data-ecran="tva"]) .mths button{flex:none;border:0;cursor:pointer;font-family:var(--mono);font-size:.6875rem; font-weight:600;letter-spacing:.09em;text-transform:uppercase;padding:.5625rem .8125rem; border-radius:999px;background:var(--d2);color:var(--t2);transition:background .18s,color .18s;min-height:34px}
+@media (hover: hover) and (pointer: fine){[data-surface="pme"] :is([data-ecran="charges"], [data-ecran="tva"]) .mths button:hover{background:#ECEEEE}}
+[data-surface="pme"] :is([data-ecran="charges"], [data-ecran="tva"]) .mths button.on{background:var(--acc);color:var(--on-acc)}
+[data-surface="pme"] :is([data-ecran="charges"], [data-ecran="tva"]) .mths button[disabled]{background:transparent;color:#B6BAC0;cursor:default; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
 [data-surface="pme"] [data-ecran="charges"] .sec:not(button):not(a){display:flex;align-items:baseline;justify-content:space-between;margin:1.875rem 0 .9375rem}
 [data-surface="pme"] [data-ecran="charges"] .sec h2{margin:0;font-size:1.3125rem;font-weight:700;letter-spacing:-.034em}
 [data-surface="pme"] [data-ecran="charges"] .cls{width:100%;display:grid;gap:.625rem;background:var(--d1);border:0;border-radius:18px; padding:.9375rem 1rem 1rem;margin-bottom:.5rem;cursor:pointer;font-family:inherit; text-align:start;color:var(--tx);transition:background .18s}
@@ -2709,8 +2709,8 @@ html.dark:has([data-surface="pme"]),
 .dark [data-surface="pme"] :is([data-ecran="bibliotheque"],[data-ecran="pochette"]) .grp i.cli{background:rgba(143,227,177,.13);color:var(--acc)}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .ceil{display:flex;align-items:flex-start;gap:.75rem;background:rgba(217,119,87,.09); border:1px solid rgba(217,119,87,.28);border-radius:16px;padding:.875rem .9375rem;margin-top:1.125rem}
 .dark [data-surface="pme"] [data-ecran="bibliotheque"] .ceil p{margin:0;font-size:.8125rem;line-height:1.45;color:#E8C9BC}
-@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] [data-ecran="charges"] .mths button:hover{background:#2e2e2e}}
-.dark [data-surface="pme"] [data-ecran="charges"] .mths button[disabled]{background:transparent;color:#3d3d44;cursor:default; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+@media (hover: hover) and (pointer: fine){.dark [data-surface="pme"] :is([data-ecran="charges"], [data-ecran="tva"]) .mths button:hover{background:#2e2e2e}}
+.dark [data-surface="pme"] :is([data-ecran="charges"], [data-ecran="tva"]) .mths button[disabled]{background:transparent;color:#3d3d44;cursor:default; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
 .dark [data-surface="pme"] [data-ecran="charges"] .cls .bar{height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
 .dark [data-surface="pme"] [data-ecran="charges"] .note .bd p{margin:0;font-size:.875rem;line-height:1.4;color:#E4E4E7;letter-spacing:-.012em}
 .dark [data-surface="pme"] [data-ecran="charges"] .ceil{display:flex;align-items:center;gap:.75rem;background:rgba(217,119,87,.09); border:1px solid rgba(217,119,87,.28);border-radius:16px;padding:.8125rem .9375rem;margin-top:1.125rem}

@@ -207,8 +207,14 @@ function PmeEcheances() {
       (new Date(`${iso}T00:00:00Z`).getTime() - new Date(`${today}T00:00:00Z`).getTime()) / JOUR_MS,
     );
 
-  const phrase =
-    rows.length === 0
+  /*
+   * Rien ne se dit tant que les échéances ne sont pas lues : pilote, 24 novembre 2026,
+   * « Aucune échéance dérivée du pack pour l'instant » pendant le chargement, avant
+   * « 1 échéance dépassée ». En échec, la carte d'erreur parle seule.
+   */
+  const phrase = !echeances.isSuccess
+    ? null
+    : rows.length === 0
       ? t("pme.echeances.voice.empty")
       : enRetard.length > 0
         ? t("pme.echeances.voice.late", { count: enRetard.length })
@@ -281,10 +287,12 @@ function PmeEcheances() {
         </div>
 
         {/* Sa parole, dans la tranche. `.am` seulement si c'est vraiment dépassé. */}
-        <div className={enRetard.length > 0 ? "trd am" : "trd"}>
-          <i aria-hidden />
-          {phrase}
-        </div>
+        {phrase ? (
+          <div className={enRetard.length > 0 ? "trd am" : "trd"}>
+            <i aria-hidden />
+            {phrase}
+          </div>
+        ) : null}
 
         {/*
          * La règle, réduite à ce qui est vrai : les dates viennent du pack, pas

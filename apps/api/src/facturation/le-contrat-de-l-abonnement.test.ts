@@ -144,7 +144,9 @@ describe("le contrat RPC de l'abonnement", { skip: !BASE_CONFIGUREE }, () => {
               lectures_restantes, organisations, sieges_occupes, sieges_inclus, sieges_max,
               prix_mensuel_ht,
               -- Il paie seul : il est titulaire, et aucune comptabilité ne l'a pris en charge.
-              true as titulaire, null::text as pris_en_charge_par
+              true as titulaire, null::text as pris_en_charge_par,
+              -- Le verdict du reste bas, rendu par la base sous la part réglée par la tour.
+              public.lectures_basses(lectures_restantes, lectures_droit) as lectures_basses
          from facturation.consommation_v where licence_id = $1`,
       [a.licence],
     );
