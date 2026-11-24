@@ -1,6 +1,6 @@
 /**
  * La facture dit à qui elle s'adresse : les coordonnées du payeur viennent de son compte, et
- * elles sont complètes AVANT de payer (décision du dirigeant, 24 novembre 2026 — 20261231290000).
+ * elles sont complètes AVANT de payer (décision du dirigeant, 24 novembre 2026 — 20261231310000).
  *
  *   node --experimental-strip-types --import ./src/garde-base-de-test.ts \
  *     --test src/facturation/la-facture-dit-a-qui-elle-s-adresse.test.ts

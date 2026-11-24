@@ -43,7 +43,7 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
     retry: false,
   });
 
-  // À qui la facture s'adressera : le payeur, lu dans son compte (20261231290000). Sans matricule
+  // À qui la facture s'adressera : le payeur, lu dans son compte (20261231310000). Sans matricule
   // ni adresse, la base refuse les CGV ; on les demande ici, par les portes d'organisation.
   const qc = useQueryClient();
   const payeur = useQuery({

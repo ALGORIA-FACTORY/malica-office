@@ -119,7 +119,7 @@ $$;
 revoke all on function facturation.lignes_a_facturer_cabinet(uuid, date) from public, anon, authenticated;
 comment on function facturation.lignes_a_facturer_cabinet(uuid, date) is
   'Les lignes de la facture du mois d''une comptabilité : une par société et par offre, avec ses '
-  'dates (du, au exclu) et l''offre d''avant quand la ligne est un passage. 20261231280000.';
+  'dates (du, au exclu) et l''offre d''avant quand la ligne est un passage. 20261231300000.';
 
 create function facturation.a_facturer_cabinet(p_cabinet uuid, p_periode date)
 returns table(licence_id uuid, tenant_id uuid, organisation text, reference text, offre_code text,
