@@ -1511,6 +1511,48 @@ function enProduction(mesures: readonly MesureDeLaPiece[]): string {
   );
 }
 
+/**
+ * Pourquoi le sens n'est pas dit, et où est passé le matricule de l'AUTRE partie (le
+ * fournisseur d'un achat, le client d'une vente) : absent de la lecture (l'OCR l'a perdu,
+ * ou il n'est pas imprimé), présent mais non attribué (le moteur), lu, ou sans vérité. C'est
+ * ce qui sépare un chantier de lecture d'un chantier du moteur (anneau 2).
+ */
+function sensNonDit(mesures: readonly MesureDeLaPiece[]): string {
+  const non = mesures.filter((m) => m.sens.attendu !== null && m.sens.lu === null);
+  if (non.length === 0) return "";
+  const parRaison = new Map<string, MesureDeLaPiece[]>();
+  for (const m of non) {
+    const r = m.sens.raison ?? "?";
+    parRaison.set(r, [...(parRaison.get(r) ?? []), m]);
+  }
+  const contrepartie = (m: MesureDeLaPiece): string => {
+    const champ =
+      m.sens.attendu === "achat" ? "matricule_fiscal_emetteur" : "matricule_fiscal_client";
+    const c = m.champs.find((x) => x.champ === champ);
+    if (!c) return "sans vérité";
+    if (c.issue === "juste") return "lue";
+    if (c.issue === "silence")
+      return c.normal ? "absente de la lecture" : "présente, non attribuée";
+    return c.issue;
+  };
+  const lignes = [...parRaison]
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([raison, ms]) => {
+      const compte = new Map<string, number>();
+      for (const m of ms) compte.set(contrepartie(m), (compte.get(contrepartie(m)) ?? 0) + 1);
+      const presentes = ms
+        .filter((m) => contrepartie(m) === "présente, non attribuée")
+        .map((m) => `${m.corpus}/${m.id}`)
+        .slice(0, 12);
+      return (
+        `  - ${raison} : ${ms.length} — matricule de l'autre partie : ${[...compte]
+          .map(([k, n]) => `${k} ${n}`)
+          .join(", ")}` + (presentes.length ? ` (présentes : ${presentes.join(", ")})` : "")
+      );
+    });
+  return `- Sens non dit (${non.length} pièces), par raison :\n${lignes.join("\n")}`;
+}
+
 export function rapport(mesures: readonly MesureDeLaPiece[]): string {
   const par = (cle: (m: MesureDeLaPiece, c: MesureDuChamp) => string) => {
     const t = new Map<string, Compte>();
@@ -1567,6 +1609,7 @@ export function rapport(mesures: readonly MesureDeLaPiece[]): string {
       ? `- Pièces prouvées dès le tableau (premier temps) : ${auTableau.length}, en ${auTableau[Math.floor(auTableau.length / 2)]} ms médians`
       : "",
     enProduction(mesures),
+    sensNonDit(mesures),
     ...tete("Total"),
     ligne("tous les champs", total),
     "",
