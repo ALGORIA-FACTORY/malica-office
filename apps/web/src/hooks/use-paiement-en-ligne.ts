@@ -46,14 +46,14 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
   // À qui la facture s'adressera : le payeur, lu dans son compte (20261231290000). Sans matricule
   // ni adresse, la base refuse les CGV ; on les demande ici, par les portes d'organisation.
   const qc = useQueryClient();
-  const factureA = useQuery({
+  const payeur = useQuery({
     queryKey: ["facture-a", paiementId],
-    queryFn: () => office().facturation.factureA(paiementId),
+    queryFn: () => office().facturation.payeurDuPaiement(paiementId),
     retry: false,
   });
-  const completerFactureA = useMutation({
+  const completerPayeur = useMutation({
     mutationFn: async (saisie: { matricule: string; adresse: string }) => {
-      const f = factureA.data;
+      const f = payeur.data;
       if (!f) throw new Error("refus.facturation.coordonnees_incompletes");
       if (!f.matricule) {
         await office().identity.definirOrganisation({
@@ -71,7 +71,7 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
     },
     onError: (e: unknown) => setMessage(texteDeLErreur(e, ou, t("common.error"))),
   });
-  const coordonneesCompletes = factureA.data?.complet === true;
+  const coordonneesCompletes = payeur.data?.complet === true;
 
   // La case des CGV (CGV, art. 2) : aucun moyen ne se choisit tant qu'elle n'est pas cochée ;
   // la version cochée part avec le paiement, et la base la garde (20261231260000).
@@ -107,8 +107,8 @@ export function useChoixDuMoyen(paiementId: string, ou: string) {
     cgv,
     cgvAcceptees,
     accepterLesCgv,
-    factureA,
-    completerFactureA,
+    payeur,
+    completerPayeur,
     coordonneesCompletes,
   };
 }

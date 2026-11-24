@@ -27,7 +27,7 @@ import {
   type Pme,
 } from "./decor-d-avance.ts";
 
-interface FactureA {
+interface PayeurDuPaiement {
   tenant_id: string;
   nom: string;
   matricule: string | null;
@@ -52,10 +52,11 @@ async function unPaiementSansCoordonnees(db: pg.PoolClient): Promise<{ p: Pme; i
   return { p, id: r.paiement!.paiement_id };
 }
 
-async function factureA(db: pg.PoolClient, id: string): Promise<FactureA> {
-  const { rows } = await db.query<{ f: FactureA }>("select public.paiement_facture_a($1) as f", [
-    id,
-  ]);
+async function payeurDuPaiement(db: pg.PoolClient, id: string): Promise<PayeurDuPaiement> {
+  const { rows } = await db.query<{ f: PayeurDuPaiement }>(
+    "select public.paiement_facture_a($1) as f",
+    [id],
+  );
   return rows[0]!.f;
 }
 
@@ -76,7 +77,7 @@ describe("la facture dit à qui elle s'adresse", { skip: !ADMIN }, () => {
     await aBlanc(async (db) => {
       const { p, id } = await unPaiementSansCoordonnees(db);
       await enPersonne(db, p.titulaire);
-      const avant = await factureA(db, id);
+      const avant = await payeurDuPaiement(db, id);
       assert.equal(avant.tenant_id, p.tenant, "la société de la licence");
       assert.equal(avant.complet, false);
       assert.equal(avant.matricule, null);
@@ -95,7 +96,7 @@ describe("la facture dit à qui elle s'adresse", { skip: !ADMIN }, () => {
         p.tenant,
         ADRESSE_D_ESSAI,
       ]);
-      const apres = await factureA(db, id);
+      const apres = await payeurDuPaiement(db, id);
       assert.equal(apres.complet, true);
       assert.equal(apres.matricule, mf.toUpperCase());
       assert.equal(apres.adresse, ADRESSE_D_ESSAI);

@@ -4442,7 +4442,7 @@ export interface FacturationRepository {
   /** Le titulaire revient sur sa descente : son offre reste. */
   annulerDescente(tenantId?: string): Promise<boolean>;
   /** À qui la facture de ce paiement s'adressera, et si ses coordonnées sont complètes. */
-  factureA(paiementId: string): Promise<FactureA>;
+  payeurDuPaiement(paiementId: string): Promise<PayeurDuPaiement>;
 
   paliersDeRecharge(): Promise<PalierDeRecharge[]>;
   mesRecharges(): Promise<RechargeDeLaLicence[]>;
@@ -4846,7 +4846,7 @@ export interface FactureDetaillee {
  * comptabilité qui paie. `complet` : matricule fiscal et adresse saisis (la base l'exige avant
  * d'accepter les CGV).
  */
-export interface FactureA {
+export interface PayeurDuPaiement {
   tenant_id: string;
   nom: string;
   matricule: string | null;

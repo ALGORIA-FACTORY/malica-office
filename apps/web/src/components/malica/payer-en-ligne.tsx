@@ -69,23 +69,23 @@ function CaseDesCgv({
  * fiscal, adresse). S'il en manque, on les demande ici et ils s'enregistrent dans son compte —
  * la facture les reprendra. La base refuse de payer tant qu'ils manquent (20261231290000).
  */
-function FactureA({
-  factureA,
+function BlocDuPayeur({
+  payeur,
   completer,
 }: {
-  factureA: ReturnType<typeof useChoixDuMoyen>["factureA"];
-  completer: ReturnType<typeof useChoixDuMoyen>["completerFactureA"];
+  payeur: ReturnType<typeof useChoixDuMoyen>["payeur"];
+  completer: ReturnType<typeof useChoixDuMoyen>["completerPayeur"];
 }) {
   const { t } = useI18n();
   const [matricule, setMatricule] = useState("");
   const [adresse, setAdresse] = useState("");
-  const f = factureA.data;
+  const f = payeur.data;
   if (!f) return null;
   const manque = !f.complet;
   return (
-    <section className="facture-a" data-facture-a aria-labelledby="facture-a-titre">
-      <span className="kick" id="facture-a-titre">
-        {t("pme.payer.factureA.titre")}
+    <section className="payeur" data-payeur aria-labelledby="payeur-titre">
+      <span className="kick" id="payeur-titre">
+        {t("pme.payer.payeur.titre")}
       </span>
       <b>{f.nom}</b>
       {f.matricule ? <span className="num">{t("facture.pdf.mf", { mf: f.matricule })}</span> : null}
@@ -99,11 +99,11 @@ function FactureA({
           }}
         >
           <p className="et" role="status">
-            {t("pme.payer.factureA.incomplet")}
+            {t("pme.payer.payeur.incomplet")}
           </p>
           {f.matricule ? null : (
             <label className="block">
-              <span className="block text-sm">{t("pme.payer.factureA.matricule")}</span>
+              <span className="block text-sm">{t("pme.payer.payeur.matricule")}</span>
               <input
                 className="w-full rounded-md border border-border bg-transparent px-2 py-1.5"
                 value={matricule}
@@ -115,7 +115,7 @@ function FactureA({
           )}
           {f.adresse ? null : (
             <label className="block">
-              <span className="block text-sm">{t("pme.payer.factureA.adresse")}</span>
+              <span className="block text-sm">{t("pme.payer.payeur.adresse")}</span>
               <textarea
                 className="w-full rounded-md border border-border bg-transparent px-2 py-1.5"
                 rows={2}
@@ -131,11 +131,11 @@ function FactureA({
             className="rounded-md border border-foreground px-3 py-1.5 text-sm font-medium disabled:opacity-40"
             disabled={completer.isPending}
           >
-            {t("pme.payer.factureA.enregistrer")}
+            {t("pme.payer.payeur.enregistrer")}
           </button>
         </form>
       ) : (
-        <span className="et">{t("pme.payer.factureA.duCompte")}</span>
+        <span className="et">{t("pme.payer.payeur.duCompte")}</span>
       )}
     </section>
   );
@@ -175,8 +175,8 @@ export function PayerEnLigneSociete() {
     cgv,
     cgvAcceptees,
     accepterLesCgv,
-    factureA,
-    completerFactureA,
+    payeur,
+    completerPayeur,
     coordonneesCompletes,
   } = useChoixDuMoyen(paiementId, OU_SOCIETE);
 
@@ -237,7 +237,7 @@ export function PayerEnLigneSociete() {
 
             {prestataire ? null : <p className="et">{t("pme.reglages.paiement.ferme")}</p>}
 
-            <FactureA factureA={factureA} completer={completerFactureA} />
+            <BlocDuPayeur payeur={payeur} completer={completerPayeur} />
 
             {coordonneesCompletes ? (
               <CaseDesCgv cgv={cgv} cochee={cgvAcceptees} cocher={accepterLesCgv} />
@@ -320,8 +320,8 @@ export function PayerEnLigneCabinet() {
     cgv,
     cgvAcceptees,
     accepterLesCgv,
-    factureA,
-    completerFactureA,
+    payeur,
+    completerPayeur,
     coordonneesCompletes,
   } = useChoixDuMoyen(paiementId, OU_CABINET);
   const qc = useQueryClient();
@@ -379,7 +379,7 @@ export function PayerEnLigneCabinet() {
           )}
 
           <div className="space-y-1 rounded-lg border border-border p-4 text-sm [&_.kick]:block [&_.kick]:text-xs [&_.kick]:uppercase [&_.kick]:text-muted-foreground [&_b]:block [&>section>span]:block">
-            <FactureA factureA={factureA} completer={completerFactureA} />
+            <BlocDuPayeur payeur={payeur} completer={completerPayeur} />
           </div>
 
           {coordonneesCompletes ? (

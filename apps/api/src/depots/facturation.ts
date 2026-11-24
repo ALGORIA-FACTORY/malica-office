@@ -15,7 +15,11 @@
  * `public.siege_inviter`, qui refuse la place de trop.
  */
 
-import type { EtatDeFacture, FactureA, PlaceComptable } from "@malica/socle/ports/repositories";
+import type {
+  EtatDeFacture,
+  PayeurDuPaiement,
+  PlaceComptable,
+} from "@malica/socle/ports/repositories";
 
 import type { Requete } from "../db.ts";
 import { enUnitesExactes } from "@malica/socle/somme-decimale";
@@ -751,10 +755,11 @@ export const facturation = {
    * paie), lu dans son compte, et si c'est complet (20261231290000). La base refuse d'accepter
    * les CGV — donc d'ouvrir la page de carte — tant que le matricule ou l'adresse manquent.
    */
-  async factureA(db: Requete, paiementId: string) {
-    const { rows } = await db.query<{ f: FactureA }>(`select public.paiement_facture_a($1) as f`, [
-      paiementId,
-    ]);
+  async payeurDuPaiement(db: Requete, paiementId: string) {
+    const { rows } = await db.query<{ f: PayeurDuPaiement }>(
+      `select public.paiement_facture_a($1) as f`,
+      [paiementId],
+    );
     return rows[0]!.f;
   },
 

@@ -2821,10 +2821,10 @@ html.dark:has([data-surface="pme"]),
 [data-surface="pme"] [data-ecran="paiement"] .du b{font-size:1.0625rem;font-weight:600;letter-spacing:-.02em;color:var(--tx)}
 [data-surface="pme"] [data-ecran="paiement"] .du .px{font-family:var(--mono);font-size:.9375rem;font-weight:600;letter-spacing:-.03em;color:var(--t2)}
 /* À qui la facture s'adressera : le payeur, repris de son compte ; ce qui manque se saisit ici. */
-[data-surface="pme"] [data-ecran="paiement"] .facture-a{background:var(--d1);border-radius:20px;padding:1rem;display:grid;gap:.25rem;font-size:.875rem;color:var(--t2)}
-[data-surface="pme"] [data-ecran="paiement"] .facture-a .kick{font-size:.6875rem;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
-[data-surface="pme"] [data-ecran="paiement"] .facture-a b{font-size:.9375rem;font-weight:600;color:var(--tx)}
-[data-surface="pme"] [data-ecran="paiement"] .facture-a input,[data-surface="pme"] [data-ecran="paiement"] .facture-a textarea{background:var(--bg);color:var(--tx);border-color:var(--hr)}
+[data-surface="pme"] [data-ecran="paiement"] .payeur{background:var(--d1);border-radius:20px;padding:1rem;display:grid;gap:.25rem;font-size:.875rem;color:var(--t2)}
+[data-surface="pme"] [data-ecran="paiement"] .payeur .kick{font-size:.6875rem;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+[data-surface="pme"] [data-ecran="paiement"] .payeur b{font-size:.9375rem;font-weight:600;color:var(--tx)}
+[data-surface="pme"] [data-ecran="paiement"] .payeur input,[data-surface="pme"] [data-ecran="paiement"] .payeur textarea{background:var(--bg);color:var(--tx);border-color:var(--hr)}
 [data-surface="pme"] [data-ecran="paiement"] .moyens{display:grid;gap:.5rem;margin:0;padding:0;list-style:none}
 [data-surface="pme"] [data-ecran="paiement"] .moyen{display:flex;align-items:center;gap:.875rem;width:100%;min-height:64px;padding:.75rem 1rem;background:var(--d1);border:1px solid transparent;border-radius:16px;color:var(--tx);font:inherit;text-align:start;cursor:pointer}
 [data-surface="pme"] [data-ecran="paiement"] .moyen:hover:not([disabled]){border-color:var(--acc)}
