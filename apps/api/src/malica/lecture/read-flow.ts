@@ -29,6 +29,7 @@ import {
   tracerLaPersistance,
   tracerLeRattrapage,
   tracerLeSudoku,
+  tracerLaRelectureDesCellules,
   tracerLExtraction,
   tracerLOcr,
   type Passe,
@@ -41,7 +42,7 @@ import type { ReglesDeLecture } from "./regles-de-lecture.ts";
 import { secondLecteurDisponible } from "./paddle.ts";
 import { creerLeSudoku } from "./sudoku.ts";
 import type { PageToken } from "./token-plan.ts";
-import { runVisionRead, type VisionRead } from "./vision.ts";
+import { runVisionRead, type Releve, type VisionRead } from "./vision.ts";
 import type { LectureDePiece } from "@malica/socle/ports/malica";
 
 interface ContexteLecture {
@@ -201,7 +202,17 @@ async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
      * modèle ; sinon la recette puis la chaîne partent, et le Sudoku revérifie.
      * `sudoku` est créé plus bas : la fermeture ne l'appelle qu'à la lecture.
      */
-    sudokuDAbord: (plan: readonly PageToken[]) => sudoku.sansIa(plan),
+    sudokuDAbord: (plan: readonly PageToken[], releve: Pick<Releve, "lecteur" | "marques">) =>
+      sudoku.sansIa(plan, releve),
+    /*
+     * La relecture des cellules (24 novembre 2026) : sur le relevé de PaddleOCR, avant le
+     * Sudoku d'abord. Le plan rendu est celui que tout l'aval lit et que la base garde.
+     */
+    relireLesCellules: async (plan: readonly PageToken[], releve: Releve) => {
+      const r = await sudoku.relireLesCellules(plan, releve);
+      tracerLaRelectureDesCellules(pieceId, r);
+      return r.tokens;
+    },
     parRecette,
     /*
      * La chaîne de désignation (Claude, puis DeepSeek, puis l'arrêt), relue

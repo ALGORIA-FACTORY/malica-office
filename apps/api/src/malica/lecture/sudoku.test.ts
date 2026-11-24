@@ -893,6 +893,7 @@ describe("sudoku — le chemin de production", { skip: !(MOTEUR && BASE) }, () =
             const branche: ContexteDuSudokuBranche = {
               ...contexte,
               mode: designe ? "designe" : "observe",
+              relectureDesCellules: true,
             };
             return branche as T;
           }

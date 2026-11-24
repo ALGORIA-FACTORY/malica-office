@@ -2835,15 +2835,27 @@ fn apres_repere(page: &Page, n: usize, l: &Lecture) -> ChampSortie {
         }
         let colle = l.colle_au_libelle.then(|| page.libelle_colle(i)).flatten();
         // Un libellé collé ne commence pas au milieu d'une phrase : « Contrat Entreprise
-        // n°ENT-55821 » n'est pas « N° » (OCR de 50/07).
+        // n°ENT-55821 » n'est pas « N° » (OCR de 50/07). Sauf quand le mot d'avant le
+        // COMPLÈTE en un repère entier du même champ : « FACTURE N°F-2026-2408 » est
+        // « Facture N° » suivi de sa valeur (photo synthétique 019, banc sans IA du
+        // 24 novembre 2026 : le numéro restait muet sur 9 photos où il était bien lu).
         let (r0, k0) = page.ou[i];
-        let colle = colle.filter(|_| {
-            k0 == 0 || {
-                let p = page.rangs[r0][k0 - 1];
-                page.ponct(p)
-                    || page.j[p].texte.chars().any(|c| c.is_ascii_digit())
-                    || page.ecart(p, i) > ECART_MOT * page.h(p)
+        let colle = colle.and_then(|(et, octet)| {
+            if k0 == 0 {
+                return Some((et, octet));
             }
+            let p = page.rangs[r0][k0 - 1];
+            if page.ponct(p)
+                || page.j[p].texte.chars().any(|c| c.is_ascii_digit())
+                || page.ecart(p, i) > ECART_MOT * page.h(p)
+            {
+                return Some((et, octet));
+            }
+            let t = page.j[i].texte.trim();
+            let joint = format!("{} {}", page.j[p].texte.trim(), t.get(..octet)?);
+            page.champs_de(&normaliser(&joint))
+                .filter(|e| e.champs.iter().all(|c| et.champs.contains(c)))
+                .map(|e| (e, octet))
         });
         let (et, debut) = match colle {
             Some((et, octet)) => (Some(et), octet),

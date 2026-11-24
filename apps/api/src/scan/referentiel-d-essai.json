@@ -368,6 +368,7 @@
     "fodec.traitement": "par_article_au_cout",
     "immobilisation.seuil": "200",
     "immobilisation.traitement": "actif_amorti",
+    "lecture.relecture_cellules": "active",
     "lecture.relecture_delai_heures": "4",
     "lecture.relecture_nuit": "coupee",
     "lecture.sudoku": "designe",

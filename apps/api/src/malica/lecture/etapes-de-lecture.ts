@@ -31,6 +31,7 @@ import { sommeDecimale } from "@malica/socle/somme-decimale";
 import { codeDuRefus, consigner, issueDeLErreur } from "../../observabilite/journal.ts";
 
 import type { BuiltRead } from "./read-piece.ts";
+import type { RelectureDesCellules } from "./sudoku.ts";
 import type { VisionRead } from "./vision.ts";
 
 /** La passe d'une lecture : la première, le rattrapage synchrone, la relecture de nuit. */
@@ -288,4 +289,23 @@ export async function tracerLaPersistance(
     });
     throw erreur;
   }
+}
+
+/**
+ * La relecture des cellules (24 novembre 2026) : ce qu'elle a fait du plan de PaddleOCR —
+ * retenue, écartée, inchangée, en erreur. Rien quand elle n'avait pas lieu d'être.
+ */
+export function tracerLaRelectureDesCellules(pieceId: string, r: RelectureDesCellules): void {
+  if (r.issue === "sans_objet") return;
+  consigner("relecture_cellules", r.issue === "erreur" ? "erreur" : "ok", {
+    cle: cle(pieceId, "relecture_cellules"),
+    piece: pieceId,
+    dureeMs: r.dureeMs,
+    detail: {
+      issue: r.issue,
+      cellules: r.cellules ?? null,
+      changees: r.changees ?? null,
+      erreur: r.erreur ?? null,
+    },
+  });
 }
