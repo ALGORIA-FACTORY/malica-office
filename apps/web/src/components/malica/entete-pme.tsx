@@ -60,9 +60,14 @@ export interface EntetePmeProps {
    * 7 novembre 2026) — seulement quand il y en a plusieurs.
    */
   societe?: React.ComponentProps<typeof SelecteurDeSociete> | undefined;
+  /**
+   * La rubrique de l'écran ouvert, que le fil d'Ariane nomme sur le poste de bureau. Le logo
+   * et le sélecteur y passent dans la barre latérale ; le téléphone ne voit pas le fil.
+   */
+  ariane: string;
 }
 
-export function EntetePme({ initiale, photo, cloche, societe }: EntetePmeProps) {
+export function EntetePme({ initiale, photo, cloche, societe, ariane }: EntetePmeProps) {
   const { t } = useI18n();
 
   return (
@@ -80,6 +85,11 @@ export function EntetePme({ initiale, photo, cloche, societe }: EntetePmeProps) 
        * seule société, la case reste vide.
        */}
       {societe ? <SelecteurDeSociete {...societe} /> : <span className="org" aria-hidden />}
+      <nav aria-label={t("pme.bureau.ariane")} className="nav-desktop ariane">
+        <ol>
+          <li aria-current="page">{ariane}</li>
+        </ol>
+      </nav>
       {/*
        * L'initiale mène aux réglages. Le lecteur d'écran annonçait « W » seul :
        * le lien dit où il mène, et la lettre reste `aria-hidden` de fait

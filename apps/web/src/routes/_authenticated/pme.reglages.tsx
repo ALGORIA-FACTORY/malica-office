@@ -38,6 +38,7 @@ import { texteDeLErreur } from "@/lib/erreur-lisible";
 import { dateEnLettres, quantite } from "@/lib/lisible";
 import { nombre as entier, ouverturesDuForfait, utilisateursInclus } from "@/lib/forfait";
 import { identitePourAffichage } from "@/lib/nom-de-la-personne";
+import { roleLisible } from "@/lib/role-lisible";
 import { cibleDeRetourDesReglages } from "@/lib/suite-de-l-arrivee";
 import { CANAL } from "@/lib/telemetrie";
 import { cn } from "@/lib/utils";
@@ -1838,22 +1839,6 @@ function etatDeLicence(code: string, t: (k: MessageKey) => string): string {
   if (code === "active") return t("pme.reglages.abo.etat.active");
   if (code === "suspendue") return t("pme.reglages.abo.etat.suspendue");
   if (code === "resiliee") return t("pme.reglages.abo.etat.resiliee");
-  return code;
-}
-
-/** Les rôles qu'un dossier de PME connaît ; les autres gardent leur code. */
-function roleLisible(
-  code: string,
-  t: (
-    k:
-      | "pme.membres.role.dirigeant"
-      | "pme.membres.role.collaborateur"
-      | "pme.membres.role.comptable",
-  ) => string,
-): string {
-  if (code === "dirigeant") return t("pme.membres.role.dirigeant");
-  if (code === "collaborateur") return t("pme.membres.role.collaborateur");
-  if (code === "comptable") return t("pme.membres.role.comptable");
   return code;
 }
 
