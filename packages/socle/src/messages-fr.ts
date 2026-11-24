@@ -5353,6 +5353,8 @@ export const fr = {
    * vrai, sans la date.
    */
   "pme.tva.sous": "C'est votre comptabilité qui dépose cette déclaration.",
+  "pme.tva.sousSansCabinet":
+    "Vous déposez cette déclaration vous-même ; ces chiffres sont une estimation tant qu'aucun comptable ne les a repris.",
   /**
    * Le nombre vient de `pme.dossiers`, jamais d'un littéral. En arabe, la
    * formulation « عدد الشركات: {count} » évite l'accord du nom (duel, 3-10,

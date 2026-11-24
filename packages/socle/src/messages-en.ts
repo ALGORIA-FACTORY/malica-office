@@ -5176,6 +5176,8 @@ export const en: Dict = {
     "Next: choose your plan. Your accountant, if you invited them, has received your invitation; otherwise, invite them whenever you like. A company without an engagement works: you capture, you read, you export.",
   "pme.tva.barreGroupe": "Group VAT",
   "pme.tva.sous": "Your accountant files this return.",
+  "pme.tva.sousSansCabinet":
+    "You file this return yourself; these figures are an estimate until an accountant has reviewed them.",
   "pme.tva.sousGroupe": "{count} companies — each files for itself.",
   "pme.tva.sousGroupe#one": "{count} company — it files for itself.",
   "pme.tva.sousGroupe#other": "{count} companies — each files for itself.",

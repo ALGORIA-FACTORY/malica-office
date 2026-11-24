@@ -17,7 +17,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 
 import { usePme } from "@/components/malica/pme-context";
+import { useMonCabinet } from "@/hooks/use-mon-cabinet";
 import { useNonAssujetti } from "@/hooks/use-regime-tva";
+import { mentionsDeLaTva } from "@/lib/mentions-de-la-tva";
 import { currentPeriod, useTvaPeriod } from "@/hooks/use-tva";
 import { Aide } from "@/components/malica/aide";
 import { UneSocieteALaFois } from "@/components/malica/societes-a-la-ligne";
@@ -228,6 +230,13 @@ function PmeTva() {
    * par société le sert : `lib/chiffre-par-societe`, une lecture par société, même moteur.)
    */
   const parSociete = pme.forfait.ouvertures.societes;
+  // Qui dépose, et si c'est une estimation : la même lecture du cabinet que les charges.
+  const cabinet = useMonCabinet(pme.tenantId);
+  const mentions = mentionsDeLaTva({
+    parSociete,
+    sansCabinet: cabinet.isSuccess && cabinet.data === null,
+    estimation,
+  });
 
   return (
     /*
@@ -288,13 +297,9 @@ function PmeTva() {
               paragraphes={[{ texte: t("pme.tva.rangee") }, { texte: t("pme.tva.source") }]}
             />
           </h1>
-          <p className="sub">
-            {parSociete
-              ? t("pme.tva.sousGroupe", { count: pme.dossiers.length })
-              : t("pme.tva.sous")}
-          </p>
+          <p className="sub">{t(mentions.sous, { count: pme.dossiers.length })}</p>
           {/* Sans comptabilité, la même mention qu'aux charges (24 novembre 2026). */}
-          {estimation ? (
+          {mentions.estimation ? (
             <p className="sub" data-estimation>
               {t("pme.charges.estimation")}
             </p>
