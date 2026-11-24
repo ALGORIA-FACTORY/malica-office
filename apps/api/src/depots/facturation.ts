@@ -752,7 +752,7 @@ export const facturation = {
 
   /**
    * À qui la facture de ce paiement s'adressera (le payeur : la société, ou la comptabilité qui
-   * paie), lu dans son compte, et si c'est complet (20261231290000). La base refuse d'accepter
+   * paie), lu dans son compte, et si c'est complet (20261231310000). La base refuse d'accepter
    * les CGV — donc d'ouvrir la page de carte — tant que le matricule ou l'adresse manquent.
    */
   async payeurDuPaiement(db: Requete, paiementId: string) {

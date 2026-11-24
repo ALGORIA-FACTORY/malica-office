@@ -8,7 +8,7 @@
  *   - la facture se lit sous la RLS : son titulaire, l'opérateur — personne d'autre ;
  *   - chaque facture de PME avertit son titulaire (application + courriel) avec tous les
  *     jetons de ses gabarits ; la facture du mois du cabinet part à ses experts, application et
- *     courriel (décision du 24 novembre 2026, 20261231280000) ;
+ *     courriel (décision du 24 novembre 2026, 20261231300000) ;
  *   - la tour renvoie le courriel d'une facture : opérateur seul, une fois dans la fenêtre.
  *
  * Sur une vraie base migrée, dans des transactions ANNULÉES, sous les vrais rôles

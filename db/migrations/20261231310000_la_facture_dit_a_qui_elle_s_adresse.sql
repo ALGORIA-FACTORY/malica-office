@@ -52,7 +52,7 @@ revoke all on function public.paiement_facture_a(uuid) from public, anon;
 grant execute on function public.paiement_facture_a(uuid) to authenticated;
 comment on function public.paiement_facture_a(uuid) is
   'À qui la facture d''un paiement s''adressera (raison sociale, matricule, adresse du payeur) et '
-  'si c''est complet. Gardée par facturation.peut_payer. 20261231290000.';
+  'si c''est complet. Gardée par facturation.peut_payer. 20261231310000.';
 
 CREATE OR REPLACE FUNCTION public.paiement_cgv_accepter(p_paiement uuid, p_cgv uuid)
  RETURNS jsonb
