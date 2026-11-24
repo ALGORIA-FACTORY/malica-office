@@ -31,6 +31,7 @@ import { SelecteurDeSociete } from "@/components/malica/selecteur-de-societe";
 import { SurfacePme } from "@/components/malica/surface-pme";
 import { useFileDAttente } from "@/hooks/use-file-d-attente";
 import { libelleDOffre, useCatalogueDesOffres } from "@/hooks/use-offres";
+import { useDepotDeFichiers } from "@/hooks/use-depot-de-fichiers";
 import { useRaccourcisDuBureau } from "@/hooks/use-raccourcis-du-bureau";
 import { usePriseDeVue } from "@/hooks/use-prise-de-vue";
 import { useI18n, type MessageKey } from "@/i18n";
@@ -315,7 +316,11 @@ function PmeLayout() {
   const aJoindre = useRef<{ id: string; vis: string } | null>(null);
 
   const choisir = useMutation({
-    mutationFn: async (input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean }) => {
+    mutationFn: async (
+      input: CaptureKind | { pages: Blob[]; dejaCadrees?: boolean } | { deposes: File[] },
+    ) => {
+      // Glissés ou collés au poste de bureau : les contrôles d'« Importer des images / PDF ».
+      if (typeof input === "object" && "deposes" in input) return files.deposer(input.deposes);
       if (typeof input === "object") {
         // Plusieurs PAGES d'UNE pièce : à ne pas confondre avec plusieurs
         // pièces. La distinction est dans la capacité, pas ici.
@@ -566,6 +571,11 @@ function PmeLayout() {
     },
   });
   const ouvrirCapture = prise.photographier;
+
+  // Sur l'écran « Ajouter des pièces », au poste : glisser des fichiers ou les coller.
+  useDepotDeFichiers(path === "/pme/capturer" && Boolean(org) && !capture.isPending, (deposes) =>
+    choisir.mutate({ deposes }),
+  );
 
   /** Une photo sans lien : jamais le remplacement d'une pièce ouverte avant. */
   const ouvrirScanner = useCallback(() => {

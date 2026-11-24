@@ -63,12 +63,25 @@ async function estUnPdf(blob: Blob): Promise<boolean> {
   return String.fromCharCode(...new Uint8Array(octets)).includes("%PDF");
 }
 
-async function pickPdfs(plusieurs = true): Promise<PickedFile[]> {
-  const choisis = await pick(PDF_ACCEPT, false, plusieurs);
+/** Des fichiers donnés pour des PDF : tous le sont, ou le lot est refusé avec leurs noms. */
+async function verifierLesPdf(choisis: readonly PickedFile[]): Promise<PickedFile[]> {
   const refuses: string[] = [];
   for (const f of choisis) if (!(await estUnPdf(f.blob))) refuses.push(f.name);
   if (refuses.length > 0) throw new FichierNonPdf(refuses);
-  return choisis;
+  return [...choisis];
+}
+
+async function pickPdfs(plusieurs = true): Promise<PickedFile[]> {
+  return verifierLesPdf(await pick(PDF_ACCEPT, false, plusieurs));
+}
+
+/** Un fichier du navigateur, tel que la capture le reçoit. */
+function enPiece(file: File): PickedFile {
+  return {
+    blob: file,
+    name: file.name,
+    source: file.type === "application/pdf" ? "pdf" : "photo",
+  };
 }
 
 /**
@@ -99,13 +112,7 @@ function pick(accept: string, capture: boolean, plusieurs: boolean): Promise<Pic
     if (capture) input.setAttribute("capture", "environment");
     if (plusieurs) input.multiple = true;
     input.onchange = () => {
-      resolve(
-        [...(input.files ?? [])].map((file) => ({
-          blob: file,
-          name: file.name,
-          source: file.type === "application/pdf" ? ("pdf" as const) : ("photo" as const),
-        })),
-      );
+      resolve([...(input.files ?? [])].map(enPiece));
     };
     input.oncancel = () => resolve([]);
     input.click();
@@ -121,7 +128,10 @@ function pick(accept: string, capture: boolean, plusieurs: boolean): Promise<Pic
  * de gamme rend l'âme avant la cinquième.
  */
 async function scan(accept: string, capture: boolean, plusieurs = false): Promise<PickedFile[]> {
-  const choisis = await pick(accept, capture, plusieurs);
+  return cadrerLesImages(await pick(accept, capture, plusieurs));
+}
+
+async function cadrerLesImages(choisis: readonly PickedFile[]): Promise<PickedFile[]> {
   const prets: PickedFile[] = [];
   for (const picked of choisis) {
     if (picked.source === "pdf") {
@@ -158,6 +168,20 @@ function choisir(moyen: "photo" | "images" | "pdf", plusieurs = true): Promise<P
 }
 
 /**
+ * Des fichiers glissés sur l'écran ou collés (⌘V) au poste de bureau : les MÊMES contrôles que
+ * « Importer des images / PDF ». Un PDF doit en être un (ses premiers octets), une image est
+ * cadrée et encodée en PDF ; tout autre fichier refuse le lot, nommé, avant qu'une lecture soit
+ * consommée — comme un `.txt` renommé en `.pdf` au sélecteur.
+ */
+async function deposer(fichiers: readonly File[]): Promise<PickedFile[]> {
+  const lot = fichiers.map(enPiece);
+  const autres = lot.filter((f) => f.source === "photo" && !f.blob.type.startsWith("image/"));
+  if (autres.length > 0) throw new FichierNonPdf(autres.map((f) => f.name));
+  await verifierLesPdf(lot.filter((f) => f.source === "pdf"));
+  return cadrerLesImages(lot);
+}
+
+/**
  * Plusieurs pages, un seul PDF compact : la pièce reste une pièce.
  */
 async function scanPages(
@@ -189,6 +213,8 @@ export const files = {
   choisir,
   /** Plusieurs PDF d'un coup : c'est le cas du rattrapage d'un mois. */
   pickPdfs,
+  /** Ce qu'on glisse ou colle sur l'écran d'ajout, au poste de bureau. */
+  deposer,
   /** Plusieurs PAGES d'UNE pièce — à ne pas confondre avec ce qui précède. */
   scanPages,
   newIdempotencyKey: () => crypto.randomUUID(),
