@@ -10,11 +10,16 @@
  *   — le réglage du cabinet (`lecture.relecture_cellules`) se lit sans repli ;
  *   — le branchement dans `runVisionRead` : le plan relu est celui que le Sudoku d'abord
  *     prouve ET celui que la lecture rend (donc celui que la base garde, R2) ; un plan
- *     fourni (le rattrapage) ne se relit pas ; un PDF à texte non plus.
+ *     fourni (le rattrapage) ne se relit pas ;
+ *   — le Sudoku et le banc se chargent SANS base : le banc du moteur tourne sans
+ *     `DATABASE_URL`. Le premier passage de cette livraison importait le journal dans
+ *     `sudoku.ts`, qui ouvre la base à l'import, et le banc tombait avant de mesurer.
  *
  *   node --experimental-strip-types --test src/malica/lecture/la-relecture-des-cellules-se-branche.test.ts
  */
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, it } from "node:test";
 
 import type { SortieDuSudoku } from "@malica/sudoku";
@@ -308,5 +313,28 @@ describe("le plan relu est celui que la lecture prouve et rend", () => {
     });
     assert.equal(appelee, false);
     assert.equal(lu.tokens[0]?.text, "100,000");
+  });
+});
+
+/* ------------------------------------------------------------ SANS BASE */
+
+describe("le Sudoku et le banc se chargent sans base", () => {
+  it("aucun import n'exige DATABASE_URL", () => {
+    const ici = fileURLToPath(new URL(".", import.meta.url));
+    const env = { ...process.env };
+    delete env["DATABASE_URL"];
+    delete env["DATABASE_URL_ADMIN"];
+    const r = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "--no-warnings",
+        "--input-type=module",
+        "-e",
+        "await import('./sudoku.ts'); await import('./banc-sans-ia.ts');",
+      ],
+      { cwd: ici, env, encoding: "utf8" },
+    );
+    assert.equal(r.status, 0, r.stderr);
   });
 });

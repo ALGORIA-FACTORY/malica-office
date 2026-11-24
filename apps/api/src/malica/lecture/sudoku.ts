@@ -56,8 +56,6 @@ import type { Requete } from "../../db.ts";
 import { dateDeLaPiece } from "../../depots/dates.ts";
 import type { ReglagesResolus } from "../../scan/reglages-comptables.ts";
 
-import { consigner } from "../../observabilite/journal.ts";
-
 import type { VerdictDuSudoku } from "./etapes-de-lecture.ts";
 import { cleDeJeton, datesDuPlan, identifiantsDuPlan, lettresDuPlan } from "./experts.ts";
 import { treillisMontant } from "./montants.ts";
@@ -1241,6 +1239,21 @@ export function relectureDesCellules(r: ReglagesResolus): boolean {
   throw new Error("reglage.lecture.illisible");
 }
 
+/**
+ * Ce que la relecture des cellules a fait : le plan à garder, et pourquoi. `sans_objet` :
+ * elle n'avait pas lieu d'être (un autre lecteur, un réglage coupé, rien de contredit). Le
+ * journal la trace (`read-flow.ts`) : ce module ne connaît pas le journal, qui ouvre la base
+ * dès qu'on l'importe — le banc, lui, tourne sans elle.
+ */
+export interface RelectureDesCellules {
+  readonly tokens: readonly PageToken[];
+  readonly issue: "sans_objet" | "inchangee" | "retenue" | "ecartee" | "erreur";
+  readonly cellules?: number;
+  readonly changees?: number;
+  readonly erreur?: string;
+  readonly dureeMs: number;
+}
+
 /** Le contexte d'une pièce, avec le mode que son dossier a arrêté. */
 export interface ContexteDuSudokuBranche extends ContexteDuSudoku {
   readonly mode: ModeDuSudoku;
@@ -1331,7 +1344,7 @@ export interface Sudoku {
   relireLesCellules(
     tokens: readonly PageToken[],
     releve: Pick<Releve, "lecteur" | "marques" | "pages">,
-  ): Promise<readonly PageToken[]>;
+  ): Promise<RelectureDesCellules>;
   /** Ce que le sudoku a rendu de cette lecture, pour le journal ; rien s'il ne l'a pas vue. */
   verdict(lecture: VisionRead): VerdictDuSudoku | null;
   /**
@@ -1478,27 +1491,27 @@ export function creerLeSudoku(
   };
   return {
     async relireLesCellules(tokens, releve) {
-      if (releve.lecteur !== "paddle" || !releve.pages?.length || !piece.devise) return tokens;
-      const jour = piece.recueLe;
       const debut = Date.now();
-      const tracer = (issue: string, detail: Record<string, string | number | null> = {}) =>
-        consigner("relecture_cellules", issue === "erreur" ? "erreur" : "ok", {
-          cle: `${piece.pieceId}:relecture_cellules`,
-          piece: piece.pieceId,
-          dureeMs: Date.now() - debut,
-          detail: { issue, ...detail },
-        });
+      const rendre = (
+        issue: RelectureDesCellules["issue"],
+        plan: readonly PageToken[] = tokens,
+        detail: Partial<Pick<RelectureDesCellules, "cellules" | "changees" | "erreur">> = {},
+      ): RelectureDesCellules => ({ tokens: plan, issue, ...detail, dureeMs: Date.now() - debut });
+      if (releve.lecteur !== "paddle" || !releve.pages?.length || !piece.devise)
+        return rendre("sans_objet");
+      const jour = piece.recueLe;
       try {
         // Le réglage d'abord : coupée, la relecture ne coûte pas même un passage du moteur.
-        if (!(await contexteDuJour(jour, piece.devise)).relectureDesCellules) return tokens;
+        if (!(await contexteDuJour(jour, piece.devise)).relectureDesCellules)
+          return rendre("sans_objet");
         const avant = await resoudreAuJour(tokens, jour, piece.devise, releve);
         const ht = champsDeLaGrille(avant.ctx.grille).ht;
         const indices = ht ? cellulesContredites(tokens, avant.sortie, ht) : [];
-        if (indices.length === 0) return tokens;
+        if (indices.length === 0) return rendre("sans_objet");
         // Les cellules contredites sont toutes sur la page du total HT (`cellulesContredites`).
         const page = tokens[indices[0]!]!.page;
         const image = releve.pages.find((p) => p.page === page);
-        if (!image) return tokens;
+        if (!image) return rendre("sans_objet");
         const lues = await relire(
           octetsDuDataUrl(image.dataUrl),
           indices.map((i) => {
@@ -1506,29 +1519,20 @@ export function creerLeSudoku(
             return [t.x0, t.y0, t.x1, t.y1] as const;
           }),
         );
-        if (!lues) return tokens;
+        if (!lues) return rendre("sans_objet", tokens, { cellules: indices.length });
         const relus = avecLesRelectures(tokens, indices, lues);
         const changees = relus.filter((t, i) => t !== tokens[i]).length;
-        if (changees === 0) {
-          tracer("inchangee", { cellules: indices.length });
-          return tokens;
-        }
+        if (changees === 0) return rendre("inchangee", tokens, { cellules: indices.length });
         const apres = await resoudreAuJour(relus, jour, piece.devise, releve);
-        const retenue = relectureRetenue(avant.sortie, apres.sortie);
-        tracer(retenue ? "retenue" : "ecartee", {
-          cellules: indices.length,
-          changees,
-          issue_apres: apres.sortie.issue,
-          lignes_apres: etatDesLignes(apres.sortie),
-        });
-        return retenue ? relus : tokens;
+        return relectureRetenue(avant.sortie, apres.sortie)
+          ? rendre("retenue", relus, { cellules: indices.length, changees })
+          : rendre("ecartee", tokens, { cellules: indices.length, changees });
       } catch (e: unknown) {
         contextes.delete(jour);
-        tracer("erreur", { erreur: e instanceof Error ? e.name : typeof e });
         console.error(
           `relecture des cellules : plan gardé — pièce ${piece.pieceId} : ${message(e)}`,
         );
-        return tokens;
+        return rendre("erreur", tokens, { erreur: e instanceof Error ? e.name : typeof e });
       }
     },
 

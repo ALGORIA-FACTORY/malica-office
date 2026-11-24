@@ -29,6 +29,7 @@ import {
   tracerLaPersistance,
   tracerLeRattrapage,
   tracerLeSudoku,
+  tracerLaRelectureDesCellules,
   tracerLExtraction,
   tracerLOcr,
   type Passe,
@@ -207,8 +208,11 @@ async function preparer(api: AppelApi, pieceId: string, lecteurs: Lecteurs) {
      * La relecture des cellules (24 novembre 2026) : sur le relevé de PaddleOCR, avant le
      * Sudoku d'abord. Le plan rendu est celui que tout l'aval lit et que la base garde.
      */
-    relireLesCellules: (plan: readonly PageToken[], releve: Releve) =>
-      sudoku.relireLesCellules(plan, releve),
+    relireLesCellules: async (plan: readonly PageToken[], releve: Releve) => {
+      const r = await sudoku.relireLesCellules(plan, releve);
+      tracerLaRelectureDesCellules(pieceId, r);
+      return r.tokens;
+    },
     parRecette,
     /*
      * La chaîne de désignation (Claude, puis DeepSeek, puis l'arrêt), relue
