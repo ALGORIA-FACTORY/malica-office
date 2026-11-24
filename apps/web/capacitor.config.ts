@@ -95,9 +95,18 @@ const config: CapacitorConfig = {
      * (`resetWhenUpdate`) : c'est lui qui porte les greffons natifs neufs.
      */
     CapacitorUpdater: {
-      autoUpdate: true,
       resetWhenUpdate: true,
       appReadyTimeout: 10_000,
+      /*
+       * L'émulateur de la CI ne parle pas à Capgo (24 novembre 2026) : chaque passage
+       * démarrait un téléphone neuf, compté « utilisateur actif » — 3 285 appareils
+       * Android 14 sur le bundle 0.0.0, le forfait dépassé (2 082 / 2 000) et l'envoi
+       * des mises à jour refusé (429 `on_premise_app`). Sans mise à jour ni statistiques,
+       * il n'est plus compté. Les vraies coques gardent les deux.
+       */
+      ...(process.env["MALICA_COQUE_EMULATEUR"] === "1"
+        ? { autoUpdate: false, statsUrl: "" }
+        : { autoUpdate: true }),
     },
   },
 
