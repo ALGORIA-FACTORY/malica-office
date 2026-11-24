@@ -10,6 +10,8 @@
  * Pur : ni réseau ni écran. Plusieurs sociétés : un jour par société, chacune ses
  * échéances.
  */
+import { trancheDEcheance } from "@/lib/portefeuille-actif";
+
 export interface EcheanceAPlat {
   id: string;
   dueDate: string;
@@ -87,4 +89,25 @@ export function echeancesParJour(
     echeances.filter((e) => e.status !== "fait"),
     aujourdhui,
   ).slice(0, combien);
+}
+
+/**
+ * Les tranches de l'écran des échéances. Une échéance déposée n'est plus à faire : ni « en
+ * retard » (local, 24 novembre 2026 : la « Déclaration TCL — Déposée par votre comptable »
+ * sous « En retard », et le compteur à 3 quand l'en-tête et l'accueil disaient 2), ni « dans
+ * les 7 jours ». Elle va sous `deposees`, qui ne compte dans aucun compteur — comme l'accueil,
+ * dont la prochaine échéance ignore les déposées. Les autres tranches suivent la date.
+ */
+export function tranchesDesEcheances<E extends EcheanceAPlat>(
+  jours: ReadonlyArray<JourDEcheancesLu<E>>,
+  aujourdhui: string,
+): Record<"retard" | "semaine" | "mois" | "suite" | "deposees", Array<JourDEcheancesLu<E>>> {
+  const t = { retard: [], semaine: [], mois: [], suite: [], deposees: [] } as Record<
+    "retard" | "semaine" | "mois" | "suite" | "deposees",
+    Array<JourDEcheancesLu<E>>
+  >;
+  for (const j of jours) {
+    t[j.faites ? "deposees" : trancheDEcheance(j.dueDate, aujourdhui)].push(j);
+  }
+  return t;
 }

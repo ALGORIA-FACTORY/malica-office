@@ -1,7 +1,7 @@
 /** Les échéances de l'accueil, une ligne par jour (22 novembre 2026). */
 import { describe, expect, it } from "vitest";
 
-import { echeancesParJour, regrouperParJour } from "../echeances-par-jour";
+import { echeancesParJour, regrouperParJour, tranchesDesEcheances } from "../echeances-par-jour";
 
 const e = (id: string, dueDate: string, label: string, status = "a_faire", tenantId = "a") => ({
   id,
@@ -73,5 +73,36 @@ describe("l'écran des échéances groupe aussi par jour", () => {
       ["2026-11-30", false, 1, "FOPROLOS"],
     ]);
     expect(jours[0]!.premiere.id).toBe("1");
+  });
+});
+
+describe("les tranches de l'écran des échéances (24 novembre 2026)", () => {
+  it("une échéance passée et déposée n'est pas en retard, et ne compte nulle part", () => {
+    const jours = regrouperParJour(
+      [
+        e("1", "2026-11-16", "TVA", "en_retard"),
+        e("2", "2026-11-20", "Timbre", "en_retard"),
+        e("3", "2026-11-20", "TCL", "fait"),
+        e("4", "2026-11-30", "Acompte"),
+        e("5", "2026-12-15", "TVA"),
+        e("6", "2027-01-15", "IR"),
+      ],
+      "2026-11-24",
+    );
+    const t = tranchesDesEcheances(jours, "2026-11-24");
+    expect(t.retard.map((j) => j.dueDate)).toEqual(["2026-11-16", "2026-11-20"]);
+    expect(t.retard.every((j) => !j.faites)).toBe(true);
+    expect(t.deposees.map((j) => j.premiere.label)).toEqual(["TCL"]);
+    expect(t.semaine.map((j) => j.dueDate)).toEqual(["2026-11-30"]);
+    expect(t.mois.map((j) => j.dueDate)).toEqual(["2026-12-15"]);
+    expect(t.suite.map((j) => j.dueDate)).toEqual(["2027-01-15"]);
+  });
+  it("une échéance déposée d'avance n'est pas « dans les 7 jours » non plus", () => {
+    const t = tranchesDesEcheances(
+      regrouperParJour([e("1", "2026-11-28", "TVA", "fait")], "2026-11-24"),
+      "2026-11-24",
+    );
+    expect(t.semaine).toHaveLength(0);
+    expect(t.deposees).toHaveLength(1);
   });
 });

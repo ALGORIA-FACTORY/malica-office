@@ -193,6 +193,18 @@ describe("l'état de l'accueil", () => {
       etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0, enRetard: 0, aExporter: 0 }),
     ).toBe("en_ordre");
   });
+  it("jamais « en ordre » tant que les échéances ne sont pas lues", () => {
+    expect(
+      etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0, enRetard: null, aExporter: 0 }),
+    ).toBe("echeances_a_lire");
+    // Ce qui est su se dit quand même : un retour, un envoi, une remise au comptable.
+    expect(etatDeLAccueil({ avancement: 1, enAttente: 2, retournees: 0, enRetard: null })).toBe(
+      "a_envoyer",
+    );
+    expect(
+      etatDeLAccueil({ avancement: 1, enAttente: 0, retournees: 0, enRetard: null, aExporter: 3 }),
+    ).toBe("a_exporter");
+  });
 });
 
 describe("un document joint n'est pas une pièce (recette du 13 novembre 2026, G8)", () => {
