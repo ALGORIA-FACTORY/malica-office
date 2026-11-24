@@ -10,8 +10,9 @@
  */
 import type { ReactNode } from "react";
 
+import portraitMalica from "@/assets/malica.webp";
 import { LanguageSwitcher } from "@/components/malica/LanguageSwitcher";
-import { useI18n } from "@/i18n";
+import { useI18n, type MessageKey } from "@/i18n";
 import "@/styles-connexion.css";
 
 const EDITEUR = "ALGORIA FACTORY";
@@ -37,6 +38,13 @@ const LIGNES: ReadonlyArray<{ w: number; vide?: boolean; cite?: boolean }> = [
   { w: 40 },
   { w: 97, vide: true },
   { w: 91 },
+];
+
+/** Les trois temps du produit, sur le panneau preuve du poste de bureau. */
+const PARCOURS: ReadonlyArray<{ titre: MessageKey; texte: MessageKey }> = [
+  { titre: "auth.parcours.photo", texte: "auth.parcours.photo.texte" },
+  { titre: "auth.parcours.lecture", texte: "auth.parcours.lecture.texte" },
+  { titre: "auth.parcours.comptable", texte: "auth.parcours.comptable.texte" },
 ];
 
 function Preuve() {
@@ -90,6 +98,21 @@ export function CadreConnexion({ children }: { children: ReactNode }) {
           <br />
           <strong>{t("auth.hero.2")}</strong>
         </h2>
+        {/* Sur poste de bureau : le parcours en trois temps, et le principe dans la voix de Malica. */}
+        <ol className="bp-parcours">
+          {PARCOURS.map((p, i) => (
+            <li key={p.titre}>
+              <span className="bp-parcours-rang">
+                {String(i + 1).padStart(2, "0")} · {t(p.titre)}
+              </span>
+              {t(p.texte)}
+            </li>
+          ))}
+        </ol>
+        <p className="bp-voix">
+          <img src={portraitMalica} alt="" width={620} height={620} />
+          {t("auth.principle")}
+        </p>
       </aside>
       <main className="cx-panel">
         <header className="cx-top">

@@ -407,219 +407,224 @@ function FicheFiscale() {
         </span>
       </div>
 
-      <div className="pad">
-        <h1>{t("fiche.titre")}</h1>
-        {/*
-         * Une ligne, pas trois. Quand une situation existe déjà, c'est CELA
-         * qu'il faut dire — le formulaire la modifie, il ne repart pas de
-         * zéro. Le reste du temps, on explique à quoi sert l'écran.
-         */}
-        <p className="sub">
-          {courante.data
-            ? t("fiche.dejaEtablie", { depuis: dateLisible(courante.data.validFrom) })
-            : t("fiche.sous")}
-        </p>
+      {/* Sur poste de bureau, deux colonnes : la carte et sa prise de vue à gauche, la fiche à droite. */}
+      <div className="pad bp-deux bp-fiche">
+        <div className="bp-colonne">
+          <h1>{t("fiche.titre")}</h1>
+          {/*
+           * Une ligne, pas trois. Quand une situation existe déjà, c'est CELA
+           * qu'il faut dire — le formulaire la modifie, il ne repart pas de
+           * zéro. Le reste du temps, on explique à quoi sert l'écran.
+           */}
+          <p className="sub">
+            {courante.data
+              ? t("fiche.dejaEtablie", { depuis: dateLisible(courante.data.validFrom) })
+              : t("fiche.sous")}
+          </p>
 
-        {/* ── la voix de Malica ──────────────────────────────────────── */}
-        <div className="sgn">
-          <span className="ph">
-            <img src={portraitMalica} alt="" width={620} height={620} />
-          </span>
-          <b>{t("malica.chat.her")}</b>
-        </div>
-        <div className="dit">
-          {t("fiche.voix")}
-          <em>{t("fiche.promesse")}</em>
-        </div>
-
-        {/* ── la lecture de la carte ─────────────────────────────────── */}
-        <div className="sec">
-          <h2>{t("pme.fiche.secCarte")}</h2>
-          <span>
-            {luDeLaCarte.size > 0 ? t("pme.bienvenue.secEtat") : t("pme.fiche.cartePasLue")}
-          </span>
-        </div>
-        <div className="pan">
-          <p>{t("pme.fiche.panCarte")}</p>
-          {lecture.isPending ? <p role="status">{t("fiche.lecture")}</p> : null}
-        </div>
-        {/*
-         * Les trois sources d'« Ajouter des pièces », à l'identique. Elles AIDENT
-         * à remplir, elles n'engagent rien : l'engagement reste en bas, en `.go .pr`.
-         */}
-        <SourcesDeCapture
-          occupe={occupe}
-          onPhotographier={prise.photographier}
-          onImporter={importer.mutate}
-        />
-
-        {luDeLaCarte.size > 0 ? (
-          <div className="mur">
-            <IconeInfo />
-            <p>{t("fiche.lu", { count: luDeLaCarte.size })}</p>
+          {/* ── la voix de Malica ──────────────────────────────────────── */}
+          <div className="sgn">
+            <span className="ph">
+              <img src={portraitMalica} alt="" width={620} height={620} />
+            </span>
+            <b>{t("malica.chat.her")}</b>
           </div>
-        ) : null}
-
-        {/* Le mur d'erreur, comme `pme.regler` l'a arrêté : `.card` + `p`. */}
-        {erreur || echecLecture ? (
-          <div className="card" role="alert">
-            <p>{erreur ?? texteDeLErreur(echecLecture, OU, t("common.error"))}</p>
+          <div className="dit">
+            {t("fiche.voix")}
+            <em>{t("fiche.promesse")}</em>
           </div>
-        ) : null}
 
-        {/* ── le régime ──────────────────────────────────────────────── */}
-        <div className="sec">
-          <h2>{t("pme.fiche.secRegime")}</h2>
-          <span>{t("pme.fiche.duReferentiel")}</span>
-        </div>
-        <div className="pan">
-          <Axe
-            label={t("fiche.champ.imposition")}
-            options={parAxe("imposition")}
-            valeur={regimeImposition}
-            onChange={setRegimeImposition}
-            vide={t("fiche.nonRenseigne")}
-            marque={luDeLaCarte.has("regime_imposition") ? marque : undefined}
+          {/* ── la lecture de la carte ─────────────────────────────────── */}
+          <div className="sec">
+            <h2>{t("pme.fiche.secCarte")}</h2>
+            <span>
+              {luDeLaCarte.size > 0 ? t("pme.bienvenue.secEtat") : t("pme.fiche.cartePasLue")}
+            </span>
+          </div>
+          <div className="pan">
+            <p>{t("pme.fiche.panCarte")}</p>
+            {lecture.isPending ? <p role="status">{t("fiche.lecture")}</p> : null}
+          </div>
+          {/*
+           * Les trois sources d'« Ajouter des pièces », à l'identique. Elles AIDENT
+           * à remplir, elles n'engagent rien : l'engagement reste en bas, en `.go .pr`.
+           */}
+          <SourcesDeCapture
+            occupe={occupe}
+            onPhotographier={prise.photographier}
+            onImporter={importer.mutate}
           />
-          {/* Le fondement du régime choisi, tel que la base le porte. */}
-          <Fondement texte={fondementDe("imposition", regimeImposition)} />
 
-          <Axe
-            label={t("fiche.champ.tva")}
-            options={parAxe("tva")}
-            valeur={regimeTva}
-            onChange={(v) => {
-              setRegimeTva(v);
-              if (v !== PARTIEL) setProrata("");
-            }}
-            vide={t("fiche.nonRenseigne")}
-            marque={luDeLaCarte.has("regime_tva") ? marque : undefined}
-          />
-          <Fondement texte={fondementDe("tva", regimeTva)} />
+          {luDeLaCarte.size > 0 ? (
+            <div className="mur">
+              <IconeInfo />
+              <p>{t("fiche.lu", { count: luDeLaCarte.size })}</p>
+            </div>
+          ) : null}
 
-          {/* Le prorata n'existe que pour un assujetti partiel : la base le
-              refuse ailleurs, l'écran ne le propose donc pas ailleurs. */}
-          {regimeTva === PARTIEL ? (
-            <Champ
-              label={t("fiche.champ.prorata")}
-              valeur={prorata}
-              onChange={setProrata}
-              type="number"
-              aide={t("fiche.aide.prorata")}
-            />
+          {/* Le mur d'erreur, comme `pme.regler` l'a arrêté : `.card` + `p`. */}
+          {erreur || echecLecture ? (
+            <div className="card" role="alert">
+              <p>{erreur ?? texteDeLErreur(echecLecture, OU, t("common.error"))}</p>
+            </div>
           ) : null}
         </div>
 
-        {/* ── la société ─────────────────────────────────────────────── */}
-        <div className="sec">
-          <h2>{t("pme.fiche.secSociete")}</h2>
-          <span>{t("pme.fiche.duReferentiel")}</span>
-        </div>
-        <div className="pan">
-          {/* La forme et le mode de dépôt décident des délais : sans les deux,
+        <div className="bp-colonne">
+          {/* ── le régime ──────────────────────────────────────────────── */}
+          <div className="sec">
+            <h2>{t("pme.fiche.secRegime")}</h2>
+            <span>{t("pme.fiche.duReferentiel")}</span>
+          </div>
+          <div className="pan">
+            <Axe
+              label={t("fiche.champ.imposition")}
+              options={parAxe("imposition")}
+              valeur={regimeImposition}
+              onChange={setRegimeImposition}
+              vide={t("fiche.nonRenseigne")}
+              marque={luDeLaCarte.has("regime_imposition") ? marque : undefined}
+            />
+            {/* Le fondement du régime choisi, tel que la base le porte. */}
+            <Fondement texte={fondementDe("imposition", regimeImposition)} />
+
+            <Axe
+              label={t("fiche.champ.tva")}
+              options={parAxe("tva")}
+              valeur={regimeTva}
+              onChange={(v) => {
+                setRegimeTva(v);
+                if (v !== PARTIEL) setProrata("");
+              }}
+              vide={t("fiche.nonRenseigne")}
+              marque={luDeLaCarte.has("regime_tva") ? marque : undefined}
+            />
+            <Fondement texte={fondementDe("tva", regimeTva)} />
+
+            {/* Le prorata n'existe que pour un assujetti partiel : la base le
+              refuse ailleurs, l'écran ne le propose donc pas ailleurs. */}
+            {regimeTva === PARTIEL ? (
+              <Champ
+                label={t("fiche.champ.prorata")}
+                valeur={prorata}
+                onChange={setProrata}
+                type="number"
+                aide={t("fiche.aide.prorata")}
+              />
+            ) : null}
+          </div>
+
+          {/* ── la société ─────────────────────────────────────────────── */}
+          <div className="sec">
+            <h2>{t("pme.fiche.secSociete")}</h2>
+            <span>{t("pme.fiche.duReferentiel")}</span>
+          </div>
+          <div className="pan">
+            {/* La forme et le mode de dépôt décident des délais : sans les deux,
               Malica ne dérive aucune échéance — et le dit. */}
-          <Axe
-            label={t("fiche.champ.forme")}
-            options={choixDe("forme")}
-            valeur={forme}
-            onChange={setForme}
-            vide={t("fiche.nonRenseigne")}
-          />
-          <Axe
-            label={t("fiche.champ.mode")}
-            options={choixDe("mode")}
-            valeur={mode}
-            onChange={setMode}
-            vide={t("fiche.nonRenseigne")}
-          />
-          <p>{t("fiche.aide.forme")}</p>
-          <Champ
-            label={t("fiche.champ.secteur")}
-            valeur={secteur}
-            onChange={setSecteur}
-            marque={luDeLaCarte.has("secteur") ? marque : undefined}
-          />
-        </div>
-
-        {/* ── l'exercice ─────────────────────────────────────────────── */}
-        <div className="sec">
-          <h2>{t("pme.fiche.secExercice")}</h2>
-          <span>{t("pme.fiche.deuxDates")}</span>
-        </div>
-        <div className="pan">
-          <Champ
-            label={t("fiche.champ.debut")}
-            valeur={debut}
-            onChange={setDebut}
-            type="date"
-            marque={luDeLaCarte.has("debut_activite") ? marque : undefined}
-          />
-          <Champ
-            label={t("fiche.champ.cloture")}
-            valeur={cloture}
-            onChange={setCloture}
-            aide={t("fiche.aide.cloture")}
-          />
-        </div>
-
-        {/* ── ce qui va être inscrit, puis l'engagement ───────────────── */}
-        <div className="sec">
-          <h2>{t("pme.fiche.secArret")}</h2>
-          <span>{dateLisible(AUJOURDHUI())}</span>
-        </div>
-        <div className="pan">
-          <div className="bil">
-            <b>
-              {remplis} {t("pme.fiche.bilSur")} {CHAMPS.length}
-            </b>{" "}
-            {t("pme.fiche.bilChamps")}{" "}
-            {courante.data ? t("pme.fiche.bilRemplace") : t("pme.fiche.bilPremiere")}
+            <Axe
+              label={t("fiche.champ.forme")}
+              options={choixDe("forme")}
+              valeur={forme}
+              onChange={setForme}
+              vide={t("fiche.nonRenseigne")}
+            />
+            <Axe
+              label={t("fiche.champ.mode")}
+              options={choixDe("mode")}
+              valeur={mode}
+              onChange={setMode}
+              vide={t("fiche.nonRenseigne")}
+            />
+            <p>{t("fiche.aide.forme")}</p>
+            <Champ
+              label={t("fiche.champ.secteur")}
+              valeur={secteur}
+              onChange={setSecteur}
+              marque={luDeLaCarte.has("secteur") ? marque : undefined}
+            />
           </div>
+
+          {/* ── l'exercice ─────────────────────────────────────────────── */}
+          <div className="sec">
+            <h2>{t("pme.fiche.secExercice")}</h2>
+            <span>{t("pme.fiche.deuxDates")}</span>
+          </div>
+          <div className="pan">
+            <Champ
+              label={t("fiche.champ.debut")}
+              valeur={debut}
+              onChange={setDebut}
+              type="date"
+              marque={luDeLaCarte.has("debut_activite") ? marque : undefined}
+            />
+            <Champ
+              label={t("fiche.champ.cloture")}
+              valeur={cloture}
+              onChange={setCloture}
+              aide={t("fiche.aide.cloture")}
+            />
+          </div>
+
+          {/* ── ce qui va être inscrit, puis l'engagement ───────────────── */}
+          <div className="sec">
+            <h2>{t("pme.fiche.secArret")}</h2>
+            <span>{dateLisible(AUJOURDHUI())}</span>
+          </div>
+          <div className="pan">
+            <div className="bil">
+              <b>
+                {remplis} {t("pme.fiche.bilSur")} {CHAMPS.length}
+              </b>{" "}
+              {t("pme.fiche.bilChamps")}{" "}
+              {courante.data ? t("pme.fiche.bilRemplace") : t("pme.fiche.bilPremiere")}
+            </div>
+            {/*
+             * La source, dite AVANT d'enregistrer. `etablirFiche` inscrit
+             * « carte » seulement si l'œil a rempli quelque chose : l'écran
+             * annonce donc ce qu'il va inscrire, il ne le découvre pas après.
+             */}
+            <div className="fixe">
+              <IconeCadenas />
+              {luDeLaCarte.size > 0
+                ? t("pme.fiche.fixeSourceCarte")
+                : t("pme.fiche.fixeSourceSaisie")}
+            </div>
+          </div>
+
           {/*
-           * La source, dite AVANT d'enregistrer. `etablirFiche` inscrit
-           * « carte » seulement si l'œil a rempli quelque chose : l'écran
-           * annonce donc ce qu'il va inscrire, il ne le découvre pas après.
+           * `.go .pr` : le bouton d'engagement de la famille — celui par lequel
+           * `arr` crée la société. `.go .sc2` n'est pas rendu : aucune seconde
+           * action de bas de page n'est vraie ici, et `.top .bk` fait le retour.
            */}
-          <div className="fixe">
-            <IconeCadenas />
-            {luDeLaCarte.size > 0
-              ? t("pme.fiche.fixeSourceCarte")
-              : t("pme.fiche.fixeSourceSaisie")}
+          <div className="go">
+            <button
+              type="button"
+              className="pr"
+              disabled={rien || enregistrement.isPending}
+              onClick={() => enregistrement.mutate()}
+            >
+              {t("fiche.enregistrer")}
+            </button>
           </div>
-        </div>
 
-        {/*
-         * `.go .pr` : le bouton d'engagement de la famille — celui par lequel
-         * `arr` crée la société. `.go .sc2` n'est pas rendu : aucune seconde
-         * action de bas de page n'est vraie ici, et `.top .bk` fait le retour.
-         */}
-        <div className="go">
-          <button
-            type="button"
-            className="pr"
-            disabled={rien || enregistrement.isPending}
-            onClick={() => enregistrement.mutate()}
-          >
-            {t("fiche.enregistrer")}
-          </button>
+          {/*
+           * La phrase de clôture, en `.foot` comme le dessin.
+           *
+           * Une version de ce fichier employait `.regle` à la place, en affirmant
+           * que `.foot` n'était déclaré que sous `[data-ecran="charges"]`.
+           * C'était faux : `[data-surface="pme"] .foot` est déclaré au niveau de
+           * la SURFACE et peint donc sur les treize écrans. Le relevé qui disait
+           * l'inverse cherchait `.foot` sous `[data-famille="papiers"]`
+           * seulement.
+           *
+           * Ce qu'elle dit n'est pas `fiche.promesse` — cette phrase-là est
+           * dans la voix de Malica, et la redire ici ferait deux fois la même
+           * sur un écran. Elle dit la conséquence de la source, que `.fixe`
+           * annonce juste au-dessus.
+           */}
+          <p className="foot">{t("pme.fiche.regleSaisie")}</p>
         </div>
-
-        {/*
-         * La phrase de clôture, en `.foot` comme le dessin.
-         *
-         * Une version de ce fichier employait `.regle` à la place, en affirmant
-         * que `.foot` n'était déclaré que sous `[data-ecran="charges"]`.
-         * C'était faux : `[data-surface="pme"] .foot` est déclaré au niveau de
-         * la SURFACE et peint donc sur les treize écrans. Le relevé qui disait
-         * l'inverse cherchait `.foot` sous `[data-famille="papiers"]`
-         * seulement.
-         *
-         * Ce qu'elle dit n'est pas `fiche.promesse` — cette phrase-là est
-         * dans la voix de Malica, et la redire ici ferait deux fois la même
-         * sur un écran. Elle dit la conséquence de la source, que `.fixe`
-         * annonce juste au-dessus.
-         */}
-        <p className="foot">{t("pme.fiche.regleSaisie")}</p>
       </div>
 
       {prise.ecran}

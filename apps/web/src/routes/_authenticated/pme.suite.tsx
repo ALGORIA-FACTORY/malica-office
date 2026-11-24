@@ -14,6 +14,7 @@
  */
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 
+import { EtapesDuDepart } from "@/components/malica/etapes-du-depart";
 import { usePme } from "@/components/malica/pme-context";
 import { useInvitationDeMaComptabilite } from "@/hooks/use-invitation-de-ma-comptabilite";
 import { useMonCabinet } from "@/hooks/use-mon-cabinet";
@@ -56,9 +57,10 @@ function Suite() {
           </svg>
         </button>
         <span className="ttl">{t("pme.suite.barre")}</span>
+        <EtapesDuDepart courante={etape} />
       </div>
 
-      <div className="pad">
+      <div className="pad bp-suite">
         <div className="dit">{t("pme.suite.titre")}</div>
 
         {etape === "forfait" ? (

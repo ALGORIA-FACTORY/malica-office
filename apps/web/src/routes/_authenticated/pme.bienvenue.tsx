@@ -15,6 +15,7 @@ import { useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { marquerBienvenueVue } from "@/components/malica/bienvenue";
+import { EtapesDuDepart } from "@/components/malica/etapes-du-depart";
 import { usePme } from "@/components/malica/pme-context";
 import { useI18n } from "@/i18n";
 import { texteDeLErreur } from "@/lib/erreur-lisible";
@@ -200,115 +201,121 @@ function Bienvenue() {
           </svg>
         </button>
         <span className="ttl">{t("pme.bienvenue.barre")}</span>
+        <EtapesDuDepart courante="verifier" />
       </div>
 
-      <div className="pad">
-        {/*
-         * La carte, dessinée. `aria-hidden` : c'est la DÉPICTION d'un carton,
-         * et ce qu'elle porte est redit juste dessous, en rangées étiquetées.
-         * Lue par une synthèse, elle dirait deux fois le même matricule sans
-         * dire ce qu'il est.
-         */}
-        <div className="carte" aria-hidden>
-          <span className="ban" />
-          <span className="t">{t("pme.bienvenue.carteBandeau")}</span>
-          <span className="mf">{matricule}</span>
-          <span className="nm">{raison}</span>
-          <span className="ln" style={{ top: "74%", width: "44%" }} />
-          <span className="ln" style={{ top: "84%", width: "30%" }} />
-          <span className="sc" />
+      {/* Sur poste de bureau, deux colonnes : la carte lue à gauche, les champs à droite. */}
+      <div className="pad bp-deux">
+        <div className="bp-colonne">
+          {/*
+           * La carte, dessinée. `aria-hidden` : c'est la DÉPICTION d'un carton,
+           * et ce qu'elle porte est redit juste dessous, en rangées étiquetées.
+           * Lue par une synthèse, elle dirait deux fois le même matricule sans
+           * dire ce qu'il est.
+           */}
+          <div className="carte" aria-hidden>
+            <span className="ban" />
+            <span className="t">{t("pme.bienvenue.carteBandeau")}</span>
+            <span className="mf">{matricule}</span>
+            <span className="nm">{raison}</span>
+            <span className="ln" style={{ top: "74%", width: "44%" }} />
+            <span className="ln" style={{ top: "84%", width: "30%" }} />
+            <span className="sc" />
+          </div>
+
+          {/* ── elle se nomme, puis elle dit ce qu'elle a fait ──────────── */}
+          <div className="sgn">
+            <span className="ph">
+              <img src={portraitMalica} alt="Malica" width={620} height={620} />
+            </span>
+            <b>{t("malica.chat.her")}</b>
+          </div>
+          {/* « Voici votre matricule » n'est dit que quand on le montre (recette du 14 novembre). */}
+          <div className="dit">
+            {pme.matricule ? t("pme.bienvenue.ditTitre") : t("pme.bienvenue.ditSansMatricule")}
+            <em>
+              {pme.matricule ? t("pme.bienvenue.ditSous") : t("pme.bienvenue.ditSousSansMatricule")}
+            </em>
+          </div>
         </div>
 
-        {/* ── elle se nomme, puis elle dit ce qu'elle a fait ──────────── */}
-        <div className="sgn">
-          <span className="ph">
-            <img src={portraitMalica} alt="Malica" width={620} height={620} />
-          </span>
-          <b>{t("malica.chat.her")}</b>
-        </div>
-        {/* « Voici votre matricule » n'est dit que quand on le montre (recette du 14 novembre). */}
-        <div className="dit">
-          {pme.matricule ? t("pme.bienvenue.ditTitre") : t("pme.bienvenue.ditSansMatricule")}
-          <em>
-            {pme.matricule ? t("pme.bienvenue.ditSous") : t("pme.bienvenue.ditSousSansMatricule")}
-          </em>
-        </div>
+        <div className="bp-colonne">
+          {/* ── les trois champs lus, chacun corrigeable ────────────────── */}
+          <div className="sec">
+            <h2>{t("pme.bienvenue.barre")}</h2>
+            <span>{t("pme.bienvenue.secEtat")}</span>
+          </div>
 
-        {/* ── les trois champs lus, chacun corrigeable ────────────────── */}
-        <div className="sec">
-          <h2>{t("pme.bienvenue.barre")}</h2>
-          <span>{t("pme.bienvenue.secEtat")}</span>
-        </div>
+          {pme.matricule ? (
+            <button type="button" className="rw" onClick={corriger}>
+              <i aria-hidden>
+                <IconeCarte />
+              </i>
+              <span className="bd">
+                <b>{matricule}</b>
+                <span>{t("pme.recu.matricule")}</span>
+              </span>
+            </button>
+          ) : (
+            <div className="rw">
+              <i aria-hidden>
+                <IconeCarte />
+              </i>
+              <span className="bd">
+                <label htmlFor="matricule-saisie">
+                  <b>{t("pme.bienvenue.matricule.saisir")}</b>
+                  <span>{t("pme.bienvenue.matricule.aide")}</span>
+                </label>
+                <input
+                  id="matricule-saisie"
+                  className="num"
+                  value={saisie}
+                  onChange={(e) => setSaisie(e.target.value)}
+                  autoComplete="off"
+                />
+                {erreur ? <span role="alert">{erreur}</span> : null}
+              </span>
+            </div>
+          )}
 
-        {pme.matricule ? (
           <button type="button" className="rw" onClick={corriger}>
             <i aria-hidden>
-              <IconeCarte />
+              <IconePiece />
             </i>
             <span className="bd">
-              <b>{matricule}</b>
-              <span>{t("pme.recu.matricule")}</span>
+              <b>{raison}</b>
+              <span>{t("onboarding.name")}</span>
             </span>
           </button>
-        ) : (
-          <div className="rw">
+
+          {/* L'adresse que le cabinet a saisie ; le trait seulement quand personne ne l'a donnée. */}
+          <button type="button" className="rw" onClick={corriger}>
             <i aria-hidden>
-              <IconeCarte />
+              <IconeSiege />
             </i>
             <span className="bd">
-              <label htmlFor="matricule-saisie">
-                <b>{t("pme.bienvenue.matricule.saisir")}</b>
-                <span>{t("pme.bienvenue.matricule.aide")}</span>
-              </label>
-              <input
-                id="matricule-saisie"
-                className="num"
-                value={saisie}
-                onChange={(e) => setSaisie(e.target.value)}
-                autoComplete="off"
-              />
-              {erreur ? <span role="alert">{erreur}</span> : null}
+              <b>{adresse}</b>
+              <span>{t("pme.bienvenue.champAdresse")}</span>
             </span>
+          </button>
+
+          <div className="regle">
+            <IconeInfo />
+            <span>{t("pme.bienvenue.regle")}</span>
           </div>
-        )}
 
-        <button type="button" className="rw" onClick={corriger}>
-          <i aria-hidden>
-            <IconePiece />
-          </i>
-          <span className="bd">
-            <b>{raison}</b>
-            <span>{t("onboarding.name")}</span>
-          </span>
-        </button>
+          {/* ── les deux départs ───────────────────────────────────────── */}
+          <div className="go">
+            <button type="button" className="pr" onClick={() => void commencer()}>
+              {t("pme.bienvenue.exact")}
+            </button>
+            <button type="button" className="sc2" onClick={corriger}>
+              {t("pme.bienvenue.corriger")}
+            </button>
+          </div>
 
-        {/* L'adresse que le cabinet a saisie ; le trait seulement quand personne ne l'a donnée. */}
-        <button type="button" className="rw" onClick={corriger}>
-          <i aria-hidden>
-            <IconeSiege />
-          </i>
-          <span className="bd">
-            <b>{adresse}</b>
-            <span>{t("pme.bienvenue.champAdresse")}</span>
-          </span>
-        </button>
-
-        <div className="regle">
-          <IconeInfo />
-          <span>{t("pme.bienvenue.regle")}</span>
+          {promettreLaSuite ? <p className="foot">{t("pme.bienvenue.pied")}</p> : null}
         </div>
-
-        {/* ── les deux départs ───────────────────────────────────────── */}
-        <div className="go">
-          <button type="button" className="pr" onClick={() => void commencer()}>
-            {t("pme.bienvenue.exact")}
-          </button>
-          <button type="button" className="sc2" onClick={corriger}>
-            {t("pme.bienvenue.corriger")}
-          </button>
-        </div>
-
-        {promettreLaSuite ? <p className="foot">{t("pme.bienvenue.pied")}</p> : null}
       </div>
     </div>
   );
