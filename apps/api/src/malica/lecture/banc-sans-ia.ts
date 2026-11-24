@@ -73,6 +73,7 @@ import {
   champsDeLaGrille,
   jetonsDuSudoku,
   lireLeContexteDuSudoku,
+  exigencesNonTenues,
   prouveePourLEcriture,
   relectureRetenue,
   resoudreLaPiece,
@@ -218,6 +219,8 @@ export interface MesureDeLaPiece {
     /** Sans IA AVANT la relecture des cellules : ce que la production lisait jusqu'ici. */
     readonly sansIaAvantRelecture: boolean;
     readonly relue: boolean;
+    /** Les exigences de l'écriture que la pièce ne tient pas : pourquoi elle appelle un modèle. */
+    readonly manque: readonly string[];
     readonly erreur?: string;
   } | null;
   readonly erreur?: string;
@@ -682,12 +685,18 @@ export async function mesurerLaPiece(
           }
         }
       }
-      production = { sansIa: prouveePourLEcriture(s, exigences), sansIaAvantRelecture, relue };
+      production = {
+        sansIa: prouveePourLEcriture(s, exigences),
+        sansIaAvantRelecture,
+        relue,
+        manque: exigencesNonTenues(s, exigences),
+      };
     } catch (e) {
       production = {
         sansIa: false,
         sansIaAvantRelecture: false,
         relue: false,
+        manque: [],
         erreur: e instanceof Error ? e.message : String(e),
       };
     }
@@ -1448,6 +1457,13 @@ function enProduction(mesures: readonly MesureDeLaPiece[]): string {
   const avant = mesurees.filter((m) => m.production!.sansIaAvantRelecture);
   const relues = mesurees.filter((m) => m.production!.relue);
   const pannes = mesurees.filter((m) => m.production!.erreur);
+  const manques = new Map<string, number>();
+  for (const m of mesurees)
+    for (const e of m.production!.manque) manques.set(e, (manques.get(e) ?? 0) + 1);
+  const seule = new Map<string, number>();
+  for (const m of mesurees)
+    if (m.production!.manque.length === 1)
+      seule.set(m.production!.manque[0]!, (seule.get(m.production!.manque[0]!) ?? 0) + 1);
   const parCorpus = [...new Set(mesurees.map((m) => m.corpus))]
     .map((c) => {
       const du = mesurees.filter((m) => m.corpus === c);
@@ -1459,7 +1475,13 @@ function enProduction(mesures: readonly MesureDeLaPiece[]): string {
     `${sansIa.length} / ${mesurees.length} pièces sans aucun modèle (${parCorpus}), ` +
     `${avant.length} sans la relecture des cellules ; ` +
     `${relues.length} relue(s) aux cellules` +
-    (pannes.length ? ` ; ${pannes.length} en panne` : "")
+    (pannes.length ? ` ; ${pannes.length} en panne` : "") +
+    `\n- Exigences non tenues en production (pièces) : ${
+      [...manques]
+        .sort((a, b) => b[1] - a[1])
+        .map(([e, n]) => `${e} ${n}${seule.get(e) ? ` (seule manquante : ${seule.get(e)})` : ""}`)
+        .join(" · ") || "aucune"
+    }`
   );
 }
 

@@ -607,7 +607,18 @@ export function prouveePourLEcriture(
   sortie: SortieDuSudoku,
   exigences: readonly ExigenceSansIa[],
 ): boolean {
-  if (exigences.length === 0) return false;
+  return exigences.length > 0 && exigencesNonTenues(sortie, exigences).length === 0;
+}
+
+/**
+ * Les exigences de l'écriture (`ref.lecture_sans_ia`) que la sortie ne tient pas, chacune
+ * nommée une fois : ce qui oblige la pièce à appeler un modèle. Une exigence portée par
+ * plusieurs champs (la date d'émission OU d'opération) est tenue dès que l'un la tient.
+ */
+export function exigencesNonTenues(
+  sortie: SortieDuSudoku,
+  exigences: readonly ExigenceSansIa[],
+): string[] {
   const parties = sortie.parties?.statut === "prouve" ? sortie.parties : null;
   const statutDe = (e: ExigenceSansIa): string => {
     switch (e.exigence) {
@@ -629,7 +640,7 @@ export function prouveePourLEcriture(
   const parExigence = new Map<string, boolean>();
   for (const e of exigences)
     parExigence.set(e.exigence, (parExigence.get(e.exigence) ?? false) || tenue(e));
-  return [...parExigence.values()].every(Boolean);
+  return [...parExigence].filter(([, ok]) => !ok).map(([e]) => e);
 }
 
 /** Une sélection vide : aucune désignation, aucune valeur. */
