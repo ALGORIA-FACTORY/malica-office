@@ -54,7 +54,7 @@
     font-size: 2.75rem;
   }
   /* Les douze mois tiennent sur la ligne : plus de défilement, plus de marge négative. */
-  [data-surface="pme"] [data-ecran="charges"] .pad > .mths {
+  [data-surface="pme"] :is([data-ecran="charges"] .pad, [data-ecran="tva"] .tv-principal) > .mths {
     flex-wrap: wrap;
     overflow: visible;
     margin-inline: 0;

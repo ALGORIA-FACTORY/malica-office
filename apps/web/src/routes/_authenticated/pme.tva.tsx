@@ -27,6 +27,8 @@ import { useI18n } from "@/i18n";
 import { moisLocal, montant } from "@/lib/lisible";
 import { office } from "@/verticals/malica-office/composition";
 import { useRevenir } from "@/hooks/use-revenir";
+import { ClasseurDesMois } from "@/components/malica/classeur-des-mois";
+import { useMoisDeLExercice } from "@/hooks/use-mois-de-l-exercice";
 
 export const Route = createFileRoute("/_authenticated/pme/tva")({
   head: () => ({
@@ -147,6 +149,9 @@ function PmeTva() {
   const periode = Route.useSearch().mois ?? currentPeriod();
 
   const { tva, estimation, isPending } = useTvaPeriod(periode);
+  // Le mois vit dans l'adresse (`?mois=`) : la carte de l'accueil y mène, le classeur y écrit.
+  const moisDeLExercice = useMoisDeLExercice(periode);
+  const allerAuMois = useNavigate();
 
   // Les pièces parties sans date d'envoi : elles ne sont dans aucun mois, et
   // l'écran doit pouvoir le dire plutôt que de les laisser disparaître.
@@ -304,6 +309,12 @@ function PmeTva() {
               {t("pme.charges.estimation")}
             </p>
           ) : null}
+          <ClasseurDesMois
+            mois={moisDeLExercice}
+            periode={periode}
+            choisir={(mois) => void allerAuMois({ to: "/pme/tva", search: { mois } })}
+            libelle={t("pme.charges.period")}
+          />
 
           {/*
            * LE CHIFFRE. `.cr` quand le solde est un crédit reporté : la feuille
