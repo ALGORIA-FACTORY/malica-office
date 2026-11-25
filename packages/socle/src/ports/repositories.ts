@@ -4489,7 +4489,7 @@ export interface FacturationRepository {
   verifierPaiement(paiementId: string): Promise<PaiementEnLigne>;
   /** Le simulateur du staging seulement ; refusé partout ailleurs. */
   simulerPaiement(paiementId: string, decision: "paye" | "refuse"): Promise<PaiementEnLigne>;
-  maRechargeAutomatique(): Promise<RechargeAutomatique | null>;
+  maRechargeAutomatique(): Promise<RechargeAutomatique>;
   reglerRechargeAutomatique(
     active: boolean,
     code: string | null,
@@ -4716,7 +4716,10 @@ export interface MonEcheance {
   dernier_jour: string;
   jours_restants: number;
   paiement_id: string;
+  /** Ce qui reste à payer : le TTC dû moins le solde créditeur déduit. */
   montant_ttc: string;
+  /** Le solde créditeur déjà déduit (argent reçu, pas encore imputé) ; « 0 » s'il n'y en a pas. */
+  credit_deduit: string;
   devise: string;
   /** L'appelant est le propriétaire principal : lui seul paie. */
   titulaire: boolean;
@@ -4779,6 +4782,8 @@ export interface RechargeDeLaLicence {
   utilisable: boolean;
   gelee: boolean;
   expiree: boolean;
+  /** Payée (ou offerte) : la PME paie d'avance, une recharge ne sert qu'une fois payée. */
+  payee: boolean;
 }
 
 /** Une facture que son titulaire paie lui-même (`public.mes_factures()`). */
@@ -5577,6 +5582,8 @@ export interface TourRepository {
   reglerFactures(reglage: SaisieDesFactures, valideDes: string, motif: string): Promise<unknown>;
   /** Les dernières factures émises, toutes sociétés et tous cabinets. */
   facturesEmises(): Promise<FactureDeLaTour[]>;
+  /** L'argent reçu et pas encore imputé, licence par licence : il s'applique de lui-même. */
+  soldesCrediteurs(): Promise<SoldeCrediteur[]>;
   /**
    * Renvoyer le courriel d'une facture de société déjà émise. `deja` : un courriel de cette
    * facture est déjà décidé dans la fenêtre du moteur, rien n'est reposé.
@@ -5628,7 +5635,24 @@ export interface RechargeAutomatique {
   active: boolean;
   recharge_code: string | null;
   plafond_mois_ht: string | null;
-  decide_le: string;
+  decide_le: string | null;
+  /**
+   * Un débit automatique est ouvert chez un prestataire (D4). Sans lui, la recharge
+   * automatique ne peut pas se payer d'avance : elle ne s'active pas.
+   */
+  disponible: boolean;
+}
+
+/** Un solde créditeur que la tour voit : de l'argent reçu, pas encore imputé à une facture. */
+export interface SoldeCrediteur {
+  licence_id: string;
+  societe: string | null;
+  titulaire: string;
+  solde: string;
+  devise: string | null;
+  /** Combien de liens payés deux fois l'alimentent (8.3). */
+  doubles: number;
+  depuis: string | null;
 }
 
 /* ============================================================================

@@ -606,6 +606,15 @@ export const tour = {
     return rows;
   },
 
+  /** L'argent reçu et pas encore imputé, licence par licence (le solde créditeur). */
+  async soldesCrediteurs(db: Requete) {
+    const { rows } = await db.query(
+      `select licence_id, societe, titulaire, solde::text, devise, doubles, depuis
+         from plateforme.soldes_crediteurs()`,
+    );
+    return rows;
+  },
+
   /** Renvoyer le courriel d'une facture de société : une fois par facture dans la fenêtre. */
   async renvoyerFacture(db: Requete, factureId: string, motif: string) {
     const { rows } = await db.query<{ r: unknown }>(

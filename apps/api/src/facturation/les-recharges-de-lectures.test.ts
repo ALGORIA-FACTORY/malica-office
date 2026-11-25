@@ -20,6 +20,8 @@ import pg from "pg";
 import { facturation } from "../depots/facturation.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
 
+import { payerEnLigne, uneOrganisation } from "./decor-de-facture.ts";
+
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
 
@@ -36,11 +38,8 @@ let SOLO = 0;
 
 async function societe(db: pg.PoolClient, offre: "basic" | "solo" | "team"): Promise<Societe> {
   const principal = randomUUID();
-  const org = await db.query<{ id: string }>(
-    `insert into identity.organizations (kind, name, jurisdiction, currency)
-     values ('pme', 'Recharge d''essai', 'TN', 'TND') returning id`,
-  );
-  const tenant = org.rows[0]!.id;
+  // Matricule et adresse : la base refuse de payer sans eux, et la recharge se paie d'avance.
+  const tenant = await uneOrganisation(db, "pme", "Recharge d'essai");
   await personnesDEssai(db, principal);
   await db.query(
     "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'dirigeant')",
@@ -125,14 +124,52 @@ const verdict = (db: pg.PoolClient, qui: string, p: string) =>
 const consommer = (db: pg.PoolClient, qui: string, p: string) =>
   sous(db, qui, () => db.query("select public.lecture_consommer($1)", [p]));
 
-const acheter = (db: pg.PoolClient, s: Societe, code = PALIER.code) =>
-  sous(db, s.principal, async () => {
+/** Un émetteur désigné : sans lui, aucun paiement ne s'ouvre. */
+async function emetteur(db: pg.PoolClient): Promise<void> {
+  const operateur = randomUUID();
+  await personnesDEssai(db, operateur);
+  await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
+  const org = await uneOrganisation(db, "pme", "Emetteur d'essai");
+  await db.query(
+    `insert into facturation.emetteurs (organisation_id, valide_des, designe_par)
+     values ($1, date '2026-01-01', $2) on conflict (valide_des) do nothing`,
+    [org, operateur],
+  );
+}
+
+/**
+ * Le principal achète une recharge et la paie d'avance (décision du 25 novembre 2026 : elle
+ * ne sert qu'une fois payée). `payer: false` : achetée, pas encore payée.
+ */
+async function acheter(
+  db: pg.PoolClient,
+  s: Societe,
+  code = PALIER.code,
+  { payer = true }: { payer?: boolean } = {},
+): Promise<Record<string, unknown>> {
+  await emetteur(db);
+  const r = await sous(db, s.principal, async () => {
     const { rows } = await db.query<{ r: Record<string, unknown> }>(
       "select public.recharge_acheter($1, $2) as r",
       [code, s.tenant],
     );
     return rows[0]!.r;
   });
+  if (!payer) return r;
+  const p = await sous(db, s.principal, async () => {
+    const { rows } = await db.query<{ p: { paiement_id: string } }>(
+      "select public.paiement_recharge_preparer($1) as p",
+      [r["recharge_id"]],
+    );
+    return rows[0]!.p;
+  });
+  await payerEnLigne(db, s.principal, p.paiement_id);
+  const { rows } = await db.query<{ r: Record<string, unknown> }>(
+    "select to_jsonb(v) as r from facturation.recharges_v v where v.recharge_id = $1",
+    [r["recharge_id"]],
+  );
+  return rows[0]!.r;
+}
 
 const code = (attendu: string) => (e: { code?: string }) => e.code === attendu;
 
@@ -338,8 +375,30 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
     });
   });
 
+  it("sans débit automatique, l'automatique ne s'active pas : la PME paie d'avance", async () => {
+    await dansUneTransaction(async (db) => {
+      const s = await societe(db, "solo");
+      await assert.rejects(
+        sous(db, s.principal, () =>
+          db.query("select public.recharge_automatique_regler(true, $1, $2, $3)", [
+            PALIER.code,
+            PALIER.prix,
+            s.tenant,
+          ]),
+        ),
+        /refus\.recharge\.automatique_sans_debit$/,
+      );
+      const lu = await sous(db, s.principal, () => facturation.maRechargeAutomatique(db));
+      assert.deepEqual([lu.active, lu.disponible], [false, false]);
+    });
+  });
+
   it("l'automatique achète au plafond du forfait, et s'arrête à son plafond du mois", async () => {
     await dansUneTransaction(async (db) => {
+      // Le jour où un prestataire débite sans le client (D4), l'automatique s'ouvre.
+      await db.query(
+        "update facturation.prestataires_paiement set debit_automatique = true where code = 'flouci'",
+      );
       const s = await societe(db, "solo");
       await sous(db, s.principal, () =>
         db.query("select public.recharge_automatique_regler(true, $1, $2, $3)", [
@@ -353,7 +412,13 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
       const p = await piece(db, s, "auto");
       const v = await verdict(db, s.principal, p);
       assert.equal(v["motif"], "recharge_automatique");
-      await consommer(db, s.principal, p);
+      // Le débit lui-même n'est pas branché (D4) : l'épreuve inscrit la recharge que le
+      // prélèvement aurait payée, puis vérifie le plafond du mois.
+      await db.query("select facturation.recharge_inscrire($1, $2, 'automatique', $3)", [
+        s.licence,
+        PALIER.code,
+        s.principal,
+      ]);
 
       const r = await db.query<{ id: string; origine: string; prix_ht: string }>(
         "select id, origine, prix_ht from facturation.recharges where licence_id = $1",
@@ -384,17 +449,15 @@ describe("les recharges de lectures", { skip: !ADMIN }, () => {
   it("la facture du mois porte la recharge, sous un seul timbre, et une seule fois", async () => {
     await dansUneTransaction(async (db) => {
       const s = await societe(db, "solo");
-      await acheter(db, s);
+      // Une recharge d'avant « payer d'avance » : sans paiement, la facture du mois la porte.
+      await acheter(db, s, PALIER.code, { payer: false });
       const operateur = randomUUID();
       await personnesDEssai(db, operateur);
       await db.query("insert into app.platform_operators (user_id) values ($1)", [operateur]);
-      const em = await db.query<{ id: string }>(
-        `insert into identity.organizations (kind, name, jurisdiction, currency)
-         values ('pme', 'Emetteur d''essai', 'TN', 'TND') returning id`,
-      );
+      const em = { rows: [{ id: await uneOrganisation(db, "pme", "Emetteur d'essai") }] };
       await db.query(
         `insert into facturation.emetteurs (organisation_id, valide_des, designe_par)
-         values ($1, date '2026-01-01', $2)`,
+         values ($1, date '2026-01-01', $2) on conflict (valide_des) do nothing`,
         [em.rows[0]!.id, operateur],
       );
 

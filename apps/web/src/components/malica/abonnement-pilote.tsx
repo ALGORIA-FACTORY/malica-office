@@ -790,7 +790,9 @@ export function MesRecharges() {
                   })}
             </b>
           </span>
-          {r.gelee || r.expiree ? (
+          {!r.payee ? (
+            <span data-a-payer>{t("pme.reglages.recharges.aPayer")}</span>
+          ) : r.gelee || r.expiree ? (
             <span>
               {r.gelee ? t("pme.reglages.recharges.gelee") : t("pme.reglages.recharges.expiree")}
             </span>
@@ -873,46 +875,57 @@ export function MesRecharges() {
               })
             : t("pme.reglages.recharges.auto.inactive")}
         </p>
+        {/* Payer d'avance (25 novembre 2026) : sans débit automatique (D4), elle ne se règle pas ;
+            une recharge déjà active peut toujours s'arrêter. */}
+        {!auto.data?.disponible ? (
+          <p className="t-body" data-auto-indisponible>
+            {t("pme.reglages.recharges.auto.indisponible")}
+          </p>
+        ) : null}
         <div className="mt-2 flex flex-wrap gap-2">
-          <select
-            value={palierAuto}
-            onChange={(e) => setPalierAuto(e.target.value)}
-            aria-label={t("pme.reglages.recharges.auto.palier")}
-            className={champ}
-          >
-            <option value="">{t("pme.reglages.recharges.auto.palier")}</option>
-            {liste.map((p) => (
-              <option key={p.code} value={p.code}>
-                {t("pme.reglages.recharges.palier", { n: p.lectures })} —{" "}
-                {t("pme.reglages.recharges.prix", {
-                  prix: aLEchelle(p.prix_ht),
-                  devise: pme.currency,
-                })}
-              </option>
-            ))}
-          </select>
-          <label className="grid gap-1 t-body">
-            <span>{t("pme.reglages.recharges.auto.plafond")}</span>
-            <input
-              inputMode="decimal"
-              value={plafond}
-              onChange={(e) => setPlafond(e.target.value)}
-              className={champ}
-            />
-          </label>
-          <button
-            type="button"
-            className="btn"
-            style={{ width: "auto" }}
-            disabled={regler.isPending || palierAuto === "" || plafond.trim() === ""}
-            onClick={() => regler.mutate(true)}
-          >
-            {t("pme.reglages.recharges.auto.activer")}
-          </button>
-          {palierAuto === "" || plafond.trim() === "" ? (
-            <p className="t-body" data-besoin-plafond>
-              {t("pme.reglages.recharges.auto.besoinPlafond")}
-            </p>
+          {auto.data?.disponible ? (
+            <>
+              <select
+                value={palierAuto}
+                onChange={(e) => setPalierAuto(e.target.value)}
+                aria-label={t("pme.reglages.recharges.auto.palier")}
+                className={champ}
+              >
+                <option value="">{t("pme.reglages.recharges.auto.palier")}</option>
+                {liste.map((p) => (
+                  <option key={p.code} value={p.code}>
+                    {t("pme.reglages.recharges.palier", { n: p.lectures })} —{" "}
+                    {t("pme.reglages.recharges.prix", {
+                      prix: aLEchelle(p.prix_ht),
+                      devise: pme.currency,
+                    })}
+                  </option>
+                ))}
+              </select>
+              <label className="grid gap-1 t-body">
+                <span>{t("pme.reglages.recharges.auto.plafond")}</span>
+                <input
+                  inputMode="decimal"
+                  value={plafond}
+                  onChange={(e) => setPlafond(e.target.value)}
+                  className={champ}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn"
+                style={{ width: "auto" }}
+                disabled={regler.isPending || palierAuto === "" || plafond.trim() === ""}
+                onClick={() => regler.mutate(true)}
+              >
+                {t("pme.reglages.recharges.auto.activer")}
+              </button>
+              {palierAuto === "" || plafond.trim() === "" ? (
+                <p className="t-body" data-besoin-plafond>
+                  {t("pme.reglages.recharges.auto.besoinPlafond")}
+                </p>
+              ) : null}
+            </>
           ) : null}
           {auto.data?.active ? (
             <button

@@ -42,7 +42,13 @@ vi.mock("@/verticals/malica-office/composition", () => ({
     facturation: {
       paliersDeRecharge: async () => [],
       mesRecharges: api.mesRecharges,
-      maRechargeAutomatique: async () => null,
+      maRechargeAutomatique: async () => ({
+        active: false,
+        recharge_code: null,
+        plafond_mois_ht: null,
+        decide_le: null,
+        disponible: false,
+      }),
     },
   }),
 }));
@@ -61,6 +67,7 @@ function recharge(expire_le: string | null) {
     restantes: 20,
     utilisable: true,
     gelee: false,
+    payee: true,
     expiree: false,
   };
 }
@@ -118,5 +125,14 @@ describe("mes recharges", () => {
     expect(await screen.findByText("pme.reglages.recharges.gelee")).toBeTruthy();
     expect(screen.getByText("pme.reglages.recharges.verrou")).toBeTruthy();
     expect(screen.getByText(/pme\.reglages\.recharges\.reste /)).toBeTruthy();
+  });
+
+  it("payer d'avance : une recharge achetée et pas encore payée le dit ; l'automatique attend le débit", async () => {
+    api.offre.code = "solo";
+    api.mesRecharges.mockResolvedValue([{ ...recharge(null), utilisable: false, payee: false }]);
+    monter();
+    expect(await screen.findByText("pme.reglages.recharges.aPayer")).toBeTruthy();
+    expect(await screen.findByText("pme.reglages.recharges.auto.indisponible")).toBeTruthy();
+    expect(screen.queryByText("pme.reglages.recharges.auto.activer")).toBeNull();
   });
 });

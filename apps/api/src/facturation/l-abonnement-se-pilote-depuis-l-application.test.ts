@@ -78,7 +78,7 @@ describe("l'abonnement se pilote depuis l'application", { skip: !BASE_CONFIGUREE
     assert.equal(offres.find((o) => o.code === "team")?.empechement, "deja_courant");
   });
 
-  it("le principal achète une recharge, règle l'automatique, et les relit", async () => {
+  it("le principal achète une recharge payable d'avance ; l'automatique attend le débit", async () => {
     const paliers = (await rpc(principal, "facturation", "paliersDeRecharge")) as Array<{
       code: string;
       prix_ht: string;
@@ -86,30 +86,44 @@ describe("l'abonnement se pilote depuis l'application", { skip: !BASE_CONFIGUREE
     assert.equal(paliers.length, 4);
     const premier = paliers.sort((a, b) => Number(a.prix_ht) - Number(b.prix_ht))[0]!;
 
-    const r = (await rpc(principal, "facturation", "acheterRecharge", premier.code, tenant)) as {
-      recharge_code: string;
+    // Payer d'avance (25 novembre 2026) : la recharge achetée attend son paiement pour servir,
+    // ou s'achète pas du tout quand aucun paiement n'est possible (pas d'émetteur désigné).
+    const r = await rpc(principal, "facturation", "acheterRecharge", premier.code, tenant).then(
+      (x) =>
+        x as {
+          recharge_code: string;
+          utilisable: boolean;
+          paiement: { objet: string } | null;
+        },
+      (e: { message?: string }) => {
+        assert.match(e.message ?? "", /refus\.recharge\.paiement_indisponible/);
+        return null;
+      },
+    );
+    const miennes = (await rpc(principal, "facturation", "mesRecharges")) as Array<{
       utilisable: boolean;
-    };
-    assert.equal(r.recharge_code, premier.code);
-    assert.equal(r.utilisable, true);
-    const miennes = (await rpc(principal, "facturation", "mesRecharges")) as unknown[];
-    assert.equal(miennes.length, 1);
+      payee: boolean;
+    }>;
+    if (r) {
+      assert.equal(r.recharge_code, premier.code);
+      assert.equal(r.utilisable, false, "elle ne sert qu'une fois payée");
+      assert.equal(r.paiement?.objet, "recharge");
+      assert.equal(miennes.length, 1);
+      assert.deepEqual([miennes[0]!.utilisable, miennes[0]!.payee], [false, false]);
+    } else {
+      assert.equal(miennes.length, 0, "rien n'est réservé sans paiement possible");
+    }
 
-    await rpc(
-      principal,
-      "facturation",
-      "reglerRechargeAutomatique",
-      true,
-      premier.code,
-      "15",
-      tenant,
+    // L'automatique attend le débit automatique (D4) : elle ne s'active pas.
+    await assert.rejects(
+      rpc(principal, "facturation", "reglerRechargeAutomatique", true, premier.code, "15", tenant),
+      /refus\.recharge\.automatique_sans_debit/,
     );
     const auto = (await rpc(principal, "facturation", "maRechargeAutomatique")) as {
       active: boolean;
-      recharge_code: string;
+      disponible: boolean;
     };
-    assert.equal(auto.active, true);
-    assert.equal(auto.recharge_code, premier.code);
+    assert.deepEqual([auto.active, auto.disponible], [false, false]);
   });
 
   it("le principal monte sans l'ouvrir avant de payer, invite un propriétaire, et lui transmet la licence", async () => {

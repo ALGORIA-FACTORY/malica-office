@@ -1180,19 +1180,29 @@ lien de paiement Malica. Les factures suivent la licence (R-01). Une recharge pa
 sur une licence payée par un cabinet (R-04). L'année se paie à son début, avec le renouvellement (1.6). Un second
 lien payé pour un même paiement se trace en trop-perçu (8.3). La tour compte des demandes côté PME.
 
+Réglé ensuite (même lot, décisions du CEO du 25 novembre 2026) :
+
+- **Payer d'avance, toujours** : une recharge ne sert qu'une fois payée (ou offerte) ; elle ne s'achète
+  pas quand aucun paiement n'est possible, et ne s'ajoute jamais à l'échéance. La recharge automatique
+  attend le débit automatique (D4) : elle ne s'active pas tant qu'aucun prestataire ne débite sans le
+  client (`prestataires_paiement.debit_automatique`).
+- **Solde créditeur** (comme Anthropic) : l'argent reçu et pas encore imputé — un acompte d'avant D7, un
+  paiement plus grand que sa facture, un lien payé deux fois, l'ancien lien d'une demande rechiffrée — est
+  un solde de la licence, déduit de lui-même de l'échéance suivante (« solde déduit » à l'écran, la facture
+  garde son plein TTC). Il couvre tout : la facture naît réglée, rien n'est demandé. La tour le voit
+  (« Soldes créditeurs »).
+- **D'où viendrait un trop-perçu** : un second lien payé (sa page ferme désormais avec notre lien,
+  `session_timeout_secs` chez Flouci), l'ancien lien d'une demande rechiffrée (il devient un solde), un
+  acompte d'avant D7. Normalement aucun ; s'il arrive, il n'est ni perdu ni redemandé.
+
 Ouvert :
 
-- **Recharge non payée** (automatique, ou achetée sans payer son lien) sur une licence **payée par un cabinet** :
-  ses lectures servent, mais aucune facture de base de la PME ne la porte. Tranché par défaut : rien n'est facturé
-  à personne. **Au dirigeant** : la recharge d'un client pris en charge va-t-elle au relevé du cabinet (lot B), ou
-  se paie-t-elle d'abord par la PME avant de servir ?
-- **Acompte d'avant D7 qui ne couvre qu'une part** d'une échéance : le passage refuse
-  (`refus.facturation.acompte_a_rapprocher`, visible dans les erreurs du passage en tour) au lieu de demander un
-  montant faux. Le rapprochement se fera par la porte « encaisser un virement » / avoir exceptionnel (lot B).
-  Attendu : aucun cas hors bac à sable (les paiements du pilote sont en sandbox Flouci) — **INCERTAIN**, à vérifier
-  sur la base du pilote avant l'ouverture de l'émission automatique.
-- **Trop-perçu** (double lien payé, paiement supérieur à la facture) : tracé au journal (`paiement.trop_percu`),
-  pas encore listé en tour ni remboursable par une porte (lot B).
+- **Remboursement d'un solde** : la tour le voit, la porte qui rembourse vient avec le lot B (virement,
+  avoir exceptionnel).
+- **ClicToPay** : sa page n'est pas fermée par notre délai (paramètre non vérifié dans sa documentation).
+  Garder le délai de la tour (`lien_valide_minutes`, 60 par défaut) au-dessus de la durée de sa page.
+- **Pilote** : les paiements y sont en bac à sable Flouci (aucun argent réel). Après déploiement, la carte
+  « Soldes créditeurs » de la tour dit s'il y a un solde ; il s'appliquera de lui-même.
 - **Reçu de paiement en anglais et en arabe** : l'objet du paiement (`{{objet}}`) est le libellé de la ligne de
   facture, en français (la facture est en français). À traduire par genre de paiement (lot E, vocabulaire).
 - **Deux courriels pour un paiement** : le reçu (`paiement.recu`) et la facture réglée. Décision du 24 novembre

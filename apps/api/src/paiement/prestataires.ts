@@ -75,6 +75,8 @@ interface DemandeDeLien {
   retour: string;
   /** L'adresse où le prestataire notifie un état final, s'il sait le faire. */
   notification?: string;
+  /** La durée de vie de la page de paiement, en secondes, si le prestataire la règle. */
+  dureeSecondes?: number;
 }
 
 export interface Prestataire {
@@ -194,6 +196,9 @@ export function flouci(
           // La notification signée (v2) : un paiement se constate même si le
           // client ne revient pas sur Malica.
           ...(d.notification ? { webhook: d.notification, webhook_version: 2 } : {}),
+          // La session ferme avec notre lien (docs.flouci.com, generate_payment :
+          // `session_timeout_secs`, 1 200 s par défaut).
+          ...(d.dureeSecondes ? { session_timeout_secs: d.dureeSecondes } : {}),
         }),
         signal: AbortSignal.timeout(DELAI_APPEL_PRESTATAIRE_MS),
       });

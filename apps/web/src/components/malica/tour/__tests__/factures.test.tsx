@@ -69,6 +69,7 @@ const tour = vi.hoisted(() => ({
   reglageFactures: vi.fn(),
   reglerFactures: vi.fn(async () => ({})),
   facturesEmises: vi.fn(),
+  soldesCrediteurs: vi.fn(),
   renvoyerFacture: vi.fn(async () => ({
     numero: "MO-TN-I11-2026-000001",
     deja: false,
@@ -80,7 +81,7 @@ vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({ tour, facturation: { factureDetail: vi.fn() } }),
 }));
 
-import { LesFacturesEmises, ReglerLesFactures } from "../factures";
+import { LesFacturesEmises, LesSoldesCrediteurs, ReglerLesFactures } from "../factures";
 
 function monter(Ecran: ComponentType) {
   tour.reglageFactures.mockResolvedValue({ en_vigueur: EN_VIGUEUR, a_venir: [] });
@@ -154,5 +155,30 @@ describe("Tour › Factures émises", () => {
       expect(tour.renvoyerFacture).toHaveBeenCalledWith("f-pme", "Courriel manqué"),
     );
     expect(await screen.findByText(/tour\.factures\.renvoyee/)).toBeTruthy();
+  });
+});
+
+describe("Tour › Soldes créditeurs", () => {
+  it("dit l'argent reçu et pas encore imputé, licence par licence, et les liens payés deux fois", async () => {
+    tour.soldesCrediteurs.mockResolvedValue([
+      {
+        licence_id: "l-1",
+        societe: "Atelier d'essai",
+        titulaire: "Samia Ben Salah",
+        solde: "6.950",
+        devise: "TND",
+        doubles: 1,
+        depuis: "2026-11-25T10:00:00.000Z",
+      },
+    ]);
+    monter(LesSoldesCrediteurs);
+    expect(await screen.findByText("Atelier d'essai")).toBeTruthy();
+    expect(screen.getByText(/tour\.soldes\.doubles/)).toBeTruthy();
+  });
+
+  it("aucun solde : il le dit", async () => {
+    tour.soldesCrediteurs.mockResolvedValue([]);
+    monter(LesSoldesCrediteurs);
+    expect(await screen.findByText("tour.soldes.aucun")).toBeTruthy();
   });
 });

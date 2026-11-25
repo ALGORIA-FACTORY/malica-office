@@ -21,15 +21,18 @@
 --    ne refacture plus une période déjà payée (lectures et contrainte d'exclusion).
 --
 -- 6. R-04 : une recharge payée a sa facture au paiement (nature `recharge`), réglée, au
---    millime du paiement (timbre compris), même quand un cabinet paie la licence. Une recharge
---    achetée pendant qu'une échéance est due la rechiffre ; déjà portée par une base, son
---    paiement à part est remplacé.
+--    millime du paiement (timbre compris), même quand un cabinet paie la licence. Elle ne
+--    s'ajoute jamais à l'échéance ; une recharge d'avant, déjà portée par une base, voit son
+--    paiement à part remplacé.
 -- 7. 1.6 : l'année ne se paie plus d'avance à la souscription ; elle se paie à son début, avec
 --    le renouvellement, et sa facture vaut ce paiement.
--- 8. Un acompte d'avant D7 encore libre compte dans ce qui est dû : il couvre tout, la facture
---    naît réglée ; une part seulement, la tour le voit (`refus.facturation.acompte_a_rapprocher`).
--- 9. 8.3 : un second lien payé pour un même paiement se trace en trop-perçu à rembourser.
+-- 8. Solde créditeur (comme Anthropic) : l'argent reçu et pas encore imputé (acompte d'avant D7,
+--    paiement plus grand que sa facture, lien payé deux fois, ancien lien d'une demande
+--    rechiffrée) se déduit de l'échéance suivante ; s'il couvre tout, la facture naît réglée.
+-- 9. 8.3 : un second lien payé est gardé (`paiements_en_double`) et devient un solde.
 -- 10. La tour compte, côté PME, des demandes à payer (`facturations_du_jour.demandes`).
+-- 11. Payer d'avance, toujours : une recharge ne sert qu'une fois payée ; la recharge
+--    automatique attend le débit automatique (D4).
 --
 -- La facture émise à la main par la plateforme (`facturation.emettre`) et la facture du
 -- cabinet ne changent pas ici (lot B : relevé du cabinet, facture au paiement).
@@ -110,6 +113,57 @@ $function$;
 
 -- ---------------------------------------------------------------- la demande due
 alter table facturation.montees_demandees add column due_depuis date;
+
+-- Le solde créditeur déduit d'une demande due (comme le « solde appliqué » d'Anthropic) : la
+-- facture née au paiement garde son plein TTC, réglé par ce solde puis par le paiement.
+alter table facturation.paiements_en_ligne
+  add column credit_deduit app.money_t not null default 0
+    constraint paiements_credit_deduit_borne
+      check (credit_deduit >= 0 and (credit_deduit = 0 or objet = 'montee_demandee'));
+alter table facturation.paiements_en_ligne drop constraint paiements_ttc_coherent;
+alter table facturation.paiements_en_ligne add constraint paiements_ttc_coherent
+  check (objet = 'facture' or montant_ttc = montant_ht + montant_tva + timbre - credit_deduit);
+alter table facturation.paiements_en_ligne add constraint paiements_demande_ttc_positif
+  check (objet <> 'montee_demandee' or montant_ttc > 0);
+-- L'argent reçu une seconde fois pour un même paiement (un autre lien payé, 8.3) : jamais
+-- avalé. Il devient un solde créditeur du payeur, appliqué à sa facture suivante, ou
+-- remboursé (porte de la tour, lot B).
+create table facturation.paiements_en_double (
+  id               uuid primary key default gen_random_uuid(),
+  paiement_id      uuid not null references facturation.paiements_en_ligne(id),
+  licence_id       uuid references facturation.licences(id),
+  payeur_tenant_id uuid references identity.organizations(id),
+  prestataire      text not null references facturation.prestataires_paiement(code),
+  reference        text not null,
+  montant          app.money_t not null check (montant > 0),
+  devise           text not null references ref.devises(code),
+  constate_le      timestamptz not null default now(),
+  constraint paiements_en_double_un_payeur
+    check ((licence_id is not null) <> (payeur_tenant_id is not null)),
+  constraint paiements_en_double_une_fois unique (prestataire, reference)
+);
+create index paiements_en_double_licence_idx on facturation.paiements_en_double (licence_id);
+create index paiements_en_double_payeur_idx on facturation.paiements_en_double (payeur_tenant_id);
+create index paiements_en_double_paiement_idx on facturation.paiements_en_double (paiement_id);
+alter table facturation.paiements_en_double enable row level security;
+revoke all on facturation.paiements_en_double from public, anon, authenticated;
+create trigger paiements_en_double_ne_se_reecrivent_pas
+  before update or delete on facturation.paiements_en_double
+  for each row execute function app.deny_mutation();
+
+create table facturation.double_imputations (
+  double_id       uuid not null references facturation.paiements_en_double(id),
+  encaissement_id uuid primary key references facturation.encaissements(id)
+);
+create index double_imputations_double_idx on facturation.double_imputations (double_id);
+alter table facturation.double_imputations enable row level security;
+revoke all on facturation.double_imputations from public, anon, authenticated;
+create trigger double_imputations_ne_se_reecrivent_pas
+  before update or delete on facturation.double_imputations
+  for each row execute function app.deny_mutation();
+
+comment on column facturation.paiements_en_ligne.credit_deduit is
+  'Solde créditeur (argent déjà reçu, pas encore imputé) déduit de ce qui est dû : on paie le reste.';
 comment on column facturation.montees_demandees.due_depuis is
   'Ce qui est dû depuis ce jour (D7) : posé par `du_a_payer`, null pour un geste du titulaire.';
 create index montees_demandees_dues_idx on facturation.montees_demandees (licence_id, cree_le desc)
@@ -149,6 +203,13 @@ as $function$
     join facturation.paiements_en_ligne_v v on v.paiement_id = p.id
    where d.licence_id = p_licence and d.due_depuis is not null
      and v.etat in ('a_payer', 'lien_cree', 'non_abouti', 'refuse')
+     -- Une facture née après la demande (un solde qui a tout réglé, un ancien lien payé) a
+     -- réglé ce qui était dû : la demande n'est plus due. Le passage suivant redemande le
+     -- reste, s'il y en a.
+     and not exists (select 1 from facturation.factures f
+                      where f.licence_id = p_licence and f.payeur_type = 'titulaire'
+                        and f.nature <> 'recharge' and f.avoir_de is null
+                        and f.statut <> 'annulee' and f.created_at > d.cree_le)
    order by d.cree_le desc
    limit 1
 $function$;
@@ -414,7 +475,10 @@ begin
     select (v_abo + coalesce(v_debut.montant_ht, 0) + coalesce(sum(x.prix_ht), 0)) into v_ht
       from facturation.recharges x
      where x.licence_id = p_licence and x.achetee_le <= p_jour
-       and not exists (select 1 from facturation.facture_recharges fr where fr.recharge_id = x.id);
+       and not exists (select 1 from facturation.facture_recharges fr where fr.recharge_id = x.id)
+       -- Payer d'avance (25 novembre 2026) : une recharge qui a son paiement se facture à ce
+       -- paiement, jamais sur une base ; seules celles d'avant (sans paiement) y restent.
+       and not exists (select 1 from facturation.paiements_en_ligne pr where pr.recharge_id = x.id);
     v_ht := v_ht + facturation.annuel_montees_a_facturer(p_licence, p_jour + 1);
   else
     v_ht := v_abo;
@@ -502,6 +566,7 @@ begin
         from facturation.recharges x
        where x.licence_id = p_licence and x.achetee_le <= p_jour
          and not exists (select 1 from facturation.facture_recharges fr where fr.recharge_id = x.id)
+         and not exists (select 1 from facturation.paiements_en_ligne pr where pr.recharge_id = x.id)
        order by x.achetee_le, x.id
     loop
       v_ordinal := v_ordinal + 1;
@@ -544,6 +609,31 @@ begin
               v_paiement.le, coalesce(auth.uid(), p_acteur))
       returning id into v_enc;
       insert into facturation.paiement_imputations (paiement_id, encaissement_id)
+      values (v_paiement.id, v_enc);
+    end loop;
+
+    -- Puis l'argent reçu en double (un second lien payé, 8.3) : un solde créditeur, appliqué.
+    for v_paiement in
+      select x.id, x.montant - coalesce(deja.montant, 0) as reste, x.reference, x.prestataire,
+             x.constate_le::date as le, facturation.moyen_encaissement_du_paiement(x.paiement_id) as moyen
+        from facturation.paiements_en_double x
+        left join lateral (select sum(en.montant) as montant
+                             from facturation.double_imputations i
+                             join facturation.encaissements en on en.id = i.encaissement_id
+                            where i.double_id = x.id) deja on true
+       where x.licence_id = p_licence
+         and x.montant > coalesce(deja.montant, 0)
+       order by x.constate_le, x.id
+    loop
+      v_impute := least(v_paiement.reste,
+                        (select e.reste_du from facturation.encours_v e where e.facture_id = v_id));
+      exit when v_impute <= 0;
+      insert into facturation.encaissements
+        (facture_id, montant, moyen, reference, encaisse_le, saisi_par)
+      values (v_id, v_impute, v_paiement.moyen, v_paiement.prestataire || ' ' || v_paiement.reference,
+              v_paiement.le, coalesce(auth.uid(), p_acteur))
+      returning id into v_enc;
+      insert into facturation.double_imputations (double_id, encaissement_id)
       values (v_paiement.id, v_enc);
     end loop;
   end if;
@@ -634,7 +724,7 @@ end
 $function$;
 drop function facturation.montee_demandee_ouvrir(uuid, uuid, text, numeric, numeric, numeric, numeric, text, text);
 
-CREATE OR REPLACE FUNCTION facturation.montee_demandee_ouvrir(p_licence uuid, p_tenant uuid, p_offre text, p_ht numeric, p_tva numeric, p_timbre numeric, p_ttc numeric, p_devise text, p_libelle text, p_par uuid, p_due_depuis date, p_le date)
+CREATE OR REPLACE FUNCTION facturation.montee_demandee_ouvrir(p_licence uuid, p_tenant uuid, p_offre text, p_ht numeric, p_tva numeric, p_timbre numeric, p_ttc numeric, p_devise text, p_libelle text, p_par uuid, p_due_depuis date, p_le date, p_credit numeric)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -657,7 +747,7 @@ begin
     join facturation.paiements_en_ligne p on p.montee_demandee_id = d.id
     join facturation.paiements_en_ligne_v v on v.paiement_id = p.id
    where d.licence_id = p_licence and d.offre_code = p_offre and d.le = v_le
-     and p.montant_ttc = p_ttc
+     and p.montant_ttc = p_ttc - p_credit
      and d.due_depuis is not distinct from p_due_depuis
      and v.etat in ('a_payer', 'lien_cree', 'non_abouti', 'refuse')
    order by d.cree_le desc limit 1;
@@ -675,10 +765,10 @@ begin
 
   insert into facturation.paiements_en_ligne
     (licence_id, objet, montee_demandee_id, libelle, montant_ht, taux_tva, montant_tva, timbre,
-     montant_ttc, devise, cree_par)
+     credit_deduit, montant_ttc, devise, cree_par)
   values
-    (p_licence, 'montee_demandee', v_dem, p_libelle, p_ht, f.taux, p_tva, p_timbre, p_ttc,
-     coalesce(p_devise, f.devise), p_par)
+    (p_licence, 'montee_demandee', v_dem, p_libelle, p_ht, f.taux, p_tva, p_timbre, p_credit,
+     p_ttc - p_credit, coalesce(p_devise, f.devise), p_par)
   returning id into v_id;
 
   return jsonb_build_object('change', false, 'paiement',
@@ -686,7 +776,7 @@ begin
 end
 $function$;
 
-revoke all on function facturation.montee_demandee_ouvrir(uuid, uuid, text, numeric, numeric, numeric, numeric, text, text, uuid, date, date)
+revoke all on function facturation.montee_demandee_ouvrir(uuid, uuid, text, numeric, numeric, numeric, numeric, text, text, uuid, date, date, numeric)
   from public, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.forfait_demander(p_offre text, p_tenant uuid DEFAULT NULL::uuid)
@@ -730,7 +820,7 @@ begin
       v_licence, p_tenant, p_offre, (v_sim ->> 'ht')::numeric, (v_sim ->> 'tva')::numeric,
       (v_sim ->> 'timbre')::numeric, (v_sim ->> 'ttc')::numeric, v_sim ->> 'devise',
       facturation.libelle_d_abonnement(p_offre, (v_sim ->> 'du')::date, (v_sim ->> 'au')::date),
-      auth.uid(), null, null);
+      auth.uid(), null, null, 0);
   end if;
 
   -- Une descente ne se paie pas. Sous la facturation d'avance, elle attend la fin de la
@@ -836,7 +926,7 @@ begin
   end if;
 
   return facturation.montee_demandee_ouvrir(v_licence, p_tenant, p_offre, v_ht, v_tva, v_timbre,
-                                            v_ttc, v_devise, v_libelle, auth.uid(), null, null);
+                                            v_ttc, v_devise, v_libelle, auth.uid(), null, null, 0);
 end
 $function$;
 
@@ -877,8 +967,10 @@ begin
     return null;
   end if;
 
-  -- L'argent déjà encaissé, pas encore imputé (un acompte d'avant D7), ne se redemande pas.
-  v_credit := facturation.acomptes_disponibles(p_licence);
+  -- Le solde créditeur (argent déjà reçu, pas encore imputé) ne se redemande jamais : il
+  -- couvre tout, la facture naît tout de suite, réglée par lui ; il en couvre une part, on ne
+  -- demande que le reste, et la facture née au paiement le porte (« solde appliqué »).
+  v_credit := facturation.solde_crediteur(p_licence);
   if v_credit >= (v_sim ->> 'ttc')::numeric then
     perform set_config('malica.paye_d_abord_le', p_jour::text, true);
     v_res := facturation.facturation_du_titulaire(
@@ -886,15 +978,10 @@ begin
                p_acteur);
     perform set_config('malica.paye_d_abord_le', '', true);
     return jsonb_build_object('par_acompte', true, 'factures', v_res);
-  elsif v_credit > 0 then
-    raise exception '%', app.refus_avec_valeurs('refus.facturation.acompte_a_rapprocher',
-                                                'acompte', v_credit::text,
-                                                'du', v_sim ->> 'ttc')
-      using errcode = 'check_violation';
   end if;
 
   select * into o from facturation.demande_due_ouverte(p_licence);
-  if o.demande_id is not null and o.montant_ttc = (v_sim ->> 'ttc')::numeric then
+  if o.demande_id is not null and o.montant_ttc = (v_sim ->> 'ttc')::numeric - v_credit then
     return jsonb_build_object('change', false, 'deja', true, 'paiement',
       (select to_jsonb(v) from facturation.paiements_en_ligne_v v where v.paiement_id = o.paiement_id));
   end if;
@@ -903,7 +990,7 @@ begin
     p_licence, v_tenant, v_offre, (v_sim ->> 'ht')::numeric, (v_sim ->> 'tva')::numeric,
     (v_sim ->> 'timbre')::numeric, (v_sim ->> 'ttc')::numeric, v_sim ->> 'devise',
     facturation.libelle_d_abonnement(v_offre, (v_sim ->> 'debut')::date, (v_sim ->> 'au')::date),
-    l.titulaire, coalesce(o.due_depuis, p_jour), p_jour);
+    l.titulaire, coalesce(o.due_depuis, p_jour), p_jour, v_credit);
 
   -- La même demande, déjà posée ce jour : rien de neuf, ni avis ni journal.
   if coalesce((v_res ->> 'deja')::boolean, false) then
@@ -913,15 +1000,16 @@ begin
   select * into o from facturation.demande_due_ouverte(p_licence);
   perform notif.emettre(v_tenant, 'abonnement.a_payer',
     jsonb_build_object('paiement_id', v_pid,
-                       'ttc', to_char((v_sim ->> 'ttc')::numeric, 'FM999999990.000'),
+                       'ttc', facturation.montant_en_texte((v_sim ->> 'ttc')::numeric - v_credit,
+                                                           v_sim ->> 'devise'),
                        'devise', v_sim ->> 'devise',
                        'offre', coalesce((ref.offre_a(v_offre, p_jour)).libelle, v_offre),
                        'echeance_longue', to_char(o.ferme_le - 1, 'DD/MM/YYYY')),
     l.titulaire, 'a_payer:' || v_pid::text, interval '400 days');
   insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
   values (v_tenant, p_acteur, 'abonnement.a_payer', 'facturation', 'paiements_en_ligne', v_pid,
-          jsonb_build_object('ttc', v_sim -> 'ttc', 'du', v_sim -> 'du', 'au', v_sim -> 'au',
-                             'due_depuis', o.due_depuis));
+          jsonb_build_object('ttc', v_sim -> 'ttc', 'credit_deduit', v_credit,
+                             'du', v_sim -> 'du', 'au', v_sim -> 'au', 'due_depuis', o.due_depuis));
   return v_res;
 end
 $function$;
@@ -1240,6 +1328,23 @@ begin
     return new;
   end if;
 
+  -- Un ancien lien d'une demande DUE remplacée depuis (rechiffrée), payé quand même : l'argent
+  -- n'émet rien à un montant périmé. Il devient un solde créditeur, et ce qui est dû se
+  -- rechiffre avec lui (réglé par lui s'il couvre tout, sinon le reste seulement).
+  if d.due_depuis is not null
+     and exists (select 1 from facturation.montees_demandees s
+                  where s.licence_id = d.licence_id and s.cree_le > d.cree_le) then
+    insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
+    values (d.par_societe, d.demande_par, 'paiement.trop_percu', 'facturation',
+            'paiements_en_ligne', p.id,
+            jsonb_build_object('motif', 'demande_remplacee', 'reference', new.reference,
+                               'trop_percu', p.montant_ttc));
+    perform facturation.du_a_payer(
+      d.licence_id, greatest((now() at time zone plateforme.fuseau_de_la_plateforme())::date, d.le),
+      d.demande_par);
+    return new;
+  end if;
+
   perform set_config('request.jwt.claim.sub', d.demande_par::text, true);
   begin
     -- Le paiement qui met fin à un essai l'arrête au jour de la demande (25 novembre 2026).
@@ -1300,7 +1405,8 @@ begin
         v_restant := v_restant - v_part;
       end loop;
       -- Payé plus que ce qui est dû (le dû a changé entre la demande et le paiement) : la
-      -- différence est due au client, la tour la voit au journal.
+      -- différence reste un solde créditeur, appliqué de lui-même à la facture suivante ; la
+      -- tour la voit (soldes créditeurs, journal).
       if v_restant > 0 then
         insert into audit.event_log (tenant_id, actor, action, object_schema, object_table, object_id, payload)
         values (d.par_societe, d.demande_par, 'paiement.trop_percu', 'facturation',
@@ -1376,6 +1482,8 @@ as $function$
            'jours_restants', greatest(d.ferme_le - current_date, 0),
            'paiement_id', d.paiement_id,
            'montant_ttc', d.montant_ttc,
+           'credit_deduit', (select p.credit_deduit from facturation.paiements_en_ligne p
+                              where p.id = d.paiement_id),
            'devise', d.devise,
            'titulaire', l.titulaire = auth.uid())
     from facturation.licence_organisations lo
@@ -1673,12 +1781,6 @@ begin
          jsonb_build_object('nature', 'recharge', 'ttc', p.montant_ttc, 'par', 'paiement')
     from (select facturation.societe_facturee(p.licence_id) as tenant_id) lo;
   perform facturation.avertir_de_la_facture(v_id);
-
-  -- Une demande due déjà ouverte comptait peut-être cette recharge : elle se rechiffre, pour
-  -- ne pas la faire payer deux fois.
-  if (facturation.demande_due_ouverte(p.licence_id)).demande_id is not null then
-    perform facturation.du_a_payer(p.licence_id, p_jour, r.achetee_par);
-  end if;
   return v_id;
 end
 $function$;
@@ -1707,27 +1809,6 @@ $function$;
 revoke all on function facturation.une_recharge_payee_se_facture() from public, anon, authenticated;
 create trigger une_recharge_payee_se_facture after insert on facturation.paiement_evenements
   for each row execute function facturation.une_recharge_payee_se_facture();
-
--- Une recharge achetée (ou automatique) pendant qu'une échéance est due change ce qui est dû :
--- la demande se rechiffre, pour que la facture née au paiement vaille ce paiement.
-create function facturation.une_recharge_rechiffre_le_du()
- returns trigger
- language plpgsql
- security definer
- set search_path to ''
-as $function$
-begin
-  if (facturation.demande_due_ouverte(new.licence_id)).demande_id is not null then
-    perform facturation.du_a_payer(
-      new.licence_id, (now() at time zone plateforme.fuseau_de_la_plateforme())::date,
-      new.achetee_par);
-  end if;
-  return new;
-end
-$function$;
-revoke all on function facturation.une_recharge_rechiffre_le_du() from public, anon, authenticated;
-create trigger une_recharge_rechiffre_le_du after insert on facturation.recharges
-  for each row execute function facturation.une_recharge_rechiffre_le_du();
 
 -- ================================================================ 1.6 : l'année
 -- L'année se paie à son début, avec le renouvellement : la demande due de ce jour-là porte
@@ -1778,33 +1859,93 @@ begin
 end
 $function$;
 
--- ================================================================ les acomptes d'avant
--- L'argent déjà encaissé et pas encore imputé (un acompte d'avant D7) compte dans ce qui est
--- dû : on ne fait jamais payer deux fois. Il couvre tout : la facture naît tout de suite,
--- réglée par lui. Il en couvre une part : le cas se rapproche à la main (la tour le voit dans
--- les erreurs du passage), plutôt qu'une demande au mauvais montant.
-create function facturation.acomptes_disponibles(p_licence uuid)
+-- ================================================================ le solde créditeur
+-- Comme le solde de crédit d'Anthropic : tout argent reçu et pas encore imputé à une facture
+-- — un acompte d'avant D7, un paiement plus grand que sa facture, un lien payé deux fois —
+-- est un solde créditeur de la licence, appliqué de lui-même à la facture suivante. On ne fait
+-- jamais payer deux fois ; on ne garde jamais d'argent sans le dire.
+create function facturation.solde_crediteur(p_licence uuid)
  returns numeric
  language sql
  stable
  security definer
  set search_path to ''
 as $$
-  select coalesce(sum(p.montant_ttc - coalesce(deja.montant, 0)), 0)
-    from facturation.paiements_en_ligne p
-    left join lateral (select sum(en.montant) as montant
-                         from facturation.paiement_imputations i
-                         join facturation.encaissements en on en.id = i.encaissement_id
-                        where i.paiement_id = p.id) deja on true
-   where p.licence_id = p_licence
-     and p.objet <> 'facture'
-     and p.montant_ttc > coalesce(deja.montant, 0)
-     and exists (select 1 from facturation.paiement_evenements e
-                   join facturation.prestataires_paiement pp on pp.code = e.prestataire
-                                                            and pp.fait_entrer_argent
-                  where e.paiement_id = p.id and e.etat = 'paye')
+  select coalesce((
+    select sum(p.montant_ttc - coalesce(deja.montant, 0))
+      from facturation.paiements_en_ligne p
+      left join lateral (select sum(en.montant) as montant
+                           from facturation.paiement_imputations i
+                           join facturation.encaissements en on en.id = i.encaissement_id
+                          where i.paiement_id = p.id) deja on true
+     where p.licence_id = p_licence
+       and p.objet <> 'facture'
+       and p.montant_ttc > coalesce(deja.montant, 0)
+       and exists (select 1 from facturation.paiement_evenements e
+                     join facturation.prestataires_paiement pp on pp.code = e.prestataire
+                                                              and pp.fait_entrer_argent
+                    where e.paiement_id = p.id and e.etat = 'paye')), 0)
+       + coalesce((
+    select sum(x.montant - coalesce(deja.montant, 0))
+      from facturation.paiements_en_double x
+      left join lateral (select sum(en.montant) as montant
+                           from facturation.double_imputations i
+                           join facturation.encaissements en on en.id = i.encaissement_id
+                          where i.double_id = x.id) deja on true
+     where x.licence_id = p_licence
+       and x.montant > coalesce(deja.montant, 0)), 0)
 $$;
-revoke all on function facturation.acomptes_disponibles(uuid) from public, anon, authenticated;
+revoke all on function facturation.solde_crediteur(uuid) from public, anon, authenticated;
+
+-- Un montant dit dans sa devise : autant de décimales que la devise en compte (R4).
+create function facturation.montant_en_texte(p_montant numeric, p_devise text)
+ returns text
+ language sql
+ stable
+ set search_path to ''
+as $$
+  select to_char(p_montant, 'FM999G999G990'
+                 || case when coalesce(d.exposant, 0) > 0
+                         then 'D' || repeat('0', d.exposant) else '' end)
+    from ref.devises d where d.code = p_devise
+$$;
+
+-- La tour voit l'argent qui attend : les soldes créditeurs des licences, et ce qui les fait.
+create function plateforme.soldes_crediteurs()
+ returns table (licence_id uuid, societe text, titulaire text, solde numeric, devise text,
+                doubles integer, depuis timestamptz)
+ language plpgsql
+ stable
+ security definer
+ set search_path to ''
+as $function$
+begin
+  if not app.is_platform() then
+    raise exception 'refus.reserve.plateforme' using errcode = '42501';
+  end if;
+  return query
+    select l.id, o.name::text, coalesce(pr.display_name, '')::text,
+           facturation.solde_crediteur(l.id),
+           (select p.devise from facturation.paiements_en_ligne p where p.licence_id = l.id
+             order by p.cree_le desc limit 1),
+           (select count(*)::integer from facturation.paiements_en_double x where x.licence_id = l.id),
+           (select min(e.le) from facturation.paiement_evenements e
+              join facturation.paiements_en_ligne p on p.id = e.paiement_id
+             where p.licence_id = l.id and e.etat = 'paye')
+      from facturation.licences l
+      left join identity.organizations o on o.id = facturation.societe_facturee(l.id)
+      left join identity.profiles pr on pr.user_id = l.titulaire
+     where (exists (select 1 from facturation.paiements_en_ligne p
+                     join facturation.paiement_evenements e on e.paiement_id = p.id and e.etat = 'paye'
+                    where p.licence_id = l.id and p.objet <> 'facture')
+            or exists (select 1 from facturation.paiements_en_double x where x.licence_id = l.id))
+       and facturation.solde_crediteur(l.id) > 0
+     order by 4 desc;
+end
+$function$;
+revoke all on function plateforme.soldes_crediteurs() from public, anon;
+grant execute on function plateforme.soldes_crediteurs() to authenticated;
+
 
 -- ---------------------------------------------------------------- l'avis de la facture
 CREATE OR REPLACE FUNCTION facturation.avertir_de_la_facture(p_facture uuid, p_fenetre interval DEFAULT '24:00:00'::interval)
@@ -1815,7 +1956,6 @@ AS $function$
 declare
   f          facturation.factures;
   v_tenant   uuid;
-  v_exposant smallint;
   v_ttc      text;
   v_reglee   boolean;
   v_expert   uuid;
@@ -1825,10 +1965,7 @@ begin
   if f.id is null or f.payeur_type not in ('titulaire', 'cabinet') then
     return 0;
   end if;
-  select d.exposant into v_exposant from ref.devises d where d.code = f.devise;
-  v_ttc := to_char(f.montant_ttc, 'FM999G999G990'
-                     || case when coalesce(v_exposant, 0) > 0
-                             then 'D' || repeat('0', v_exposant) else '' end);
+  v_ttc := facturation.montant_en_texte(f.montant_ttc, f.devise);
 
   -- La facture du mois d'une comptabilité : à chacun de ses experts, en application et par
   -- courriel. Une ligne par société et par offre ; on dit combien d'abonnements elle porte.
@@ -2146,6 +2283,20 @@ begin
        and not exists (select 1 from audit.event_log a
                         where a.action = 'paiement.trop_percu' and a.object_id = p_paiement
                           and a.payload ->> 'reference' is not distinct from p_reference) then
+      -- L'argent est là : il devient un solde créditeur du payeur (appliqué à sa facture
+      -- suivante, ou remboursé), au montant que le prestataire dit avoir encaissé.
+      if coalesce(p_detail ->> 'unites_encaissees', '') ~ '^[0-9]+$' then
+        insert into facturation.paiements_en_double
+          (paiement_id, licence_id, payeur_tenant_id, prestataire, reference, montant, devise)
+        select p.id, case when p.payeur_tenant_id is null then p.licence_id end,
+               p.payeur_tenant_id, p_prestataire, p_reference,
+               (p_detail ->> 'unites_encaissees')::numeric / power(10::numeric, d.exposant),
+               p.devise
+          from facturation.paiements_en_ligne p
+          join ref.devises d on d.code = p.devise
+         where p.id = p_paiement
+        on conflict (prestataire, reference) do nothing;
+      end if;
       insert into audit.event_log (tenant_id, actor, action, object_schema, object_table,
                                    object_id, payload)
       select coalesce(v_payeur, lo.tenant_id), auth.uid(), 'paiement.trop_percu', 'facturation',
@@ -2190,6 +2341,189 @@ begin
   end if;
 
   return (select to_jsonb(v) from facturation.paiements_en_ligne_v v where v.paiement_id = p_paiement);
+end
+$function$;
+
+-- ================================================================ payer d'avance, toujours
+-- Décision du CEO (25 novembre 2026) : la PME paie d'avance, dans tous les cas. Une recharge
+-- ne sert qu'une fois payée (ou offerte, ou portée par une facture d'avant qui est payée).
+create or replace view facturation.recharges_v with (security_invoker = true) as
+ SELECT r.id AS recharge_id,
+    r.licence_id,
+    r.recharge_code,
+    r.lectures,
+    r.prix_ht,
+    r.achetee_le,
+    NULLIF(r.expire_le, 'infinity'::date) AS expire_le,
+    r.origine,
+    ((r.lectures - COALESCE(u.n, (0)::bigint)))::integer AS restantes,
+    ((NOT ech.expiree) AND COALESCE(o.recharges_permises, false) AND pay.payee) AS utilisable,
+    ((NOT ech.expiree) AND (NOT COALESCE(o.recharges_permises, false))) AS gelee,
+    ech.expiree,
+    pay.payee
+   FROM (((((facturation.recharges r
+     LEFT JOIN LATERAL ( SELECT count(*) AS n
+           FROM facturation.lectures l
+          WHERE (l.recharge_id = r.id)) u ON (true))
+     LEFT JOIN LATERAL ( SELECT ((r.expire_le < CURRENT_DATE) AND ((ref.recharge_a(r.recharge_code, CURRENT_DATE)).validite_mois IS NOT NULL)) AS expiree) ech ON (true))
+     LEFT JOIN LATERAL ( SELECT (((r.prix_ht)::numeric <= (0)::numeric)
+            OR (EXISTS ( SELECT 1
+                   FROM ((facturation.paiements_en_ligne p
+                     JOIN facturation.paiement_evenements e ON (((e.paiement_id = p.id) AND (e.etat = 'paye'::text))))
+                     JOIN facturation.prestataires_paiement pp ON (((pp.code = e.prestataire) AND pp.fait_entrer_argent)))
+                  WHERE (p.recharge_id = r.id)))
+            OR ((NOT (EXISTS ( SELECT 1
+                   FROM facturation.paiements_en_ligne p
+                  WHERE (p.recharge_id = r.id)))) AND (EXISTS ( SELECT 1
+                   FROM (facturation.facture_recharges fr
+                     JOIN facturation.encours_v ev ON ((ev.facture_id = fr.facture_id)))
+                  WHERE ((fr.recharge_id = r.id) AND (ev.etat = 'payee'::text)))))) AS payee) pay ON (true))
+     LEFT JOIN facturation.forfait_courant_v h ON ((h.licence_id = r.licence_id)))
+     LEFT JOIN LATERAL ref.offre_a(h.offre_code, h.offre_depuis) o(id, code, libelle, prix_mensuel_ht, lectures_par_organisation, sieges_inclus, sieges_max, prix_siege_sup, lectures_par_siege_sup, organisations_incluses, organisations_max, prix_organisation_sup, effective_from, created_at, rang, recharges_permises) ON (true));
+
+-- La recharge automatique attend le débit automatique (D4) : un prestataire le dit en table.
+alter table facturation.prestataires_paiement
+  add column debit_automatique boolean not null default false;
+comment on column facturation.prestataires_paiement.debit_automatique is
+  'Le prestataire débite sans le client (paiements récurrents). Aucun ne le fait encore (D4).';
+
+create function facturation.debit_automatique_ouvert()
+ returns boolean
+ language sql
+ stable
+ security definer
+ set search_path to ''
+as $$
+  select exists (select 1 from facturation.prestataires_paiement pp
+                  where pp.debit_automatique and pp.fait_entrer_argent and pp.ouvre_le_paiement)
+$$;
+revoke all on function facturation.debit_automatique_ouvert() from public, anon;
+grant execute on function facturation.debit_automatique_ouvert() to authenticated;
+
+CREATE OR REPLACE FUNCTION facturation.recharge_automatique_possible(p_licence uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_reglage record;
+  v_palier  ref.recharges;
+  v_depense numeric;
+  v_permis  boolean;
+begin
+  select * into v_reglage
+    from facturation.recharge_automatique a
+   where a.licence_id = p_licence
+   order by a.decide_le desc, a.id desc
+   limit 1;
+  if v_reglage.id is null or not v_reglage.active then
+    return null;
+  end if;
+  -- Payer d'avance (25 novembre 2026) : une recharge automatique se paie par un débit
+  -- automatique, que le prestataire n'ouvre pas encore (D4). Jusque-là, elle ne s'achète pas.
+  if not facturation.debit_automatique_ouvert() then
+    return null;
+  end if;
+
+  select o.recharges_permises into v_permis
+    from facturation.forfait_courant_v h
+    cross join lateral ref.offre_a(h.offre_code, h.offre_depuis) o
+   where h.licence_id = p_licence;
+  if not coalesce(v_permis, false) then
+    return null;
+  end if;
+
+  v_palier := ref.recharge_a(v_reglage.recharge_code, current_date);
+  if v_palier.code is null then
+    return null;
+  end if;
+
+  select coalesce(sum(r.prix_ht), 0) into v_depense
+    from facturation.recharges r
+   where r.licence_id = p_licence and r.origine = 'automatique'
+     and r.achetee_le >= date_trunc('month', current_date)::date;
+
+  if v_depense + v_palier.prix_ht > v_reglage.plafond_mois_ht then
+    return null;
+  end if;
+  return v_palier.code;
+end
+$function$;
+
+CREATE OR REPLACE FUNCTION public.recharge_automatique_regler(p_active boolean, p_code text DEFAULT NULL::text, p_plafond_mois_ht numeric DEFAULT NULL::numeric, p_tenant uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_licence uuid;
+begin
+  if p_tenant is not null and not app.has_org_role(p_tenant, array['dirigeant']) then
+    raise exception 'refus.reserve.proprietaire_principal'
+      using errcode = '42501';
+  end if;
+  v_licence := facturation.ma_licence(p_tenant);
+  if v_licence is null then
+    raise exception 'refus.reserve.proprietaire_principal'
+      using errcode = '42501';
+  end if;
+  if p_active and not facturation.debit_automatique_ouvert() then
+    raise exception 'refus.recharge.automatique_sans_debit' using errcode = 'check_violation';
+  end if;
+  if p_active and (ref.recharge_a(p_code, current_date)).code is null then
+    raise exception 'refus.recharge.palier_inconnu' using errcode = 'check_violation';
+  end if;
+
+  insert into facturation.recharge_automatique
+    (licence_id, active, recharge_code, plafond_mois_ht, decide_par)
+  values (v_licence, p_active,
+          case when p_active then p_code end,
+          case when p_active then p_plafond_mois_ht end,
+          auth.uid());
+
+  return jsonb_build_object('active', p_active, 'palier', case when p_active then p_code end,
+                            'plafond_mois_ht', case when p_active then p_plafond_mois_ht end);
+end
+$function$;
+
+CREATE OR REPLACE FUNCTION public.recharge_acheter(p_code text, p_tenant uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_licence uuid;
+  v_permis  boolean;
+  v_id      uuid;
+begin
+  if p_tenant is not null and not app.has_org_role(p_tenant, array['dirigeant']) then
+    raise exception 'refus.reserve.proprietaire_principal' using errcode = '42501';
+  end if;
+  v_licence := facturation.ma_licence(p_tenant);
+  if v_licence is null then
+    raise exception 'refus.reserve.proprietaire_principal' using errcode = '42501';
+  end if;
+
+  select o.recharges_permises into v_permis
+    from facturation.forfait_courant_v h
+    cross join lateral ref.offre_a(h.offre_code, h.offre_depuis) o
+   where h.licence_id = v_licence;
+  if not coalesce(v_permis, false) then
+    raise exception 'refus.recharge.offre_sans_recharge' using errcode = 'check_violation',
+      hint = 'Le Basic ne prend pas de recharge : passer au Solo ou au-dessus.';
+  end if;
+
+  -- Payer d'avance (25 novembre 2026) : une recharge payante ne s'achète que si elle peut
+  -- se payer tout de suite (un émetteur désigné) ; sinon, rien n'est réservé.
+  if (ref.recharge_a(p_code, current_date)).prix_ht > 0
+     and not exists (select 1 from facturation.emetteurs e where e.valide_des <= current_date) then
+    raise exception 'refus.recharge.paiement_indisponible' using errcode = 'check_violation';
+  end if;
+  v_id := facturation.recharge_inscrire(v_licence, p_code, 'achat', auth.uid());
+  return (select to_jsonb(r) from facturation.recharges_v r where r.recharge_id = v_id);
 end
 $function$;
 

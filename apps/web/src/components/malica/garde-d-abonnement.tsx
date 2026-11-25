@@ -117,10 +117,13 @@ export default function GardeDAbonnement({ children }: { children: ReactNode }) 
     );
   }
 
+  // Le solde déjà reçu se déduit, et se dit (comme le « solde appliqué » d'Anthropic).
+  const credit = d && Number(d.credit_deduit) > 0 ? `${d.credit_deduit} ${d.devise}` : null;
   const ligne = d
-    ? t("pme.abonnement.aPayer", {
+    ? t(credit ? "pme.abonnement.aPayer.credit" : "pme.abonnement.aPayer", {
         montant: `${d.montant_ttc} ${d.devise}`,
         date: dateEnLettres(d.dernier_jour, locale),
+        credit: credit ?? "",
       })
     : t(e!.jours_restants <= 1 ? "pme.essai.enCours.dernier" : "pme.essai.enCours", {
         jours: e!.jours_restants,

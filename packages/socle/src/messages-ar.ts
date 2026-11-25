@@ -2591,8 +2591,6 @@ export const ar: Dict = {
   "refus.fonction.inconnue": "هذه الوظيفة غير معروفة لدى برج المراقبة.",
   "refus.facturation_auto.perimetre_inconnu": "نطاق الفوترة هو «cabinets» أو «pme».",
   "refus.facturation.premier_du_mois": "تبدأ فترة الفوترة في أول الشهر.",
-  "refus.facturation.acompte_a_rapprocher":
-    "عربون بقيمة {acompte} مقبوض سابقاً لا يغطي إلا جزءاً من {du} المستحقة: تجب المطابقة يدوياً.",
   "refus.facturation.destinataire_sans_nom":
     "المرسَل إليه {destinataire} بلا اسم: الفاتورة بلا مرسَل إليه ليست فاتورة.",
   "refus.facturation.rien_a_facturer": "لا شيء للفوترة عن {periode}.",
@@ -4186,6 +4184,23 @@ export const ar: Dict = {
   "tour.factures.emises.aide":
     "آخر مائة. تُنزَّل كل واحدة بصيغة PDF؛ ويُعاد إرسال بريد فاتورة الشركة مرة واحدة لكل فاتورة كل 24 ساعة.",
   "tour.factures.emises.aucune": "لم تصدر أي فاتورة.",
+  "tour.soldes.titre": "الأرصدة الدائنة",
+  "tour.soldes.aide":
+    "المال المقبوض ولم يُحتسب بعد في فاتورة: دفعة أكبر من فاتورتها، رابط دُفع مرتين، عربون سابق. يُخصم تلقائياً من الفاتورة التالية للشركة.",
+  "tour.soldes.aucun": "لا رصيد: كل المال المقبوض محتسب في فاتورة.",
+  "tour.soldes.doubles": "{count} من الروابط دُفعت مرتين",
+  "tour.soldes.doubles#one": "رابط واحد دُفع مرتين",
+  "tour.soldes.doubles#other": "{count} من الروابط دُفعت مرتين",
+  "tour.soldes.depuis": "منذ {date}",
+  "pme.abonnement.aPayer.credit":
+    "حان تجديد اشتراككم: {montant} شامل الأداء تُدفع في أجل أقصاه {date}، بعد خصم رصيدكم البالغ {credit}. تصدر الفاتورة عند الدفع.",
+  "pme.reglages.recharges.aPayer": "للدفع: تُفتح قراءاته عند الدفع.",
+  "pme.reglages.recharges.auto.indisponible":
+    "سيأتي مع الاقتطاع الآلي. إلى ذلك الحين، يُشترى الشحن ويُدفع مسبقاً بنقرة واحدة.",
+  "refus.recharge.paiement_indisponible":
+    "الدفع عبر الإنترنت غير متاح بعد: يُدفع الشحن مسبقاً، فلا يمكن شراؤه حالياً.",
+  "refus.recharge.automatique_sans_debit":
+    "الشحن الآلي ينتظر الاقتطاع الآلي: اشتروا شحناً وادفعوا ثمنه مسبقاً.",
   "tour.factures.payeur.titulaire": "شركة",
   "tour.factures.payeur.cabinet": "مكتب محاسبة",
   "tour.factures.telecharger": "PDF",
@@ -4413,7 +4428,7 @@ export const ar: Dict = {
     "تُفتح باقة {offre} فور استلام الدفع. ادفع فرق الشهر أدناه.",
   "refus.forfait.paiement_indisponible":
     "الدفع الإلكتروني غير متاح بعد: لا يمكن دفع تغيير الباقة هذا حالياً.",
-  "pme.reglages.recharges.aRegler": "أضيف الرصيد وقراءاته متاحة. ادفع ثمنه أدناه.",
+  "pme.reglages.recharges.aRegler": "حُجز الشحن: تُفتح قراءاته فور دفعه. ادفع ثمنه أدناه.",
   "pme.reglages.sansPlafond": "بلا سقف",
   "pme.home.greet.morning.prenom": "صباح الخير يا {prenom}.",
   "pme.home.greet.afternoon.prenom": "طاب يومك يا {prenom}.",
@@ -4455,10 +4470,10 @@ export const ar: Dict = {
   "pme.reglages.offres.empechement.pas_de_licence": "مخصص للمالك الرئيسي.",
   "pme.reglages.recharges": "رصيد قراءات إضافي",
   "pme.reglages.recharges.sous":
-    "تتراكم ولا تنتهي صلاحيتها. يُستهلك رصيد الشهر أوّلًا، ثمّ الشحنات من الأقدم إلى الأحدث. تظهر في فاتورة الشهر.",
+    "تتراكم ولا تنتهي صلاحيتها. يُستهلك رصيد الشهر أوّلًا، ثمّ الشحنات من الأقدم إلى الأحدث. يُدفع كلّ شحن مسبقاً وله فاتورته التي تصدر عند الدفع.",
   "pme.reglages.recharges.palier": "{n} قراءة",
   "pme.reglages.recharges.prix": "{prix} {devise} دون احتساب الأداء",
-  "pme.reglages.recharges.achetee": "أضيف الرصيد. سيظهر في فاتورة الشهر.",
+  "pme.reglages.recharges.achetee": "أضيف الرصيد: قراءاته متاحة.",
   "pme.reglages.recharges.verrou": "يُتاح الرصيد الإضافي ابتداء من باقة Solo.",
   "pme.reglages.recharges.miennes": "أرصدتي",
   "pme.reglages.recharges.reste": "{restantes} من {lectures} · حتى {date}",

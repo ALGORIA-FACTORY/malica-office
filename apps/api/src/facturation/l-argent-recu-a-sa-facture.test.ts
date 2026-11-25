@@ -1,5 +1,8 @@
 /**
- * Une recharge payée a sa facture, au paiement (revue du 25 novembre 2026, R-04 ; D7).
+ * L'argent reçu a sa facture, ou reste un solde créditeur — jamais perdu, jamais demandé deux
+ * fois (revue du 25 novembre 2026 : R-04, 8.3 ; D7 ; « payer d'avance, toujours »).
+ *
+ * Une recharge payée a sa facture, au paiement.
  *
  * Avant : l'argent d'une recharge attendait la prochaine facture de base du titulaire. Quand
  * une comptabilité paie toute la licence, cette facture n'existe pas : de l'argent encaissé
@@ -8,7 +11,7 @@
  * à part ; et un second lien payé pour un même paiement se trace en trop-perçu (8.3).
  *
  *   cd apps/api && node --experimental-strip-types --import ./src/garde-base-de-test.ts \
- *     --test src/facturation/une-recharge-payee-a-sa-facture.test.ts
+ *     --test src/facturation/l-argent-recu-a-sa-facture.test.ts
  */
 
 import assert from "node:assert/strict";
@@ -25,7 +28,9 @@ import {
   regler,
   unePme,
   facturesDuTitulaire,
+  changer,
   jourDe,
+  passer,
   payerLesDus,
   resteDu,
 } from "./decor-d-avance.ts";
@@ -97,7 +102,7 @@ async function facturesDeRecharge(db: pg.PoolClient, licence: string) {
   return rows;
 }
 
-describe("une recharge payée a sa facture", { skip: !ADMIN }, () => {
+describe("l'argent reçu a sa facture, ou un solde créditeur", { skip: !ADMIN }, () => {
   after(async () => {
     await pool?.end();
   });
@@ -195,82 +200,197 @@ describe("une recharge payée a sa facture", { skip: !ADMIN }, () => {
     });
   });
 
-  it("une recharge déjà portée par la facture de base ne se paie plus à part", async () => {
+  it("payer d'avance : achetée, elle ne sert qu'une fois payée, et jamais sur l'échéance", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       await regler(db, s, "pme", true);
       const p = await unePme(db, await jourDe(db));
-      // Achetée avant que l'échéance ne soit payée : la demande due la compte.
-      const { paiement } = await acheter(db, p.titulaire, p.tenant);
+      const { recharge, paiement } = await acheter(db, p.titulaire, p.tenant);
+      const etat = async () =>
+        (
+          await db.query<{ utilisable: boolean; payee: boolean }>(
+            "select utilisable, payee from facturation.recharges_v where recharge_id = $1",
+            [recharge],
+          )
+        ).rows[0]!;
+      assert.deepEqual(await etat(), { utilisable: false, payee: false }, "pas avant le paiement");
+
+      // L'échéance payée ne la porte pas : elle a son propre paiement.
       await db.query("set constraints all immediate");
       await payerLesDus(db);
       const [base] = await facturesDuTitulaire(db, p.licence);
-      assert.ok(base, "l'échéance payée a sa facture");
       const { rows: lignes } = await db.query<{ libelle: string }>(
-        "select libelle from facturation.facture_lignes where facture_id = $1 order by ordinal",
+        "select libelle from facturation.facture_lignes where facture_id = $1",
         [base!.id],
       );
-      assert.ok(
-        lignes.some((l) => l.libelle.startsWith("Recharge ")),
-        "la recharge est sur la base",
-      );
-      assert.equal(
-        await resteDu(db, base!.id),
-        0,
-        "la facture vaut le paiement, recharge comprise",
-      );
+      assert.ok(!lignes.some((l) => l.libelle.startsWith("Recharge ")), "pas sur la base");
+      assert.equal(await resteDu(db, base!.id), 0, "la facture vaut son paiement");
 
-      const { rows: v } = await db.query<{ etat: string }>(
-        "select etat from facturation.paiements_en_ligne_v where paiement_id = $1",
-        [paiement.paiement_id],
-      );
-      assert.equal(v[0]!.etat, "remplace", "son paiement à part est remplacé : jamais deux fois");
-      assert.deepEqual(await facturesDeRecharge(db, p.licence), []);
+      await payerEnLigne(db, p.titulaire, paiement.paiement_id);
+      assert.deepEqual(await etat(), { utilisable: true, payee: true }, "payée, elle sert");
+      assert.equal((await facturesDeRecharge(db, p.licence)).length, 1);
     });
   });
 
-  it("une recharge rechiffre l'échéance due ; payée à part, elle en sort : jamais deux fois", async () => {
+  it("solde créditeur : il se déduit de l'échéance, on ne paie que le reste, la facture garde son plein TTC", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       await regler(db, s, "pme", true);
-      const p = await unePme(db, await jourDe(db));
+      const p = await unePme(db, await jourDe(db, -3));
       await db.query("set constraints all immediate");
-      await db.query("set constraints all deferred");
+      await payerLesDus(db);
+      const [base] = await facturesDuTitulaire(db, p.licence);
+
+      // Un lien de recharge payé deux fois : le second paiement devient un solde créditeur.
+      const { paiement } = await acheter(db, p.titulaire, p.tenant);
+      await payerEnLigne(db, p.titulaire, paiement.paiement_id, "T1");
+      await payerEnLigne(db, p.titulaire, paiement.paiement_id, "T2");
+      const solde = async () =>
+        Number(
+          (
+            await db.query<{ s: string }>("select facturation.solde_crediteur($1)::text as s", [
+              p.licence,
+            ])
+          ).rows[0]!.s,
+        );
+      assert.equal(await solde(), Number(paiement.montant_ttc));
+      await enPersonne(db, s.operateur);
+      const { rows: tour } = await db.query<{ licence_id: string; solde: string }>(
+        "select licence_id, solde::text from plateforme.soldes_crediteurs()",
+      );
+      await db.query("reset role");
+      assert.ok(
+        tour.some((t) => t.licence_id === p.licence),
+        "la tour le voit",
+      );
+
+      // L'échéance suivante : on ne demande que le reste.
+      await passer(db, base!.couvre_au);
+      const { rows: d } = await db.query<{ paiement_id: string; montant_ttc: string }>(
+        "select paiement_id, montant_ttc::text from facturation.demande_due_ouverte($1)",
+        [p.licence],
+      );
+      const { rows: pl } = await db.query<{
+        credit: string;
+        ht: string;
+        tva: string;
+        timbre: string;
+      }>(
+        `select credit_deduit::text as credit, montant_ht::text as ht, montant_tva::text as tva,
+                timbre::text from facturation.paiements_en_ligne where id = $1`,
+        [d[0]!.paiement_id],
+      );
+      const plein = Number(pl[0]!.ht) + Number(pl[0]!.tva) + Number(pl[0]!.timbre);
+      assert.equal(Number(pl[0]!.credit), Number(paiement.montant_ttc), "le solde déduit");
+      assert.equal(
+        Math.round((plein - Number(pl[0]!.credit)) * 1000),
+        Math.round(Number(d[0]!.montant_ttc) * 1000),
+        "on ne paie que le reste",
+      );
+      await enPersonne(db, p.titulaire);
+      const { rows: e } = await db.query<{ r: { credit_deduit: string; montant_ttc: string } }>(
+        "select public.mon_echeance($1) as r",
+        [p.tenant],
+      );
+      await db.query("reset role");
+      assert.equal(Number(e[0]!.r.credit_deduit), Number(paiement.montant_ttc), "la PME le voit");
+
+      await payerLesDus(db);
+      const suivante = (await facturesDuTitulaire(db, p.licence)).find(
+        (f) => f.couvre_du === base!.couvre_au,
+      );
+      assert.ok(suivante, "la facture naît au paiement");
+      const { rows: ttc } = await db.query<{ t: string }>(
+        "select montant_ttc::text as t from facturation.factures where id = $1",
+        [suivante.id],
+      );
+      assert.equal(Number(ttc[0]!.t), plein, "plein TTC sur la facture");
+      assert.equal(await resteDu(db, suivante.id), 0, "réglée : solde, puis paiement");
+      assert.equal(await solde(), 0, "le solde est consommé");
+    });
+  });
+
+  it("un solde qui couvre l'échéance la règle seul : la facture naît, rien n'est demandé", async () => {
+    await aBlanc(async (db) => {
+      const s = await socle(db);
+      await regler(db, s, "pme", true);
+      const p = await unePme(db, await jourDe(db, -3));
+      await db.query("set constraints all immediate");
+      // Le lien de l'échéance payé deux fois : un solde du montant d'une échéance.
+      const { rows: d } = await db.query<{ paiement_id: string }>(
+        "select paiement_id from facturation.demande_due_ouverte($1)",
+        [p.licence],
+      );
+      await payerEnLigne(db, p.titulaire, d[0]!.paiement_id, "T1");
+      await payerEnLigne(db, p.titulaire, d[0]!.paiement_id, "T2");
+      await db.query("set constraints all immediate");
+      const [base] = await facturesDuTitulaire(db, p.licence);
+
+      const bilan = await passer(db, base!.couvre_au);
+      assert.equal(bilan.pme?.emises, 1, "réglée par le solde");
+      assert.equal(bilan.pme?.demandes, 0);
+      const { rows: due } = await db.query("select 1 from facturation.demande_due_ouverte($1)", [
+        p.licence,
+      ]);
+      assert.equal(due.length, 0, "rien à payer");
+      const suivante = (await facturesDuTitulaire(db, p.licence)).find(
+        (f) => f.couvre_du === base!.couvre_au,
+      );
+      assert.ok(suivante);
+      assert.equal(await resteDu(db, suivante.id), 0);
+    });
+  });
+
+  it("l'ancien lien d'une échéance rechiffrée, payé quand même : un solde, déduit de la nouvelle", async () => {
+    await aBlanc(async (db) => {
+      const s = await socle(db);
+      await regler(db, s, "pme", true);
+      const jour = await jourDe(db);
+      const p = await unePme(db, jour);
+      await db.query("set constraints all immediate");
       const due = async () =>
         (
           await db.query<{ paiement_id: string; montant_ttc: string }>(
             "select paiement_id, montant_ttc::text from facturation.demande_due_ouverte($1)",
             [p.licence],
           )
-        ).rows[0]!;
-      const sans = await due();
-      assert.ok(sans.paiement_id, "l'échéance est due");
-      // Achetée pendant que l'échéance est due : la demande se rechiffre, recharge comprise.
-      const { paiement } = await acheter(db, p.titulaire, p.tenant);
-      const avant = await due();
-      assert.notEqual(avant.paiement_id, sans.paiement_id);
-      assert.ok(Number(avant.montant_ttc) > Number(sans.montant_ttc), "recharge comprise");
+        ).rows[0];
+      const ancienne = (await due())!;
 
-      await payerEnLigne(db, p.titulaire, paiement.paiement_id);
-      const apres = await due();
-      assert.notEqual(apres.paiement_id, avant.paiement_id, "une demande neuve");
-      assert.ok(
-        Number(apres.montant_ttc) === Number(sans.montant_ttc),
-        "sans la recharge déjà payée",
-      );
+      // Ce qui est dû change (une offre plus chère) : l'échéance se rechiffre.
+      await changer(db, p, "team", jour);
+      await db.query("select facturation.du_a_payer($1, $2::date, null)", [p.licence, jour]);
+      const nouvelle = (await due())!;
+      assert.notEqual(nouvelle.paiement_id, ancienne.paiement_id);
+
+      // La page de l'ancienne demande, restée ouverte, est payée quand même.
+      await payerEnLigne(db, p.titulaire, ancienne.paiement_id, "ANCIEN");
       await db.query("set constraints all immediate");
-      await payerLesDus(db);
-      const [base] = await facturesDuTitulaire(db, p.licence);
-      assert.equal(await resteDu(db, base!.id), 0);
-      const { rows: trop } = await db.query(
-        "select 1 from audit.event_log where action = 'paiement.trop_percu' and tenant_id = $1",
-        [p.tenant],
+      assert.deepEqual(await facturesDuTitulaire(db, p.licence), [], "rien à un montant périmé");
+      const reste = (await due())!;
+      const { rows: pl } = await db.query<{ credit: string }>(
+        "select credit_deduit::text as credit from facturation.paiements_en_ligne where id = $1",
+        [reste.paiement_id],
       );
-      assert.equal(trop.length, 0, "rien de payé deux fois");
+      assert.equal(Number(pl[0]!.credit), Number(ancienne.montant_ttc), "l'argent reçu est déduit");
+      const { rows: trace } = await db.query<{ motif: string }>(
+        `select payload ->> 'motif' as motif from audit.event_log
+          where action = 'paiement.trop_percu' and object_id = $1`,
+        [ancienne.paiement_id],
+      );
+      assert.deepEqual(
+        trace.map((t) => t.motif),
+        ["demande_remplacee"],
+      );
+
+      await payerLesDus(db);
+      const [f] = await facturesDuTitulaire(db, p.licence);
+      assert.equal(await resteDu(db, f!.id), 0, "réglée : l'ancien paiement, puis le reste");
+      assert.equal(await due(), undefined, "plus rien de dû");
     });
   });
 
-  it("un second lien payé pour le même paiement se trace en trop-perçu à rembourser (8.3)", async () => {
+  it("un second lien payé pour le même paiement devient un solde créditeur, tracé (8.3)", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       await regler(db, s, "pme", true);
@@ -291,6 +411,15 @@ describe("une recharge payée a sa facture", { skip: !ADMIN }, () => {
       assert.equal(rows[0]!.payload["motif"], "double_paiement");
       assert.equal(rows[0]!.payload["reference"], "T2");
       assert.equal((await facturesDeRecharge(db, p.licence)).length, 1, "une facture, pas deux");
+      const { rows: doubles } = await db.query<{ reference: string; montant: string }>(
+        "select reference, montant::text from facturation.paiements_en_double where paiement_id = $1",
+        [paiement.paiement_id],
+      );
+      assert.deepEqual(
+        doubles.map((x) => [x.reference, Number(x.montant)]),
+        [["T2", Number(paiement.montant_ttc)]],
+        "l'argent reçu deux fois est gardé, au montant encaissé : un solde créditeur",
+      );
     });
   });
 });
