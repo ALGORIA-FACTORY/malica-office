@@ -1120,16 +1120,17 @@ Revue : projet MALICA OFFICE, `decisions/2026-11-24_revue-comptabilite-par-matri
 
 Après #448 et #458 (relecture des cellules en production, lecteur passé au moteur, « Livré à » et « السيد » repères du
 client), la production lit 80 pièces sur 411 sans aucun modèle (50 avant), à zéro valeur fausse au banc. Trois sujets
-restent ouverts ; aucun n'est en cours.
+restaient ouverts ; le premier est fermé.
 
-- **La TVA du mois ne tient plus sa borne de charge — probable régression de performance, pas un test instable.**
-  `la-tva-du-mois-tient-la-charge.test.ts` mesure déjà la meilleure de cinq passes en alternance. Sa borne
-  (`6 × nue + 500`) a été posée le 1er novembre sur un rapport transmis / nue de 3,9 à 5,3. Relevé en CI le 24
-  novembre : « transmis : 3777 ms > 3629 ms » (environ 7,2 fois la sélection nue, l'ancien coût lent était de 8 fois
-  et plus) et « charges : 3429 ms > 3309 ms » (environ 2,4 fois, borne de 2 fois). Le job `api` passe à la relance,
-  mais `main` exige désormais ses cinq contrôles : chaque dépassement bloque une fusion. **Ce qui le ferme** : un
-  `explain (analyze, buffers)` de `office.extraitsTransmis` et de `charges.articles` sur la base de l'épreuve, et
-  le coût ramené sous la borne. Desserrer la borne est refusé : elle cesserait de voir l'ancien coût.
+- **Fermé le 25 novembre 2026 — la TVA du mois tenait mal sa borne de charge : c'était une régression réelle.** Le
+  temps ne partait pas dans la requête, mais dans la sécurité par ligne : `app.piece_lisible`, appelée pour chaque
+  pièce et chaque article lus, descend par `app.orgs_avec_droit` jusqu'à `app.adhesions_de` (récrite pour l'accès
+  total). Sous PostgreSQL 17, une fonction SQL `security definer` n'est jamais intégrée à la requête : elle est
+  planifiée à chaque appel, et ses appelées aussi — cinq planifications par pièce. Les 19 fonctions de ce chemin
+  passent en PL/pgSQL, corps inchangés (`20261231350000_la_lisibilite_ne_se_replanifie_plus.sql`, gardée par
+  `la-lisibilite-ne-se-replanifie-plus.test.ts`). Mesuré en CI sous PostgreSQL 17, même runner, base neuve de chaque côté : TVA du mois 1 298 → 524 à 586 ms, TVA du cabinet 881 → 295 à 314 ms, « Vos charges » 1 296 → 743 à 860 ms. En local (PostgreSQL 16) : TVA du mois 2 082 →
+  838 ms, TVA du cabinet 1 456 → 460 ms, « Vos charges » 2 097 → 1 078 ms ; rapport transmis / nue 6,6 → 3,7. La
+  borne n'a pas bougé.
 - **Les matricules du jeu d'essai portent une lettre de contrôle fausse.** `matriculeDEssai` tire la lettre de A à
   Z : 26 matricules fictifs sur 29 (jeu d'ALGORIA) et 12 sur 15 (jeu synthétique) ne portent pas la lettre que la
   règle du pack calcule, et 8 portent une lettre qui n'existe pas (I, O, U). L'OCR lit le « O » comme un zéro
@@ -1157,6 +1158,7 @@ sans dette ; pas d'essai pour une société amenée par une comptabilité ; une 
 fin proche (préavis `essai.preavis_jours`, 3 par défaut) et de fin, une fois chacun.
 
 Ouvert :
+
 - **CGV inchangées** (décision du CEO, 25 novembre 2026) : l'essai est une condition SPÉCIFIQUE, pas générale.
   Ses termes sont ceux de chaque essai : les jours figés à sa naissance (`facturation.essais`, avec le réglage de la
   tour qui les a donnés), dits au client par l'écran et par les avis de fin proche et de fin.
