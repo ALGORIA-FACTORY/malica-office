@@ -359,14 +359,50 @@ export const tour = {
     annuelMoisOfferts: number,
     essaiJours: number,
     renouvellementDelaiJours: number,
+    releveBlocageJours: number,
+    releveSuspensionJours: number,
     motif: string,
   ) {
     const { rows } = await db.query<{ r: unknown }>(
       `select plateforme.abonnement_regler($1::smallint, $2, $3::smallint, $4::smallint,
-                                           $5::smallint, $6) as r`,
-      [reportMois, annuelOuvert, annuelMoisOfferts, essaiJours, renouvellementDelaiJours, motif],
+                                           $5::smallint, $6::smallint, $7::smallint, $8) as r`,
+      [
+        reportMois,
+        annuelOuvert,
+        annuelMoisOfferts,
+        essaiJours,
+        renouvellementDelaiJours,
+        releveBlocageJours,
+        releveSuspensionJours,
+        motif,
+      ],
     );
     return rows[0]?.r ?? null;
+  },
+
+  /** Les relevés des comptabilités qui attendent leur paiement (D8). */
+  async relevesAEncaisser(db: Requete) {
+    const { rows } = await db.query(
+      `select releve_id, cabinet_id, cabinet, periode::text, etabli_le::text, montant_ttc::text,
+              devise, bloque_le::text, suspendu_le::text
+         from plateforme.releves_a_encaisser()`,
+    );
+    return rows;
+  },
+
+  /** Inscrire le virement d'un relevé, au montant exact : sa facture naît, réglée (D10). */
+  async encaisserVirement(
+    db: Requete,
+    releveId: string,
+    montant: string,
+    le: string,
+    reference: string,
+  ) {
+    const { rows } = await db.query<{ r: { facture_id: string; numero: string } }>(
+      `select plateforme.virement_encaisser($1, $2::numeric, $3::date, $4) as r`,
+      [releveId, montant, le, reference],
+    );
+    return rows[0]!.r;
   },
 
   /** Le plafond de dépense IA par organisation et par mois (dollars), en vigueur. */
@@ -609,10 +645,25 @@ export const tour = {
   /** L'argent reçu et pas encore imputé, licence par licence (le solde créditeur). */
   async soldesCrediteurs(db: Requete) {
     const { rows } = await db.query(
-      `select licence_id, societe, titulaire, solde::text, devise, doubles, depuis
+      `select licence_id, cabinet_id, societe, titulaire, solde::text, devise, doubles, depuis
          from plateforme.soldes_crediteurs()`,
     );
     return rows;
+  },
+
+  /** Inscrire le remboursement d'un solde créditeur : il cesse de compter. */
+  async rembourserSolde(
+    db: Requete,
+    licenceId: string | null,
+    cabinetId: string | null,
+    reference: string,
+    motif: string,
+  ) {
+    const { rows } = await db.query<{ r: { montant: string; devise: string } }>(
+      `select plateforme.solde_rembourser($1, $2, $3, $4) as r`,
+      [licenceId, cabinetId, reference, motif],
+    );
+    return rows[0]!.r;
   },
 
   /** Renvoyer le courriel d'une facture de société : une fois par facture dans la fenêtre. */

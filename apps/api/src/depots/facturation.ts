@@ -37,7 +37,7 @@ import { idsDeSocietes } from "./societes.ts";
 /** Un paiement en ligne, tel que `facturation.paiements_en_ligne_v` le rend. */
 interface PaiementLu {
   paiement_id: string;
-  objet: "montee" | "recharge" | "annuel" | "facture" | "montee_demandee";
+  objet: "montee" | "recharge" | "annuel" | "facture" | "montee_demandee" | "releve";
   libelle: string;
   montant_ht: string;
   montant_tva: string;
@@ -1280,6 +1280,14 @@ export const facturation = {
       effet_du: string | null;
       effet_au: string | null;
     }>;
+  },
+
+  /** Les relevés de la comptabilité (D8), leurs lignes, et où virer. */
+  async relevesDuCabinet(db: Requete, cabinetId: string) {
+    const { rows } = await db.query<{ r: unknown }>(`select public.releves_du_cabinet($1) as r`, [
+      cabinetId,
+    ]);
+    return rows[0]!.r;
   },
 
   /** Les factures adressées au cabinet (la RLS les réserve à ses membres). */

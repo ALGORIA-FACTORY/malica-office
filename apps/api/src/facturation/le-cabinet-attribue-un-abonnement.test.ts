@@ -17,6 +17,8 @@ import { identite } from "../depots/identite.ts";
 import { matriculeDEssai } from "../matricule-d-essai.ts";
 import { inviteeParLaComptabilite, personnesDEssai } from "../personne-d-essai.ts";
 
+import { factureDuCabinet } from "./decor-de-facture.ts";
+
 const BASE_CONFIGUREE = Boolean(
   process.env["DATABASE_URL"] && process.env["JWT_SECRET"] && process.env["DATABASE_URL_ADMIN"],
 );
@@ -233,12 +235,11 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
          values ($1, date '2026-01-01', $2)`,
         [cabinet, op],
       );
-      await db.query("set local role authenticated");
-      await db.query("select set_config('request.jwt.claim.sub', $1, true)", [op]);
-      const { rows } = await db.query<{ r: { facture_id: string; lignes: number } }>(
-        `select facturation.emettre_cabinet($1, date_trunc('month', current_date)::date) as r`,
-        [cabinet],
+      // D8 : le mois se dit par un relevé ; la tour inscrit son virement, la facture naît.
+      const { rows: m } = await db.query<{ mois: string }>(
+        "select date_trunc('month', current_date)::date::text as mois",
       );
+      const rows = [{ r: await factureDuCabinet(db, cabinet, m[0]!.mois, op) }];
       assert.equal(rows[0]!.r.lignes, 1);
       const { rows: f } = await db.query<{
         licence_id: string | null;
@@ -259,8 +260,8 @@ describe("le cabinet attribue un abonnement, la PME choisit", { skip: !BASE_CONF
       await db.query("savepoint deux");
       await assert.rejects(
         db.query(
-          `select facturation.emettre_cabinet($1, date_trunc('month', current_date)::date)`,
-          [cabinet],
+          "select facturation.releve_etablir($1, date_trunc('month', current_date)::date, $2)",
+          [cabinet, op],
         ),
         /refus\.facturation\.deja_emise\?periode=/,
       );

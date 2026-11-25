@@ -4515,6 +4515,8 @@ export interface FacturationRepository {
   abonnementsDuCabinet(cabinetId: string): Promise<AbonnementAttribue[]>;
   abonnementsPourMoi(tenantId: string): Promise<AbonnementPropose[]>;
   facturesDuCabinet(cabinetId: string): Promise<FactureDuCabinet[]>;
+  /** Les relevés de la comptabilité : à régler d'abord, puis l'historique. */
+  relevesDuCabinet(cabinetId: string): Promise<RelevesDuCabinet>;
   /** Montée sur-le-champ, descente à l'accord du dirigeant, proposition changée avant son arrivée. */
   changerOffreAbonnement(
     accesId: string,
@@ -4694,8 +4696,68 @@ export interface ReglageAbonnement {
   essai_jours: number;
   /** Les jours après lesquels un dossier dont le dû n'est pas payé ferme (D12). */
   renouvellement_delai_jours: number;
+  /** Les jours après lesquels un relevé impayé ferme les attributions d'une comptabilité (D11). */
+  releve_blocage_jours: number;
+  /** Les jours après lesquels il suspend les abonnements qu'elle paie (D11). */
+  releve_suspension_jours: number;
   motif: string | null;
   decide_le: string | null;
+}
+
+/** Une ligne d'un relevé de comptabilité : figée, telle que la facture la portera. */
+export interface LigneDeReleve {
+  libelle: string;
+  montant_ht: string;
+}
+
+/**
+ * Le relevé du mois écoulé d'une comptabilité (D8) : non fiscal, à payer en ligne ou par
+ * virement du montant exact ; sa facture naît au paiement.
+ */
+export interface ReleveDuCabinet {
+  releve_id: string;
+  periode: string;
+  etabli_le: string;
+  abonnements: number;
+  montant_ht: string;
+  montant_tva: string;
+  timbre: string;
+  montant_ttc: string;
+  devise: string;
+  /** Réglé : sa facture ; sinon `null`. */
+  facture_id: string | null;
+  numero: string | null;
+  /** À régler : son paiement en ligne ; `null` une fois réglé. */
+  paiement_id: string | null;
+  /** Impayé : le jour où les attributions ferment, et celui où les clients sont suspendus. */
+  bloque_le: string | null;
+  suspendu_le: string | null;
+  lignes: LigneDeReleve[];
+}
+
+/** Les relevés d'une comptabilité, et où virer. */
+export interface RelevesDuCabinet {
+  banque: {
+    titulaire: string | null;
+    banque: string | null;
+    rib: string | null;
+    iban: string | null;
+    bic: string | null;
+  } | null;
+  releves: ReleveDuCabinet[];
+}
+
+/** Un relevé qui attend son paiement, vu de la tour. */
+export interface ReleveAEncaisser {
+  releve_id: string;
+  cabinet_id: string;
+  cabinet: string;
+  periode: string;
+  etabli_le: string;
+  montant_ttc: string;
+  devise: string;
+  bloque_le: string | null;
+  suspendu_le: string | null;
 }
 
 /** L'essai gratuit, tel que `public.mon_essai()` le rend (25 novembre 2026). */
@@ -4950,7 +5012,7 @@ export type EtatDeFacture =
 /** Un paiement en ligne — une montée, une recharge, l'année, une facture — tel que la base le rend. */
 export interface PaiementEnLigne {
   paiement_id: string;
-  objet: "montee" | "recharge" | "annuel" | "facture" | "montee_demandee";
+  objet: "montee" | "recharge" | "annuel" | "facture" | "montee_demandee" | "releve";
   libelle: string;
   montant_ht: string;
   montant_tva: string;
@@ -5502,8 +5564,22 @@ export interface TourRepository {
     annuelMoisOfferts: number,
     essaiJours: number,
     renouvellementDelaiJours: number,
+    releveBlocageJours: number,
+    releveSuspensionJours: number,
     motif: string,
   ): Promise<unknown>;
+  /** Les relevés des comptabilités qui attendent leur paiement. */
+  relevesAEncaisser(): Promise<ReleveAEncaisser[]>;
+  /**
+   * Inscrire le virement d'un relevé, au montant exact (D10) : sa facture naît, réglée. Un
+   * refus revient en `refus.virement.*` ou `refus.releve.deja_regle`.
+   */
+  encaisserVirement(
+    releveId: string,
+    montant: string,
+    le: string,
+    reference: string,
+  ): Promise<{ facture_id: string; numero: string }>;
   /** Le plafond de dépense IA par organisation et par mois (dollars), en vigueur ; `null` sans réglage. */
   reglageIa(): Promise<{
     plafond_usd_par_org_mois: string;
@@ -5585,6 +5661,16 @@ export interface TourRepository {
   /** L'argent reçu et pas encore imputé, licence par licence : il s'applique de lui-même. */
   soldesCrediteurs(): Promise<SoldeCrediteur[]>;
   /**
+   * Inscrire le remboursement d'un solde, fait à la banque ou chez le prestataire : il cesse
+   * de compter. La licence ou la comptabilité, la référence du remboursement, son motif.
+   */
+  rembourserSolde(
+    licenceId: string | null,
+    cabinetId: string | null,
+    reference: string,
+    motif: string,
+  ): Promise<{ montant: string; devise: string }>;
+  /**
    * Renvoyer le courriel d'une facture de société déjà émise. `deja` : un courriel de cette
    * facture est déjà décidé dans la fenêtre du moteur, rien n'est reposé.
    */
@@ -5645,7 +5731,9 @@ export interface RechargeAutomatique {
 
 /** Un solde créditeur que la tour voit : de l'argent reçu, pas encore imputé à une facture. */
 export interface SoldeCrediteur {
-  licence_id: string;
+  /** Le solde d'une licence (PME), ou d'une comptabilité : l'un des deux. */
+  licence_id: string | null;
+  cabinet_id: string | null;
   societe: string | null;
   titulaire: string;
   solde: string;

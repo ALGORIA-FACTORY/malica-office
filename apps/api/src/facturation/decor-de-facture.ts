@@ -443,3 +443,64 @@ export async function facturesDAvance(
     part_mensuelle_ht: Number(r.part),
   }));
 }
+
+/** Le relevé d'un mois de la comptabilité (D8) : ce que le passage du 1er établit. */
+export interface ReleveEtabli {
+  releve_id: string;
+  paiement_id: string;
+  lignes: number;
+  abonnements: number;
+  ttc: number;
+}
+
+export async function releveDuCabinet(
+  db: pg.PoolClient,
+  cabinet: string,
+  periode: string,
+  acteur: string,
+): Promise<ReleveEtabli> {
+  await db.query("reset role");
+  const { rows } = await db.query<{ r: ReleveEtabli }>(
+    "select facturation.releve_etablir($1, $2::date, $3) as r",
+    [cabinet, periode, acteur],
+  );
+  return rows[0]!.r;
+}
+
+/** La tour inscrit le virement du relevé, au montant exact : sa facture naît, réglée (D10). */
+export async function virementDuReleve(
+  db: pg.PoolClient,
+  operateur: string,
+  releve: string,
+  reference = "VIR-ESSAI",
+): Promise<{ facture_id: string; numero: string }> {
+  await db.query("savepoint virement");
+  await db.query("set local role authenticated");
+  await db.query("select set_config('request.jwt.claim.sub', $1, true)", [operateur]);
+  try {
+    const { rows } = await db.query<{ r: { facture_id: string; numero: string } }>(
+      `select plateforme.virement_encaisser(
+                $1, (select montant_ttc from plateforme.releves_a_encaisser() where releve_id = $1),
+                current_date, $2) as r`,
+      [releve, reference],
+    );
+    await db.query("reset role");
+    await db.query("release savepoint virement");
+    return rows[0]!.r;
+  } catch (erreur) {
+    await db.query("rollback to savepoint virement");
+    await db.query("reset role");
+    throw erreur;
+  }
+}
+
+/** Le mois de la comptabilité, de bout en bout : relevé, virement, facture née réglée. */
+export async function factureDuCabinet(
+  db: pg.PoolClient,
+  cabinet: string,
+  periode: string,
+  operateur: string,
+): Promise<ReleveEtabli & { facture_id: string; numero: string }> {
+  const releve = await releveDuCabinet(db, cabinet, periode, operateur);
+  return { ...releve, ...(await virementDuReleve(db, operateur, releve.releve_id)) };
+}

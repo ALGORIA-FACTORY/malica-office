@@ -97,7 +97,7 @@ describe("le reste de lectures se signale sous un seuil", { skip: !ADMIN }, () =
 
       await enPersonne(db, d.operateur, () =>
         db.query(
-          "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, 0::smallint, 14::smallint, 'Essai : report inchangé')",
+          "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, 0::smallint, 14::smallint, 14::smallint, 30::smallint, 'Essai : report inchangé')",
         ),
       );
       assert.equal(await part(db), "0.250", "la part reste celle de la tour");

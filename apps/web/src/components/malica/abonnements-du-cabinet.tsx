@@ -97,6 +97,12 @@ export function AbonnementsDuCabinet({
 
   // En lecture, aucun geste : la tour regarde, elle ne propose ni ne paie.
   const expert = !lecture && acces.data?.role === "expert";
+  // Le relevé du mois écoulé (D8) : à régler, en ligne ou par virement ; sa facture naît
+  // au paiement, et rejoint alors la liste ci-dessous.
+  const releves = useQuery({
+    queryKey: ["cab-abo-releves", org.id],
+    queryFn: () => office().facturation.relevesDuCabinet(org.id),
+  });
   // Les rôles qui engagent le cabinet, ceux que `facturation.peut_payer` admet.
   const peutPayer = !lecture && (expert || acces.data?.role === "dirigeant");
   const [refusDePaiement, setRefusDePaiement] = useState<string | null>(null);
@@ -155,9 +161,88 @@ export function AbonnementsDuCabinet({
       a.client_nom.toLocaleLowerCase(locale).includes(recherche.toLocaleLowerCase(locale)),
   );
 
-  /* Les factures que la comptabilité règle à Malica. */
+  const aujourdHui = new Date().toISOString().slice(0, 10);
+  const aRegler = (releves.data?.releves ?? []).filter((r) => r.facture_id === null);
+  const banque = releves.data?.banque ?? null;
+  /* Ce que la comptabilité doit, puis les factures nées de ses paiements. */
   const sectionFactures = (
     <section className="space-y-3">
+      {aRegler.map((r) => {
+        const suspendu = r.suspendu_le !== null && r.suspendu_le <= aujourdHui;
+        const bloque = r.bloque_le !== null && r.bloque_le <= aujourdHui;
+        return (
+          <div
+            key={r.releve_id}
+            className={cn(
+              "rounded-md border px-4 py-3",
+              suspendu ? "border-signal-stop" : bloque ? "border-signal-warn" : "border-border",
+            )}
+            data-releve={r.releve_id}
+          >
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <p className="min-w-[220px] flex-1 text-sm font-medium">
+                {t("cab.releve.ligne", {
+                  periode: r.periode.slice(0, 7),
+                  montant: montant(r.montant_ttc, r.devise),
+                })}
+              </p>
+              {peutPayer && r.paiement_id ? (
+                <Link
+                  to="/cabinet/payer/$paiementId"
+                  params={{ paiementId: r.paiement_id }}
+                  className="rounded-md border border-foreground px-3 py-1.5 text-[12.5px] font-medium hover:bg-foreground hover:text-background"
+                >
+                  {t("cab.releve.payer")}
+                </Link>
+              ) : null}
+            </div>
+            <p className="mt-1 text-[12.5px] text-muted-foreground">{t("cab.releve.aide")}</p>
+            {banque?.rib || banque?.iban ? (
+              <p className="mt-1 text-[12.5px] text-muted-foreground" data-virement>
+                {t("cab.releve.virement", { montant: montant(r.montant_ttc, r.devise) })}{" "}
+                <span className="num" dir="ltr">
+                  {banque.rib ?? banque.iban}
+                </span>
+                {banque.titulaire ? ` · ${banque.titulaire}` : ""}
+                {banque.banque ? ` · ${banque.banque}` : ""}
+              </p>
+            ) : null}
+            {suspendu || bloque || r.bloque_le ? (
+              <p
+                role={suspendu || bloque ? "alert" : undefined}
+                className={cn(
+                  "mt-1 text-[12.5px]",
+                  suspendu
+                    ? "text-signal-stop"
+                    : bloque
+                      ? "text-signal-warn"
+                      : "text-muted-foreground",
+                )}
+                data-echeance
+              >
+                {suspendu
+                  ? t("cab.releve.suspendu", { date: date(r.suspendu_le) })
+                  : bloque
+                    ? t("cab.releve.bloque", { date: date(r.suspendu_le) })
+                    : t("cab.releve.avant", { date: date(r.bloque_le) })}
+              </p>
+            ) : null}
+            <details className="mt-2">
+              <summary className="cursor-pointer text-[12.5px] text-muted-foreground">
+                {t("cab.releve.detail", { count: r.lignes.length })}
+              </summary>
+              <ul className="mt-1 space-y-1">
+                {r.lignes.map((l) => (
+                  <li key={l.libelle} className="flex justify-between gap-4 text-[12.5px]">
+                    <span>{l.libelle}</span>
+                    <span className="num">{montant(l.montant_ht, r.devise)}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </div>
+        );
+      })}
       <SectionTitle>{t("cab.abo.factures.titre")}</SectionTitle>
       {refusDePaiement ? (
         <p role="alert" className="text-[12.5px] text-signal-stop">

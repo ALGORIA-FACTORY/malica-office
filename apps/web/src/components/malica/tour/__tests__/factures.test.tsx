@@ -70,6 +70,9 @@ const tour = vi.hoisted(() => ({
   reglerFactures: vi.fn(async () => ({})),
   facturesEmises: vi.fn(),
   soldesCrediteurs: vi.fn(),
+  relevesAEncaisser: vi.fn(),
+  encaisserVirement: vi.fn(),
+  rembourserSolde: vi.fn(),
   renvoyerFacture: vi.fn(async () => ({
     numero: "MO-TN-I11-2026-000001",
     deja: false,
@@ -81,7 +84,12 @@ vi.mock("@/verticals/malica-office/composition", () => ({
   office: () => ({ tour, facturation: { factureDetail: vi.fn() } }),
 }));
 
-import { LesFacturesEmises, LesSoldesCrediteurs, ReglerLesFactures } from "../factures";
+import {
+  LesFacturesEmises,
+  LesRelevesAEncaisser,
+  LesSoldesCrediteurs,
+  ReglerLesFactures,
+} from "../factures";
 
 function monter(Ecran: ComponentType) {
   tour.reglageFactures.mockResolvedValue({ en_vigueur: EN_VIGUEUR, a_venir: [] });
@@ -163,6 +171,7 @@ describe("Tour › Soldes créditeurs", () => {
     tour.soldesCrediteurs.mockResolvedValue([
       {
         licence_id: "l-1",
+        cabinet_id: null,
         societe: "Atelier d'essai",
         titulaire: "Samia Ben Salah",
         solde: "6.950",
@@ -174,11 +183,81 @@ describe("Tour › Soldes créditeurs", () => {
     monter(LesSoldesCrediteurs);
     expect(await screen.findByText("Atelier d'essai")).toBeTruthy();
     expect(screen.getByText(/tour\.soldes\.doubles/)).toBeTruthy();
+
+    // Un solde que rien n'attend se rembourse : la référence et le motif, puis il s'inscrit.
+    tour.rembourserSolde.mockResolvedValue({ montant: "6.950", devise: "TND" });
+    fireEvent.click(screen.getByText("tour.soldes.rembourser"));
+    const inscrire = screen.getByText<HTMLButtonElement>("tour.soldes.inscrire");
+    expect(inscrire.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("tour.soldes.reference"), {
+      target: { value: "RBT-1" },
+    });
+    fireEvent.change(screen.getByLabelText("common.motif"), { target: { value: "Double lien" } });
+    fireEvent.click(inscrire);
+    await waitFor(() =>
+      expect(tour.rembourserSolde).toHaveBeenCalledWith("l-1", null, "RBT-1", "Double lien"),
+    );
+    expect(await screen.findByText(/^tour\.soldes\.fait /)).toBeTruthy();
   });
 
   it("aucun solde : il le dit", async () => {
     tour.soldesCrediteurs.mockResolvedValue([]);
     monter(LesSoldesCrediteurs);
     expect(await screen.findByText("tour.soldes.aucun")).toBeTruthy();
+  });
+});
+
+describe("Tour › Relevés à encaisser", () => {
+  const RELEVE = {
+    releve_id: "r-1",
+    cabinet_id: "c-1",
+    cabinet: "Comptabilité d'essai",
+    periode: "2026-10-01",
+    etabli_le: "2026-11-01",
+    montant_ttc: "70.810",
+    devise: "TND",
+    bloque_le: "2000-01-15",
+    suspendu_le: "2099-12-01",
+  };
+
+  it("dit le relevé, son état, et inscrit le virement au montant saisi (D10)", async () => {
+    tour.relevesAEncaisser.mockResolvedValue([RELEVE]);
+    tour.encaisserVirement.mockResolvedValue({
+      facture_id: "f-9",
+      numero: "MO-TN-I11-2026-000009",
+    });
+    monter(LesRelevesAEncaisser);
+    expect(await screen.findByText(/Comptabilité d'essai/)).toBeTruthy();
+    expect(screen.getByText(/^tour\.releves\.etat\.bloque /)).toBeTruthy();
+
+    fireEvent.click(screen.getByText("tour.releves.virement"));
+    const encaisser = screen.getByText<HTMLButtonElement>("tour.releves.encaisser");
+    expect(encaisser.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("tour.releves.montant"), {
+      target: { value: "70.810" },
+    });
+    fireEvent.change(screen.getByLabelText("tour.releves.date"), {
+      target: { value: "2026-11-20" },
+    });
+    fireEvent.change(screen.getByLabelText("tour.releves.reference"), {
+      target: { value: " VIR-2026-11 " },
+    });
+    expect(encaisser.disabled).toBe(false);
+    fireEvent.click(encaisser);
+    await waitFor(() =>
+      expect(tour.encaisserVirement).toHaveBeenCalledWith(
+        "r-1",
+        "70.810",
+        "2026-11-20",
+        "VIR-2026-11",
+      ),
+    );
+    expect(await screen.findByText(/^tour\.releves\.fait .*000009/)).toBeTruthy();
+  });
+
+  it("aucun relevé en attente : il le dit", async () => {
+    tour.relevesAEncaisser.mockResolvedValue([]);
+    monter(LesRelevesAEncaisser);
+    expect(await screen.findByText("tour.releves.aucun")).toBeTruthy();
   });
 });

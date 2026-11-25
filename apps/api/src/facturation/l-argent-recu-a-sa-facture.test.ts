@@ -345,6 +345,50 @@ describe("l'argent reçu a sa facture, ou un solde créditeur", { skip: !ADMIN }
     });
   });
 
+  it("un solde remboursé par la tour ne se déduit plus : l'échéance revient à son plein montant", async () => {
+    await aBlanc(async (db) => {
+      const s = await socle(db);
+      await regler(db, s, "pme", true);
+      const p = await unePme(db, await jourDe(db, -3));
+      await db.query("set constraints all immediate");
+      await payerLesDus(db);
+      const [base] = await facturesDuTitulaire(db, p.licence);
+      const { paiement } = await acheter(db, p.titulaire, p.tenant);
+      await payerEnLigne(db, p.titulaire, paiement.paiement_id, "T1");
+      await payerEnLigne(db, p.titulaire, paiement.paiement_id, "T2");
+      await passer(db, base!.couvre_au);
+      const due = async () =>
+        (
+          await db.query<{ credit: string; ttc: string }>(
+            `select p.credit_deduit::text as credit, p.montant_ttc::text as ttc
+               from facturation.demande_due_ouverte($1) d
+               join facturation.paiements_en_ligne p on p.id = d.paiement_id`,
+            [p.licence],
+          )
+        ).rows[0]!;
+      const avant = await due();
+      assert.equal(Number(avant.credit), Number(paiement.montant_ttc), "le solde est déduit");
+
+      await enPersonne(db, s.operateur);
+      await db.query("select plateforme.solde_rembourser($1, null, 'RBT-1', 'Double lien rendu')", [
+        p.licence,
+      ]);
+      await db.query("reset role");
+      const apres = await due();
+      assert.equal(Number(apres.credit), 0, "rendu, il ne se déduit plus");
+      assert.equal(
+        Math.round(Number(apres.ttc) * 1000),
+        Math.round((Number(avant.ttc) + Number(avant.credit)) * 1000),
+        "l'échéance revient à son plein montant",
+      );
+      await payerLesDus(db);
+      const suivante = (await facturesDuTitulaire(db, p.licence)).find(
+        (f) => f.couvre_du === base!.couvre_au,
+      );
+      assert.equal(await resteDu(db, suivante!.id), 0);
+    });
+  });
+
   it("l'ancien lien d'une échéance rechiffrée, payé quand même : un solde, déduit de la nouvelle", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);

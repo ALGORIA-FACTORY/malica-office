@@ -32,6 +32,8 @@ import {
   type LigneDeCarte,
 } from "../relances/courriel-de-notification.ts";
 
+import { factureDuCabinet } from "./decor-de-facture.ts";
+
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 3 }) : null;
 
@@ -470,27 +472,27 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
                  $4, date '2026-11-01', $5, date '2026-11-01')`,
         [p.tenant, p.licence, cabinet, expert, p.titulaire],
       );
-      const { rows: e } = await db.query<{ r: { facture_id: string; numero: string } }>(
-        "select facturation.emission_du_cabinet($1, date '2026-11-01', $2) as r",
-        [cabinet, s.operateur],
-      );
-      const facture = e[0]!.r;
+      // D8 : le mois se dit par un relevé ; son virement inscrit, la facture naît, réglée.
+      const facture = await factureDuCabinet(db, cabinet, "2026-11-01", s.operateur);
       assert.match(facture.numero, /^MO-TN-I11-\d{4}-\d{6}$/, "la même série");
       const { rows: envois } = await db.query<{ code: string; canal: string }>(
         `select code, canal from notif.envois
-          where destinataire = $1 and code like 'facture.%' order by code, canal`,
+          where destinataire = $1 and (code like 'facture.%' or code like 'releve.%')
+          order by code, canal`,
         [expert],
       );
       assert.deepEqual(
         envois.map((x) => [x.code, x.canal]),
         [
-          ["facture.emise.cabinet", "app"],
-          ["facture.emise.cabinet", "email"],
+          ["facture.reglee.cabinet", "app"],
+          ["facture.reglee.cabinet", "email"],
+          ["releve.cabinet", "app"],
+          ["releve.cabinet", "email"],
         ],
-        "l'application et le courriel, sous le genre du cabinet",
+        "le relevé, puis la facture réglée : l'application et le courriel",
       );
 
-      // Le courriel se rend sans jeton orphelin, son bouton mène à la facturation du cabinet.
+      // Les deux courriels se rendent sans jeton orphelin, chacun avec son bouton.
       const { rows: file } = await db.query<{
         email: string;
         locale: string;
@@ -506,34 +508,43 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
         libelles: Record<string, string>;
         carte: LigneDeCarte[] | null;
       }>("select * from notif.reserver_courriels(1000000, interval '10 minutes')");
-      const courriel = file.find(
-        (x) => x.code === "facture.emise.cabinet" && x.email.includes(expert),
-      );
-      assert.ok(courriel, "la file rend le courriel de la facture du mois");
-      assert.equal(courriel.action_route, "/cabinet/regler/{{facture_id}}");
-      const message = courrielDeNotification({
-        locale: courriel.locale,
-        code: courriel.code,
-        titre: courriel.titre,
-        corps: courriel.corps,
-        action: {
-          libelle: courriel.action_libelle,
-          url: `https://essai.example${routeDuBouton(courriel.action_route, courriel.donnees)}`,
-        },
-        ton: courriel.ton,
-        organisation: courriel.organisation,
-        urlPublique: "https://essai.example",
-        libelles: courriel.libelles,
-        donnees: courriel.donnees,
-        sujet: courriel.sujet,
-        carte: courriel.carte,
-      });
-      assert.ok(message.sujet.includes(facture.numero), message.sujet);
-      assert.ok(!message.html.includes("{{") && !message.texte.includes("{{"), message.texte);
-      assert.ok(message.texte.includes("virement"), message.texte);
+      const rendu = (code: string) => {
+        const courriel = file.find((x) => x.code === code && x.email.includes(expert));
+        assert.ok(courriel, `la file rend le courriel ${code}`);
+        const message = courrielDeNotification({
+          locale: courriel.locale,
+          code: courriel.code,
+          titre: courriel.titre,
+          corps: courriel.corps,
+          action: {
+            libelle: courriel.action_libelle,
+            url: `https://essai.example${routeDuBouton(courriel.action_route, courriel.donnees)}`,
+          },
+          ton: courriel.ton,
+          organisation: courriel.organisation,
+          urlPublique: "https://essai.example",
+          libelles: courriel.libelles,
+          donnees: courriel.donnees,
+          sujet: courriel.sujet,
+          carte: courriel.carte,
+        });
+        assert.ok(!message.html.includes("{{") && !message.texte.includes("{{"), message.texte);
+        return message;
+      };
+      const releve = rendu("releve.cabinet");
+      assert.ok(releve.sujet.includes("11/2026"), releve.sujet);
+      assert.ok(releve.texte.includes("virement"), releve.texte);
+      assert.ok(releve.texte.includes("passage d'offre"), "le texte garde ses apostrophes");
       assert.ok(
-        message.html.includes(`/cabinet/regler/${facture.facture_id}`),
-        "le bouton ouvre le paiement de cette facture",
+        releve.html.includes(`/cabinet/payer/${facture.paiement_id}`),
+        "le bouton du relevé ouvre son paiement, par un lien Malica",
+      );
+      const reglee = rendu("facture.reglee.cabinet");
+      assert.ok(reglee.sujet.includes(facture.numero), reglee.sujet);
+      assert.ok(reglee.texte.includes("VIR-ESSAI"), "la facture réglée est le reçu : sa référence");
+      assert.ok(
+        reglee.html.includes(`/cabinet/facture/${facture.facture_id}`),
+        "le bouton ouvre cette facture",
       );
 
       // Le renvoi n'est pas pour elle.
