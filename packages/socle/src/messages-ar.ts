@@ -4247,6 +4247,20 @@ export const ar: Dict = {
   "tour.abonnement.annuel.ouvert": "مفتوح للحرفاء المباشرين",
   "tour.abonnement.annuel.ferme": "مغلق",
   "tour.abonnement.annuel.offerts": "الأشهر المجانية من اثني عشر",
+  "pme.essai.enCours": "تجربة مجانية: تبقى لكم {jours} أيام، حتى {date} ضمنًا.",
+  "pme.essai.enCours.dernier": "تجربة مجانية: اليوم الأخير، {date}.",
+  "pme.essai.passer": "الاشتراك",
+  "pme.essai.demanderAuPrincipal": "وحده المالك الرئيسي يمكنه الاشتراك.",
+  "pme.essai.termine.titre": "انتهت فترة التجربة",
+  "pme.essai.termine.corps":
+    "انتهت فترة التجربة المجانية يوم {date}. ملفكم ووثائقكم محفوظة: اشتركوا لإعادة فتحه.",
+  "tour.abonnement.essai": "أيام التجربة المجانية (التسجيلات الجديدة)",
+  "tour.abonnement.essai.aide":
+    "تُمنح لكل شركة تسجّل بنفسها، دون بطاقة. 0: لا تجربة. التجربة التي بدأت تحتفظ بأيامها.",
+  "tour.abonnement.essai.borne": "بين 0 و90.",
+  "notif.kind.essai.fin_proche": "تنتهي تجربتكم المجانية قريبًا.",
+  "notif.kind.essai.termine": "انتهت تجربتكم المجانية.",
+  "refus.essai.fige": "لا تُعدَّل التجربة: تُسجَّل نهايتها فقط، مرة واحدة.",
   "tour.abonnement.annuel.offerts.borne": "بين 0 و11.",
   "tour.pannes": "سجل الأعطال",
   "tour.pannes.sous":

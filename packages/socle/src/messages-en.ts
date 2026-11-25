@@ -4424,6 +4424,20 @@ export const en: Dict = {
   "tour.abonnement.annuel.ouvert": "Open to direct customers",
   "tour.abonnement.annuel.ferme": "Closed",
   "tour.abonnement.annuel.offerts": "Free months out of twelve",
+  "pme.essai.enCours": "Free trial: {jours} days left, until {date} included.",
+  "pme.essai.enCours.dernier": "Free trial: last day, {date}.",
+  "pme.essai.passer": "Subscribe",
+  "pme.essai.demanderAuPrincipal": "Only the principal owner can subscribe.",
+  "pme.essai.termine.titre": "Your trial has ended",
+  "pme.essai.termine.corps":
+    "Your free trial ended on {date}. Your file and documents are kept: subscribe to reopen it.",
+  "tour.abonnement.essai": "Free trial days (new sign-ups)",
+  "tour.abonnement.essai.aide":
+    "Offered to each company that signs up on its own, without a card. 0: no trial. A trial already started keeps its days.",
+  "tour.abonnement.essai.borne": "Between 0 and 90.",
+  "notif.kind.essai.fin_proche": "Your free trial ends soon.",
+  "notif.kind.essai.termine": "Your free trial has ended.",
+  "refus.essai.fige": "A trial cannot be changed: only its end is recorded, once.",
   "tour.abonnement.annuel.offerts.borne": "Between 0 and 11.",
   "tour.pannes": "The failure log",
   "tour.pannes.sous":

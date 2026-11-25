@@ -8,7 +8,10 @@ import { ALERTE, BOUTON, CARTE, CHAMP, TEXTE, TITRE, useRetour } from "./commun"
 
 /**
  * L'abonnement, réglé par la tour (19 octobre 2026) : le report d'un mois, et
- * l'année — ouverte ou non, et combien de mois elle offre.
+ * l'année — ouverte ou non, et combien de mois elle offre. Et, depuis le
+ * 25 novembre 2026, les jours d'essai gratuit des NOUVELLES entrées : un essai
+ * fige ses jours à la naissance de la licence, un changement ne touche que les
+ * suivantes.
  *
  * La base calcule tout (`facturation.report_de`, `public.mon_annuel`) ; la
  * tour ne règle que les interrupteurs et le nombre, datés et motivés. Un
@@ -26,6 +29,7 @@ export function ReglerLAbonnement() {
   const [report, setReport] = useState<0 | 1>(1);
   const [annuel, setAnnuel] = useState(true);
   const [offerts, setOfferts] = useState("2");
+  const [essai, setEssai] = useState("0");
   const [motif, setMotif] = useState("");
 
   useEffect(() => {
@@ -33,13 +37,16 @@ export function ReglerLAbonnement() {
     setReport(reglage.data.report_mois === 1 ? 1 : 0);
     setAnnuel(reglage.data.annuel_ouvert);
     setOfferts(String(reglage.data.annuel_mois_offerts));
+    setEssai(String(reglage.data.essai_jours));
   }, [reglage.data]);
 
   const nOfferts = Number.parseInt(offerts, 10);
   const offertsValide = Number.isInteger(nOfferts) && nOfferts >= 0 && nOfferts <= 11;
+  const nEssai = Number.parseInt(essai, 10);
+  const essaiValide = /^\d+$/.test(essai) && nEssai >= 0 && nEssai <= 90;
 
   const regler = useMutation({
-    mutationFn: () => office().tour.reglerAbonnement(report, annuel, nOfferts, motif),
+    mutationFn: () => office().tour.reglerAbonnement(report, annuel, nOfferts, nEssai, motif),
     onSuccess: async () => {
       setRetour(t("tour.fait"));
       setMotif("");
@@ -99,6 +106,18 @@ export function ReglerLAbonnement() {
         {!offertsValide ? (
           <p className={ALERTE}>{t("tour.abonnement.annuel.offerts.borne")}</p>
         ) : null}
+        <p className={TEXTE}>{t("tour.abonnement.essai.aide")}</p>
+        <label className={TEXTE}>
+          {t("tour.abonnement.essai")}
+          <input
+            value={essai}
+            onChange={(e) => setEssai(e.target.value)}
+            inputMode="numeric"
+            aria-label={t("tour.abonnement.essai")}
+            className={`${CHAMP} mt-1 w-full`}
+          />
+        </label>
+        {!essaiValide ? <p className={ALERTE}>{t("tour.abonnement.essai.borne")}</p> : null}
         <input
           value={motif}
           onChange={(e) => setMotif(e.target.value)}
@@ -109,7 +128,7 @@ export function ReglerLAbonnement() {
         <button
           type="button"
           className={BOUTON}
-          disabled={regler.isPending || motif.trim() === "" || !offertsValide}
+          disabled={regler.isPending || motif.trim() === "" || !offertsValide || !essaiValide}
           onClick={() => regler.mutate()}
         >
           {t("tour.enregistrer")}

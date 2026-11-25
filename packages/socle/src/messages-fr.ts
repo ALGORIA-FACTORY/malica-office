@@ -4554,6 +4554,20 @@ export const fr = {
   "tour.abonnement.annuel.ouvert": "Ouvert aux clients en direct",
   "tour.abonnement.annuel.ferme": "Fermé",
   "tour.abonnement.annuel.offerts": "Mois offerts sur douze",
+  "pme.essai.enCours": "Essai gratuit : il vous reste {jours} jours, jusqu'au {date} inclus.",
+  "pme.essai.enCours.dernier": "Essai gratuit : dernier jour, le {date}.",
+  "pme.essai.passer": "Passer à l'abonnement",
+  "pme.essai.demanderAuPrincipal": "Seul le propriétaire principal peut passer à l'abonnement.",
+  "pme.essai.termine.titre": "Votre essai est terminé",
+  "pme.essai.termine.corps":
+    "Votre essai gratuit a pris fin le {date}. Votre dossier et vos pièces sont conservés : passez à l'abonnement pour le rouvrir.",
+  "tour.abonnement.essai": "Jours d'essai gratuit (nouvelles entrées)",
+  "tour.abonnement.essai.aide":
+    "Offerts à chaque société qui s'inscrit seule, sans carte. 0 : pas d'essai. Un essai déjà commencé garde ses jours.",
+  "tour.abonnement.essai.borne": "Entre 0 et 90.",
+  "notif.kind.essai.fin_proche": "Votre essai gratuit se termine bientôt.",
+  "notif.kind.essai.termine": "Votre essai gratuit est terminé.",
+  "refus.essai.fige": "Un essai ne se modifie pas : seule sa fin s'inscrit, une fois.",
   "tour.abonnement.annuel.offerts.borne": "Entre 0 et 11.",
   "tour.pannes": "Le journal des pannes",
   "tour.pannes.sous":
