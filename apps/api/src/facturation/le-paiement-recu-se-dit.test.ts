@@ -48,7 +48,7 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
     await pool?.end();
   });
 
-  it("une montée payée : un reçu de paiement, et sa facture dite réglée, au nom de l'offre", async () => {
+  it("une montée payée : un seul courriel, sa facture dite réglée, qui sert de reçu", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const ancre = await jourDe(db, -5);
@@ -59,11 +59,12 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
       await payer(db, p, r.paiement!.paiement_id);
 
       const e = await envois(db, p.titulaire);
-      const recu = e.find((x) => x.code === "paiement.recu");
-      assert.ok(recu, "le reçu de paiement part");
-      assert.equal(recu.donnees["reference"], "REF-1");
-      assert.ok(recu.donnees["objet"]?.includes("Solo"), "l'objet nomme l'offre");
-      assert.ok(!recu.corps_rendu?.includes("{{"), "jetons rendus");
+      // Comme Anthropic : la facture née du paiement est le reçu ; pas de reçu à part.
+      assert.equal(
+        e.filter((x) => x.code === "paiement.recu").length,
+        0,
+        "un paiement, un courriel",
+      );
 
       const complement = (await facturesDuTitulaire(db, p.licence)).find(
         (x) => x.nature === "complement",
@@ -75,6 +76,8 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
         "la facture née du paiement se dit réglée, pas « à régler »",
       );
       assert.equal(avis[0]!.donnees["offre"], "Solo");
+      assert.equal(avis[0]!.donnees["reference"], "clictopay REF-1", "la référence du paiement");
+      assert.ok(!(avis[0]!.corps_rendu ?? "").includes("{{"), "jetons rendus");
       assert.match(complement.libelle, /Complément d'abonnement Solo/);
     });
   });

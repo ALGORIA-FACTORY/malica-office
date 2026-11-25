@@ -1,5 +1,7 @@
 {
-  "acces": ["monAcces"],
+  "acces": [
+    "monAcces"
+  ],
   "banque": [
     "audit",
     "bookLines",
@@ -124,7 +126,12 @@
     "rechercher",
     "rechercherHybride"
   ],
-  "exports": ["estimer", "exercices", "generer", "historique"],
+  "exports": [
+    "estimer",
+    "exercices",
+    "generer",
+    "historique"
+  ],
   "fabrique": [
     "codesDuReferentiel",
     "contexteDeDesignation",
@@ -263,9 +270,21 @@
     "sortir",
     "updateAsset"
   ],
-  "integrations": ["cles", "creerCle", "etat", "revoquerCle"],
-  "journal": ["consigner", "consignerHorsDossier", "etapes"],
-  "journalDuJour": ["exporter", "lire"],
+  "integrations": [
+    "cles",
+    "creerCle",
+    "etat",
+    "revoquerCle"
+  ],
+  "journal": [
+    "consigner",
+    "consignerHorsDossier",
+    "etapes"
+  ],
+  "journalDuJour": [
+    "exporter",
+    "lire"
+  ],
   "office": [
     "book",
     "bookedExtracts",
@@ -335,7 +354,9 @@
     "taxRates",
     "typesDeDocument"
   ],
-  "signalements": ["deposer"],
+  "signalements": [
+    "deposer"
+  ],
   "stocks": [
     "addMouvement",
     "categories",

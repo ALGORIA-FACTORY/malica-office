@@ -1373,9 +1373,13 @@ begin
         from facturation.factures x where x.licence_id = d.licence_id;
       -- La facture qui naît de ce paiement naît réglée : son avis le dit (20261231270000).
       perform set_config('malica.paye_d_abord_le', v_jour::text, true);
+      -- L'avis de la facture est son reçu : il dit la référence du paiement qui la fait naître.
+      perform set_config('malica.reference_du_paiement',
+                         new.prestataire || ' ' || coalesce(new.reference, p.id::text), true);
       perform facturation.facturation_du_titulaire(d.licence_id, v_jour, v_reglage.rattrapage_mois,
                                                    v_reglage.decide_par);
       perform set_config('malica.paye_d_abord_le', '', true);
+      perform set_config('malica.reference_du_paiement', '', true);
       -- CE paiement se répartit sur les factures qu'il vient d'émettre, dans l'ordre des jours
       -- (une échéance en retard, puis le jour) ; l'émission d'une base en a peut-être déjà
       -- pris sa part. Les factures suivent la licence, pas la personne (R-01).
@@ -1954,6 +1958,7 @@ CREATE OR REPLACE FUNCTION facturation.avertir_de_la_facture(p_facture uuid, p_f
  SET search_path TO ''
 AS $function$
 declare
+  v_reference text;
   f          facturation.factures;
   v_tenant   uuid;
   v_ttc      text;
@@ -2004,6 +2009,13 @@ begin
               or exists (select 1 from facturation.encours_v e
                           where e.facture_id = f.id and e.etat = 'payee');
 
+  -- Une facture née d'un paiement est aussi son reçu (comme Anthropic : un seul courriel) :
+  -- elle dit la référence du paiement qui l'a réglée.
+  v_reference := coalesce((select string_agg(distinct e.reference, ', ' order by e.reference)
+                             from facturation.encaissements e where e.facture_id = f.id),
+                           nullif(current_setting('malica.reference_du_paiement', true), ''),
+                           '—');
+
   -- La facture d'une recharge (R-04) naît toujours réglée, de son paiement : son avis dit la
   -- recharge, pas un abonnement.
   if f.nature = 'recharge' then
@@ -2017,7 +2029,8 @@ begin
                          join facturation.recharges r on r.id = fr.recharge_id
                         where fr.facture_id = f.id limit 1),
         'ttc',        v_ttc,
-        'devise',     f.devise),
+        'devise',     f.devise,
+        'reference',  v_reference),
       f.payeur_personne,
       'facture:' || f.id::text,
       p_fenetre);
@@ -2036,7 +2049,8 @@ begin
       'au',         to_char(f.couvre_au - 1, 'DD/MM/YYYY'),
       'ttc',        v_ttc,
       'devise',     f.devise,
-      'echeance',   to_char(f.echeance_le, 'DD/MM/YYYY')),
+      'echeance',   to_char(f.echeance_le, 'DD/MM/YYYY'),
+      'reference',  v_reference),
     f.payeur_personne,
     'facture:' || f.id::text,
     p_fenetre);
@@ -2131,19 +2145,20 @@ insert into notif.gabarits (code, canal, locale, sujet, titre, corps, action_lib
   ('facture.recharge.pme', 'email', 'fr', 'Malica Office — facture {{numero}} réglée',
    'Votre recharge est réglée',
    'Votre recharge de {{lectures}} lectures : {{ttc}} {{devise}} TTC, réglés en ligne. Les '
-   'lectures sont à vous. Rien ne reste à payer. La facture {{numero}} se télécharge en PDF dans '
-   'vos réglages, rubrique Abonnement.',
+   'lectures sont à vous. Rien ne reste à payer. Référence du paiement : {{reference}}. La facture '
+   '{{numero}} se télécharge en PDF dans vos réglages, rubrique Abonnement.',
    'Télécharger la facture', '/pme/reglages?page=abonnement', date '2026-11-25', 'succes'),
   ('facture.recharge.pme', 'email', 'en', 'Malica Office — invoice {{numero}} paid',
    'Your top-up is paid',
    'Your top-up of {{lectures}} readings: {{ttc}} {{devise}} incl. VAT, paid online. The '
-   'readings are yours. Nothing is left to pay. Invoice {{numero}} can be downloaded as a PDF '
-   'from your settings, under Subscription.',
+   'readings are yours. Nothing is left to pay. Payment reference: {{reference}}. Invoice '
+   '{{numero}} can be downloaded as a PDF from your settings, under Subscription.',
    'Download the invoice', '/pme/reglages?page=abonnement', date '2026-11-25', 'succes'),
   ('facture.recharge.pme', 'email', 'ar', 'Malica Office — الفاتورة {{numero}} مدفوعة',
    'شحنكم مدفوع',
    'شحنكم: {{lectures}} من القراءات، {{ttc}} {{devise}} شامل الأداء، دُفعت عبر الإنترنت. القراءات '
-   'لكم. لم يبقَ شيء للدفع. تُنزَّل الفاتورة {{numero}} بصيغة PDF من إعداداتكم، قسم الاشتراك.',
+   'لكم. لم يبقَ شيء للدفع. مرجع الدفع: {{reference}}. تُنزَّل الفاتورة {{numero}} بصيغة PDF '
+   'من إعداداتكم، قسم الاشتراك.',
    'تنزيل الفاتورة', '/pme/reglages?page=abonnement', date '2026-11-25', 'succes');
 
 insert into notif.diffusions (code, canal, gabarit, valid_from) values
@@ -2524,6 +2539,80 @@ begin
   end if;
   v_id := facturation.recharge_inscrire(v_licence, p_code, 'achat', auth.uid());
   return (select to_jsonb(r) from facturation.recharges_v r where r.recharge_id = v_id);
+end
+$function$;
+
+-- ================================================================ un paiement, un courriel
+-- Comme Anthropic : la PME reçoit UN courriel par paiement. Quand le paiement fait naître sa
+-- facture réglée, le courriel de cette facture est le reçu (montant, référence, PDF) ; le
+-- reçu à part ne part plus. Il part encore quand l'argent n'est pas tout sur une facture
+-- (un solde créditeur), et toujours pour la comptabilité qui paie sa facture.
+insert into notif.gabarits (code, canal, locale, sujet, titre, corps, action_libelle, action_route,
+                            effective_from, ton) values
+  ('facture.reglee.pme', 'email', 'fr', 'Malica Office — facture {{numero}} réglée',
+   'Votre facture {{numero}} est réglée',
+   'Votre abonnement {{offre}} du {{du_longue}} au {{au_longue}} : {{ttc}} {{devise}} TTC, réglés '
+   'en ligne. Rien ne reste à payer. Référence du paiement : {{reference}}. La facture PDF se '
+   'télécharge dans vos réglages, rubrique Abonnement.',
+   'Télécharger la facture', '/pme/reglages?page=abonnement', date '2026-11-25', 'succes'),
+  ('facture.reglee.pme', 'email', 'en', 'Malica Office — invoice {{numero}} paid',
+   'Your invoice {{numero}} is paid',
+   'Your {{offre}} subscription from {{du_longue}} to {{au_longue}}: {{ttc}} {{devise}} incl. VAT, '
+   'paid online. Nothing is left to pay. Payment reference: {{reference}}. The PDF invoice can be '
+   'downloaded from your settings, under Subscription.',
+   'Download the invoice', '/pme/reglages?page=abonnement', date '2026-11-25', 'succes'),
+  ('facture.reglee.pme', 'email', 'ar', 'Malica Office — الفاتورة {{numero}} مدفوعة',
+   'فاتورتكم {{numero}} مدفوعة',
+   'اشتراككم {{offre}} من {{du_longue}} إلى {{au_longue}}: {{ttc}} {{devise}} شامل الأداء، دُفعت '
+   'عبر الإنترنت. لم يبقَ شيء للدفع. مرجع الدفع: {{reference}}. تُنزَّل الفاتورة بصيغة PDF من '
+   'إعداداتكم، قسم الاشتراك.',
+   'تنزيل الفاتورة', '/pme/reglages?page=abonnement', date '2026-11-25', 'succes');
+
+CREATE OR REPLACE FUNCTION facturation.avertir_du_paiement()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  p          facturation.paiements_en_ligne;
+  v_tenant   uuid;
+  v_exposant smallint;
+begin
+  if new.etat <> 'paye'
+     or not exists (select 1 from facturation.prestataires_paiement pp
+                     where pp.code = new.prestataire and pp.fait_entrer_argent) then
+    return new;
+  end if;
+  select * into p from facturation.paiements_en_ligne where id = new.paiement_id;
+  -- La PME dont le paiement a fait naître sa facture, réglée en entier : le courriel de la
+  -- facture est son reçu. Un seul courriel par paiement.
+  if p.payeur_tenant_id is null and p.objet in ('montee_demandee', 'recharge')
+     and p.montant_ttc <= coalesce((select sum(en.montant)
+                                      from facturation.paiement_imputations i
+                                      join facturation.encaissements en on en.id = i.encaissement_id
+                                     where i.paiement_id = p.id), 0) then
+    return new;
+  end if;
+  v_tenant := coalesce(p.payeur_tenant_id,
+                       facturation.societe_facturee(p.licence_id));
+  select d.exposant into v_exposant from ref.devises d where d.code = p.devise;
+  perform notif.emettre(
+    v_tenant,
+    -- La comptabilité qui paie la facture de ses clients : son bouton mène à SA facturation.
+    case when p.payeur_tenant_id is not null then 'paiement.recu.cabinet' else 'paiement.recu' end,
+    jsonb_build_object(
+      'paiement_id', p.id,
+      'objet',       p.libelle,
+      'ttc',         to_char(p.montant_ttc, 'FM999G999G990'
+                       || case when coalesce(v_exposant, 0) > 0
+                               then 'D' || repeat('0', v_exposant) else '' end),
+      'devise',      p.devise,
+      'reference',   coalesce(new.reference, p.id::text),
+      'le',          to_char(new.le, 'DD/MM/YYYY')),
+    p.cree_par,
+    'paiement:' || p.id::text);
+  return new;
 end
 $function$;
 
