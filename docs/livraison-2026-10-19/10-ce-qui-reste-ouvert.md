@@ -1128,7 +1128,7 @@ restaient ouverts ; le premier est fermé.
   total). Sous PostgreSQL 17, une fonction SQL `security definer` n'est jamais intégrée à la requête : elle est
   planifiée à chaque appel, et ses appelées aussi — cinq planifications par pièce. Les 19 fonctions de ce chemin
   passent en PL/pgSQL, corps inchangés (`20261231350000_la_lisibilite_ne_se_replanifie_plus.sql`, gardée par
-  `la-lisibilite-ne-se-replanifie-plus.test.ts`). Mesuré sur la base de l'épreuve, même machine : TVA du mois 2 082 →
+  `la-lisibilite-ne-se-replanifie-plus.test.ts`). Mesuré en CI sous PostgreSQL 17, même runner, base neuve de chaque côté : TVA du mois 1 298 → 524 à 586 ms, TVA du cabinet 881 → 295 à 314 ms, « Vos charges » 1 296 → 743 à 860 ms. En local (PostgreSQL 16) : TVA du mois 2 082 →
   838 ms, TVA du cabinet 1 456 → 460 ms, « Vos charges » 2 097 → 1 078 ms ; rapport transmis / nue 6,6 → 3,7. La
   borne n'a pas bougé.
 - **Les matricules du jeu d'essai portent une lettre de contrôle fausse.** `matriculeDEssai` tire la lettre de A à
@@ -1158,6 +1158,7 @@ sans dette ; pas d'essai pour une société amenée par une comptabilité ; une 
 fin proche (préavis `essai.preavis_jours`, 3 par défaut) et de fin, une fois chacun.
 
 Ouvert :
+
 - **CGV inchangées** (décision du CEO, 25 novembre 2026) : l'essai est une condition SPÉCIFIQUE, pas générale.
   Ses termes sont ceux de chaque essai : les jours figés à sa naissance (`facturation.essais`, avec le réglage de la
   tour qui les a donnés), dits au client par l'écran et par les avis de fin proche et de fin.
