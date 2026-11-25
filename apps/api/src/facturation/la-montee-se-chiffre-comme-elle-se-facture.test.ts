@@ -19,7 +19,7 @@ import {
   pool,
   aBlanc,
   enPersonne,
-  passer,
+  passerEtPayer,
   socle,
   regler,
   unePme,
@@ -45,7 +45,7 @@ describe("la montée se chiffre comme elle se facture", { skip: !ADMIN }, () => 
       const ancre = await jourDe(db, -8);
       await regler(db, s, "pme", true);
       const p = await unePme(db, ancre, "premium");
-      await passer(db, ancre);
+      await passerEtPayer(db, ancre);
       const [base] = await facturesDuTitulaire(db, p.licence);
       assert.equal(base!.nature, "base");
       // L'ancien chemin : la descente appliquée le jour même (avant ce correctif).
@@ -68,7 +68,7 @@ describe("la montée se chiffre comme elle se facture", { skip: !ADMIN }, () => 
       const ancre = await jourDe(db, -5);
       await regler(db, s, "pme", true);
       const p = await unePme(db, ancre, "basic");
-      await passer(db, ancre);
+      await passerEtPayer(db, ancre);
 
       const d = await devis(db, p, "solo");
       assert.equal(d.rien_a_regler, false);
@@ -127,7 +127,7 @@ describe("la montée se chiffre comme elle se facture", { skip: !ADMIN }, () => 
       const ancre = await jourDe(db, -8);
       await regler(db, s, "pme", true);
       const p = await unePme(db, ancre, "premium");
-      await passer(db, ancre);
+      await passerEtPayer(db, ancre);
       const [base] = await facturesDuTitulaire(db, p.licence);
 
       const r = await demander(db, p, "basic");
@@ -145,7 +145,7 @@ describe("la montée se chiffre comme elle se facture", { skip: !ADMIN }, () => 
       await db.query("reset role");
       assert.deepEqual(m[0]!.d, { offre: "basic", le: base!.couvre_au });
 
-      await passer(db, base!.couvre_au);
+      await passerEtPayer(db, base!.couvre_au);
       assert.equal(
         await offreEnCours(db, p),
         "basic",
@@ -165,7 +165,7 @@ describe("la montée se chiffre comme elle se facture", { skip: !ADMIN }, () => 
       const ancre = await jourDe(db, -3);
       await regler(db, s, "pme", true);
       const p = await unePme(db, ancre, "team");
-      await passer(db, ancre);
+      await passerEtPayer(db, ancre);
 
       assert.ok((await demander(db, p, "solo")).descente);
       const r = await demander(db, p, "premium");
@@ -195,7 +195,7 @@ describe("la montée se chiffre comme elle se facture", { skip: !ADMIN }, () => 
       const ancre = await jourDe(db, -5);
       await regler(db, s, "pme", true);
       const p = await unePme(db, ancre, "basic");
-      await passer(db, ancre);
+      await passerEtPayer(db, ancre);
       const avant = await db.query<{ n: string; c: string }>(
         `select (select count(*) from facturation.factures where licence_id = $1)::text as n,
                 (select coalesce(sum(dernier), 0) from facturation.compteurs_factures)::text as c`,

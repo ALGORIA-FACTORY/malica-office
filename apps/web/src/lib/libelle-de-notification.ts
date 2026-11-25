@@ -53,6 +53,8 @@ const GENRES: Record<string, MessageKey> = {
   "facture.emise.pme": "notif.kind.facture.emise.pme",
   // Payée d'abord, la facture naît réglée ; tout paiement confirmé se dit (24 novembre 2026).
   "facture.reglee.pme": "notif.kind.facture.reglee.pme",
+  // Une recharge payée a sa facture, née réglée (R-04, 25 novembre 2026).
+  "facture.recharge.pme": "notif.kind.facture.recharge.pme",
   "paiement.recu": "notif.kind.paiement.recu",
   "paiement.recu.cabinet": "notif.kind.paiement.recu",
   // Une descente programmée que l'échéance refuse se dit (revue du 24 novembre 2026, T6).
@@ -60,6 +62,10 @@ const GENRES: Record<string, MessageKey> = {
   // L'essai gratuit : sa fin proche, et sa fin (25 novembre 2026).
   "essai.fin_proche": "notif.kind.essai.fin_proche",
   "essai.termine": "notif.kind.essai.termine",
+  // Ce qui est dû (D7, D12) : à payer, fermeture proche, fermé.
+  "abonnement.a_payer": "notif.kind.abonnement.a_payer",
+  "abonnement.fermeture_proche": "notif.kind.abonnement.fermeture_proche",
+  "abonnement.ferme": "notif.kind.abonnement.ferme",
 };
 
 export function chaine(payload: Record<string, unknown>, cle: string): string | null {
@@ -194,10 +200,14 @@ export function seMontreIci(kind: string, coque: boolean): boolean {
 const DE_L_ABONNEMENT: ReadonlySet<string> = new Set([
   "facture.emise.pme",
   "facture.reglee.pme",
+  "facture.recharge.pme",
   "paiement.recu",
   "abonnement.descente_refusee",
   "essai.fin_proche",
   "essai.termine",
+  "abonnement.a_payer",
+  "abonnement.fermeture_proche",
+  "abonnement.ferme",
 ]);
 
 function parleDAbonnement(kind: string): boolean {

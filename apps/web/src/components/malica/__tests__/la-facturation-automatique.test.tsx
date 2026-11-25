@@ -47,6 +47,7 @@ const OUVERT: EtatDuPerimetreDeFacturation = {
     passee_le: "2026-11-05T08:10:00.000Z",
     emises: 4,
     deja_emises: 1,
+    demandes: 0,
     rien_a_facturer: 2,
     erreurs: 1,
     detail_erreurs: [
@@ -57,6 +58,11 @@ const OUVERT: EtatDuPerimetreDeFacturation = {
 
 const LIVREE: EtatFacturationAuto = { cabinets: COUPE, pme: COUPE };
 const CABINETS_OUVERTS: EtatFacturationAuto = { cabinets: OUVERT, pme: COUPE };
+/** La PME ouverte : son passage demande, il n'émet rien (D7). */
+const PME_OUVERTE: EtatFacturationAuto = {
+  cabinets: COUPE,
+  pme: { ...OUVERT, dernier: { ...OUVERT.dernier!, emises: 0, demandes: 3, deja_emises: 2 } },
+};
 
 let etat: EtatFacturationAuto = LIVREE;
 const regler = vi.fn(async () => ({}));
@@ -194,5 +200,15 @@ describe("la carte de la facturation automatique", () => {
     await waitFor(() =>
       expect(regler).toHaveBeenCalledWith("cabinets", false, 2, "Incident d'émetteur"),
     );
+  });
+
+  it("côté PME, le passage compte ce qu'il demande, jamais des factures émises", async () => {
+    const c = await carte(PME_OUVERTE);
+    const compte = (cle: string) =>
+      c.pme.querySelector(`[data-compteur="tour.facturation.compteur.${cle}"]`);
+    expect(compte("demandes")!.textContent).toContain("3");
+    expect(compte("dejaDemandees")!.textContent).toContain("2");
+    expect(compte("emises")).toBeNull();
+    expect(compte("deja")).toBeNull();
   });
 });

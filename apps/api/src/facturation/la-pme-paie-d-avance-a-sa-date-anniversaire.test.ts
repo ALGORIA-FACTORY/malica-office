@@ -15,13 +15,14 @@
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { after, describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 
 import pg from "pg";
 
 import { ADRESSE_D_ESSAI, matriculeDEssai } from "../matricule-d-essai.ts";
 import { personnesDEssai } from "../personne-d-essai.ts";
 
+import { payerLesDus, resteDu } from "./decor-d-avance.ts";
 import type { BilanDuJour } from "./demarrer-la-facturation.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
@@ -53,8 +54,19 @@ async function enPersonne(db: pg.PoolClient, id: string): Promise<void> {
   await db.query("select set_config('request.jwt.claim.sub', $1, true)", [id]);
 }
 
-/** Le robot de l'API, le jour `jour`. */
+/**
+ * Le robot de l'API, le jour `jour` ; la PME paie le jour même ce qu'il a rendu dû. Depuis
+ * D7 (25 novembre 2026), le robot ne facture plus : il pose une demande à payer, et la
+ * facture naît au paiement, datée du jour de la demande.
+ */
 async function passer(db: pg.PoolClient, jour: string): Promise<BilanDuJour> {
+  const bilan = await passerSeul(db, jour);
+  await payerLesDus(db);
+  return bilan;
+}
+
+/** Le robot de l'API seul, le jour `jour`. */
+async function passerSeul(db: pg.PoolClient, jour: string): Promise<BilanDuJour> {
   await db.query("reset role");
   await db.query("select set_config('request.jwt.claim.sub', '', true)");
   await db.query("set local role malica_api");
@@ -231,7 +243,21 @@ const millimes = (n: number) => (Math.round(n * 1000) / 1000).toFixed(3);
 
 const fenetre = (f: Facture) => [f.nature, f.couvre_du, f.couvre_au, f.emise_le];
 
+/**
+ * Le jour d'émission d'une facture payée le jour `jour` : elle naît au paiement (D7), et un
+ * paiement ne se date pas avant l'horloge — un jour passé du robot se paie aujourd'hui.
+ */
+let AUJOURDHUI = "";
+const paye = (jour: string) => (jour < AUJOURDHUI ? AUJOURDHUI : jour);
+
 describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () => {
+  before(async () => {
+    const { rows } = await pool!.query<{ j: string }>(
+      `select ((now() at time zone c.fuseau)::date)::text as j
+         from ref.calendrier_juridiction c where c.jurisdiction = 'TN'`,
+    );
+    AUJOURDHUI = rows[0]!.j;
+  });
   after(async () => {
     await pool?.end();
   });
@@ -246,7 +272,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       assert.equal(bilan.pme?.etat, "passee");
       const [f, ...autres] = await facturesDuTitulaire(db, p.licence);
       assert.equal(autres.length, 0);
-      assert.deepEqual(fenetre(f!), ["base", "2026-11-20", "2026-12-20", "2026-11-20"]);
+      assert.deepEqual(fenetre(f!), ["base", "2026-11-20", "2026-12-20", paye("2026-11-20")]);
       assert.equal(f!.periode, "2026-11-01", "la période dit le mois de la facture");
       assert.equal(f!.montant_ht, millimes(await prix(db, "solo", "2026-11-20")), "sans prorata");
       assert.ok(Number(f!.timbre) > 0, "le timbre vient du pack de l'émetteur");
@@ -260,7 +286,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       await passer(db, "2026-12-20");
       const toutes = await facturesDuTitulaire(db, p.licence);
       assert.deepEqual(toutes.map(fenetre), [
-        ["base", "2026-11-20", "2026-12-20", "2026-11-20"],
+        ["base", "2026-11-20", "2026-12-20", paye("2026-11-20")],
         ["base", "2026-12-20", "2027-01-20", "2026-12-20"],
       ]);
     });
@@ -483,7 +509,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
     });
   });
 
-  it("trois passages le même jour : aucun doublon, aucun numéro tiré", async () => {
+  it("trois passages le même jour : aucun doublon, aucun numéro tiré par le robot", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const p = await unePme(db, "2026-11-20");
@@ -497,8 +523,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       );
       const troisieme = await passer(db, "2026-11-20");
       assert.equal(troisieme.pme?.etat, "passee");
-      assert.equal(troisieme.pme?.emises, 0);
-      assert.ok((troisieme.pme?.deja_emises ?? 0) >= 1);
+      assert.equal(troisieme.pme?.emises, 0, "le robot n'émet jamais de facture (D7)");
       const { rows: apres } = await db.query<{ n: string }>(
         "select coalesce(sum(dernier), 0)::text as n from facturation.compteurs_factures",
       );
@@ -546,7 +571,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
     });
   });
 
-  it("le jour même, sans le robot : la souscription a sa facture, la montée paie son complément", async () => {
+  it("le jour même, sans le robot : la souscription est due, la montée paie son complément", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       await db.query("select set_config('TimeZone', plateforme.fuseau_de_la_plateforme(), true)");
@@ -556,6 +581,12 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       const p = await unePme(db, jour);
       // La validation de la transaction : les déclencheurs différés passent.
       await db.query("set constraints all immediate");
+      assert.deepEqual(
+        await facturesDuTitulaire(db, p.licence),
+        [],
+        "rien n'est facturé avant le paiement",
+      );
+      await payerLesDus(db);
       const [f, ...autres] = await facturesDuTitulaire(db, p.licence);
       assert.equal(autres.length, 0);
       assert.equal(f!.nature, "base");
@@ -566,36 +597,40 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       await enPersonne(db, p.titulaire);
       await db.query("select public.forfait_changer('team', $1)", [p.tenant]);
       const { rows: paye } = await db.query<{
-        p: { paiement_id: string; montant_ttc: string; etat: string } | null;
+        p: { paiement_id: string; montant_ttc: string; objet: string } | null;
       }>("select public.paiement_montee_preparer($1) as p", [p.tenant]);
-      const { rows: mes } = await db.query<{ numero: string; montant_ttc: string }>(
-        "select numero, montant_ttc::text from public.mes_factures()",
-      );
       await db.query("reset role");
+      assert.equal(paye[0]!.p!.objet, "montee_demandee", "le complément est dû, pas facturé");
+      assert.deepEqual(
+        (await facturesDuTitulaire(db, p.licence)).map((x) => x.nature),
+        ["base"],
+      );
 
+      await payerLesDus(db);
       const toutes = await facturesDuTitulaire(db, p.licence);
       assert.deepEqual(
         toutes.map((x) => x.nature),
         ["base", "complement"],
       );
-      const { rows: objet } = await db.query<{ objet: string; facture_id: string; ttc: string }>(
-        `select objet, facture_id, montant_ttc::text as ttc from facturation.paiements_en_ligne
-          where id = $1`,
-        [paye[0]!.p!.paiement_id],
+      const { rows: ttc } = await db.query<{ t: string }>(
+        "select montant_ttc::text as t from facturation.factures where id = $1",
+        [toutes[1]!.id],
       );
       assert.equal(
-        objet[0]!.objet,
-        "facture",
-        "le paiement en ligne paie la facture complémentaire",
+        Number(ttc[0]!.t),
+        Number(paye[0]!.p!.montant_ttc),
+        "la facture vaut le paiement",
       );
-      assert.equal(objet[0]!.facture_id, toutes[1]!.id);
+      assert.equal(await resteDu(db, toutes[1]!.id), 0, "le complément naît réglé");
       const { rows: acomptes } = await db.query(
         "select 1 from facturation.paiements_en_ligne where licence_id = $1 and objet = 'montee'",
         [p.licence],
       );
       assert.equal(acomptes.length, 0, "aucun acompte de montée, périmètre ouvert");
-      assert.equal(mes.length, 2, "la page de paiement voit les deux factures");
-      assert.ok(mes.some((m) => m.numero === toutes[1]!.numero && m.montant_ttc === objet[0]!.ttc));
+      await enPersonne(db, p.titulaire);
+      const { rows: mes } = await db.query("select numero from public.mes_factures()");
+      await db.query("reset role");
+      assert.equal(mes.length, 2, "les deux factures, réglées");
     });
   });
 
@@ -610,6 +645,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       await regler(db, s, "pme", true);
       const p = await unePme(db, j[0]!.jour);
       await db.query("set constraints all immediate");
+      await payerLesDus(db);
       await db.query("set constraints all deferred");
 
       await enPersonne(db, p.titulaire);
@@ -705,8 +741,9 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       await regler(db, s, "pme", true);
       const p = await unePme(db, j[0]!.jour);
       await db.query("set constraints all immediate");
+      await payerLesDus(db);
       const [premiere] = await facturesDuTitulaire(db, p.licence);
-      assert.ok(premiere, "la souscription a sa facture le jour même");
+      assert.ok(premiere, "la souscription a sa facture le jour même, à son paiement");
 
       await enPersonne(db, p.titulaire);
       const { rows: m } = await db.query<{

@@ -2778,6 +2778,8 @@ export const fr = {
   "refus.facturation_auto.perimetre_inconnu":
     "Un périmètre de facturation est « cabinets » ou « pme ».",
   "refus.facturation.premier_du_mois": "Une période de facturation commence le premier du mois.",
+  "refus.facturation.acompte_a_rapprocher":
+    "Un acompte de {acompte} déjà encaissé ne couvre qu’une part des {du} dus : à rapprocher à la main.",
   "refus.facturation.destinataire_sans_nom":
     "Le destinataire {destinataire} n’a pas de nom : une facture sans destinataire n’est pas une facture.",
   "refus.facturation.rien_a_facturer": "Rien à facturer pour {periode}.",
@@ -4528,10 +4530,10 @@ export const fr = {
     "1 : le mois qui vient de se clore. Au-delà, des mois plus anciens jamais facturés le seront.",
   "tour.facturation.pme": "PME — d'avance, à la date anniversaire",
   "tour.facturation.pme.aide":
-    "Ce que la PME paie se facture d'avance, le jour anniversaire de son abonnement, sans prorata. Une montée, une place ou une société en plus partent le jour même sur une facture complémentaire ; une descente vaut à l'échéance suivante.",
+    "Ce que la PME doit se chiffre d'avance, le jour anniversaire de son abonnement, sans prorata, et lui est demandé : la facture naît à son paiement, réglée. Une montée, une place ou une société en plus se demandent le jour même ; une descente vaut à l'échéance suivante.",
   "tour.facturation.pme.rattrapage": "Échéances examinées à chaque passage",
   "tour.facturation.pme.rattrapage.aide":
-    "1 : la période en cours. Au-delà, des échéances plus anciennes jamais facturées le seront.",
+    "1 : la période en cours. Au-delà, des échéances plus anciennes jamais payées sont demandées.",
   "tour.facturation.invalide": "Un nombre entier, au moins 1.",
   "tour.facturation.ouvrir": "Ouvrir l'émission",
   "tour.facturation.couper": "Couper l'émission",
@@ -4539,6 +4541,8 @@ export const fr = {
   "tour.facturation.dernier.aucun": "Aucun passage encore.",
   "tour.facturation.compteur.emises": "Émises",
   "tour.facturation.compteur.deja": "Déjà émises",
+  "tour.facturation.compteur.demandes": "Mises à payer",
+  "tour.facturation.compteur.dejaDemandees": "Déjà à payer",
   "tour.facturation.compteur.rien": "Rien à facturer",
   "tour.facturation.compteur.erreurs": "Erreurs",
   "tour.abonnement.report": "Report des lectures",
@@ -4557,7 +4561,6 @@ export const fr = {
   "pme.essai.enCours": "Essai gratuit : il vous reste {jours} jours, jusqu'au {date} inclus.",
   "pme.essai.enCours.dernier": "Essai gratuit : dernier jour, le {date}.",
   "pme.essai.passer": "Passer à l'abonnement",
-  "pme.essai.demanderAuPrincipal": "Seul le propriétaire principal peut passer à l'abonnement.",
   "pme.essai.termine.titre": "Votre essai est terminé",
   "pme.essai.termine.corps":
     "Votre essai gratuit a pris fin le {date}. Votre dossier et vos pièces sont conservés : passez à l'abonnement pour le rouvrir.",
@@ -4568,6 +4571,20 @@ export const fr = {
   "notif.kind.essai.fin_proche": "Votre essai gratuit se termine bientôt.",
   "notif.kind.essai.termine": "Votre essai gratuit est terminé.",
   "refus.essai.fige": "Un essai ne se modifie pas : seule sa fin s'inscrit, une fois.",
+  "pme.abonnement.aPayer":
+    "Votre abonnement est à renouveler : {montant} TTC à régler au plus tard le {date}. La facture naît au paiement.",
+  "pme.abonnement.payer": "Payer",
+  "pme.abonnement.principal": "Seul le propriétaire principal peut payer l'abonnement.",
+  "pme.abonnement.ferme.titre": "Votre dossier est fermé",
+  "pme.abonnement.ferme.corps":
+    "Votre renouvellement n'a pas été réglé au plus tard le {date}. Vos données et vos pièces sont conservées, et aucune facture ni dette n'a été créée : un paiement de {montant} TTC rouvre votre dossier.",
+  "tour.abonnement.delai": "Jours avant la fermeture d'un dossier non renouvelé",
+  "tour.abonnement.delai.aide":
+    "Rien n'est facturé avant le paiement. Passé ce délai sans paiement, le dossier de la société est fermé, sans dette ; le paiement le rouvre.",
+  "tour.abonnement.delai.borne": "Entre 1 et 90.",
+  "notif.kind.abonnement.a_payer": "Votre abonnement est à renouveler.",
+  "notif.kind.abonnement.fermeture_proche": "Votre dossier ferme bientôt sans paiement.",
+  "notif.kind.abonnement.ferme": "Votre dossier est fermé : un paiement le rouvre.",
   "tour.abonnement.annuel.offerts.borne": "Entre 0 et 11.",
   "tour.pannes": "Le journal des pannes",
   "tour.pannes.sous":
@@ -4841,9 +4858,8 @@ export const fr = {
   "pme.reglages.annuel.dates": "Du {du} au {au}. Le mois en cours reste facturé au mois.",
   "pme.reglages.annuel.passer": "Passer à l'année",
   "pme.reglages.annuel.confirmer": "Confirmer : payer {montant} {devise} HT pour l'année",
-  "pme.reglages.annuel.fait": "C'est fait : votre année commence le premier du mois prochain.",
-  "pme.reglages.annuel.fait.aRegler":
-    "C'est fait : votre année commence le premier du mois prochain. Le paiement est dans « À régler ».",
+  "pme.reglages.annuel.fait":
+    "C’est fait : votre année commence le {du}. Elle se paie ce jour-là, avec votre renouvellement ; la facture naît du paiement.",
   "pme.reglages.annuel.enCours": "Abonnement à l'année",
   "pme.reglages.annuel.enCours.sous":
     "{offre}, du {du} au {au}, dont {offerts} mois offerts. Les lectures restent mensuelles.",
@@ -6008,6 +6024,7 @@ export const fr = {
     "Votre changement d'offre n'a pas pu se faire : vous restez sur votre offre actuelle.",
   "notif.kind.paiement.recu": "Votre paiement est bien reçu.",
   "notif.kind.facture.reglee.pme": "Votre facture d’abonnement est réglée.",
+  "notif.kind.facture.recharge.pme": "Votre recharge est réglée, sa facture est prête.",
   "pme.payer.payeur.titre": "Facturé à",
   "pme.payer.payeur.duCompte": "Repris de votre compte : la facture portera ces coordonnées.",
   "pme.payer.payeur.incomplet":

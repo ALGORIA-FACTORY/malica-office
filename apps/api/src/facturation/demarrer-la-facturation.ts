@@ -29,6 +29,10 @@ interface BilanDuPerimetre {
   etat: "coupee" | "deja_passee" | "passee";
   emises?: number;
   deja_emises?: number;
+  /** Périmètre PME : ce qui devient dû est une demande à payer, pas une facture (D7). */
+  demandes?: number;
+  /** Les demandes ouvertes par ce passage : la licence et son paiement à régler. */
+  a_payer?: Array<{ licence: string; paiement: string }>;
   rien_a_facturer?: number;
   erreurs?: number;
 }
@@ -98,8 +102,9 @@ export function demarrerLaFacturation() {
         const b = bilan?.[p];
         if (b?.etat !== "passee") continue;
         console.log(
-          `[facturation] ${bilan!.jour} ${p} — ${b.emises} émise(s), ${b.deja_emises} déjà ` +
-            `émise(s), ${b.rien_a_facturer} sans rien à facturer, ${b.erreurs} erreur(s)`,
+          `[facturation] ${bilan!.jour} ${p} — ${b.emises} émise(s), ${b.demandes ?? 0} à ` +
+            `payer, ${b.deja_emises} déjà faite(s), ${b.rien_a_facturer} sans rien à facturer, ` +
+            `${b.erreurs} erreur(s)`,
         );
       }
     } catch (e) {

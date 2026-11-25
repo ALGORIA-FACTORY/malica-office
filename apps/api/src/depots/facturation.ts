@@ -697,7 +697,7 @@ export const facturation = {
    * revient en `refus.annuel.ferme?motif=<code>`.
    */
   async souscrireAnnuel(db: Requete, tenantId?: string) {
-    const { rows } = await db.query<{ r: { engagement: string; paiement: unknown } }>(
+    const { rows } = await db.query<{ r: { engagement: string; du: string } }>(
       `select public.annuel_souscrire($1) as r`,
       [tenantId ?? null],
     );
@@ -722,6 +722,17 @@ export const facturation = {
    */
   async monEssai(db: Requete, tenantId: string) {
     const { rows } = await db.query<{ r: unknown }>(`select public.mon_essai($1) as r`, [tenantId]);
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Ce que la société doit et n'a pas encore payé (D7) : le montant, le paiement à régler, et
+   * le jour où son dossier ferme sans paiement (D12). `null` quand rien n'est dû.
+   */
+  async monEcheance(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{ r: unknown }>(`select public.mon_echeance($1) as r`, [
+      tenantId,
+    ]);
     return rows[0]?.r ?? null;
   },
 

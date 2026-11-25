@@ -78,10 +78,13 @@ class ErreurDeJointure extends Error {
 }
 
 /**
- * L'essai gratuit (25 novembre 2026) : une ligne en haut tant qu'il court, et le dossier
- * fermé quand il est terminé sans paiement. Commerce seulement : jamais dans la coque.
+ * L'abonnement (25 novembre 2026) : une ligne en haut tant que l'essai court ou qu'un dû
+ * attend son paiement, et le dossier fermé quand l'un ou l'autre a passé son terme.
+ * Commerce seulement : jamais dans la coque.
  */
-const GardeDEssai = __COMMERCE__ ? lazy(() => import("@/components/malica/essai-gratuit")) : null;
+const GardeDAbonnement = __COMMERCE__
+  ? lazy(() => import("@/components/malica/garde-d-abonnement"))
+  : null;
 
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
@@ -853,11 +856,11 @@ function PmeLayout() {
                 },
               }}
             >
-              {GardeDEssai ? (
+              {GardeDAbonnement ? (
                 <Suspense fallback={null}>
-                  <GardeDEssai>
+                  <GardeDAbonnement>
                     <Outlet key={numeroAjout} />
-                  </GardeDEssai>
+                  </GardeDAbonnement>
                 </Suspense>
               ) : (
                 <Outlet key={numeroAjout} />

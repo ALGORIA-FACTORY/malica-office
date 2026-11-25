@@ -2591,6 +2591,8 @@ export const ar: Dict = {
   "refus.fonction.inconnue": "هذه الوظيفة غير معروفة لدى برج المراقبة.",
   "refus.facturation_auto.perimetre_inconnu": "نطاق الفوترة هو «cabinets» أو «pme».",
   "refus.facturation.premier_du_mois": "تبدأ فترة الفوترة في أول الشهر.",
+  "refus.facturation.acompte_a_rapprocher":
+    "عربون بقيمة {acompte} مقبوض سابقاً لا يغطي إلا جزءاً من {du} المستحقة: تجب المطابقة يدوياً.",
   "refus.facturation.destinataire_sans_nom":
     "المرسَل إليه {destinataire} بلا اسم: الفاتورة بلا مرسَل إليه ليست فاتورة.",
   "refus.facturation.rien_a_facturer": "لا شيء للفوترة عن {periode}.",
@@ -4221,10 +4223,10 @@ export const ar: Dict = {
     "1: الشهر الذي أُغلق للتو. وما زاد على ذلك، ستُفوتر الأشهر الأقدم التي لم تُفوتر قط.",
   "tour.facturation.pme": "المؤسسات الصغرى — مسبقاً، في تاريخ الذكرى",
   "tour.facturation.pme.aide":
-    "ما تدفعه المؤسسة يُفوتر مسبقاً، في تاريخ ذكرى اشتراكها، دون تناسب. الترقية أو مقعد أو شركة إضافية تخرج في اليوم نفسه بفاتورة تكميلية؛ والتخفيض يسري عند الاستحقاق التالي.",
+    "ما على المؤسسة يُحتسب مسبقاً، في تاريخ ذكرى اشتراكها، دون تناسب، ويُطلب منها: تصدر الفاتورة عند الدفع، مسدَّدة. الترقية أو مقعد أو شركة إضافية تُطلب في اليوم نفسه؛ والتخفيض يسري عند الاستحقاق التالي.",
   "tour.facturation.pme.rattrapage": "الاستحقاقات التي تُفحص في كل مرور",
   "tour.facturation.pme.rattrapage.aide":
-    "1: الفترة الجارية. وما زاد على ذلك، ستُفوتر الاستحقاقات الأقدم التي لم تُفوتر قط.",
+    "1: الفترة الجارية. وما زاد على ذلك، تُطلب الاستحقاقات الأقدم التي لم تُدفع قط.",
   "tour.facturation.invalide": "عدد صحيح، 1 على الأقل.",
   "tour.facturation.ouvrir": "فتح الإصدار",
   "tour.facturation.couper": "إيقاف الإصدار",
@@ -4232,6 +4234,8 @@ export const ar: Dict = {
   "tour.facturation.dernier.aucun": "لا مرور بعد.",
   "tour.facturation.compteur.emises": "صادرة",
   "tour.facturation.compteur.deja": "صادرة من قبل",
+  "tour.facturation.compteur.demandes": "مطلوبة للدفع",
+  "tour.facturation.compteur.dejaDemandees": "مطلوبة من قبل",
   "tour.facturation.compteur.rien": "لا شيء للفوترة",
   "tour.facturation.compteur.erreurs": "أخطاء",
   "tour.abonnement.report": "ترحيل القراءات",
@@ -4250,7 +4254,6 @@ export const ar: Dict = {
   "pme.essai.enCours": "تجربة مجانية: تبقى لكم {jours} أيام، حتى {date} ضمنًا.",
   "pme.essai.enCours.dernier": "تجربة مجانية: اليوم الأخير، {date}.",
   "pme.essai.passer": "الاشتراك",
-  "pme.essai.demanderAuPrincipal": "وحده المالك الرئيسي يمكنه الاشتراك.",
   "pme.essai.termine.titre": "انتهت فترة التجربة",
   "pme.essai.termine.corps":
     "انتهت فترة التجربة المجانية يوم {date}. ملفكم ووثائقكم محفوظة: اشتركوا لإعادة فتحه.",
@@ -4261,6 +4264,20 @@ export const ar: Dict = {
   "notif.kind.essai.fin_proche": "تنتهي تجربتكم المجانية قريبًا.",
   "notif.kind.essai.termine": "انتهت تجربتكم المجانية.",
   "refus.essai.fige": "لا تُعدَّل التجربة: تُسجَّل نهايتها فقط، مرة واحدة.",
+  "pme.abonnement.aPayer":
+    "حان موعد تجديد اشتراككم: {montant} شامل الأداء تُدفع في أجل أقصاه {date}. تصدر الفاتورة عند الدفع.",
+  "pme.abonnement.payer": "الدفع",
+  "pme.abonnement.principal": "وحده المالك الرئيسي يمكنه دفع الاشتراك.",
+  "pme.abonnement.ferme.titre": "أُغلق ملفكم",
+  "pme.abonnement.ferme.corps":
+    "لم يُدفع تجديدكم في أجل أقصاه {date}. بياناتكم ووثائقكم محفوظة، ولم تُنشأ أي فاتورة أو دين: دفع {montant} شامل الأداء يعيد فتح ملفكم.",
+  "tour.abonnement.delai": "الأيام قبل إغلاق ملف غير مجدَّد",
+  "tour.abonnement.delai.aide":
+    "لا تصدر أي فاتورة قبل الدفع. بعد هذا الأجل دون دفع، يُغلق ملف الشركة دون دين؛ والدفع يعيد فتحه.",
+  "tour.abonnement.delai.borne": "بين 1 و90.",
+  "notif.kind.abonnement.a_payer": "حان موعد تجديد اشتراككم.",
+  "notif.kind.abonnement.fermeture_proche": "يُغلق ملفكم قريبًا دون دفع.",
+  "notif.kind.abonnement.ferme": "أُغلق ملفكم: الدفع يعيد فتحه.",
   "tour.abonnement.annuel.offerts.borne": "بين 0 و11.",
   "tour.pannes": "سجل الأعطال",
   "tour.pannes.sous":
@@ -4517,8 +4534,8 @@ export const ar: Dict = {
   "pme.reglages.annuel.dates": "من {du} إلى {au}. يبقى الشهر الجاري مفوترًا شهريًا.",
   "pme.reglages.annuel.passer": "الانتقال إلى الدفع السنوي",
   "pme.reglages.annuel.confirmer": "تأكيد: دفع {montant} {devise} دون أداء للسنة",
-  "pme.reglages.annuel.fait": "تم: تبدأ سنتك في أول الشهر القادم.",
-  "pme.reglages.annuel.fait.aRegler": "تم: تبدأ سنتك في أول الشهر القادم. الدفع في «للخلاص».",
+  "pme.reglages.annuel.fait":
+    "تم: تبدأ سنتك في {du}. تُدفع في ذلك اليوم مع تجديدك؛ وتصدر الفاتورة عند الدفع.",
   "pme.reglages.annuel.enCours": "اشتراك سنوي",
   "pme.reglages.annuel.enCours.sous":
     "{offre}، من {du} إلى {au}، أشهر مجانية: {offerts}. تبقى القراءات شهرية.",
@@ -5542,6 +5559,7 @@ export const ar: Dict = {
   "notif.kind.abonnement.descente_refusee": "تعذّر تغيير عرضكم: تبقون على عرضكم الحالي.",
   "notif.kind.paiement.recu": "تم استلام دفعتكم.",
   "notif.kind.facture.reglee.pme": "فاتورة اشتراككم مدفوعة.",
+  "notif.kind.facture.recharge.pme": "شحنكم مدفوع، وفاتورته جاهزة.",
   "pme.payer.payeur.titre": "الفاتورة باسم",
   "pme.payer.payeur.duCompte": "مأخوذة من حسابكم: ستحمل الفاتورة هذه البيانات.",
   "pme.payer.payeur.incomplet":

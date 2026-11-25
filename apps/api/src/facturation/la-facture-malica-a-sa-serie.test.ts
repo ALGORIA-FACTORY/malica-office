@@ -143,14 +143,19 @@ async function unePme(db: pg.PoolClient, nom = "PME facturée"): Promise<Pme> {
   return { titulaire, tenant, licence };
 }
 
-/** Le robot facture la PME le `JOUR` ; rend sa facture de base. */
+/**
+ * La PME est facturée le `JOUR`, dans le geste qui encaisse (D7 : aucune facture avant le
+ * paiement) ; rend sa facture de base. La série se juge ici, pas le paiement.
+ */
 async function facturer(db: pg.PoolClient, s: Socle, p: Pme) {
   await enAdmin(db);
+  await db.query("select set_config('malica.paye_d_abord_le', $1, true)", [JOUR]);
   await db.query("select facturation.facturation_du_titulaire($1, $2::date, 1, $3)", [
     p.licence,
     JOUR,
     s.operateur,
   ]);
+  await db.query("select set_config('malica.paye_d_abord_le', '', true)");
   const { rows } = await db.query<{ id: string; numero: string }>(
     `select id, numero from facturation.factures
       where licence_id = $1 and payeur_type = 'titulaire' order by created_at, numero`,
@@ -362,7 +367,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
     });
   });
 
-  it("chaque facture de PME avertit son titulaire, avec tous les jetons de ses gabarits", async () => {
+  it("chaque facture de PME naît réglée et avertit son titulaire, avec tous les jetons de ses gabarits", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const p = await unePme(db);
@@ -377,7 +382,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
         sujet_cle: string;
       }>(
         `select canal, decision, donnees, titre_rendu, corps_rendu, sujet_cle from notif.envois
-          where destinataire = $1 and code = 'facture.emise.pme' order by canal`,
+          where destinataire = $1 and code = 'facture.reglee.pme' order by canal`,
         [p.titulaire],
       );
       assert.deepEqual(
@@ -413,7 +418,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
         libelles: Record<string, string>;
         carte: LigneDeCarte[] | null;
       }>("select * from notif.reserver_courriels(1000000, interval '10 minutes')");
-      const c = file.find((x) => x.code === "facture.emise.pme" && x.email.includes(p.titulaire));
+      const c = file.find((x) => x.code === "facture.reglee.pme" && x.email.includes(p.titulaire));
       assert.ok(c, "la file rend le courriel de la facture");
       assert.equal(c.action_route, "/pme/reglages?page=abonnement");
       const message = courrielDeNotification({
@@ -545,7 +550,8 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const p = await unePme(db);
-      // Le courriel est fermé à l'émission, comme les factures émises avant ce courriel.
+      // Le courriel est fermé à l'émission, comme les factures émises avant ce courriel. Le
+      // renvoi dit l'état du jour (réglée ou à régler) : le code suit l'encaissement.
       await db.query(
         `insert into notif.preferences (user_id, email_actif) values ($1, false)
          on conflict (user_id) do update set email_actif = false`,
@@ -559,7 +565,9 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
         (
           await db.query<{ decision: string }>(
             `select decision from notif.envois where destinataire = $1
-                and code = 'facture.emise.pme' and canal = 'email' order by cree_le`,
+                and code like 'facture.%.pme' and canal = 'email'
+              -- Une transaction : \`cree_le\` ne départage pas ; l'abandon précède le renvoi.
+              order by cree_le, decision = 'a_remettre'`,
             [p.titulaire],
           )
         ).rows.map((r) => r.decision);
@@ -567,7 +575,7 @@ describe("la facture de Malica Office", { skip: !ADMIN }, () => {
         (
           await db.query(
             `select 1 from notif.envois where destinataire = $1
-                and code = 'facture.emise.pme' and canal = 'app'`,
+                and code like 'facture.%.pme' and canal = 'app'`,
             [p.titulaire],
           )
         ).rows.length;

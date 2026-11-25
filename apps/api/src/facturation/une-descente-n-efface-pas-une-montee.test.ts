@@ -30,6 +30,8 @@ import {
   ouvrirLePerimetrePme,
   paliers,
   passer,
+  passerEtPayer,
+  payerLesDus,
   prix,
   uneComptabilite,
   type Decor,
@@ -173,7 +175,7 @@ describe("une descente n'efface pas une montée", { skip: !ADMIN }, () => {
     });
   });
 
-  it("périmètre ouvert : le complément de la montée reste dû après la descente, et l'échéance suivante part au prix de Team", async () => {
+  it("périmètre ouvert : la montée reste due après la descente, sans avoir ; payée, son complément naît, puis l'échéance part au prix de Team", async () => {
     await aBlanc(async (db) => {
       const d = await decor(db, "solo");
       const [solo, team, premium] = [
@@ -182,7 +184,7 @@ describe("une descente n'efface pas une montée", { skip: !ADMIN }, () => {
         await prix(db, "premium"),
       ];
       await ouvrirLePerimetrePme(db, d);
-      await passer(db, d.mois);
+      await passerEtPayer(db, d.mois);
       const [base] = await facturesDAvance(db, d.licence);
       assert.equal(base!.nature, "base");
       assert.equal(base!.part_mensuelle_ht, solo);
@@ -191,28 +193,22 @@ describe("une descente n'efface pas une montée", { skip: !ADMIN }, () => {
         db.query("select public.forfait_changer('premium', $1)", [d.tenant]),
       );
       const aPayer = await monteeARegler(db, d);
+      assert.ok(aPayer, "la montée se règle en ligne");
       const avant = await facturesDAvance(db, d.licence);
-      const complement = avant.find((f) => f.nature === "complement");
-      assert.ok(complement, "la montée émet son complément le jour même");
-      assert.equal(complement.part_mensuelle_ht, millimes(premium - solo));
-      assert.equal(
-        complement.montant_ht,
-        millimes(((premium - solo) * d.joursRestants) / d.joursDuMois),
+      assert.deepEqual(
+        avant.map((f) => f.nature),
+        ["base"],
+        "D7 : aucune facture de complément avant son paiement",
       );
-      assert.ok(aPayer, "le complément se règle en ligne");
 
-      // La descente, sans avoir réglé.
+      // La descente, sans avoir réglé : ni avoir ni facture, la même demande reste due.
       await enPersonne(db, d.titulaire, () =>
         db.query("select public.forfait_changer('team', $1)", [d.tenant]),
       );
       await passer(db, d.jour);
-      assert.deepEqual(
-        await facturesDAvance(db, d.licence),
-        avant,
-        "ni avoir ni facture de plus : le complément reste dû",
-      );
+      assert.deepEqual(await facturesDAvance(db, d.licence), avant);
       const encore = await monteeARegler(db, d);
-      assert.ok(encore, "le complément reste à régler après la descente");
+      assert.ok(encore, "la montée reste à régler après la descente");
       assert.equal(encore.paiement_id, aPayer.paiement_id);
 
       const jours = await jourParJour(db, d.licence, d.jour, d.moisDApres);
@@ -221,7 +217,19 @@ describe("une descente n'efface pas une montée", { skip: !ADMIN }, () => {
         [d.moisSuivant, "team", 0, team],
       ]);
 
-      await passer(db, d.moisSuivant);
+      // Payée : le complément des jours Premium naît, réglé.
+      await payerLesDus(db);
+      const complement = (await facturesDAvance(db, d.licence)).find(
+        (f) => f.nature === "complement",
+      );
+      assert.ok(complement, "payée, la montée a son complément");
+      assert.equal(complement.part_mensuelle_ht, millimes(premium - solo));
+      assert.equal(
+        complement.montant_ht,
+        millimes(((premium - solo) * d.joursRestants) / d.joursDuMois),
+      );
+
+      await passerEtPayer(db, d.moisSuivant);
       const toutes = await facturesDAvance(db, d.licence);
       assert.equal(toutes.length, 3);
       assert.equal(toutes[2]!.couvre_du, d.moisSuivant);

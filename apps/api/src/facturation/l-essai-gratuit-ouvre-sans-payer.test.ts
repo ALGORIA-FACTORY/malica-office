@@ -42,7 +42,7 @@ import { uneOrganisation } from "./decor-de-facture.ts";
 async function reglerLEssai(db: pg.PoolClient, s: Socle, jours: number) {
   await enPersonne(db, s.operateur);
   await db.query(
-    "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, $1::smallint, 'Essai gratuit')",
+    "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, $1::smallint, 14::smallint, 'Essai gratuit')",
     [jours],
   );
   await db.query("reset role");
@@ -116,7 +116,7 @@ describe("l'essai gratuit ouvre sans payer", { skip: !ADMIN }, () => {
       await db.query("savepoint refus");
       await assert.rejects(
         db.query(
-          "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, 30::smallint, 'x')",
+          "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, 30::smallint, 14::smallint, 'x')",
         ),
         /refus\.reserve\.plateforme/,
       );
@@ -180,8 +180,12 @@ describe("l'essai gratuit ouvre sans payer", { skip: !ADMIN }, () => {
       await db.query("reset role");
 
       await db.query("set local role malica_api");
-      const { rows: n1 } = await db.query<{ n: number }>("select notif.prevenir_les_essais() as n");
-      const { rows: n2 } = await db.query<{ n: number }>("select notif.prevenir_les_essais() as n");
+      const { rows: n1 } = await db.query<{ n: number }>(
+        "select notif.prevenir_les_abonnements() as n",
+      );
+      const { rows: n2 } = await db.query<{ n: number }>(
+        "select notif.prevenir_les_abonnements() as n",
+      );
       await db.query("reset role");
       assert.equal(n2[0]!.n, 0, "l'avis ne se répète pas");
       const { rows: envois } = await db.query<{ code: string; canal: string }>(

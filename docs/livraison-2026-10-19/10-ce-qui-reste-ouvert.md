@@ -1162,10 +1162,38 @@ Ouvert :
 - **CGV inchangées** (décision du CEO, 25 novembre 2026) : l'essai est une condition SPÉCIFIQUE, pas générale.
   Ses termes sont ceux de chaque essai : les jours figés à sa naissance (`facturation.essais`, avec le réglage de la
   tour qui les a donnés), dits au client par l'écran et par les avis de fin proche et de fin.
-- **Essai réglé à 0** : la naissance émet toujours une base Basic impayée le jour même (écart 1.8 de la revue du
-  25/11). À régler avec « payer d'abord » à la naissance si la tour coupe l'essai.
+- ~~**Essai réglé à 0** : la naissance émet une base Basic impayée le jour même (1.8).~~ Réglé par
+  `20261231360000` (D7) : la naissance pose une demande à payer, la facture naît du paiement.
 - **Coque Android** : sans commerce, elle n'affiche ni l'essai ni sa fin ; la base refuse déjà ce qu'un dossier
   fermé ne peut faire (`app.licence_active` : pièces, lectures), le reste se lit.
 - **R-C** (le client paie seul, case cochée par la comptabilité) : l'essai s'y appliquera quand l'état existera.
 - **Fermeture « entière »** : l'écran remplace toute page de la PME par la fin d'essai, sauf le paiement ; côté
   base, les gestes tenus par `app.licence_active` sont refusés. Les autres portes ne lisent pas encore l'essai.
+
+### Aucune facture avant le paiement (décisions du CEO D6, D7, D12, 25 novembre 2026 — lot A)
+
+Réglé par `20261231360000` : côté PME, le robot et les changements posent une **demande à payer** (une seule
+ouverte par licence, rechiffrée si ce qui est dû change) ; la facture naît du paiement, réglée, au montant du
+paiement ; non payé dans le délai réglé en tour (`renouvellement_delai_jours`, 14 par défaut) le dossier ferme,
+sans facture ni dette, et le paiement le rouvre. Avis `abonnement.a_payer`, `fermeture_proche`, `ferme` avec le
+lien de paiement Malica. Les factures suivent la licence (R-01). Une recharge payée a sa facture au paiement, même
+sur une licence payée par un cabinet (R-04). L'année se paie à son début, avec le renouvellement (1.6). Un second
+lien payé pour un même paiement se trace en trop-perçu (8.3). La tour compte des demandes côté PME.
+
+Ouvert :
+
+- **Recharge non payée** (automatique, ou achetée sans payer son lien) sur une licence **payée par un cabinet** :
+  ses lectures servent, mais aucune facture de base de la PME ne la porte. Tranché par défaut : rien n'est facturé
+  à personne. **Au dirigeant** : la recharge d'un client pris en charge va-t-elle au relevé du cabinet (lot B), ou
+  se paie-t-elle d'abord par la PME avant de servir ?
+- **Acompte d'avant D7 qui ne couvre qu'une part** d'une échéance : le passage refuse
+  (`refus.facturation.acompte_a_rapprocher`, visible dans les erreurs du passage en tour) au lieu de demander un
+  montant faux. Le rapprochement se fera par la porte « encaisser un virement » / avoir exceptionnel (lot B).
+  Attendu : aucun cas hors bac à sable (les paiements du pilote sont en sandbox Flouci) — **INCERTAIN**, à vérifier
+  sur la base du pilote avant l'ouverture de l'émission automatique.
+- **Trop-perçu** (double lien payé, paiement supérieur à la facture) : tracé au journal (`paiement.trop_percu`),
+  pas encore listé en tour ni remboursable par une porte (lot B).
+- **Reçu de paiement en anglais et en arabe** : l'objet du paiement (`{{objet}}`) est le libellé de la ligne de
+  facture, en français (la facture est en français). À traduire par genre de paiement (lot E, vocabulaire).
+- **Deux courriels pour un paiement** : le reçu (`paiement.recu`) et la facture réglée. Décision du 24 novembre
+  (« tout paiement confirmé se dit ») ; à fondre en un seul reçu-facture si le CEO le veut (D6, « comme Anthropic »).

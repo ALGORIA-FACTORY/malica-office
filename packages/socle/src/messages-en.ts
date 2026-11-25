@@ -2687,6 +2687,8 @@ export const en: Dict = {
   "refus.fonction.inconnue": "The control tower does not know this feature.",
   "refus.facturation_auto.perimetre_inconnu": "An invoicing scope is “cabinets” or “pme”.",
   "refus.facturation.premier_du_mois": "A billing period starts on the first of the month.",
+  "refus.facturation.acompte_a_rapprocher":
+    "A deposit of {acompte} already received covers only part of the {du} due: reconcile it by hand.",
   "refus.facturation.destinataire_sans_nom":
     "Recipient {destinataire} has no name: an invoice without a recipient is not an invoice.",
   "refus.facturation.rien_a_facturer": "Nothing to invoice for {periode}.",
@@ -4398,10 +4400,10 @@ export const en: Dict = {
     "1: the month that has just closed. Beyond that, older months never invoiced will be.",
   "tour.facturation.pme": "SMEs — in advance, on the anniversary date",
   "tour.facturation.pme.aide":
-    "What the SME pays is invoiced in advance, on its subscription's anniversary date, without proration. An upgrade, an extra seat or company goes out the same day on a complementary invoice; a downgrade applies at the next due date.",
+    "What the SME owes is priced in advance, on its subscription's anniversary date, without proration, and requested from it: the invoice is issued when it pays, already settled. An upgrade, an extra seat or company is requested the same day; a downgrade applies at the next due date.",
   "tour.facturation.pme.rattrapage": "Due dates examined on each run",
   "tour.facturation.pme.rattrapage.aide":
-    "1: the current period. Beyond that, older due dates never invoiced will be.",
+    "1: the current period. Beyond that, older due dates never paid are requested.",
   "tour.facturation.invalide": "A whole number, at least 1.",
   "tour.facturation.ouvrir": "Open issuing",
   "tour.facturation.couper": "Turn issuing off",
@@ -4409,6 +4411,8 @@ export const en: Dict = {
   "tour.facturation.dernier.aucun": "No run yet.",
   "tour.facturation.compteur.emises": "Issued",
   "tour.facturation.compteur.deja": "Already issued",
+  "tour.facturation.compteur.demandes": "Requested",
+  "tour.facturation.compteur.dejaDemandees": "Already requested",
   "tour.facturation.compteur.rien": "Nothing to invoice",
   "tour.facturation.compteur.erreurs": "Errors",
   "tour.abonnement.report": "Carry-over of reads",
@@ -4427,7 +4431,6 @@ export const en: Dict = {
   "pme.essai.enCours": "Free trial: {jours} days left, until {date} included.",
   "pme.essai.enCours.dernier": "Free trial: last day, {date}.",
   "pme.essai.passer": "Subscribe",
-  "pme.essai.demanderAuPrincipal": "Only the principal owner can subscribe.",
   "pme.essai.termine.titre": "Your trial has ended",
   "pme.essai.termine.corps":
     "Your free trial ended on {date}. Your file and documents are kept: subscribe to reopen it.",
@@ -4438,6 +4441,20 @@ export const en: Dict = {
   "notif.kind.essai.fin_proche": "Your free trial ends soon.",
   "notif.kind.essai.termine": "Your free trial has ended.",
   "refus.essai.fige": "A trial cannot be changed: only its end is recorded, once.",
+  "pme.abonnement.aPayer":
+    "Your subscription is due for renewal: {montant} incl. VAT to pay by {date}. The invoice is issued on payment.",
+  "pme.abonnement.payer": "Pay",
+  "pme.abonnement.principal": "Only the principal owner can pay the subscription.",
+  "pme.abonnement.ferme.titre": "Your file is closed",
+  "pme.abonnement.ferme.corps":
+    "Your renewal was not paid by {date}. Your data and documents are kept, and no invoice or debt was created: a payment of {montant} incl. VAT reopens your file.",
+  "tour.abonnement.delai": "Days before an unrenewed file closes",
+  "tour.abonnement.delai.aide":
+    "Nothing is invoiced before payment. After this delay without payment, the company's file is closed, without debt; payment reopens it.",
+  "tour.abonnement.delai.borne": "Between 1 and 90.",
+  "notif.kind.abonnement.a_payer": "Your subscription is due for renewal.",
+  "notif.kind.abonnement.fermeture_proche": "Your file closes soon without payment.",
+  "notif.kind.abonnement.ferme": "Your file is closed: a payment reopens it.",
   "tour.abonnement.annuel.offerts.borne": "Between 0 and 11.",
   "tour.pannes": "The failure log",
   "tour.pannes.sous":
@@ -4705,9 +4722,8 @@ export const en: Dict = {
   "pme.reglages.annuel.dates": "From {du} to {au}. The current month stays billed monthly.",
   "pme.reglages.annuel.passer": "Switch to yearly",
   "pme.reglages.annuel.confirmer": "Confirm: pay {montant} {devise} excl. VAT for the year",
-  "pme.reglages.annuel.fait": "Done: your year starts on the first of next month.",
-  "pme.reglages.annuel.fait.aRegler":
-    "Done: your year starts on the first of next month. The payment is under “To pay”.",
+  "pme.reglages.annuel.fait":
+    "Done: your year starts on {du}. It is paid that day, with your renewal; the invoice is issued on payment.",
   "pme.reglages.annuel.enCours": "Yearly subscription",
   "pme.reglages.annuel.enCours.sous":
     "{offre}, from {du} to {au}, free months: {offerts}. Reads stay monthly.",
@@ -5782,6 +5798,7 @@ export const en: Dict = {
     "Your plan change could not be made: you stay on your current plan.",
   "notif.kind.paiement.recu": "Your payment has been received.",
   "notif.kind.facture.reglee.pme": "Your subscription invoice is paid.",
+  "notif.kind.facture.recharge.pme": "Your top-up is paid; its invoice is ready.",
   "pme.payer.payeur.titre": "Billed to",
   "pme.payer.payeur.duCompte": "Taken from your account: the invoice will show these details.",
   "pme.payer.payeur.incomplet":

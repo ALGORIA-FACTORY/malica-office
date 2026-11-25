@@ -31,7 +31,7 @@ import {
   millimes,
   ouvrirLePerimetrePme,
   paliers,
-  passer,
+  passerEtPayer,
   prix,
   regler,
   uneComptabilite,
@@ -186,7 +186,7 @@ describe("un jour ne se paie pas deux fois", { skip: !ADMIN }, () => {
       await enPersonne(db, d.titulaire, () =>
         db.query("select public.forfait_changer('premium', $1)", [d.tenant]),
       );
-      await passer(db, d.jour);
+      await passerEtPayer(db, d.jour);
       const [complement, ...autres] = await facturesDAvance(db, d.licence);
       assert.equal(autres.length, 0);
       assert.equal(complement!.nature, "complement");
@@ -210,7 +210,7 @@ describe("un jour ne se paie pas deux fois", { skip: !ADMIN }, () => {
       );
       // Rien de plus n'est facturé à la PME d'ici là : son complément couvre ces
       // jours. À l'échéance, elle ne paie plus que ce qui dépasse Team.
-      await passer(db, echeance);
+      await passerEtPayer(db, echeance);
       const [, suivante, ...plus] = await facturesDAvance(db, d.licence);
       assert.equal(plus.length, 0);
       assert.equal(suivante!.couvre_du, echeance);

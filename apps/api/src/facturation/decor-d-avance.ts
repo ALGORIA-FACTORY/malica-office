@@ -11,7 +11,9 @@ import pg from "pg";
 
 import { personnesDEssai } from "../personne-d-essai.ts";
 
-import { uneOrganisation } from "./decor-de-facture.ts";
+import { payerEnLigne, payerLesDus, uneOrganisation } from "./decor-de-facture.ts";
+
+export { payerLesDus };
 
 import type { BilanDuJour } from "./demarrer-la-facturation.ts";
 
@@ -241,18 +243,17 @@ export async function offreEnCours(db: pg.PoolClient, p: Pme): Promise<string> {
 
 /** Le prestataire confirme le paiement (un prestataire qui fait entrer l'argent). */
 export async function payer(db: pg.PoolClient, p: Pme, id: string) {
-  await enPersonne(db, p.titulaire);
-  await db.query(
-    "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-1', 'https://test.clictopay.com/pay/REF-1', '{}', 'visa') from cgv",
-    [id],
-  );
-  await db.query(
-    "select public.paiement_inscrire($1, 'paye', 'clictopay', 'REF-1', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
-    [id],
-  );
+  await payerEnLigne(db, p.titulaire, id);
   await db.query("reset role");
   await db.query("set constraints all immediate");
   await db.query("set constraints all deferred");
+}
+
+/** Le robot passe le `jour`, et la PME paie le jour même ce qu'il a rendu dû (D7). */
+export async function passerEtPayer(db: pg.PoolClient, jour: string): Promise<BilanDuJour> {
+  const bilan = await passer(db, jour);
+  await payerLesDus(db);
+  return bilan;
 }
 
 export async function resteDu(db: pg.PoolClient, facture: string): Promise<number> {

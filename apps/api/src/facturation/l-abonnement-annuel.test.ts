@@ -102,7 +102,7 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       )
     ).rows[0]!.m;
 
-  it("l'année se propose, se souscrit, se paie, et ferme la descente", async () => {
+  it("l'année se propose, se souscrit sans rien payer d'avance, et ferme la descente", async () => {
     await aBlanc(async (db) => {
       const s = await societeSolo(db);
       const operateur = await emetteur(db);
@@ -136,15 +136,20 @@ describe("l'abonnement annuel", { skip: !ADMIN }, () => {
       assert.ok(avant.proposition.ttc !== null, "le TTC vient de la fiscalité de la facture");
 
       const r = await sous(db, s.principal, async () => {
-        const { rows } = await db.query<{
-          r: { paiement: { objet: string; montant_ht: string; montant_ttc: string } };
-        }>("select public.annuel_souscrire($1) as r", [s.tenant]);
+        const { rows } = await db.query<{ r: { engagement: string; du: string } }>(
+          "select public.annuel_souscrire($1) as r",
+          [s.tenant],
+        );
         return rows[0]!.r;
       });
-      assert.equal(r.paiement.objet, "annuel");
-      assert.equal(Number(r.paiement.montant_ht), prix * (12 - offerts));
-      // Recette du 11 novembre (1.8) : « À régler » porte le TTC annoncé, timbre compris.
-      assert.equal(Number(r.paiement.montant_ttc), Number(avant.proposition.ttc));
+      assert.equal(r.du, avant.proposition.du, "l'année commence où elle était proposée");
+      // D7 (25 novembre 2026) : rien ne se paie à la souscription. L'année se paie à son
+      // début, avec le renouvellement, et sa facture naît de ce paiement, au même montant (1.6).
+      const { rows: acomptes } = await db.query(
+        "select 1 from facturation.paiements_en_ligne where engagement_id = $1",
+        [r.engagement],
+      );
+      assert.equal(acomptes.length, 0, "aucun acompte annuel");
       const enCours = await sous(db, s.principal, async () => {
         const { rows } = await db.query<{ r: { en_cours: { ttc: string } } }>(
           "select public.mon_annuel($1) as r",

@@ -119,10 +119,20 @@ function UnPerimetre({
   const date = (iso: string) =>
     new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(new Date(iso));
   const qui = r?.decide_par_nom ?? r?.decide_par_email ?? null;
+  // Côté PME, le passage demande ce qui est dû et n'émet rien (D7) : ses compteurs le disent.
+  const demande = perimetre.code === "pme";
   const compteurs: Array<{ cle: MessageKey; n: number; couleur: string }> = dernier
     ? [
-        { cle: "tour.facturation.compteur.emises", n: dernier.emises, couleur: "" },
-        { cle: "tour.facturation.compteur.deja", n: dernier.deja_emises, couleur: "" },
+        demande
+          ? { cle: "tour.facturation.compteur.demandes", n: dernier.demandes, couleur: "" }
+          : { cle: "tour.facturation.compteur.emises", n: dernier.emises, couleur: "" },
+        {
+          cle: demande
+            ? "tour.facturation.compteur.dejaDemandees"
+            : "tour.facturation.compteur.deja",
+          n: dernier.deja_emises,
+          couleur: "",
+        },
         { cle: "tour.facturation.compteur.rien", n: dernier.rien_a_facturer, couleur: "" },
         {
           cle: "tour.facturation.compteur.erreurs",

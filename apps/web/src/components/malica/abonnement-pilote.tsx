@@ -569,8 +569,8 @@ export function ChangerDOffre() {
  * en cours reste facturé au mois. Tout chiffre vient de `mon_annuel` — prix,
  * mois offerts, TTC, dates. L'écran n'en calcule aucun (R3, R4).
  *
- * Deux touches : la première arme, la seconde engage. Le paiement à régler,
- * s'il y en a un, apparaît dans « À régler », juste dessous.
+ * Deux touches : la première arme, la seconde engage. Rien ne se paie à la souscription :
+ * l'année se paie à son début, avec le renouvellement, et sa facture naît du paiement (D7).
  */
 export function PayerALAnnee() {
   const catalogue = useCatalogueDesOffres().data;
@@ -590,7 +590,7 @@ export function PayerALAnnee() {
     mutationFn: () => office().facturation.souscrireAnnuel(pme.tenantId),
     onSuccess: async (r) => {
       setArmee(false);
-      setRetour(t(r.paiement ? "pme.reglages.annuel.fait.aRegler" : "pme.reglages.annuel.fait"));
+      setRetour(t("pme.reglages.annuel.fait", { du: dateEnLettres(r.du, locale) }));
       await invalider();
     },
     onError: (e: unknown) => {

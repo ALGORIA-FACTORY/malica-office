@@ -23,6 +23,7 @@ import {
   jourDe,
   demander,
   payer,
+  payerLesDus,
 } from "./decor-d-avance.ts";
 
 interface Envoi {
@@ -78,13 +79,22 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
     });
   });
 
-  it("une facture de période ordinaire reste « à régler », au nom de l'offre", async () => {
+  it("une période ordinaire se demande au nom de l'offre ; payée, sa facture naît réglée", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const ancre = await jourDe(db, -5);
       await regler(db, s, "pme", true);
       const p = await unePme(db, ancre, "premium");
       await passer(db, ancre);
+      assert.deepEqual(await facturesDuTitulaire(db, p.licence), [], "aucune facture impayée");
+      const demande = (await envois(db, p.titulaire)).filter(
+        (x) => x.code === "abonnement.a_payer",
+      );
+      assert.equal(demande.length, 1, "un avis : à payer");
+      assert.equal(demande[0]!.donnees["offre"], "Premium");
+      assert.ok(!(demande[0]!.corps_rendu ?? "").includes("{{"), "jetons rendus");
+
+      await payerLesDus(db);
       const [base] = await facturesDuTitulaire(db, p.licence);
       assert.match(base!.libelle, /^Abonnement Premium — /);
       const avis = (await envois(db, p.titulaire)).filter(
@@ -92,7 +102,8 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
       );
       assert.deepEqual(
         avis.map((x) => x.code),
-        ["facture.emise.pme"],
+        ["facture.reglee.pme"],
+        "jamais « à régler » : la facture naît du paiement",
       );
       assert.equal(avis[0]!.donnees["offre"], "Premium");
     });

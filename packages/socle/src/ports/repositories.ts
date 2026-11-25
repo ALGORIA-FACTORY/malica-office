@@ -4425,12 +4425,15 @@ export interface FacturationRepository {
   monReport(tenantId?: string): Promise<{ report: number; actif: boolean } | null>;
   /** L'essai gratuit de la société, ou `null` si sa licence n'en a pas eu. */
   monEssai(tenantId: string): Promise<MonEssai | null>;
+  /** Ce que la société doit et n'a pas encore payé, ou `null` (D7, D12). */
+  monEcheance(tenantId: string): Promise<MonEcheance | null>;
   /** L'année : en cours, ou proposée avec ce qui la ferme ; `null` hors propriétaire principal. */
   monAnnuel(tenantId?: string): Promise<MonAnnuel | null>;
-  /** Passer à l'année ; un refus revient en `refus.annuel.ferme?motif=<code>`. */
-  souscrireAnnuel(
-    tenantId?: string,
-  ): Promise<{ engagement: string; paiement: PaiementEnLigne | null }>;
+  /**
+   * Passer à l'année ; un refus revient en `refus.annuel.ferme?motif=<code>`. Rien ne se paie
+   * à la souscription : l'année se paie à son début (`du`), avec le renouvellement (D7).
+   */
+  souscrireAnnuel(tenantId?: string): Promise<{ engagement: string; du: string }>;
   /**
    * Propriétaire principal seul ; un refus revient en `refus.forfait.empeche?motif=<code>&…`.
    * Une descente pendant une période payée d'avance ne change rien aujourd'hui : elle se
@@ -4689,6 +4692,8 @@ export interface ReglageAbonnement {
   annuel_mois_offerts: number;
   /** Les jours d'essai gratuit offerts aux nouvelles entrées ; 0 = pas d'essai. */
   essai_jours: number;
+  /** Les jours après lesquels un dossier dont le dû n'est pas payé ferme (D12). */
+  renouvellement_delai_jours: number;
   motif: string | null;
   decide_le: string | null;
 }
@@ -4701,6 +4706,19 @@ export interface MonEssai {
   jours: number;
   jours_restants: number;
   /** L'appelant est le propriétaire principal : lui seul passe à l'abonnement. */
+  titulaire: boolean;
+}
+
+/** Ce qui est dû, tel que `public.mon_echeance()` le rend (25 novembre 2026). */
+export interface MonEcheance {
+  etat: "a_payer" | "ferme";
+  due_depuis: string;
+  dernier_jour: string;
+  jours_restants: number;
+  paiement_id: string;
+  montant_ttc: string;
+  devise: string;
+  /** L'appelant est le propriétaire principal : lui seul paie. */
   titulaire: boolean;
 }
 
@@ -5140,6 +5158,8 @@ export interface EtatDuPerimetreDeFacturation {
     passee_le: string;
     emises: number;
     deja_emises: number;
+    /** Demandes à payer ouvertes (périmètre PME : D7, aucune facture avant le paiement). */
+    demandes: number;
     rien_a_facturer: number;
     erreurs: number;
     detail_erreurs: Array<{
@@ -5476,6 +5496,7 @@ export interface TourRepository {
     annuelOuvert: boolean,
     annuelMoisOfferts: number,
     essaiJours: number,
+    renouvellementDelaiJours: number,
     motif: string,
   ): Promise<unknown>;
   /** Le plafond de dépense IA par organisation et par mois (dollars), en vigueur ; `null` sans réglage. */

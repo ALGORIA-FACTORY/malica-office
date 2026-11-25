@@ -348,7 +348,8 @@ export const tour = {
 
   /**
    * La tour règle l'abonnement : le report d'un mois, l'année ouverte ou non,
-   * ses mois offerts, et les jours d'essai des nouvelles entrées. Daté et motivé ;
+   * ses mois offerts, les jours d'essai des nouvelles entrées, et le délai avant qu'un
+   * dossier non renouvelé ferme (D12). Daté et motivé ;
    * rien ne se réécrit.
    */
   async reglerAbonnement(
@@ -357,11 +358,13 @@ export const tour = {
     annuelOuvert: boolean,
     annuelMoisOfferts: number,
     essaiJours: number,
+    renouvellementDelaiJours: number,
     motif: string,
   ) {
     const { rows } = await db.query<{ r: unknown }>(
-      `select plateforme.abonnement_regler($1::smallint, $2, $3::smallint, $4::smallint, $5) as r`,
-      [reportMois, annuelOuvert, annuelMoisOfferts, essaiJours, motif],
+      `select plateforme.abonnement_regler($1::smallint, $2, $3::smallint, $4::smallint,
+                                           $5::smallint, $6) as r`,
+      [reportMois, annuelOuvert, annuelMoisOfferts, essaiJours, renouvellementDelaiJours, motif],
     );
     return rows[0]?.r ?? null;
   },
