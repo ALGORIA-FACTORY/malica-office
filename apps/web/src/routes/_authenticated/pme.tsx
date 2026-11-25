@@ -9,7 +9,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { CalendarClock, Home as HomeIcon, Library, Lock, Plus, Settings } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 
 import portraitMalica from "@/assets/malica.webp";
 import { CIBLE_COQUE, COMMERCE } from "@/capabilities/coque";
@@ -76,6 +76,12 @@ class ErreurDeJointure extends Error {
     super(message);
   }
 }
+
+/**
+ * L'essai gratuit (25 novembre 2026) : une ligne en haut tant qu'il court, et le dossier
+ * fermé quand il est terminé sans paiement. Commerce seulement : jamais dans la coque.
+ */
+const GardeDEssai = __COMMERCE__ ? lazy(() => import("@/components/malica/essai-gratuit")) : null;
 
 export const Route = createFileRoute("/_authenticated/pme")({
   head: () => ({
@@ -847,7 +853,15 @@ function PmeLayout() {
                 },
               }}
             >
-              <Outlet key={numeroAjout} />
+              {GardeDEssai ? (
+                <Suspense fallback={null}>
+                  <GardeDEssai>
+                    <Outlet key={numeroAjout} />
+                  </GardeDEssai>
+                </Suspense>
+              ) : (
+                <Outlet key={numeroAjout} />
+              )}
             </PmeProvider>
           )}
         </main>

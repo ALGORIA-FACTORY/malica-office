@@ -57,6 +57,9 @@ const GENRES: Record<string, MessageKey> = {
   "paiement.recu.cabinet": "notif.kind.paiement.recu",
   // Une descente programmée que l'échéance refuse se dit (revue du 24 novembre 2026, T6).
   "abonnement.descente_refusee": "notif.kind.abonnement.descente_refusee",
+  // L'essai gratuit : sa fin proche, et sa fin (25 novembre 2026).
+  "essai.fin_proche": "notif.kind.essai.fin_proche",
+  "essai.termine": "notif.kind.essai.termine",
 };
 
 export function chaine(payload: Record<string, unknown>, cle: string): string | null {
@@ -193,6 +196,8 @@ const DE_L_ABONNEMENT: ReadonlySet<string> = new Set([
   "facture.reglee.pme",
   "paiement.recu",
   "abonnement.descente_refusee",
+  "essai.fin_proche",
+  "essai.termine",
 ]);
 
 function parleDAbonnement(kind: string): boolean {

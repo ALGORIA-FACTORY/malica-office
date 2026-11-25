@@ -717,6 +717,15 @@ export const facturation = {
   },
 
   /**
+   * L'essai gratuit de la société (25 novembre 2026) : en cours, terminé sans paiement (le
+   * dossier est fermé), ou converti. `null` si sa licence n'en a pas eu.
+   */
+  async monEssai(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{ r: unknown }>(`select public.mon_essai($1) as r`, [tenantId]);
+    return rows[0]?.r ?? null;
+  },
+
+  /**
    * Passer à une offre, à la date du jour. Seul le propriétaire principal le
    * peut ; un refus revient en `refus.forfait.empeche?motif=<code>&chiffres=<chiffres>`.
    */
