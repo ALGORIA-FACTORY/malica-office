@@ -11,7 +11,8 @@ import { ALERTE, BOUTON, CARTE, CHAMP, TEXTE, TITRE, useRetour } from "./commun"
  * l'année — ouverte ou non, et combien de mois elle offre. Et, depuis le
  * 25 novembre 2026, les jours d'essai gratuit des NOUVELLES entrées : un essai
  * fige ses jours à la naissance de la licence, un changement ne touche que les
- * suivantes.
+ * suivantes. Et le délai après lequel un dossier dont le dû n'est pas payé
+ * ferme (D12, 25 novembre 2026) : la facture ne naît qu'au paiement.
  *
  * La base calcule tout (`facturation.report_de`, `public.mon_annuel`) ; la
  * tour ne règle que les interrupteurs et le nombre, datés et motivés. Un
@@ -30,6 +31,7 @@ export function ReglerLAbonnement() {
   const [annuel, setAnnuel] = useState(true);
   const [offerts, setOfferts] = useState("2");
   const [essai, setEssai] = useState("0");
+  const [delai, setDelai] = useState("14");
   const [motif, setMotif] = useState("");
 
   useEffect(() => {
@@ -38,15 +40,19 @@ export function ReglerLAbonnement() {
     setAnnuel(reglage.data.annuel_ouvert);
     setOfferts(String(reglage.data.annuel_mois_offerts));
     setEssai(String(reglage.data.essai_jours));
+    setDelai(String(reglage.data.renouvellement_delai_jours));
   }, [reglage.data]);
 
   const nOfferts = Number.parseInt(offerts, 10);
   const offertsValide = Number.isInteger(nOfferts) && nOfferts >= 0 && nOfferts <= 11;
   const nEssai = Number.parseInt(essai, 10);
   const essaiValide = /^\d+$/.test(essai) && nEssai >= 0 && nEssai <= 90;
+  const nDelai = Number.parseInt(delai, 10);
+  const delaiValide = /^\d+$/.test(delai) && nDelai >= 1 && nDelai <= 90;
 
   const regler = useMutation({
-    mutationFn: () => office().tour.reglerAbonnement(report, annuel, nOfferts, nEssai, motif),
+    mutationFn: () =>
+      office().tour.reglerAbonnement(report, annuel, nOfferts, nEssai, nDelai, motif),
     onSuccess: async () => {
       setRetour(t("tour.fait"));
       setMotif("");
@@ -118,6 +124,18 @@ export function ReglerLAbonnement() {
           />
         </label>
         {!essaiValide ? <p className={ALERTE}>{t("tour.abonnement.essai.borne")}</p> : null}
+        <p className={TEXTE}>{t("tour.abonnement.delai.aide")}</p>
+        <label className={TEXTE}>
+          {t("tour.abonnement.delai")}
+          <input
+            value={delai}
+            onChange={(e) => setDelai(e.target.value)}
+            inputMode="numeric"
+            aria-label={t("tour.abonnement.delai")}
+            className={`${CHAMP} mt-1 w-full`}
+          />
+        </label>
+        {!delaiValide ? <p className={ALERTE}>{t("tour.abonnement.delai.borne")}</p> : null}
         <input
           value={motif}
           onChange={(e) => setMotif(e.target.value)}
@@ -128,7 +146,13 @@ export function ReglerLAbonnement() {
         <button
           type="button"
           className={BOUTON}
-          disabled={regler.isPending || motif.trim() === "" || !offertsValide || !essaiValide}
+          disabled={
+            regler.isPending ||
+            motif.trim() === "" ||
+            !offertsValide ||
+            !essaiValide ||
+            !delaiValide
+          }
           onClick={() => regler.mutate()}
         >
           {t("tour.enregistrer")}

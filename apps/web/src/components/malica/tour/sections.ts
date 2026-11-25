@@ -47,7 +47,7 @@ import { LaChaineDeDesignation } from "./chaine-de-designation";
 import { LaConsigneDuConseil, LeReglageDuConseil } from "./conseil-cite";
 import { DesignerLEmetteur } from "./emetteur";
 import { LaFacturationAutomatique } from "./facturation-automatique";
-import { LesFacturesEmises, ReglerLesFactures } from "./factures";
+import { LesFacturesEmises, LesSoldesCrediteurs, ReglerLesFactures } from "./factures";
 import { LesFonctionsDuProduit } from "./fonctions";
 import { LaGrille } from "./grille";
 import { LeJournalDesPannes } from "./journal-des-pannes";
@@ -81,7 +81,7 @@ export const SECTIONS = {
   factures: {
     libelle: "tour.menu.factures",
     icone: FileText,
-    cartes: [ReglerLesFactures, LesFacturesEmises],
+    cartes: [ReglerLesFactures, LesFacturesEmises, LesSoldesCrediteurs],
   },
   fonctions: {
     libelle: "tour.menu.fonctions",

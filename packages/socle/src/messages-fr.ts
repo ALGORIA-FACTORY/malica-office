@@ -4489,6 +4489,23 @@ export const fr = {
   "tour.factures.emises.aide":
     "Les cent dernières. Chacune se télécharge en PDF ; le courriel d’une facture de société se renvoie, une fois par facture et par 24 heures.",
   "tour.factures.emises.aucune": "Aucune facture émise.",
+  "tour.soldes.titre": "Soldes créditeurs",
+  "tour.soldes.aide":
+    "L'argent reçu et pas encore imputé à une facture : un paiement plus grand que sa facture, un lien payé deux fois, un acompte d'avant. Il se déduit de lui-même de la facture suivante de la société.",
+  "tour.soldes.aucun": "Aucun solde : tout l'argent reçu est sur une facture.",
+  "tour.soldes.doubles": "{count} liens payés deux fois",
+  "tour.soldes.doubles#one": "un lien payé deux fois",
+  "tour.soldes.doubles#other": "{count} liens payés deux fois",
+  "tour.soldes.depuis": "depuis le {date}",
+  "pme.abonnement.aPayer.credit":
+    "Votre abonnement est à renouveler : {montant} TTC à régler au plus tard le {date}, votre solde de {credit} déjà déduit. La facture naît au paiement.",
+  "pme.reglages.recharges.aPayer": "À payer : ses lectures s'ouvrent au paiement.",
+  "pme.reglages.recharges.auto.indisponible":
+    "Elle arrivera avec le prélèvement automatique. D'ici là, une recharge s'achète et se paie d'avance, en un clic.",
+  "refus.recharge.paiement_indisponible":
+    "Le paiement en ligne n'est pas encore ouvert : une recharge se paie d'avance, elle ne peut pas s'acheter pour l'instant.",
+  "refus.recharge.automatique_sans_debit":
+    "La recharge automatique attend le prélèvement automatique : achetez une recharge et payez-la d'avance.",
   "tour.factures.payeur.titulaire": "Société",
   "tour.factures.payeur.cabinet": "Comptabilité",
   "tour.factures.telecharger": "PDF",
@@ -4528,10 +4545,10 @@ export const fr = {
     "1 : le mois qui vient de se clore. Au-delà, des mois plus anciens jamais facturés le seront.",
   "tour.facturation.pme": "PME — d'avance, à la date anniversaire",
   "tour.facturation.pme.aide":
-    "Ce que la PME paie se facture d'avance, le jour anniversaire de son abonnement, sans prorata. Une montée, une place ou une société en plus partent le jour même sur une facture complémentaire ; une descente vaut à l'échéance suivante.",
+    "Ce que la PME doit se chiffre d'avance, le jour anniversaire de son abonnement, sans prorata, et lui est demandé : la facture naît à son paiement, réglée. Une montée, une place ou une société en plus se demandent le jour même ; une descente vaut à l'échéance suivante.",
   "tour.facturation.pme.rattrapage": "Échéances examinées à chaque passage",
   "tour.facturation.pme.rattrapage.aide":
-    "1 : la période en cours. Au-delà, des échéances plus anciennes jamais facturées le seront.",
+    "1 : la période en cours. Au-delà, des échéances plus anciennes jamais payées sont demandées.",
   "tour.facturation.invalide": "Un nombre entier, au moins 1.",
   "tour.facturation.ouvrir": "Ouvrir l'émission",
   "tour.facturation.couper": "Couper l'émission",
@@ -4539,6 +4556,8 @@ export const fr = {
   "tour.facturation.dernier.aucun": "Aucun passage encore.",
   "tour.facturation.compteur.emises": "Émises",
   "tour.facturation.compteur.deja": "Déjà émises",
+  "tour.facturation.compteur.demandes": "Mises à payer",
+  "tour.facturation.compteur.dejaDemandees": "Déjà à payer",
   "tour.facturation.compteur.rien": "Rien à facturer",
   "tour.facturation.compteur.erreurs": "Erreurs",
   "tour.abonnement.report": "Report des lectures",
@@ -4557,7 +4576,6 @@ export const fr = {
   "pme.essai.enCours": "Essai gratuit : il vous reste {jours} jours, jusqu'au {date} inclus.",
   "pme.essai.enCours.dernier": "Essai gratuit : dernier jour, le {date}.",
   "pme.essai.passer": "Passer à l'abonnement",
-  "pme.essai.demanderAuPrincipal": "Seul le propriétaire principal peut passer à l'abonnement.",
   "pme.essai.termine.titre": "Votre essai est terminé",
   "pme.essai.termine.corps":
     "Votre essai gratuit a pris fin le {date}. Votre dossier et vos pièces sont conservés : passez à l'abonnement pour le rouvrir.",
@@ -4568,6 +4586,20 @@ export const fr = {
   "notif.kind.essai.fin_proche": "Votre essai gratuit se termine bientôt.",
   "notif.kind.essai.termine": "Votre essai gratuit est terminé.",
   "refus.essai.fige": "Un essai ne se modifie pas : seule sa fin s'inscrit, une fois.",
+  "pme.abonnement.aPayer":
+    "Votre abonnement est à renouveler : {montant} TTC à régler au plus tard le {date}. La facture naît au paiement.",
+  "pme.abonnement.payer": "Payer",
+  "pme.abonnement.principal": "Seul le propriétaire principal peut payer l'abonnement.",
+  "pme.abonnement.ferme.titre": "Votre dossier est fermé",
+  "pme.abonnement.ferme.corps":
+    "Votre renouvellement n'a pas été réglé au plus tard le {date}. Vos données et vos pièces sont conservées, et aucune facture ni dette n'a été créée : un paiement de {montant} TTC rouvre votre dossier.",
+  "tour.abonnement.delai": "Jours avant la fermeture d'un dossier non renouvelé",
+  "tour.abonnement.delai.aide":
+    "Rien n'est facturé avant le paiement. Passé ce délai sans paiement, le dossier de la société est fermé, sans dette ; le paiement le rouvre.",
+  "tour.abonnement.delai.borne": "Entre 1 et 90.",
+  "notif.kind.abonnement.a_payer": "Votre abonnement est à renouveler.",
+  "notif.kind.abonnement.fermeture_proche": "Votre dossier ferme bientôt sans paiement.",
+  "notif.kind.abonnement.ferme": "Votre dossier est fermé : un paiement le rouvre.",
   "tour.abonnement.annuel.offerts.borne": "Entre 0 et 11.",
   "tour.pannes": "Le journal des pannes",
   "tour.pannes.sous":
@@ -4712,7 +4744,7 @@ export const fr = {
   "refus.forfait.paiement_indisponible":
     "Le paiement en ligne n'est pas encore ouvert : ce passage d'offre ne peut pas se régler pour l'instant.",
   "pme.reglages.recharges.aRegler":
-    "Recharge ajoutée : ses lectures sont déjà là. Réglez-la ci-dessous.",
+    "Recharge réservée : ses lectures s'ouvrent dès son paiement. Réglez-la ci-dessous.",
   "pme.reglages.sansPlafond": "sans plafond",
   "pme.home.greet.morning.prenom": "Bonjour, {prenom}.",
   "pme.home.greet.afternoon.prenom": "Bon après-midi, {prenom}.",
@@ -4756,10 +4788,10 @@ export const fr = {
   "pme.reglages.offres.empechement.pas_de_licence": "Réservé au propriétaire principal.",
   "pme.reglages.recharges": "Recharges de lectures",
   "pme.reglages.recharges.sous":
-    "Elles s'ajoutent les unes aux autres et n'expirent pas. Le forfait du mois passe d'abord, puis les recharges, de la plus ancienne à la plus récente. Elles figurent sur la facture du mois.",
+    "Elles s'ajoutent les unes aux autres et n'expirent pas. Le forfait du mois passe d'abord, puis les recharges, de la plus ancienne à la plus récente. Chacune se paie d'avance et a sa facture, née du paiement.",
   "pme.reglages.recharges.palier": "{n} lectures",
   "pme.reglages.recharges.prix": "{prix} {devise} HT",
-  "pme.reglages.recharges.achetee": "Recharge ajoutée. Elle figurera sur la facture du mois.",
+  "pme.reglages.recharges.achetee": "Recharge ajoutée : ses lectures sont là.",
   "pme.reglages.recharges.verrou": "Les recharges s'ouvrent dès l'offre Solo.",
   "pme.reglages.recharges.miennes": "Mes recharges",
   "pme.reglages.recharges.reste": "{restantes} sur {lectures} · jusqu'au {date}",
@@ -4841,9 +4873,8 @@ export const fr = {
   "pme.reglages.annuel.dates": "Du {du} au {au}. Le mois en cours reste facturé au mois.",
   "pme.reglages.annuel.passer": "Passer à l'année",
   "pme.reglages.annuel.confirmer": "Confirmer : payer {montant} {devise} HT pour l'année",
-  "pme.reglages.annuel.fait": "C'est fait : votre année commence le premier du mois prochain.",
-  "pme.reglages.annuel.fait.aRegler":
-    "C'est fait : votre année commence le premier du mois prochain. Le paiement est dans « À régler ».",
+  "pme.reglages.annuel.fait":
+    "C’est fait : votre année commence le {du}. Elle se paie ce jour-là, avec votre renouvellement ; la facture naît du paiement.",
   "pme.reglages.annuel.enCours": "Abonnement à l'année",
   "pme.reglages.annuel.enCours.sous":
     "{offre}, du {du} au {au}, dont {offerts} mois offerts. Les lectures restent mensuelles.",
@@ -6008,6 +6039,7 @@ export const fr = {
     "Votre changement d'offre n'a pas pu se faire : vous restez sur votre offre actuelle.",
   "notif.kind.paiement.recu": "Votre paiement est bien reçu.",
   "notif.kind.facture.reglee.pme": "Votre facture d’abonnement est réglée.",
+  "notif.kind.facture.recharge.pme": "Votre recharge est réglée, sa facture est prête.",
   "pme.payer.payeur.titre": "Facturé à",
   "pme.payer.payeur.duCompte": "Repris de votre compte : la facture portera ces coordonnées.",
   "pme.payer.payeur.incomplet":

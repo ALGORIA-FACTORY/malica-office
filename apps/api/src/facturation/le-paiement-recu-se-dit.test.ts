@@ -23,6 +23,7 @@ import {
   jourDe,
   demander,
   payer,
+  payerLesDus,
 } from "./decor-d-avance.ts";
 
 interface Envoi {
@@ -47,7 +48,7 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
     await pool?.end();
   });
 
-  it("une montée payée : un reçu de paiement, et sa facture dite réglée, au nom de l'offre", async () => {
+  it("une montée payée : un seul courriel, sa facture dite réglée, qui sert de reçu", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const ancre = await jourDe(db, -5);
@@ -58,11 +59,12 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
       await payer(db, p, r.paiement!.paiement_id);
 
       const e = await envois(db, p.titulaire);
-      const recu = e.find((x) => x.code === "paiement.recu");
-      assert.ok(recu, "le reçu de paiement part");
-      assert.equal(recu.donnees["reference"], "REF-1");
-      assert.ok(recu.donnees["objet"]?.includes("Solo"), "l'objet nomme l'offre");
-      assert.ok(!recu.corps_rendu?.includes("{{"), "jetons rendus");
+      // Comme Anthropic : la facture née du paiement est le reçu ; pas de reçu à part.
+      assert.equal(
+        e.filter((x) => x.code === "paiement.recu").length,
+        0,
+        "un paiement, un courriel",
+      );
 
       const complement = (await facturesDuTitulaire(db, p.licence)).find(
         (x) => x.nature === "complement",
@@ -74,17 +76,28 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
         "la facture née du paiement se dit réglée, pas « à régler »",
       );
       assert.equal(avis[0]!.donnees["offre"], "Solo");
+      assert.equal(avis[0]!.donnees["reference"], "clictopay REF-1", "la référence du paiement");
+      assert.ok(!(avis[0]!.corps_rendu ?? "").includes("{{"), "jetons rendus");
       assert.match(complement.libelle, /Complément d'abonnement Solo/);
     });
   });
 
-  it("une facture de période ordinaire reste « à régler », au nom de l'offre", async () => {
+  it("une période ordinaire se demande au nom de l'offre ; payée, sa facture naît réglée", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const ancre = await jourDe(db, -5);
       await regler(db, s, "pme", true);
       const p = await unePme(db, ancre, "premium");
       await passer(db, ancre);
+      assert.deepEqual(await facturesDuTitulaire(db, p.licence), [], "aucune facture impayée");
+      const demande = (await envois(db, p.titulaire)).filter(
+        (x) => x.code === "abonnement.a_payer",
+      );
+      assert.equal(demande.length, 1, "un avis : à payer");
+      assert.equal(demande[0]!.donnees["offre"], "Premium");
+      assert.ok(!(demande[0]!.corps_rendu ?? "").includes("{{"), "jetons rendus");
+
+      await payerLesDus(db);
       const [base] = await facturesDuTitulaire(db, p.licence);
       assert.match(base!.libelle, /^Abonnement Premium — /);
       const avis = (await envois(db, p.titulaire)).filter(
@@ -92,7 +105,8 @@ describe("le paiement reçu se dit", { skip: !ADMIN }, () => {
       );
       assert.deepEqual(
         avis.map((x) => x.code),
-        ["facture.emise.pme"],
+        ["facture.reglee.pme"],
+        "jamais « à régler » : la facture naît du paiement",
       );
       assert.equal(avis[0]!.donnees["offre"], "Premium");
     });

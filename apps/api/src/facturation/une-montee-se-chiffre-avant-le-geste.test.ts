@@ -31,6 +31,7 @@ import {
   prix,
   type Decor,
 } from "./decor-de-facture.ts";
+import { payerLesDus } from "./decor-d-avance.ts";
 
 const ADMIN = process.env["DATABASE_URL_ADMIN"];
 const pool = ADMIN ? new pg.Pool({ connectionString: ADMIN, max: 1 }) : null;
@@ -206,6 +207,7 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
         // (il ne tire pas dans une transaction annulée). Pas le robot du jour : il prend un verrou
         // global, et 31 tours ralentiraient les autres épreuves de facturation.
         await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+        await payerLesDus(db); // D7 : la facture d'avance naît de son paiement
         const avant = await facturesDAvance(db, d.licence);
         const devis = await devisDu(db, d, "team", j[0]!.aujourdhui);
         assert.ok(devis, `k=${k} : un devis`);
@@ -215,8 +217,10 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
             j[0]!.aujourdhui,
           ]),
         );
-        // Ce que le déclencheur du changement fait au commit (il ne tire pas dans une transaction annulée).
+        // Ce que le déclencheur du changement fait au commit (il ne tire pas dans une transaction
+        // annulée) : la montée devient due ; payée, son complément naît.
         await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+        await payerLesDus(db);
         const { rows: c } = await db.query<{
           ht: string;
           tva: string;
@@ -277,6 +281,7 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
       }
       await ouvrirLePerimetrePme(db, d);
       await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+      await payerLesDus(db); // D7 : la facture d'avance naît de son paiement
       const [base] = await facturesDAvance(db, d.licence);
       assert.ok(base, "une facture d'avance couvre le jour");
       const prixTeam = await prix(db, "team");
@@ -296,6 +301,7 @@ describe("une montée se chiffre avant le geste", { skip: !ADMIN }, () => {
         ]),
       );
       await db.query("select facturation.facturer_sur_le_champ($1, null)", [d.licence]);
+      await payerLesDus(db);
       const { rows: c } = await db.query<{ ht: string; ttc: string }>(
         `select montant_ht::text as ht, montant_ttc::text as ttc
            from facturation.factures

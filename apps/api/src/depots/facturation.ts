@@ -697,7 +697,7 @@ export const facturation = {
    * revient en `refus.annuel.ferme?motif=<code>`.
    */
   async souscrireAnnuel(db: Requete, tenantId?: string) {
-    const { rows } = await db.query<{ r: { engagement: string; paiement: unknown } }>(
+    const { rows } = await db.query<{ r: { engagement: string; du: string } }>(
       `select public.annuel_souscrire($1) as r`,
       [tenantId ?? null],
     );
@@ -722,6 +722,17 @@ export const facturation = {
    */
   async monEssai(db: Requete, tenantId: string) {
     const { rows } = await db.query<{ r: unknown }>(`select public.mon_essai($1) as r`, [tenantId]);
+    return rows[0]?.r ?? null;
+  },
+
+  /**
+   * Ce que la société doit et n'a pas encore payé (D7) : le montant, le paiement à régler, et
+   * le jour où son dossier ferme sans paiement (D12). `null` quand rien n'est dû.
+   */
+  async monEcheance(db: Requete, tenantId: string) {
+    const { rows } = await db.query<{ r: unknown }>(`select public.mon_echeance($1) as r`, [
+      tenantId,
+    ]);
     return rows[0]?.r ?? null;
   },
 
@@ -913,7 +924,8 @@ export const facturation = {
     // seconde commande pour le même paiement (revenir en arrière et choisir
     // Mastercard après Visa mène à la même page de carte). Un lien « non abouti »
     // se rouvre par une commande neuve — l'ancien reste interrogé jusqu'à sa
-    // conclusion.
+    // conclusion ; sa page a fermé avec lui (`dureeSecondes`, quand le prestataire la
+    // règle), et s'il a quand même été payé, l'argent devient un solde créditeur (8.3).
     if (
       p.etat === "lien_cree" &&
       p.prestataire === env.prestataire.code &&
@@ -939,9 +951,15 @@ export const facturation = {
     // encaissement saisi entre-temps), la base refuse par une clé.
     await db.query(`select public.paiement_encore_du($1)`, [paiementId]);
 
+    // La page du prestataire ferme quand notre lien cesse de valoir (le délai de la tour) :
+    // jamais une page encore payable que l'écran croit close.
+    const { rows: duree } = await db.query<{ s: number }>(
+      `select (public.abonnement_reglage() ->> 'lien_valide_minutes')::integer * 60 as s`,
+    );
     const { reference, lien } = await chezLePrestataire(env.prestataire.code, () =>
       env.prestataire.creerLien({
         paiementId,
+        ...(duree[0]?.s ? { dureeSecondes: duree[0].s } : {}),
         unites: Number(enUnitesExactes(p.montant_ttc, devise.exposant)),
         devise: devise.iso_numerique,
         libelle: p.libelle,
@@ -1059,7 +1077,7 @@ export const facturation = {
   async mesRecharges(db: Requete) {
     const { rows } = await db.query(
       `select recharge_id, recharge_code, lectures, prix_ht, achetee_le, expire_le,
-              origine, restantes, utilisable, gelee, expiree
+              origine, restantes, utilisable, gelee, expiree, payee
          from facturation.recharges_v order by expire_le, achetee_le, recharge_id`,
     );
     return rows;
@@ -1083,11 +1101,18 @@ export const facturation = {
 
   /** Le dernier réglage de la recharge automatique, ou `null`. */
   async maRechargeAutomatique(db: Requete) {
+    // Toujours une réponse : sans réglage, la recharge est inactive ; `disponible` dit si
+    // un débit automatique permet de la payer d'avance (D4).
     const { rows } = await db.query(
-      `select active, recharge_code, plafond_mois_ht, decide_le
-         from facturation.recharge_automatique order by decide_le desc, id desc limit 1`,
+      `select coalesce(a.active, false) as active, a.recharge_code, a.plafond_mois_ht,
+              a.decide_le, facturation.debit_automatique_ouvert() as disponible
+         from (select 1) un
+         left join lateral (
+           select active, recharge_code, plafond_mois_ht, decide_le
+             from facturation.recharge_automatique order by decide_le desc, id desc limit 1) a
+           on true`,
     );
-    return rows[0] ?? null;
+    return rows[0]!;
   },
 
   /** Régler la recharge automatique : un palier et un plafond du mois, ou l'arrêt. */

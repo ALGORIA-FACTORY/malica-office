@@ -411,3 +411,52 @@ export function LesFacturesEmises() {
     </div>
   );
 }
+
+/**
+ * L'argent qui attend : reçu, pas encore imputé à une facture (un acompte d'avant D7, un
+ * paiement plus grand que sa facture, un lien payé deux fois). Il s'applique de lui-même à
+ * la facture suivante de la licence ; la tour le voit, et le rembourse au besoin (lot B).
+ */
+export function LesSoldesCrediteurs() {
+  const { t, locale } = useI18n();
+  const soldes = useQuery({
+    queryKey: ["tour-soldes-crediteurs"],
+    queryFn: () => office().tour.soldesCrediteurs(),
+  });
+  const lignes = soldes.data ?? [];
+  return (
+    <div className={CARTE} data-soldes-crediteurs>
+      <h2 className={TITRE}>{t("tour.soldes.titre")}</h2>
+      <p className={TEXTE}>{t("tour.soldes.aide")}</p>
+      {soldes.isError ? <p className={ALERTE}>{t("common.error")}</p> : null}
+      {soldes.isSuccess && lignes.length === 0 ? (
+        <p className={TEXTE}>{t("tour.soldes.aucun")}</p>
+      ) : null}
+      <ul className="divide-y divide-border">
+        {lignes.map((l) => (
+          <li key={l.licence_id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
+            <span className="min-w-[200px] flex-1">
+              <span className="block text-foreground">{l.societe ?? l.titulaire}</span>
+              <span className={`${TEXTE} block`}>
+                {l.titulaire}
+                {l.doubles > 0 ? ` · ${t("tour.soldes.doubles", { count: l.doubles })}` : ""}
+                {l.depuis
+                  ? ` · ${t("tour.soldes.depuis", {
+                      date: jourOuInstant(l.depuis, locale, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      }),
+                    })}`
+                  : ""}
+              </span>
+            </span>
+            <span className="font-mono text-[13px] text-foreground" dir="ltr">
+              {montantEtDevise(montant(l.solde, locale), l.devise ?? "")}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

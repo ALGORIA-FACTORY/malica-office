@@ -230,19 +230,38 @@ async function aRegler(db: pg.PoolClient, d: Decor): Promise<Acompte | null> {
 export const monteeARegler = (db: pg.PoolClient, d: Decor) =>
   enPersonne(db, d.titulaire, () => aRegler(db, d));
 
-/** Le titulaire règle son acompte chez un prestataire qui fait entrer l'argent. */
-export async function regler(db: pg.PoolClient, d: Decor, paiement: string): Promise<void> {
-  await enPersonne(db, d.titulaire, async () => {
+/**
+ * Une personne règle un paiement chez un prestataire qui fait entrer l'argent : CGV
+ * acceptées, lien créé, « payé » avec le montant encaissé. La seule façon de payer des épreuves.
+ */
+export async function payerEnLigne(
+  db: pg.PoolClient,
+  qui: string,
+  paiement: string,
+  reference = "REF-1",
+): Promise<void> {
+  await enPersonne(db, qui, async () => {
     await db.query(
-      "with cgv as (select public.paiement_cgv_accepter($1, (plateforme.cgv_en_vigueur()).id)) select public.paiement_inscrire($1, 'lien_cree', 'clictopay', 'REF-0', 'https://test.clictopay.com/pay/REF-0', '{}', 'visa') from cgv",
-      [paiement],
+      `with cgv as (select public.paiement_cgv_accepter($1::uuid, (plateforme.cgv_en_vigueur()).id))
+       select public.paiement_inscrire($1::uuid, 'lien_cree', 'clictopay', $2,
+                'https://test.clictopay.com/pay/' || $2, '{}', 'visa') from cgv`,
+      [paiement, reference],
     );
     await db.query(
-      "select public.paiement_inscrire($1, 'paye', 'clictopay', 'REF-0', null, jsonb_build_object('unites_encaissees', (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text from facturation.paiements_en_ligne_v v join ref.devises d on d.code = v.devise where v.paiement_id = $1)))",
-      [paiement],
+      `select public.paiement_inscrire($1::uuid, 'paye', 'clictopay', $2, null,
+                jsonb_build_object('unites_encaissees',
+                  (select trunc(v.montant_ttc * power(10::numeric, d.exposant))::bigint::text
+                     from facturation.paiements_en_ligne_v v
+                     join ref.devises d on d.code = v.devise
+                    where v.paiement_id = $1::uuid)))`,
+      [paiement, reference],
     );
   });
 }
+
+/** Le titulaire règle son acompte. */
+export const regler = (db: pg.PoolClient, d: Decor, paiement: string) =>
+  payerEnLigne(db, d.titulaire, paiement);
 
 export interface PartsDuJour {
   jour: string;
@@ -359,6 +378,33 @@ export async function passer(db: pg.PoolClient, jour: string): Promise<void> {
   await db.query("select fabrique.facturation_du_jour($1::date)", [jour]);
   await db.query("reset role");
   await db.query("release savepoint robot");
+}
+
+/**
+ * Le titulaire paie ce qui est dû (D7, 25 novembre 2026) : la base ne facture plus avant
+ * l'encaissement, elle pose une demande à payer. Chaque demande due encore ouverte d'une
+ * licence née dans CETTE transaction se paie par un prestataire qui fait entrer l'argent ;
+ * ses factures naissent alors, réglées. Rend les paiements réglés.
+ */
+export async function payerLesDus(db: pg.PoolClient): Promise<string[]> {
+  await db.query("reset role");
+  const { rows } = await db.query<{ paiement: string; titulaire: string }>(
+    `select d.paiement_id as paiement, l.titulaire
+       from facturation.licences l
+       cross join lateral facturation.demande_due_ouverte(l.id) d
+      where l.created_at = now()
+      order by l.id`,
+  );
+  for (const r of rows) await payerEnLigne(db, r.titulaire, r.paiement);
+  await db.query("set constraints all immediate");
+  await db.query("set constraints all deferred");
+  return rows.map((r) => r.paiement);
+}
+
+/** Le robot passe le `jour`, et la PME paie le jour même ce qu'il a rendu dû (D7). */
+export async function passerEtPayer(db: pg.PoolClient, jour: string): Promise<void> {
+  await passer(db, jour);
+  await payerLesDus(db);
 }
 
 export interface FactureDAvance {

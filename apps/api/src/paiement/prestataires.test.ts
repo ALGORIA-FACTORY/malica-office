@@ -174,6 +174,7 @@ describe("les prestataires de paiement", () => {
       libelle: "Passage Solo -> Team",
       retour: "https://app.exemple.tn/pme/reglages?paiement=p-1",
       notification: "https://app.exemple.tn/notifications-de-paiement/flouci",
+      dureeSecondes: 3600,
     });
     assert.deepEqual(r, { reference: "AgCK", lien: "https://checkout.flouci.com/x/AgCK" });
     assert.equal(vus[0]!.url, "https://developers.flouci.com/api/v2/generate_payment");
@@ -186,6 +187,7 @@ describe("les prestataires de paiement", () => {
     assert.equal(corps["accept_card"], true);
     assert.equal(corps["webhook"], "https://app.exemple.tn/notifications-de-paiement/flouci");
     assert.equal(corps["webhook_version"], 2);
+    assert.equal(corps["session_timeout_secs"], 3600, "la page ferme avec notre lien (8.3)");
   });
 
   it("un refus de Flouci se dit", async () => {

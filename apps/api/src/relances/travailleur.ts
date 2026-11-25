@@ -67,11 +67,12 @@ export async function tourDeRelances(d: Dependances) {
     const { rows } = await db.query<{ r: Record<string, unknown> }>(
       "select notif.relancer_les_impayes() as r",
     );
-    // Les avis d'essai (fin proche, fin) partent par la même file : une fois chacun.
-    const { rows: essais } = await db.query<{ n: number }>(
-      "select notif.prevenir_les_essais() as n",
+    // Les avis de l'abonnement (fin d'essai, fermeture d'un dossier non renouvelé) partent par
+    // la même file : une fois chacun.
+    const { rows: avis } = await db.query<{ n: number }>(
+      "select notif.prevenir_les_abonnements() as n",
     );
-    return { ...rows[0]!.r, essais: essais[0]!.n };
+    return { ...rows[0]!.r, avis: avis[0]!.n };
   });
 
   const config = configurationCourriel(d.env);
