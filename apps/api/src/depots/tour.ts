@@ -348,18 +348,20 @@ export const tour = {
 
   /**
    * La tour règle l'abonnement : le report d'un mois, l'année ouverte ou non,
-   * et ses mois offerts. Daté et motivé ; rien ne se réécrit.
+   * ses mois offerts, et les jours d'essai des nouvelles entrées. Daté et motivé ;
+   * rien ne se réécrit.
    */
   async reglerAbonnement(
     db: Requete,
     reportMois: number,
     annuelOuvert: boolean,
     annuelMoisOfferts: number,
+    essaiJours: number,
     motif: string,
   ) {
     const { rows } = await db.query<{ r: unknown }>(
-      `select plateforme.abonnement_regler($1::smallint, $2, $3::smallint, $4) as r`,
-      [reportMois, annuelOuvert, annuelMoisOfferts, motif],
+      `select plateforme.abonnement_regler($1::smallint, $2, $3::smallint, $4::smallint, $5) as r`,
+      [reportMois, annuelOuvert, annuelMoisOfferts, essaiJours, motif],
     );
     return rows[0]?.r ?? null;
   },

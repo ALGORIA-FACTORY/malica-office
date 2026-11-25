@@ -44,6 +44,7 @@ function fausseBase() {
       appels.push({ sql, params });
       if (sql.includes("relancer_les_impayes"))
         return { rows: [{ r: { actives: true, postes: 1 } }] };
+      if (sql.includes("prevenir_les_essais")) return { rows: [{ n: 0 }] };
       if (sql.includes("reserver_courriels")) {
         const servi = appels.filter((a) => a.sql.includes("reserver_courriels")).length;
         return { rows: servi === 1 ? [COURRIEL] : [] };
@@ -73,8 +74,10 @@ describe("le travailleur des relances", () => {
     const b = fausseBase();
     const r = await tourDeRelances({ executer: b.executer, env: {} });
     assert.equal(r.sansCle, true);
-    assert.equal(b.appels.length, 1);
+    // La base décide les relances, puis les avis d'essai ; rien d'autre.
+    assert.equal(b.appels.length, 2);
     assert.match(b.appels[0]!.sql, /relancer_les_impayes/);
+    assert.match(b.appels[1]!.sql, /prevenir_les_essais/);
   });
 
   it("réserve, envoie hors transaction, puis inscrit « remis » — dans cet ordre", async () => {

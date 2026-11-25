@@ -1110,10 +1110,11 @@ Revue : projet MALICA OFFICE, `decisions/2026-11-24_revue-comptabilite-par-matri
   (une société archivée n'est plus la société facturée) : réglés par `20261231340000`. La facture porte
   `client_nom`, `client_adresse` et `destinataire_legal_id` posés à l'émission ; `facturation.societe_facturee`
   est le seul endroit qui désigne la société d'une licence (une épreuve refuse tout retour en arrière).
-- Restent pour le lot 0 : T2 (une licence suivie par deux cabinets), T3 (périodes recalculées avec le nombre de
-  sociétés du jour), T4 (une société archivée encore comptée), T6 (descente refusée sans avertir), T8 (titulaire
-  de plusieurs licences), T10 (invariants du titulaire sans épreuve). T7 (onboarding) et T9 (cabinet sans
-  matricule) passent au lot de la création propre.
+- ~~T6 descente refusée sans avertir~~, ~~T8 titulaire de plusieurs licences~~, ~~T10 invariants du titulaire
+  sans épreuve~~ : réglés dans la même migration (#468).
+- Restent : T2 (une licence suivie par deux cabinets), T3 (périodes recalculées avec le nombre de sociétés du
+  jour), T4 (une société archivée encore comptée). T7 (onboarding) et T9 (cabinet sans matricule) passent au lot
+  de la création propre. Revue de bout en bout du 25 novembre : `decisions/2026-11-25_revue-e2e-abonnement-facturation.md`.
 
 ### Lecture : trois sujets ouverts à la fin du 24 novembre 2026
 
@@ -1146,3 +1147,22 @@ restent ouverts ; aucun n'est en cours.
   nom de l'émetteur 17, matricule 9, date 9, montants 4). **Ce qui le ferme** : un banc avec `cas` sur les pièces hybrides pour voir la
   ligne dans le service OCR (`infra/ocr/service.py`, relecture arabe des lignes mixtes), puis l'anneau 2 pour le nom
   de l'émetteur, chacun mesuré au banc avant et après, à zéro faux.
+
+### L'essai gratuit (décision du CEO, 25 novembre 2026)
+
+Réglé par `20261231350000` : jours réglés en tour (0 = pas d'essai), figés à la naissance de la licence, nouvelles
+entrées seulement ; Basic pendant l'essai ; aucune facture avant paiement ; passer à l'abonnement se paie d'abord
+(la première base naît réglée, la date anniversaire est le jour du paiement) ; essai échu non payé = dossier fermé,
+sans dette ; pas d'essai pour une société amenée par une comptabilité ; une prise en charge clôt l'essai ; avis de
+fin proche (préavis `essai.preavis_jours`, 3 par défaut) et de fin, une fois chacun.
+
+Ouvert :
+- **CGV** : l'essai, sa durée et la fermeture du dossier à son terme doivent figurer dans les conditions de vente
+  (nouvelle version, validée par le CEO hors conversation).
+- **Essai réglé à 0** : la naissance émet toujours une base Basic impayée le jour même (écart 1.8 de la revue du
+  25/11). À régler avec « payer d'abord » à la naissance si la tour coupe l'essai.
+- **Coque Android** : sans commerce, elle n'affiche ni l'essai ni sa fin ; la base refuse déjà ce qu'un dossier
+  fermé ne peut faire (`app.licence_active` : pièces, lectures), le reste se lit.
+- **R-C** (le client paie seul, case cochée par la comptabilité) : l'essai s'y appliquera quand l'état existera.
+- **Fermeture « entière »** : l'écran remplace toute page de la PME par la fin d'essai, sauf le paiement ; côté
+  base, les gestes tenus par `app.licence_active` sont refusés. Les autres portes ne lisent pas encore l'essai.

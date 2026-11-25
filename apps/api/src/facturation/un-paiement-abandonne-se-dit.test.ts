@@ -101,7 +101,7 @@ describe("un paiement abandonné se dit", { skip: !ADMIN }, () => {
       // Une décision de la tour sur le report ne remet pas la durée à son défaut.
       await enPersonne(db, d.operateur, () =>
         db.query(
-          "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, 'Essai : report inchangé')",
+          "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, 0::smallint, 'Essai : report inchangé')",
         ),
       );
       assert.equal(await duree(db), 10);

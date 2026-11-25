@@ -4423,6 +4423,8 @@ export interface FacturationRepository {
   prixTtc(ht: string): Promise<PrixTtc | null>;
   /** Les lectures du mois dernier reportées sur celui-ci (déjà dans le droit). */
   monReport(tenantId?: string): Promise<{ report: number; actif: boolean } | null>;
+  /** L'essai gratuit de la société, ou `null` si sa licence n'en a pas eu. */
+  monEssai(tenantId: string): Promise<MonEssai | null>;
   /** L'année : en cours, ou proposée avec ce qui la ferme ; `null` hors propriétaire principal. */
   monAnnuel(tenantId?: string): Promise<MonAnnuel | null>;
   /** Passer à l'année ; un refus revient en `refus.annuel.ferme?motif=<code>`. */
@@ -4685,8 +4687,21 @@ export interface ReglageAbonnement {
   report_mois: number;
   annuel_ouvert: boolean;
   annuel_mois_offerts: number;
+  /** Les jours d'essai gratuit offerts aux nouvelles entrées ; 0 = pas d'essai. */
+  essai_jours: number;
   motif: string | null;
   decide_le: string | null;
+}
+
+/** L'essai gratuit, tel que `public.mon_essai()` le rend (25 novembre 2026). */
+export interface MonEssai {
+  etat: "en_cours" | "termine" | "converti";
+  debut: string;
+  dernier_jour: string;
+  jours: number;
+  jours_restants: number;
+  /** L'appelant est le propriétaire principal : lui seul passe à l'abonnement. */
+  titulaire: boolean;
 }
 
 /** L'année, telle que `public.mon_annuel()` la rend. */
@@ -5460,6 +5475,7 @@ export interface TourRepository {
     reportMois: 0 | 1,
     annuelOuvert: boolean,
     annuelMoisOfferts: number,
+    essaiJours: number,
     motif: string,
   ): Promise<unknown>;
   /** Le plafond de dépense IA par organisation et par mois (dollars), en vigueur ; `null` sans réglage. */
