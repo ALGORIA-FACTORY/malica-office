@@ -1114,3 +1114,35 @@ Revue : projet MALICA OFFICE, `decisions/2026-11-24_revue-comptabilite-par-matri
   sociétés du jour), T4 (une société archivée encore comptée), T6 (descente refusée sans avertir), T8 (titulaire
   de plusieurs licences), T10 (invariants du titulaire sans épreuve). T7 (onboarding) et T9 (cabinet sans
   matricule) passent au lot de la création propre.
+
+### Lecture : trois sujets ouverts à la fin du 24 novembre 2026
+
+Après #448 et #458 (relecture des cellules en production, lecteur passé au moteur, « Livré à » et « السيد » repères du
+client), la production lit 80 pièces sur 411 sans aucun modèle (50 avant), à zéro valeur fausse au banc. Trois sujets
+restent ouverts ; aucun n'est en cours.
+
+- **La TVA du mois ne tient plus sa borne de charge — probable régression de performance, pas un test instable.**
+  `la-tva-du-mois-tient-la-charge.test.ts` mesure déjà la meilleure de cinq passes en alternance. Sa borne
+  (`6 × nue + 500`) a été posée le 1er novembre sur un rapport transmis / nue de 3,9 à 5,3. Relevé en CI le 24
+  novembre : « transmis : 3777 ms > 3629 ms » (environ 7,2 fois la sélection nue, l'ancien coût lent était de 8 fois
+  et plus) et « charges : 3429 ms > 3309 ms » (environ 2,4 fois, borne de 2 fois). Le job `api` passe à la relance,
+  mais `main` exige désormais ses cinq contrôles : chaque dépassement bloque une fusion. **Ce qui le ferme** : un
+  `explain (analyze, buffers)` de `office.extraitsTransmis` et de `charges.articles` sur la base de l'épreuve, et
+  le coût ramené sous la borne. Desserrer la borne est refusé : elle cesserait de voir l'ancien coût.
+- **Les matricules du jeu d'essai portent une lettre de contrôle fausse.** `matriculeDEssai` tire la lettre de A à
+  Z : 26 matricules fictifs sur 29 (jeu d'ALGORIA) et 12 sur 15 (jeu synthétique) ne portent pas la lettre que la
+  règle du pack calcule, et 8 portent une lettre qui n'existe pas (I, O, U). L'OCR lit le « O » comme un zéro
+  (`1487008O` relevé `14870080`, algoria-045), et le moteur refuse, à juste titre, de réparer vers une lettre
+  impossible : 77 pièces ne lisent que le matricule du dossier. Le vrai matricule d'ALGORIA porte sa lettre calculée
+  (`1958330V`, vérifié). **Ce qui le ferme** : `matriculeDEssai` garde son tirage (la suite du hasard ne bouge pas)
+  et écrit la lettre calculée ; les deux jeux sont régénérés sur le poste où leur rendu est reproductible à l'octet,
+  puis mesurés au banc. Le rendu n'est pas reproductible dans l'atelier de la conversation (145 fichiers changent
+  sans aucune modification). **Au dirigeant** : régénérer, ou décider de garder des lettres au hasard (le jeu
+  éprouve alors l'avertissement de clé, au prix de ces 77 pièces).
+- **L'OCR perd les lignes bilingues, et l'émetteur reste le premier verrou.** Sur les PDF hybrides relus en image,
+  une ligne « FACTURE N° … / فاتورة عدد » disparaît du relevé (synthétique 071) et un matricule y devient
+  `66000///000`. Le banc nomme ce qui oblige encore une pièce à appeler un modèle en production : nom de l'émetteur
+  251, matricule de l'émetteur 209, numéro 179, sens 170, date 135, montants 111 (dont « seule manquante » : numéro 31,
+  nom de l'émetteur 17, matricule 9, date 9, montants 4). **Ce qui le ferme** : un banc avec `cas` sur les pièces hybrides pour voir la
+  ligne dans le service OCR (`infra/ocr/service.py`, relecture arabe des lignes mixtes), puis l'anneau 2 pour le nom
+  de l'émetteur, chacun mesuré au banc avant et après, à zéro faux.
