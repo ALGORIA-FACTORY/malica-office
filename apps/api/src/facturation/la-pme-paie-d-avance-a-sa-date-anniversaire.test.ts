@@ -523,7 +523,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       );
       const troisieme = await passer(db, "2026-11-20");
       assert.equal(troisieme.pme?.etat, "passee");
-      assert.equal(troisieme.pme?.emises, 0, "le robot n'émet jamais de facture (D7)");
+      assert.equal(troisieme.pme?.emises, 0, "rien de neuf : aucune facture, aucun numéro");
       const { rows: apres } = await db.query<{ n: string }>(
         "select coalesce(sum(dernier), 0)::text as n from facturation.compteurs_factures",
       );

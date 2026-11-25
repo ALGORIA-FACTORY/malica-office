@@ -327,8 +327,12 @@ describe("l'argent reçu a sa facture, ou un solde créditeur", { skip: !ADMIN }
       const [base] = await facturesDuTitulaire(db, p.licence);
 
       const bilan = await passer(db, base!.couvre_au);
-      assert.equal(bilan.pme?.emises, 1, "réglée par le solde");
-      assert.equal(bilan.pme?.demandes, 0);
+      // D'autres licences de la base passent aussi : on juge la nôtre.
+      assert.ok((bilan.pme?.emises ?? 0) >= 1, "réglée par le solde");
+      assert.ok(
+        !(bilan.pme?.a_payer ?? []).some((x) => x.licence === p.licence),
+        "rien ne lui est demandé",
+      );
       const { rows: due } = await db.query("select 1 from facturation.demande_due_ouverte($1)", [
         p.licence,
       ]);
