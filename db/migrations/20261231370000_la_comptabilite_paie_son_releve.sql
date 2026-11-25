@@ -70,7 +70,27 @@ create table facturation.releve_lignes (
 create index releve_lignes_tenant_idx on facturation.releve_lignes (tenant_id);
 create index releve_lignes_licence_idx on facturation.releve_lignes (licence_id);
 alter table facturation.releve_lignes enable row level security;
+alter table facturation.releve_lignes force row level security;
 revoke all on facturation.releve_lignes from public, anon, authenticated;
+-- Les mêmes gardes que les lignes d'une facture : une ligne ne se lit que par
+-- son relevé, et sa licence est bien celle de la société qu'elle nomme.
+create policy releve_lignes_lire on facturation.releve_lignes for select to authenticated
+  using ((select app.is_platform())
+         or exists (select 1 from facturation.releves_cabinet r
+                     where r.id = releve_lignes.releve_id
+                       and r.cabinet_id in (select app.member_orgs())));
+create policy releve_lignes_ins on facturation.releve_lignes for insert to authenticated
+  with check ((select app.is_platform())
+              and (licence_id is null or tenant_id is null
+                   or exists (select 1 from facturation.licence_organisations lo
+                               where lo.licence_id = releve_lignes.licence_id
+                                 and lo.tenant_id = releve_lignes.tenant_id)));
+-- Le relecteur de nuit n'en a pas besoin : il ne la lit ni ne l'écrit.
+create policy service_hors_perimetre on facturation.releve_lignes as restrictive
+  for select to authenticated using ((select app.service()) is null);
+create trigger service_hors_perimetre
+  before insert or update or delete on facturation.releve_lignes
+  for each statement execute function app.service_hors_perimetre();
 create trigger releve_lignes_ne_se_reecrivent_pas before update or delete on facturation.releve_lignes
   for each row execute function app.deny_mutation();
 
