@@ -38,9 +38,12 @@ const BASE_CONFIGUREE = Boolean(
 
 describe("la TVA du mois tient la charge", { skip: !BASE_CONFIGUREE }, () => {
   const marque = `tva-charge-${Date.now()}`;
-  // Une famille d'essai, reconnue par un mot que rien d'autre n'emploie.
-  const FAMILLE = `IMMO_ESSAI_${Date.now()}`;
-  const MOT = `immoessai${Date.now()}`;
+  // Une famille d'essai, reconnue par un mot que rien d'autre n'emploie. Son
+  // code et son mot sont propres à ce fichier : les fichiers d'épreuve tournent
+  // en parallèle, et un nom partagé à la milliseconde près ferait tomber la
+  // famille d'une autre épreuve au nettoyage de celle-ci.
+  const FAMILLE = `IMMO_CHARGE_ESSAI_${Date.now()}`;
+  const MOT = `immochargeessai${Date.now()}`;
   const mfDossier = matriculeDEssai("A", "M");
   const mdp = "MotDePasseTresLong2026!";
   let dirigeant: Utilisateur;
