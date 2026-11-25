@@ -1157,8 +1157,9 @@ sans dette ; pas d'essai pour une société amenée par une comptabilité ; une 
 fin proche (préavis `essai.preavis_jours`, 3 par défaut) et de fin, une fois chacun.
 
 Ouvert :
-- **CGV** : l'essai, sa durée et la fermeture du dossier à son terme doivent figurer dans les conditions de vente
-  (nouvelle version, validée par le CEO hors conversation).
+- **CGV inchangées** (décision du CEO, 25 novembre 2026) : l'essai est une condition SPÉCIFIQUE, pas générale.
+  Ses termes sont ceux de chaque essai : les jours figés à sa naissance (`facturation.essais`, avec le réglage de la
+  tour qui les a donnés), dits au client par l'écran et par les avis de fin proche et de fin.
 - **Essai réglé à 0** : la naissance émet toujours une base Basic impayée le jour même (écart 1.8 de la revue du
   25/11). À régler avec « payer d'abord » à la naissance si la tour coupe l'essai.
 - **Coque Android** : sans commerce, elle n'affiche ni l'essai ni sa fin ; la base refuse déjà ce qu'un dossier
