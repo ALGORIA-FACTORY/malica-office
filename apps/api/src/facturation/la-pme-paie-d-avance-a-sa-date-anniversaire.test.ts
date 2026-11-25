@@ -454,10 +454,11 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
         montant_ht: string;
         n: number;
       }>(
+        // D8 : le mois de la comptabilité se dit par un relevé ; sa facture naît au paiement.
         `select f.periode::text, f.montant_ht::text,
-                (select count(*)::int from facturation.facture_lignes l where l.facture_id = f.id) as n
-           from facturation.factures f
-          where f.payeur_tenant_id = $1 and f.licence_id is null order by f.periode`,
+                (select count(*)::int from facturation.releve_lignes l where l.releve_id = f.id) as n
+           from facturation.releves_cabinet f
+          where f.cabinet_id = $1 order by f.periode`,
         [cabinet],
       );
       assert.deepEqual(
@@ -494,8 +495,8 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       const team = await prix(db, "team", "2026-11-20");
       const { rows } = await db.query<{ montant_ht: string; libelle: string }>(
         `select f.montant_ht::text, l.libelle
-           from facturation.factures f join facturation.facture_lignes l on l.facture_id = f.id
-          where f.payeur_tenant_id = $1 and f.periode = date '2026-12-01'`,
+           from facturation.releves_cabinet f join facturation.releve_lignes l on l.releve_id = f.id
+          where f.cabinet_id = $1 and f.periode = date '2026-12-01'`,
         [cabinet],
       );
       assert.equal(rows.length, 1);
@@ -532,7 +533,7 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
     });
   });
 
-  it("les périmètres sont indépendants : PME coupée, le cabinet facture seul ; et l'inverse", async () => {
+  it("les périmètres sont indépendants : PME coupée, le cabinet a son relevé seul ; et l'inverse", async () => {
     await aBlanc(async (db) => {
       const s = await socle(db);
       const seule = await unePme(db, "2026-12-01");
@@ -545,10 +546,10 @@ describe("la PME paie d'avance, à sa date anniversaire", { skip: !ADMIN }, () =
       assert.equal(j1.cabinets?.etat, "passee");
       assert.deepEqual(await facturesDuTitulaire(db, seule.licence), []);
       const { rows: c1 } = await db.query(
-        "select 1 from facturation.factures where payeur_tenant_id = $1",
+        "select 1 from facturation.releves_cabinet where cabinet_id = $1",
         [cabinet],
       );
-      assert.equal(c1.length, 1);
+      assert.equal(c1.length, 1, "son relevé du mois (D8)");
 
       await regler(db, s, "cabinets", false);
       await regler(db, s, "pme", true);

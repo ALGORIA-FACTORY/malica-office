@@ -38,6 +38,7 @@ export const METHODES_COMMERCIALES: ReadonlySet<string> = new Set([
   "proposerAbonnement",
   "abonnementsDuCabinet",
   "facturesDuCabinet",
+  "relevesDuCabinet",
   "lignesDeFacture",
   "changerOffreAbonnement",
   "arreterAbonnement",

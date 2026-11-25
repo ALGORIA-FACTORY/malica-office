@@ -42,7 +42,7 @@ import { uneOrganisation } from "./decor-de-facture.ts";
 async function reglerLEssai(db: pg.PoolClient, s: Socle, jours: number) {
   await enPersonne(db, s.operateur);
   await db.query(
-    "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, $1::smallint, 14::smallint, 'Essai gratuit')",
+    "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, $1::smallint, 14::smallint, 14::smallint, 30::smallint, 'Essai gratuit')",
     [jours],
   );
   await db.query("reset role");
@@ -116,7 +116,7 @@ describe("l'essai gratuit ouvre sans payer", { skip: !ADMIN }, () => {
       await db.query("savepoint refus");
       await assert.rejects(
         db.query(
-          "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, 30::smallint, 14::smallint, 'x')",
+          "select plateforme.abonnement_regler(1::smallint, true, 2::smallint, 30::smallint, 14::smallint, 14::smallint, 30::smallint, 'x')",
         ),
         /refus\.reserve\.plateforme/,
       );

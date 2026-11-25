@@ -31,8 +31,11 @@ interface BilanDuPerimetre {
   deja_emises?: number;
   /** Périmètre PME : ce qui devient dû est une demande à payer, pas une facture (D7). */
   demandes?: number;
-  /** Les demandes ouvertes par ce passage : la licence et son paiement à régler. */
-  a_payer?: Array<{ licence: string; paiement: string }>;
+  /**
+   * Ce que ce passage met à payer : côté PME, la licence et son paiement ; côté
+   * comptabilités, le relevé du mois, son cabinet et son paiement (D8).
+   */
+  a_payer?: Array<{ licence?: string; cabinet?: string; releve_id?: string; paiement: string }>;
   rien_a_facturer?: number;
   erreurs?: number;
 }

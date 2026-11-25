@@ -220,6 +220,31 @@ async function facturesDe(db: pg.PoolClient, where: string, arg: string) {
   return rows;
 }
 
+/**
+ * Les relevés d'une comptabilité (D8) : ce que le passage établit pour elle, à la place d'une
+ * facture ; mêmes colonnes que `facturesDe`, sa date étant celle où il est établi.
+ */
+async function relevesDe(db: pg.PoolClient, cabinet: string) {
+  await db.query("reset role");
+  const { rows } = await db.query<{
+    id: string;
+    periode: string;
+    emise_le: string;
+    montant_ht: string;
+    libelle: string;
+    lignes: number;
+  }>(
+    `select r.id, r.periode::text, r.etabli_le::text as emise_le, r.montant_ht::text,
+            (select string_agg(l.libelle, ' | ' order by l.ordinal)
+               from facturation.releve_lignes l where l.releve_id = r.id) as libelle,
+            (select count(*)::int from facturation.releve_lignes l where l.releve_id = r.id) as lignes
+       from facturation.releves_cabinet r where r.cabinet_id = $1
+      order by r.periode`,
+    [cabinet],
+  );
+  return rows;
+}
+
 /** Le prorata attendu, recalculé ici : le prix de l'offre × jours / jours du mois. */
 async function prorata(db: pg.PoolClient, offre: string, depuis: string, mois: string) {
   await db.query("reset role");
@@ -249,7 +274,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       );
       assert.equal(rows[0]!.r.etat, "coupee", "appelée quand même, la base refuse de travailler");
       assert.deepEqual(await facturesDe(db, "f.licence_id", m.licence), []);
-      assert.deepEqual(await facturesDe(db, "f.payeur_tenant_id", m.cabinet), []);
+      assert.deepEqual(await relevesDe(db, m.cabinet), []);
       const { rows: passages } = await db.query(
         "select 1 from fabrique.facturations_du_jour where jour = $1::date",
         [m.jour],
@@ -294,20 +319,23 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       assert.ok(f!.libelle.includes(`du ${e[0]!.debut} au `), f!.libelle);
       assert.equal(f!.emise_le, m.jour, "datée du jour de la plateforme, pas de l'UTC");
 
-      // Le cabinet : sa facture mensuelle unique, une ligne au prorata depuis le 22 ;
-      // la licence qu'il paie entièrement n'a pas de facture de titulaire.
+      // Le cabinet (D8) : son relevé du mois, unique, une ligne au prorata depuis le 22, et
+      // aucune facture avant son paiement ; la licence qu'il paie entièrement n'a pas de
+      // facture de titulaire.
       const duCabinet = await prorata(db, "solo", m.depuisCabinet, m.mois);
-      const [c, ...autresC] = await facturesDe(db, "f.payeur_tenant_id", m.cabinet);
+      const [c, ...autresC] = await relevesDe(db, m.cabinet);
       assert.equal(autresC.length, 0);
       assert.equal(c!.periode, m.mois);
       assert.equal(c!.lignes, 1);
       assert.equal(c!.montant_ht, duCabinet.ht);
+      assert.equal(bilan?.cabinets?.emises, 0, "aucune facture avant le paiement");
+      assert.deepEqual(await facturesDe(db, "f.payeur_tenant_id", m.cabinet), []);
       assert.deepEqual(await facturesDe(db, "f.licence_id", m.licenceDuCabinet), []);
 
-      // Chaque facture au journal ; celle du cabinet, l'opérateur qui a ouvert pour acteur.
+      // La facture et le relevé au journal ; le relevé, l'opérateur qui a ouvert pour acteur.
       const { rows: journal } = await db.query<{ actor: string; object_id: string }>(
         `select actor, object_id from audit.event_log
-          where action = 'facture.emise' and object_id = any($1::uuid[])`,
+          where action in ('facture.emise', 'releve.etabli') and object_id = any($1::uuid[])`,
         [[f!.id, c!.id]],
       );
       assert.equal(journal.length, 2);
@@ -327,7 +355,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
         assert.equal(p.reglage.decide_par_email, `essai-${m.operateur}@essai.local`);
         assert.equal(p.dernier.jour, m.jour);
       }
-      assert.ok(etat[0]!.r.cabinets.dernier.emises >= 1);
+      assert.ok(etat[0]!.r.cabinets.dernier.demandes >= 1);
       assert.equal(etat[0]!.r.pme.dernier.emises, 0);
       assert.ok(etat[0]!.r.pme.dernier.demandes >= 1);
     });
@@ -367,7 +395,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
         [m.licence],
       );
       assert.equal(dues.length, 1, "une seule demande, malgré trois passages");
-      assert.equal((await facturesDe(db, "f.payeur_tenant_id", m.cabinet)).length, 1);
+      assert.equal((await relevesDe(db, m.cabinet)).length, 1);
     });
   });
 
@@ -400,7 +428,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       await regler(db, m, true, 1, ["cabinets"]);
       assert.equal((await passer()).etat, "passee");
       assert.deepEqual(
-        (await facturesDe(db, "f.payeur_tenant_id", m.cabinet)).map((f) => f.periode),
+        (await relevesDe(db, m.cabinet)).map((f) => f.periode),
         [dernier],
       );
 
@@ -408,7 +436,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       // dernier, déjà facturé, ne repart pas.
       await regler(db, m, true, 3, ["cabinets"]);
       assert.equal((await passer()).etat, "passee");
-      const factures = await facturesDe(db, "f.payeur_tenant_id", m.cabinet);
+      const factures = await relevesDe(db, m.cabinet);
       assert.deepEqual(
         factures.map((f) => f.periode),
         [m.mois, avant, dernier],
@@ -471,7 +499,7 @@ describe("la facture part chaque jour", { skip: !ADMIN }, () => {
       );
       await refuse("select fabrique.facturation_du_jour($1::date)", [m.jour], /permission denied/);
       await refuse(
-        "select facturation.emission_du_cabinet($1, $2::date, $3)",
+        "select facturation.releve_etablir($1, $2::date, $3)",
         [m.cabinet, m.mois, m.operateur],
         /permission denied/,
       );

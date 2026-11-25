@@ -4359,9 +4359,54 @@ export const en: Dict = {
   "tour.factures.emises.aide":
     "The latest hundred. Each one downloads as a PDF; a company invoice’s email can be re-sent, once per invoice every 24 hours.",
   "tour.factures.emises.aucune": "No invoice issued.",
+  "cab.releve.ligne": "Statement for {periode}: {montant} incl. VAT to pay",
+  "cab.releve.payer": "Pay online",
+  "cab.releve.aide":
+    "Pay online, or by bank transfer of the exact amount. Your invoice is issued on payment, already settled.",
+  "cab.releve.virement": "By bank transfer: {montant}, to account",
+  "cab.releve.avant": "Without payment before {date}, new assignments will be closed.",
+  "cab.releve.bloque":
+    "New assignments are closed. Without payment before {date}, your clients' subscriptions will be suspended.",
+  "cab.releve.suspendu":
+    "Your clients' subscriptions have been suspended since {date}. Payment reopens them at once.",
+  "cab.releve.detail": "Statement details ({count} lines)",
+  "cab.releve.detail#one": "Statement details (one line)",
+  "cab.releve.detail#other": "Statement details ({count} lines)",
+  "tour.releves.titre": "Statements to collect",
+  "tour.releves.aide":
+    "Accounting firms' statements awaiting payment. A bank transfer received is recorded here, for the exact amount: the invoice is issued at once, settled.",
+  "tour.releves.aucun": "No statement pending.",
+  "tour.releves.virement": "Record a transfer",
+  "tour.releves.montant": "Amount received",
+  "tour.releves.date": "Transfer date",
+  "tour.releves.reference": "Transfer reference",
+  "tour.releves.encaisser": "Collect",
+  "tour.releves.fait": "Transfer recorded: invoice {numero}.",
+  "tour.releves.etat.attente": "Issued on {date}",
+  "tour.releves.etat.bloque": "Assignments closed since {date}",
+  "tour.releves.etat.suspendu": "Clients suspended since {date}",
+  "tour.abonnement.releve.aide":
+    "An accounting firm's statement left unpaid: its new assignments close first, then the subscriptions it pays for its clients are suspended. Its payment reopens everything.",
+  "tour.abonnement.releve.blocage": "Days before closing assignments",
+  "tour.abonnement.releve.suspension": "Days before suspending its clients",
+  "tour.abonnement.releve.borne":
+    "From 1 to 90 days to close, then up to 180 to suspend, never before closing.",
+  "refus.releve.deja_regle": "This statement is already paid: its invoice exists.",
+  "refus.introuvable.releve": "This statement cannot be found.",
+  "refus.virement.montant_inexact": "The amount must be exactly the statement's: {attendu}.",
+  "refus.virement.date":
+    "The transfer date can be neither in the future nor before the statement's month.",
+  "refus.virement.reference": "Enter the transfer reference.",
+  "refus.abonnement.releve_impaye":
+    "A statement is still unpaid: new assignments are closed until it is paid.",
+  "tour.soldes.rembourser": "Record a refund",
+  "tour.soldes.reference": "Refund reference",
+  "tour.soldes.inscrire": "Record",
+  "tour.soldes.fait": "Refund recorded: {montant}.",
+  "refus.solde.aucun": "No balance to refund.",
   "tour.soldes.titre": "Credit balances",
   "tour.soldes.aide":
-    "Money received and not yet applied to an invoice: a payment larger than its invoice, a link paid twice, an earlier deposit. It is deducted automatically from the company's next invoice.",
+    "Money received and not yet applied to an invoice: a payment larger than its invoice, a link paid twice, an earlier deposit. A company's balance is deducted automatically from its next invoice. A balance nothing is waiting for is refunded at the bank or the provider, then recorded here.",
   "tour.soldes.aucun": "No balance: all money received is on an invoice.",
   "tour.soldes.doubles": "{count} links paid twice",
   "tour.soldes.doubles#one": "one link paid twice",
@@ -4409,7 +4454,7 @@ export const en: Dict = {
   "tour.facturation.motif": "Reason: {motif}",
   "tour.facturation.cabinets": "Accountants — monthly, in arrears",
   "tour.facturation.cabinets.aide":
-    "Every day, Malica issues each accountant's monthly invoice for the closed months still missing: one per accountant and per month, prorated by days, never twice.",
+    "Every day, Malica issues each accounting firm's statement for the closed months that are missing: one per firm and per month, prorated by day, never two. The invoice is issued when it is paid.",
   "tour.facturation.cabinets.rattrapage": "Closed months examined on each run",
   "tour.facturation.cabinets.rattrapage.aide":
     "1: the month that has just closed. Beyond that, older months never invoiced will be.",
@@ -4425,7 +4470,6 @@ export const en: Dict = {
   "tour.facturation.dernier": "Last run: {date}",
   "tour.facturation.dernier.aucun": "No run yet.",
   "tour.facturation.compteur.emises": "Issued",
-  "tour.facturation.compteur.deja": "Already issued",
   "tour.facturation.compteur.demandes": "Requested",
   "tour.facturation.compteur.dejaDemandees": "Already requested",
   "tour.facturation.compteur.rien": "Nothing to invoice",

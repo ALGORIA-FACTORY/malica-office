@@ -419,9 +419,28 @@ export function LesFacturesEmises() {
  */
 export function LesSoldesCrediteurs() {
   const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const { retour, setRetour, echec } = useRetour();
   const soldes = useQuery({
     queryKey: ["tour-soldes-crediteurs"],
     queryFn: () => office().tour.soldesCrediteurs(),
+  });
+  const [ouvert, setOuvert] = useState<string | null>(null);
+  const [reference, setReference] = useState("");
+  const [motif, setMotif] = useState("");
+  const rembourser = useMutation({
+    mutationFn: (l: { licence_id: string | null; cabinet_id: string | null }) =>
+      office().tour.rembourserSolde(l.licence_id, l.cabinet_id, reference.trim(), motif.trim()),
+    onSuccess: async (r) => {
+      setRetour(
+        t("tour.soldes.fait", { montant: montantEtDevise(montant(r.montant, locale), r.devise) }),
+      );
+      setOuvert(null);
+      setReference("");
+      setMotif("");
+      await qc.invalidateQueries({ queryKey: ["tour-soldes-crediteurs"] });
+    },
+    onError: echec,
   });
   const lignes = soldes.data ?? [];
   return (
@@ -433,30 +452,218 @@ export function LesSoldesCrediteurs() {
         <p className={TEXTE}>{t("tour.soldes.aucun")}</p>
       ) : null}
       <ul className="divide-y divide-border">
-        {lignes.map((l) => (
-          <li key={l.licence_id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
-            <span className="min-w-[200px] flex-1">
-              <span className="block text-foreground">{l.societe ?? l.titulaire}</span>
-              <span className={`${TEXTE} block`}>
-                {l.titulaire}
-                {l.doubles > 0 ? ` · ${t("tour.soldes.doubles", { count: l.doubles })}` : ""}
-                {l.depuis
-                  ? ` · ${t("tour.soldes.depuis", {
-                      date: jourOuInstant(l.depuis, locale, {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      }),
-                    })}`
-                  : ""}
-              </span>
-            </span>
-            <span className="font-mono text-[13px] text-foreground" dir="ltr">
-              {montantEtDevise(montant(l.solde, locale), l.devise ?? "")}
-            </span>
-          </li>
-        ))}
+        {lignes.map((l) => {
+          const cle = l.licence_id ?? l.cabinet_id ?? "";
+          return (
+            <li key={cle} className="py-2" data-solde={cle}>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="min-w-[200px] flex-1">
+                  <span className="block text-foreground">{l.societe ?? l.titulaire}</span>
+                  <span className={`${TEXTE} block`}>
+                    {[
+                      l.titulaire,
+                      l.doubles > 0 ? t("tour.soldes.doubles", { count: l.doubles }) : "",
+                      l.depuis
+                        ? t("tour.soldes.depuis", {
+                            date: jourOuInstant(l.depuis, locale, {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            }),
+                          })
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+                <span className="font-mono text-[13px] text-foreground" dir="ltr">
+                  {montantEtDevise(montant(l.solde, locale), l.devise ?? "")}
+                </span>
+                <button
+                  type="button"
+                  className={BOUTON}
+                  aria-expanded={ouvert === cle}
+                  onClick={() => setOuvert(ouvert === cle ? null : cle)}
+                >
+                  {t("tour.soldes.rembourser")}
+                </button>
+              </div>
+              {ouvert === cle ? (
+                <div className="mt-2 flex flex-col gap-2">
+                  <label className={TEXTE}>
+                    {t("tour.soldes.reference")}
+                    <input
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                      className={`${CHAMP} mt-1 w-full`}
+                    />
+                  </label>
+                  <input
+                    value={motif}
+                    onChange={(e) => setMotif(e.target.value)}
+                    placeholder={t("common.motif")}
+                    aria-label={t("common.motif")}
+                    className={CHAMP}
+                  />
+                  <button
+                    type="button"
+                    className={BOUTON}
+                    disabled={
+                      rembourser.isPending || reference.trim() === "" || motif.trim() === ""
+                    }
+                    onClick={() => rembourser.mutate(l)}
+                  >
+                    {t("tour.soldes.inscrire")}
+                  </button>
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
+      {retour ? (
+        <p className={TEXTE} aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Les relevés des comptabilités qui attendent leur paiement (D8). Un virement reçu
+ * s'inscrit ici, par toute personne de la tour, au montant exact (D10) : la facture naît
+ * aussitôt, réglée. En ligne, la comptabilité paie depuis son espace.
+ */
+export function LesRelevesAEncaisser() {
+  const { t, locale } = useI18n();
+  const qc = useQueryClient();
+  const { retour, setRetour, echec } = useRetour();
+  const releves = useQuery({
+    queryKey: ["tour-releves"],
+    queryFn: () => office().tour.relevesAEncaisser(),
+  });
+  const [ouvert, setOuvert] = useState<string | null>(null);
+  const [montantRecu, setMontantRecu] = useState("");
+  const [le, setLe] = useState("");
+  const [reference, setReference] = useState("");
+  const encaisser = useMutation({
+    mutationFn: (releveId: string) =>
+      office().tour.encaisserVirement(releveId, montantRecu.trim(), le, reference.trim()),
+    onSuccess: async (r) => {
+      setRetour(t("tour.releves.fait", { numero: r.numero }));
+      setOuvert(null);
+      setMontantRecu("");
+      setLe("");
+      setReference("");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["tour-releves"] }),
+        qc.invalidateQueries({ queryKey: ["tour-factures-emises"] }),
+      ]);
+    },
+    onError: echec,
+  });
+  const jour = (iso: string) =>
+    jourOuInstant(iso, locale, { day: "2-digit", month: "2-digit", year: "numeric" });
+  const aujourdHui = new Date().toISOString().slice(0, 10);
+  const lignes = releves.data ?? [];
+  return (
+    <div className={CARTE} data-releves>
+      <h2 className={TITRE}>{t("tour.releves.titre")}</h2>
+      <p className={TEXTE}>{t("tour.releves.aide")}</p>
+      {releves.isError ? <p className={ALERTE}>{t("common.error")}</p> : null}
+      {releves.isSuccess && lignes.length === 0 ? (
+        <p className={TEXTE}>{t("tour.releves.aucun")}</p>
+      ) : null}
+      <ul className="divide-y divide-border">
+        {lignes.map((r) => {
+          const suspendu = r.suspendu_le !== null && r.suspendu_le <= aujourdHui;
+          const bloque = r.bloque_le !== null && r.bloque_le <= aujourdHui;
+          return (
+            <li key={r.releve_id} className="py-2" data-releve={r.releve_id}>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="min-w-[200px] flex-1">
+                  <span className="block text-foreground">
+                    {r.cabinet} · <span className="num">{r.periode.slice(0, 7)}</span>
+                  </span>
+                  <span
+                    className={`${TEXTE} block ${suspendu ? "text-signal-stop" : bloque ? "text-signal-warn" : ""}`}
+                    data-etat
+                  >
+                    {suspendu
+                      ? t("tour.releves.etat.suspendu", { date: jour(r.suspendu_le!) })
+                      : bloque
+                        ? t("tour.releves.etat.bloque", { date: jour(r.bloque_le!) })
+                        : t("tour.releves.etat.attente", { date: jour(r.etabli_le) })}
+                  </span>
+                </span>
+                <span className="font-mono text-[13px] text-foreground" dir="ltr">
+                  {montantEtDevise(montant(r.montant_ttc, locale), r.devise)}
+                </span>
+                <button
+                  type="button"
+                  className={BOUTON}
+                  aria-expanded={ouvert === r.releve_id}
+                  onClick={() => setOuvert(ouvert === r.releve_id ? null : r.releve_id)}
+                >
+                  {t("tour.releves.virement")}
+                </button>
+              </div>
+              {ouvert === r.releve_id ? (
+                <div className="mt-2 flex flex-col gap-2">
+                  <label className={TEXTE}>
+                    {t("tour.releves.montant")}
+                    <input
+                      value={montantRecu}
+                      onChange={(e) => setMontantRecu(e.target.value)}
+                      inputMode="decimal"
+                      dir="ltr"
+                      className={`${CHAMP} mt-1 w-full`}
+                    />
+                  </label>
+                  <label className={TEXTE}>
+                    {t("tour.releves.date")}
+                    <input
+                      type="date"
+                      value={le}
+                      max={aujourdHui}
+                      onChange={(e) => setLe(e.target.value)}
+                      className={`${CHAMP} mt-1 w-full`}
+                    />
+                  </label>
+                  <label className={TEXTE}>
+                    {t("tour.releves.reference")}
+                    <input
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                      className={`${CHAMP} mt-1 w-full`}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className={BOUTON}
+                    disabled={
+                      encaisser.isPending ||
+                      !/^\d+([.,]\d+)?$/.test(montantRecu.trim()) ||
+                      le === "" ||
+                      reference.trim() === ""
+                    }
+                    onClick={() => encaisser.mutate(r.releve_id)}
+                  >
+                    {t("tour.releves.encaisser")}
+                  </button>
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {retour ? (
+        <p className={TEXTE} aria-live="polite">
+          {retour}
+        </p>
+      ) : null}
     </div>
   );
 }

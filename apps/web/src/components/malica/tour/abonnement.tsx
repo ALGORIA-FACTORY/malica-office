@@ -32,6 +32,8 @@ export function ReglerLAbonnement() {
   const [offerts, setOfferts] = useState("2");
   const [essai, setEssai] = useState("0");
   const [delai, setDelai] = useState("14");
+  const [blocage, setBlocage] = useState("14");
+  const [suspension, setSuspension] = useState("30");
   const [motif, setMotif] = useState("");
 
   useEffect(() => {
@@ -41,6 +43,11 @@ export function ReglerLAbonnement() {
     setOfferts(String(reglage.data.annuel_mois_offerts));
     setEssai(String(reglage.data.essai_jours));
     setDelai(String(reglage.data.renouvellement_delai_jours));
+    // Sans réglage encore, la base ne rend rien : le champ garde son point de départ.
+    if (reglage.data.releve_blocage_jours != null)
+      setBlocage(String(reglage.data.releve_blocage_jours));
+    if (reglage.data.releve_suspension_jours != null)
+      setSuspension(String(reglage.data.releve_suspension_jours));
   }, [reglage.data]);
 
   const nOfferts = Number.parseInt(offerts, 10);
@@ -49,10 +56,29 @@ export function ReglerLAbonnement() {
   const essaiValide = /^\d+$/.test(essai) && nEssai >= 0 && nEssai <= 90;
   const nDelai = Number.parseInt(delai, 10);
   const delaiValide = /^\d+$/.test(delai) && nDelai >= 1 && nDelai <= 90;
+  // Le relevé de la comptabilité (D11) : les attributions ferment, puis ses clients sont suspendus.
+  const nBlocage = Number.parseInt(blocage, 10);
+  const nSuspension = Number.parseInt(suspension, 10);
+  const releveValide =
+    /^\d+$/.test(blocage) &&
+    /^\d+$/.test(suspension) &&
+    nBlocage >= 1 &&
+    nBlocage <= 90 &&
+    nSuspension >= nBlocage &&
+    nSuspension <= 180;
 
   const regler = useMutation({
     mutationFn: () =>
-      office().tour.reglerAbonnement(report, annuel, nOfferts, nEssai, nDelai, motif),
+      office().tour.reglerAbonnement(
+        report,
+        annuel,
+        nOfferts,
+        nEssai,
+        nDelai,
+        nBlocage,
+        nSuspension,
+        motif,
+      ),
     onSuccess: async () => {
       setRetour(t("tour.fait"));
       setMotif("");
@@ -136,6 +162,28 @@ export function ReglerLAbonnement() {
           />
         </label>
         {!delaiValide ? <p className={ALERTE}>{t("tour.abonnement.delai.borne")}</p> : null}
+        <p className={TEXTE}>{t("tour.abonnement.releve.aide")}</p>
+        <label className={TEXTE}>
+          {t("tour.abonnement.releve.blocage")}
+          <input
+            value={blocage}
+            onChange={(e) => setBlocage(e.target.value)}
+            inputMode="numeric"
+            aria-label={t("tour.abonnement.releve.blocage")}
+            className={`${CHAMP} mt-1 w-full`}
+          />
+        </label>
+        <label className={TEXTE}>
+          {t("tour.abonnement.releve.suspension")}
+          <input
+            value={suspension}
+            onChange={(e) => setSuspension(e.target.value)}
+            inputMode="numeric"
+            aria-label={t("tour.abonnement.releve.suspension")}
+            className={`${CHAMP} mt-1 w-full`}
+          />
+        </label>
+        {!releveValide ? <p className={ALERTE}>{t("tour.abonnement.releve.borne")}</p> : null}
         <input
           value={motif}
           onChange={(e) => setMotif(e.target.value)}
@@ -151,7 +199,8 @@ export function ReglerLAbonnement() {
             motif.trim() === "" ||
             !offertsValide ||
             !essaiValide ||
-            !delaiValide
+            !delaiValide ||
+            !releveValide
           }
           onClick={() => regler.mutate()}
         >

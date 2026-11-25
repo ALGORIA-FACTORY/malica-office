@@ -4489,9 +4489,54 @@ export const fr = {
   "tour.factures.emises.aide":
     "Les cent dernières. Chacune se télécharge en PDF ; le courriel d’une facture de société se renvoie, une fois par facture et par 24 heures.",
   "tour.factures.emises.aucune": "Aucune facture émise.",
+  "cab.releve.ligne": "Relevé de {periode} : {montant} TTC à régler",
+  "cab.releve.payer": "Payer en ligne",
+  "cab.releve.aide":
+    "Réglez en ligne, ou par virement du montant exact. Votre facture naît au paiement, déjà réglée.",
+  "cab.releve.virement": "Par virement : {montant}, sur le compte",
+  "cab.releve.avant": "Sans paiement avant le {date}, les nouvelles attributions seront fermées.",
+  "cab.releve.bloque":
+    "Les nouvelles attributions sont fermées. Sans paiement avant le {date}, les abonnements de vos clients seront suspendus.",
+  "cab.releve.suspendu":
+    "Les abonnements de vos clients sont suspendus depuis le {date}. Le paiement les rouvre aussitôt.",
+  "cab.releve.detail": "Détail du relevé ({count} lignes)",
+  "cab.releve.detail#one": "Détail du relevé (une ligne)",
+  "cab.releve.detail#other": "Détail du relevé ({count} lignes)",
+  "tour.releves.titre": "Relevés à encaisser",
+  "tour.releves.aide":
+    "Les relevés des comptabilités qui attendent leur paiement. Un virement reçu s'inscrit ici, au montant exact : la facture naît aussitôt, réglée.",
+  "tour.releves.aucun": "Aucun relevé en attente.",
+  "tour.releves.virement": "Inscrire un virement",
+  "tour.releves.montant": "Montant reçu",
+  "tour.releves.date": "Date du virement",
+  "tour.releves.reference": "Référence du virement",
+  "tour.releves.encaisser": "Encaisser",
+  "tour.releves.fait": "Virement inscrit : facture {numero}.",
+  "tour.releves.etat.attente": "Établi le {date}",
+  "tour.releves.etat.bloque": "Attributions fermées depuis le {date}",
+  "tour.releves.etat.suspendu": "Clients suspendus depuis le {date}",
+  "tour.abonnement.releve.aide":
+    "Le relevé d'une comptabilité resté impayé : ses nouvelles attributions ferment d'abord, puis les abonnements qu'elle paie pour ses clients sont suspendus. Son paiement rouvre tout.",
+  "tour.abonnement.releve.blocage": "Jours avant de fermer les attributions",
+  "tour.abonnement.releve.suspension": "Jours avant de suspendre ses clients",
+  "tour.abonnement.releve.borne":
+    "De 1 à 90 jours pour fermer, puis jusqu'à 180 pour suspendre, jamais avant la fermeture.",
+  "refus.releve.deja_regle": "Ce relevé est déjà réglé : sa facture existe.",
+  "refus.introuvable.releve": "Ce relevé est introuvable.",
+  "refus.virement.montant_inexact": "Le montant doit être exactement celui du relevé : {attendu}.",
+  "refus.virement.date":
+    "La date du virement ne peut être ni à venir, ni antérieure au mois du relevé.",
+  "refus.virement.reference": "Indiquez la référence du virement.",
+  "refus.abonnement.releve_impaye":
+    "Un relevé reste à régler : les nouvelles attributions sont fermées jusqu'à son paiement.",
+  "tour.soldes.rembourser": "Inscrire un remboursement",
+  "tour.soldes.reference": "Référence du remboursement",
+  "tour.soldes.inscrire": "Inscrire",
+  "tour.soldes.fait": "Remboursement inscrit : {montant}.",
+  "refus.solde.aucun": "Aucun solde à rembourser.",
   "tour.soldes.titre": "Soldes créditeurs",
   "tour.soldes.aide":
-    "L'argent reçu et pas encore imputé à une facture : un paiement plus grand que sa facture, un lien payé deux fois, un acompte d'avant. Il se déduit de lui-même de la facture suivante de la société.",
+    "L'argent reçu et pas encore imputé à une facture : un paiement plus grand que sa facture, un lien payé deux fois, un acompte d'avant. Celui d'une société se déduit de lui-même de sa facture suivante. Un solde que rien n'attend se rembourse à la banque ou chez le prestataire, puis s'inscrit ici.",
   "tour.soldes.aucun": "Aucun solde : tout l'argent reçu est sur une facture.",
   "tour.soldes.doubles": "{count} liens payés deux fois",
   "tour.soldes.doubles#one": "un lien payé deux fois",
@@ -4539,7 +4584,7 @@ export const fr = {
   "tour.facturation.motif": "Motif : {motif}",
   "tour.facturation.cabinets": "Comptabilités — au mois, à terme échu",
   "tour.facturation.cabinets.aide":
-    "Chaque jour, Malica émet la facture mensuelle de chaque comptabilité pour les mois clos qui manquent : une par comptabilité et par mois, au prorata des jours, jamais deux.",
+    "Chaque jour, Malica établit le relevé de chaque comptabilité pour les mois clos qui manquent : un par comptabilité et par mois, au prorata des jours, jamais deux. La facture naît à son paiement.",
   "tour.facturation.cabinets.rattrapage": "Mois clos examinés à chaque passage",
   "tour.facturation.cabinets.rattrapage.aide":
     "1 : le mois qui vient de se clore. Au-delà, des mois plus anciens jamais facturés le seront.",
@@ -4555,7 +4600,6 @@ export const fr = {
   "tour.facturation.dernier": "Dernier passage : le {date}",
   "tour.facturation.dernier.aucun": "Aucun passage encore.",
   "tour.facturation.compteur.emises": "Émises",
-  "tour.facturation.compteur.deja": "Déjà émises",
   "tour.facturation.compteur.demandes": "Mises à payer",
   "tour.facturation.compteur.dejaDemandees": "Déjà à payer",
   "tour.facturation.compteur.rien": "Rien à facturer",

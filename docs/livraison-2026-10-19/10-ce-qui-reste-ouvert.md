@@ -1207,3 +1207,27 @@ Ouvert :
   facture, en français (la facture est en français). À traduire par genre de paiement (lot E, vocabulaire).
 - **Deux courriels pour un paiement** : le reçu (`paiement.recu`) et la facture réglée. Décision du 24 novembre
   (« tout paiement confirmé se dit ») ; à fondre en un seul reçu-facture si le CEO le veut (D6, « comme Anthropic »).
+
+### La comptabilité paie son relevé (décisions du CEO D8 option A, D10, D11, 25 novembre 2026 — lot B)
+
+Réglé par `20261231370000` : le passage du 1er établit, pour le mois écoulé, un **relevé** (non fiscal, figé :
+ses lignes, ses montants) ; aucune facture ne naît avant le paiement. Le relevé se règle en ligne (lien Malica →
+session du prestataire) ou par **virement du montant exact**, inscrit en tour par toute personne qui y a accès ;
+la facture naît alors, réglée, aux montants du relevé. Impayé passé les délais de la tour (14 jours puis 30, réglables) :
+plus de nouvelle attribution, puis les abonnements que la comptabilité paie sont suspendus ; son paiement rouvre tout.
+Avis : relevé, attributions fermées, suspension proche, suspendu, facture réglée (qui est le reçu). Un relevé payé
+deux fois est gardé en solde. La tour inscrit le **remboursement** d'un solde (référence, motif). L'émission manuelle
+sans écran (`facturation.emettre_cabinet`) est retirée.
+
+Ouvert :
+
+- **Avis de MAP sur l'option A** : vente ou service, fait générateur de la TVA, El Fatoora. Le relevé non fiscal puis la
+  facture au paiement est la décision du CEO ; sa conformité fiscale reste à confirmer par écrit — **INCERTAIN**.
+- **Avoir exceptionnel** (D6 : erreur seulement, geste de tour motivé) : pas construit. C'est un document fiscal
+  (mentions, série) : sa forme se fixe avec MAP avant de l'écrire. Avec la facture née du paiement, le cas attendu est
+  rare ; d'ici là une erreur se corrige par un remboursement inscrit en tour.
+- **Factures de comptabilité d'avant D8 restées impayées** (émises avant ce lot) : payables en ligne comme avant ; le
+  virement en tour ne vaut que pour un relevé. Attendu : aucune hors bac à sable — à vérifier sur le pilote.
+- **Solde d'une comptabilité** (relevé payé deux fois) : vu et remboursable en tour, pas déduit du relevé suivant.
+- **Ce que voit la PME suspendue par l'impayé de sa comptabilité** : l'écran de dossier suspendu existant, sans dire
+  que la cause est chez sa comptabilité ni proposer de reprendre l'abonnement à son compte (lot D, R-B / R-C).

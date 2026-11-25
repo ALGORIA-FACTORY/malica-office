@@ -29,6 +29,7 @@ import {
   decor,
   jourParJour,
   millimes,
+  factureDuCabinet,
   uneComptabilite,
 } from "./decor-de-facture.ts";
 
@@ -161,12 +162,9 @@ describe("la comptabilité reçoit une seule facture", { skip: !ADMIN }, () => {
         "insert into identity.memberships (tenant_id, user_id, role) values ($1, $2, 'collaborateur')",
         [c.cabinet, collaborateur],
       );
-      const { rows: e } = await db.query<{ r: { facture_id: string; lignes: number } }>(
-        "select facturation.emission_du_cabinet($1, date '2026-11-01', $2) as r",
-        [c.cabinet, d.operateur],
-      );
-      const facture = e[0]!.r;
-      assert.equal(facture.lignes, 1, "un abonnement facturé");
+      // D8 : le relevé du mois, puis son virement inscrit en tour ; la facture naît, réglée.
+      const facture = await factureDuCabinet(db, c.cabinet, "2026-11-01", d.operateur);
+      assert.equal(facture.abonnements, 1, "un abonnement facturé");
       const { rows: lignes } = await db.query<{ libelle: string; montant_ht: string }>(
         `select libelle, montant_ht::text from facturation.facture_lignes
           where facture_id = $1 order by ordinal`,
@@ -204,8 +202,8 @@ describe("la comptabilité reçoit une seule facture", { skip: !ADMIN }, () => {
       assert.deepEqual(
         envois.map((x) => [x.destinataire, x.code, x.canal]),
         [
-          [c.expert, "facture.emise.cabinet", "app"],
-          [c.expert, "facture.emise.cabinet", "email"],
+          [c.expert, "facture.reglee.cabinet", "app"],
+          [c.expert, "facture.reglee.cabinet", "email"],
         ],
         "l'expert seul, en application et par courriel",
       );
