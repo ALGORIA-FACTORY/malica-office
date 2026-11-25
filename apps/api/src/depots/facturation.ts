@@ -817,11 +817,13 @@ export const facturation = {
               (ref.offre_a(f.offre_code, f.emise_le)).libelle as offre_libelle,
               f.reference_abonne, f.montant_ht::text, f.taux_tva::text, f.montant_tva::text,
               f.timbre::text, f.montant_ttc::text, f.devise, e.etat, e.reste_du::text,
+              -- Le client tel que la facture l'a figé à son émission (20261231340000) : jamais
+              -- relu dans la fiche de la société, qui peut changer depuis.
               jsonb_build_object(
-                'nom', coalesce(o.name, f.destinataire_nom),
+                'nom', f.client_nom,
                 'destinataire', f.destinataire_nom,
-                'matricule', coalesce(f.destinataire_legal_id, o.legal_id),
-                'adresse', o.adresse) as client,
+                'matricule', f.destinataire_legal_id,
+                'adresse', f.client_adresse) as client,
               coalesce((select jsonb_agg(jsonb_build_object(
                           'ordinal', l.ordinal, 'libelle', l.libelle,
                           'quantite', l.quantite::text, 'prix_unitaire', l.prix_unitaire::text,
@@ -841,14 +843,6 @@ export const facturation = {
                        '[]'::jsonb) as reglements
          from facturation.factures f
          left join facturation.encours_v e on e.facture_id = f.id
-         left join lateral (
-           select x.name, x.legal_id, x.adresse
-             from identity.organizations x
-            where x.id = coalesce(f.payeur_tenant_id,
-                                  (select lo.tenant_id from facturation.licence_organisations lo
-                                    where lo.licence_id = f.licence_id
-                                    order by lo.rattachee_le, lo.tenant_id limit 1))
-         ) o on true
         where f.id = $1`,
       [factureId],
     );

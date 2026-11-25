@@ -1101,3 +1101,16 @@ réglée (« Réglée le … par carte bancaire, réf. … », sans RIB). Les co
   (`20261231320000`) ; elle était la première par identifiant, au hasard (recette du pilote, 24 novembre).
 - **Le RIB et le RNE d'ALGORIA** restent saisis une fois à la tour (Tour → Factures) ; ils ne se lisent pas encore dans
   la fiche de l'organisation émettrice (son compte bancaire n'a qu'un libellé et un IBAN).
+
+### Lot 0 de la revue « comptabilité par matricule » (24 novembre 2026)
+
+Revue : projet MALICA OFFICE, `decisions/2026-11-24_revue-comptabilite-par-matricule.md`.
+
+- ~~T1 facture non figée~~, ~~T5 société facturée désignée à douze endroits dont trois au hasard~~, T4 en partie
+  (une société archivée n'est plus la société facturée) : réglés par `20261231340000`. La facture porte
+  `client_nom`, `client_adresse` et `destinataire_legal_id` posés à l'émission ; `facturation.societe_facturee`
+  est le seul endroit qui désigne la société d'une licence (une épreuve refuse tout retour en arrière).
+- Restent pour le lot 0 : T2 (une licence suivie par deux cabinets), T3 (périodes recalculées avec le nombre de
+  sociétés du jour), T4 (une société archivée encore comptée), T6 (descente refusée sans avertir), T8 (titulaire
+  de plusieurs licences), T10 (invariants du titulaire sans épreuve). T7 (onboarding) et T9 (cabinet sans
+  matricule) passent au lot de la création propre.

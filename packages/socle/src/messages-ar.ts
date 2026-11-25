@@ -5525,6 +5525,7 @@ export const ar: Dict = {
   "refus.cgv.version_perimee":
     "تغيّرت الشروط العامة للبيع: اقرؤوا النسخة الجديدة، ثم أعيدوا تأشير الخانة.",
   "refus.cgv.mal_formees": "أدخلوا تاريخ النسخة وعنوان https:// للشروط العامة للبيع.",
+  "notif.kind.abonnement.descente_refusee": "تعذّر تغيير عرضكم: تبقون على عرضكم الحالي.",
   "notif.kind.paiement.recu": "تم استلام دفعتكم.",
   "notif.kind.facture.reglee.pme": "فاتورة اشتراككم مدفوعة.",
   "pme.payer.payeur.titre": "الفاتورة باسم",
